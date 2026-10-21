@@ -3222,6 +3222,14 @@ namespace Selene
                     root.Children.Add(me);
                     me.Play();
                 }
+                else if (g != null && System.IO.File.Exists(System.IO.Path.Combine(SelenePaths.Media("Hero"), g.Id + ".jpg")))
+                {
+                    // no theme video: the game's own art, soft and dark, behind the closing tile
+                    var art = new Image { Source = LoadNow(System.IO.Path.Combine(SelenePaths.Media("Hero"), g.Id + ".jpg"), 1280), Stretch = Stretch.UniformToFill,
+                                          Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 40 }, Opacity = 0.55,
+                                          RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = new ScaleTransform(1.1, 1.1) };
+                    root.Children.Add(art);
+                }
                 var veil = new RadialGradientBrush { Center = new Point(0.5, 0.48), GradientOrigin = new Point(0.5, 0.48), RadiusX = 0.7, RadiusY = 0.75 };
                 veil.GradientStops.Add(new GradientStop(Color.FromArgb(0x55, 0, 0, 0), 0));
                 veil.GradientStops.Add(new GradientStop(Color.FromArgb(0xB0, 0, 0, 0), 1));
