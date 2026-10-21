@@ -18,6 +18,10 @@ if ($running) {
     Get-Process Playnite.FullscreenApp -ErrorAction SilentlyContinue | Stop-Process -Force
 }
 
+# a Selene Core build waiting in obj\stage goes in now that Playnite has let go of the old one
+$stage = Join-Path (Split-Path $PSScriptRoot -Parent) 'SeleneCore\obj\stage'
+if (Test-Path "$stage\SeleneCore.dll") { Copy-Item "$stage\*" (Join-Path (Split-Path $PSScriptRoot -Parent) 'SeleneCore\bin') -Recurse -Force }
+
 $text = [IO.File]::ReadAllText($config)
 $text = [regex]::Replace($text, '"Theme"\s*:\s*"[^"]*"', '"Theme": "' + $ids[$which] + '"')
 [IO.File]::WriteAllText($config, $text)

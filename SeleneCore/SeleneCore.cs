@@ -34,6 +34,7 @@ namespace Selene
             if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use, staying off"); return; }
             HomeNav.Api = PlayniteApi;
             HomeNav.Install();
+            SeleneShell.Start();
             HomeNav.Log("Selene Core started");
         }
 
@@ -59,8 +60,10 @@ namespace Selene
         public List<string> GameFolders { get; set; }
         public string HelperPath { get; set; }
         public string StreamLogsFolder { get; set; }
+        public string AvatarPath { get; set; }
+        public string DisplayName { get; set; }
 
-        public SeleneSettings() { MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; }
+        public SeleneSettings() { MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; AvatarPath = ""; DisplayName = ""; }
     }
 
     public class SeleneSettingsViewModel : ObservableObject, ISettings
@@ -82,6 +85,7 @@ namespace Selene
             if (editing == null) return;
             Settings.MediaFolder = editing.MediaFolder; Settings.GameFolders = editing.GameFolders;
             Settings.HelperPath = editing.HelperPath; Settings.StreamLogsFolder = editing.StreamLogsFolder;
+            Settings.AvatarPath = editing.AvatarPath; Settings.DisplayName = editing.DisplayName;
         }
 
         public void EndEdit()
@@ -112,6 +116,8 @@ namespace Selene
             var games = field("Folders with games no store knows about (one per line):", string.Join(Environment.NewLine, s.GameFolders ?? new List<string>()),
                 v => s.GameFolders = new List<string>(v.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)));
             games.AcceptsReturn = true; games.MinHeight = 60;
+            field("Login name. Empty = your Steam name:", s.DisplayName, v => s.DisplayName = v);
+            field("Login picture (image file). Empty = your Steam avatar:", s.AvatarPath, v => s.AvatarPath = v);
             field("Optional companion helper (.exe) with admin rights. Empty = off:", s.HelperPath, v => s.HelperPath = v);
             field("Optional game-streaming host log folder. Empty = off:", s.StreamLogsFolder, v => s.StreamLogsFolder = v);
             return new UserControl { Content = panel };

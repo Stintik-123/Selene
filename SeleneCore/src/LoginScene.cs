@@ -27,7 +27,7 @@ namespace Selene
         private static int whoIndex = 1;     // 0 add user, 1 avatar
         private static Border addTile, avatarTile;
         private static Ellipse avatarRing, addRing;
-        private static bool bootSoundPlayed;
+        private static bool bootSoundPlayed, keysHooked;
         private static MediaPlayer bootPlayer, blipPlayer;
         private static readonly Random rnd = new Random(7);
 
@@ -37,6 +37,27 @@ namespace Selene
             {
                 if (w == null || login == null) return;
                 loginRoot = login;
+                // keyboard works too (Enter = A, Esc = B, arrows): not everyone has a controller plugged in
+                if (!keysHooked)
+                {
+                    keysHooked = true;
+                    w.PreviewKeyDown += (s, e) =>
+                    {
+                        if (!IsActive) return;
+                        string b = e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Space ? "A"
+                                 : e.Key == System.Windows.Input.Key.Escape || e.Key == System.Windows.Input.Key.Back ? "B"
+                                 : e.Key == System.Windows.Input.Key.Left ? "DPadLeft" : e.Key == System.Windows.Input.Key.Right ? "DPadRight"
+                                 : e.Key == System.Windows.Input.Key.Up ? "DPadUp" : e.Key == System.Windows.Input.Key.Down ? "DPadDown" : null;
+                        if (b != null) { HandleButton(b); e.Handled = true; }
+                    };
+                }
+                // developer switch: %TEMP%\selene-skip-login skips the login (to look at the home while building Selene)
+                if (System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-skip-login")))
+                {
+                    login.Visibility = Visibility.Collapsed;
+                    HomeNav.Log("ps5 login: skipped (developer switch)");
+                    return;
+                }
                 var shell = HomeNav.FindByName(w, "LoginCenterShell") as Grid;
                 if (shell == null) { HomeNav.Log("ps5 login: LoginCenterShell not found"); return; }
                 if (scene == null)
@@ -89,7 +110,8 @@ namespace Selene
                 FadeOut(whoLayer, 260);
                 PlaySound(SelenePaths.ThemeAudio("LoginSelect.wav"), 0.9);  // profile picked: the theme's own sign-in sound
                 stage = 2;
-                return false;  // Aniki unlocks (its LoginConfirm sound plays)
+                SeleneShell.HideLogin();  // the login layer is Selene's own now
+                return true;
             }
             return true;
         }
@@ -237,21 +259,20 @@ namespace Selene
             avatarTile = new Border { CornerRadius = new CornerRadius(105), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x11, 0x11, 0x11)), RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = new ScaleTransform(1.08, 1.08) };
             try
             {
-                var pathBlock = HomeNav.FindByName(w, "ProfilePicturePathLogin") as TextBlock;
-                var tpl = w.TryFindResource("SteamSelfAvatarTemplate") as ControlTemplate;
-                if (tpl != null)
+                // the user's picture: Selene Core's setting, else the Steam account's avatar
+                var pic = SelenePaths.AvatarImage;
+                if (pic != null && System.IO.File.Exists(pic))
                 {
-                    var av = new Control { Template = tpl, Width = 210, Height = 210 };
-                    if (pathBlock != null) av.SetBinding(FrameworkElement.TagProperty, new System.Windows.Data.Binding("Text") { Source = pathBlock });
-                    av.Clip = new EllipseGeometry(new Point(105, 105), 105, 105);
-                    avatarTile.Child = av;
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit(); bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bmp.DecodePixelWidth = 420; bmp.UriSource = new Uri(pic); bmp.EndInit(); bmp.Freeze();
+                    avatarTile.Child = new Image { Source = bmp, Stretch = Stretch.UniformToFill, Width = 210, Height = 210, Clip = new EllipseGeometry(new Point(105, 105), 105, 105) };
                 }
             }
             catch (Exception ex) { HomeNav.Log("ps5 login avatar: " + ex.Message); }
             avatarRing = new Ellipse { Stroke = Brushes.White, StrokeThickness = 5, Margin = new Thickness(-10), Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 22, Color = Color.FromRgb(0x6F, 0xB4, 0xFF), Opacity = 0.8 } };
             avGrid.Children.Add(avatarTile); avGrid.Children.Add(avatarRing);
             avCol.Children.Add(avGrid);
-            var userName = w.TryFindResource("UserName") as string ?? "Player";
+            var userName = SelenePaths.UserName;
             avCol.Children.Add(new TextBlock { Text = userName, FontSize = 26, FontFamily = new FontFamily("Segoe UI"), Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 24, 0, 0) });
             row.Children.Add(avCol);
             col.Children.Add(row);

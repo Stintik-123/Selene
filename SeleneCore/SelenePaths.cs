@@ -55,6 +55,50 @@ namespace Selene
             }
         }
 
+        // the signed-in Steam account (loginusers.vdf, most recent): its avatar file and display name
+        private static string steamId, steamName;
+        private static void ReadSteamUser()
+        {
+            if (steamId != null) return;
+            steamId = ""; steamName = "";
+            try
+            {
+                var steam = Path.GetDirectoryName(SteamUserdata);
+                var vdf = File.ReadAllText(Path.Combine(steam, "config", "loginusers.vdf"));
+                foreach (Match m in Regex.Matches(vdf, "\"(\\d{17})\"\\s*\\{(.*?)\\}", RegexOptions.Singleline))
+                {
+                    var body = m.Groups[2].Value;
+                    var name = Regex.Match(body, "\"PersonaName\"\\s*\"([^\"]*)\"");
+                    bool recent = Regex.IsMatch(body, "\"MostRecent\"\\s*\"1\"");
+                    if (steamId == "" || recent) { steamId = m.Groups[1].Value; steamName = name.Success ? name.Groups[1].Value : ""; }
+                    if (recent) break;
+                }
+            }
+            catch { }
+        }
+
+        public static string AvatarImage
+        {
+            get
+            {
+                if (settings != null && !string.IsNullOrWhiteSpace(settings.AvatarPath)) return settings.AvatarPath;
+                ReadSteamUser();
+                if (steamId == "") return null;
+                var p = Path.Combine(Path.GetDirectoryName(SteamUserdata), "config", "avatarcache", steamId + ".png");
+                return File.Exists(p) ? p : null;
+            }
+        }
+
+        public static string UserName
+        {
+            get
+            {
+                if (settings != null && !string.IsNullOrWhiteSpace(settings.DisplayName)) return settings.DisplayName;
+                ReadSteamUser();
+                return steamName != "" ? steamName : Environment.UserName;
+            }
+        }
+
         public static string PlayniteConfig
         {
             get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite"); }
