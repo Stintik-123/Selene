@@ -206,12 +206,6 @@ namespace Selene
             }
         }
 
-        // Entries pointing at a helper's folder instead of the game: Genshin's Play runs an FPS unlocker from Downloads, and its
-        // install folder was Downloads too, so anything running from Downloads made Genshin look "playing"
-        private static readonly Dictionary<string, string> RealGameFolders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-        };
-
         // D:\Games is also the Xbox app's install folder (.GamingRoot): its games carry MicrosoftGame.Config, and the
         // Xbox library integration already has them (Call of Duty: Modern Warfare II was added twice more as local games:
         // once under its folder's code name "42C66953-...", once as "Call of Duty- Modern Warfare 2")
@@ -282,28 +276,30 @@ namespace Selene
             }
         }
 
-        private static void FixKnownEntries(Playnite.SDK.IGameDatabaseAPI db, List<Game> games)
-        {
-            var downloads = Full(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
-            foreach (var g in games)
-            {
-                string real;
-                if (!RealGameFolders.TryGetValue(g.Name ?? "", out real) || !Directory.Exists(real)) continue;
-                if (Full(g.InstallDirectory) != downloads) continue;
-                g.InstallDirectory = real;
-                var play = g.GameActions != null ? g.GameActions.FirstOrDefault(a => a.IsPlayAction) : null;
-                if (play != null) { play.TrackingMode = TrackingMode.Directory; play.TrackingPath = real; }
-                db.Games.Update(g);
-                HomeNav.Log("fixed game folder: " + g.Name + " -> " + real);
-            }
-        }
-
-        // Games that need admin rights (HoYoverse anti-cheat) start through a scheduled task created once with "run with
-        // highest privileges" (PS5Launch\<name>): no UAC prompt covering the screen on every launch, the pad keeps working.
-        private static readonly Dictionary<string, string> ElevatedTasks = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-        };
+        // ---- automatic: a game that runs as administrator gets a no-prompt launcher ----
+        // While it runs, its processes are checked; after it closes, a scheduled task "Selene\<name>" with highest
+        // privileges is created (one Windows admin prompt, once per game) and Play goes through it from then on: no UAC
+        // prompt over the TV on every launch, the controller keeps working.
         private const string Schtasks = @"C:\Windows\System32\schtasks.exe";
+        private static readonly HashSet<Guid> ranAsAdmin = new HashSet<Guid>();
+        private static readonly HashSet<Guid> declined = new HashSet<Guid>();
+
+        [System.Runtime.InteropServices.DllImport("advapi32.dll")] private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+        [System.Runtime.InteropServices.DllImport("advapi32.dll")] private static extern bool GetTokenInformation(IntPtr token, int cls, out int value, int size, out int returned);
+
+        private static bool IsElevated(int pid)
+        {
+            var h = OpenProcess(0x1000 /* QUERY_LIMITED_INFORMATION */, false, pid);
+            if (h == IntPtr.Zero) return false;
+            try
+            {
+                IntPtr token;
+                if (!OpenProcessToken(h, 0x0008 /* TOKEN_QUERY */, out token)) return true;  // a normal program can't read an admin one's token
+                try { int v, n; return GetTokenInformation(token, 20 /* TokenElevation */, out v, 4, out n) && v != 0; }
+                finally { CloseHandle(token); }
+            }
+            finally { CloseHandle(h); }
+        }
 
         private static bool TaskExists(string name)
         {
@@ -315,33 +311,105 @@ namespace Selene
             catch { return false; }
         }
 
-        private static void UseElevatedTasks(Playnite.SDK.IGameDatabaseAPI db, List<Game> games)
+        public static void WatchForAdmin(Game g)
         {
-            foreach (var g in games)
+            if (g == null || ranAsAdmin.Contains(g.Id)) return;
+            var started = DateTime.Now;
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            timer.Tick += (s, e) =>
             {
-                string task;
-                if (!ElevatedTasks.TryGetValue(g.Name ?? "", out task) || g.GameActions == null) continue;
-                var play = g.GameActions.FirstOrDefault(a => a.IsPlayAction);
-                if (play == null || string.IsNullOrWhiteSpace(g.InstallDirectory)) continue;
-                // installed = its game folder is there (Genshin was marked not installed when its folder was fixed: the
-                // unlocker it starts lives in Downloads, not in the game folder -> "Installation implementation is not available")
-                bool there = Directory.Exists(g.InstallDirectory);
-                if (string.Equals(play.Path, Schtasks, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (g.IsInstalled != there) { g.IsInstalled = there; db.Games.Update(g); HomeNav.Log("admin-task game " + (there ? "installed: " : "folder gone, not installed: ") + g.Name); }
-                    continue;
-                }
-                if (!TaskExists(task)) continue;
-                g.IsInstalled = there;
-                play.Type = GameActionType.File;
-                play.Path = Schtasks;
-                play.Arguments = "/run /tn \"" + task + "\"";
-                play.WorkingDir = null;
-                play.TrackingMode = TrackingMode.Directory;
-                play.TrackingPath = g.InstallDirectory;
-                db.Games.Update(g);
-                HomeNav.Log("game now starts without the admin prompt (task " + task + "): " + g.Name);
+                if ((DateTime.Now - started).TotalMinutes > 3) { timer.Stop(); return; }
+                foreach (var pid in ProcessesInGameFolder(g))
+                    if (IsElevated(pid)) { ranAsAdmin.Add(g.Id); timer.Stop(); HomeNav.Log("runs as administrator: " + g.Name); return; }
+            };
+            timer.Start();
+        }
+
+        public static void AfterGameStopped(Game g)
+        {
+            if (g == null || !ranAsAdmin.Contains(g.Id) || declined.Contains(g.Id)) return;
+            try { MakeAdminLauncher(g); }
+            catch (Exception ex) { HomeNav.Log("admin launcher failed: " + ex.Message); }
+        }
+
+        private static string Xml(string s) { return System.Security.SecurityElement.Escape(s ?? ""); }
+
+        private static void MakeAdminLauncher(Game g)
+        {
+            var api = HomeNav.Api;
+            var play = g.GameActions != null ? g.GameActions.FirstOrDefault(a => a.IsPlayAction) : null;
+            if (api == null || play == null || play.Type != GameActionType.File || string.IsNullOrWhiteSpace(play.Path)) return;
+            if (string.Equals(play.Path, Schtasks, StringComparison.OrdinalIgnoreCase)) return;  // already has one
+            var dir = g.InstallDirectory ?? "";
+            var exe = play.Path.Replace("{InstallDir}", dir);
+            if (!Path.IsPathRooted(exe)) exe = Path.Combine(dir, exe);
+            if (!File.Exists(exe)) return;
+            var args = (play.Arguments ?? "").Replace("{InstallDir}", dir);
+            var work = string.IsNullOrWhiteSpace(play.WorkingDir) ? Path.GetDirectoryName(exe) : play.WorkingDir.Replace("{InstallDir}", dir);
+            var name = Regex.Replace(g.Name ?? "Game", @"[\\/:*?""<>|]", "").Trim();
+            var task = @"Selene\" + name;
+            var xml = "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\n" +
+                "<Task version=\"1.4\" xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit/task\">\n" +
+                "  <RegistrationInfo><Description>Started by Selene (Playnite) so this game launches without a UAC prompt</Description></RegistrationInfo>\n" +
+                "  <Principals><Principal id=\"Author\"><LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel></Principal></Principals>\n" +
+                "  <Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>" +
+                "<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><AllowStartOnDemand>true</AllowStartOnDemand><ExecutionTimeLimit>PT0S</ExecutionTimeLimit><Priority>5</Priority></Settings>\n" +
+                "  <Actions Context=\"Author\"><Exec><Command>\"" + Xml(exe) + "\"</Command>" + (args != "" ? "<Arguments>" + Xml(args) + "</Arguments>" : "") +
+                "<WorkingDirectory>" + Xml(work) + "</WorkingDirectory></Exec></Actions>\n</Task>\n";
+            var file = Path.Combine(Path.GetTempPath(), "selene-task-" + g.Id + ".xml");
+            File.WriteAllText(file, xml, System.Text.Encoding.Unicode);
+            HomeNav.Log("admin launcher: asking Windows once for " + g.Name);
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo(Schtasks, "/create /tn \"" + task + "\" /xml \"" + file + "\" /f")
+                    { UseShellExecute = true, Verb = "runas", WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden };
+                using (var p = System.Diagnostics.Process.Start(psi)) p.WaitForExit(60000);
             }
+            catch (System.ComponentModel.Win32Exception) { declined.Add(g.Id); HomeNav.Log("admin launcher: declined for " + g.Name); return; }
+            finally { try { File.Delete(file); } catch { } }
+            if (!TaskExists(task)) { HomeNav.Log("admin launcher: task not created for " + g.Name); return; }
+            play.Path = Schtasks;
+            play.Arguments = "/run /tn \"" + task + "\"";
+            play.WorkingDir = null;
+            play.TrackingMode = TrackingMode.Directory;
+            play.TrackingPath = Path.GetDirectoryName(exe);
+            api.Database.Games.Update(g);
+            HomeNav.Log("admin launcher: " + g.Name + " now starts without the admin prompt (" + task + ")");
+        }
+
+        // ---- automatic: wrong or generic game folder, learned from where the game actually runs ----
+        // (a launcher or tool in Downloads made a game "playing" whenever anything ran from Downloads)
+        private static bool IsGenericFolder(string dir)
+        {
+            if (string.IsNullOrWhiteSpace(dir)) return true;
+            var d = Full(dir);
+            var home = Full(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            foreach (var g in new[] { home, Full(Path.Combine(home, "Downloads")), Full(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)),
+                                      Full(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)) })
+                if (d == g) return true;
+            var root = Path.GetPathRoot(dir);
+            return !string.IsNullOrEmpty(root) && d == Full(root);
+        }
+
+        public static void LearnFolder(Guid gameId, string exePath)
+        {
+            try
+            {
+                var api = HomeNav.Api;
+                if (api == null || string.IsNullOrWhiteSpace(exePath)) return;
+                var g = api.Database.Games.Get(gameId);
+                if (g == null) return;
+                var real = Path.GetDirectoryName(exePath);
+                if (IsGenericFolder(real)) return;
+                // a real, existing folder is left alone (games can run helpers from elsewhere)
+                if (!IsGenericFolder(g.InstallDirectory) && Directory.Exists(g.InstallDirectory)) return;
+                g.InstallDirectory = real;
+                var play = g.GameActions != null ? g.GameActions.FirstOrDefault(a => a.IsPlayAction) : null;
+                if (play != null && play.TrackingMode == TrackingMode.Directory) play.TrackingPath = real;
+                api.Database.Games.Update(g);
+                HomeNav.Log("game folder learned from the running game: " + g.Name + " -> " + real);
+            }
+            catch (Exception ex) { HomeNav.Log("folder learn failed: " + ex.Message); }
         }
 
         // Folder of the game's own exe; falls back to InstallDirectory (Steam-shortcut launches, no exe path)
@@ -413,6 +481,14 @@ namespace Selene
                 finally { CloseHandle(h); }
             }
             return list;
+        }
+
+        public static string ExeOf(int pid)
+        {
+            var h = OpenProcess(0x1000, false, pid);
+            if (h == IntPtr.Zero) return null;
+            try { var sb = new System.Text.StringBuilder(1024); int n = sb.Capacity; return QueryFullProcessImageName(h, 0, sb, ref n) ? sb.ToString() : null; }
+            finally { CloseHandle(h); }
         }
 
         public static bool IsMarkedRunning(Guid id) { return markedRunning.Contains(id); }

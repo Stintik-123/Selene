@@ -3095,7 +3095,7 @@ namespace Selene
                     Log("pause skipped: " + (name == null ? "no game running" : proc));
                     return;
                 }
-                bool online = GamePause.IsOnline(name ?? "");
+                bool online = GamePause.IsOnline((int)pid);
                 if (!online) ShowWindow(gameWindow, 7);  // SW_SHOWMINNOACTIVE: parked, so Windows will not ghost it once frozen
                 var target = gameWindow;
                 var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(online ? 1 : 450) };
@@ -3855,6 +3855,13 @@ namespace Selene
             if (w == null) return;
             var root = w.Content as UIElement;
             PlayReadySound();
+            if (game != IntPtr.Zero)
+            {
+                // where the game really runs from (fixes a wrong or generic game folder automatically)
+                uint gamePid;
+                GetWindowThreadProcessId(game, out gamePid);
+                LocalGames.LearnFolder(launchGameId, LocalGames.ExeOf((int)gamePid));
+            }
             Log("launch cover: revealing game (" + why + ", " + (DateTime.Now - launchStart).TotalSeconds.ToString("0.0") + " s)");
             if (root != null) root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));  // main window black behind
             w.Topmost = false;

@@ -9,21 +9,83 @@ namespace Selene
 {
     public static class GamePause
     {
-        // online games are only muted: freezing them drops the connection (and can upset anti-cheat)
-        private static readonly string[] OnlineGames = {
-            "path of exile", "marvel rivals", "arc raiders", "apex", "battlefield", "the finals", "finals", "nba 2k", "overwatch",
-            "destiny", "genshin", "honkai", "counter-strike", "rainbow six", "valorant", "fortnite", "warframe", "dota", "league of legends",
-            "call of duty", "naraka", "delta force", "wuthering", "zenless", "rocket league", "pubg", "dead by daylight", "deadlock",
-            "lost ark", "new world", "final fantasy xiv", "world of warcraft", "elden ring nightreign", "helldivers", "the division", "xdefiant" };
+        // Online games are only muted, never frozen: freezing drops the connection and can upset anti-cheat.
+        // Decided per game automatically (no list of names): anti-cheat files next to the game, or an open connection to
+        // the internet right now.
+        private static readonly string[] AntiCheatMarks = { "easyanticheat", "battleye", "beservice", "anticheat", "anti-cheat",
+            "mhyprot", "xigncode", "nprotect", "gameguard", "punkbuster", "vanguard", "acebase", "ace-base" };
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern bool QueryFullProcessImageName(IntPtr h, int flags, System.Text.StringBuilder name, ref int size);
+        [DllImport("iphlpapi.dll")] private static extern uint GetExtendedTcpTable(IntPtr table, ref int size, bool sort, int af, int tableClass, int reserved);
+
+        private static string ExePath(int pid)
+        {
+            var h = OpenProcess(0x1000 /* QUERY_LIMITED_INFORMATION */, false, pid);
+            if (h == IntPtr.Zero) return null;
+            try { var sb = new System.Text.StringBuilder(1024); int n = sb.Capacity; return QueryFullProcessImageName(h, 0, sb, ref n) ? sb.ToString() : null; }
+            finally { CloseHandle(h); }
+        }
+
+        private static bool HasAntiCheat(string exe)
+        {
+            try
+            {
+                var dir = new System.IO.DirectoryInfo(System.IO.Path.GetDirectoryName(exe));
+                for (int up = 0; up < 3 && dir != null && dir.Parent != null; up++, dir = dir.Parent)
+                    foreach (var e in dir.EnumerateFileSystemInfos())
+                    {
+                        var n = e.Name.ToLowerInvariant();
+                        foreach (var m in AntiCheatMarks) if (n.Contains(m)) return true;
+                    }
+            }
+            catch { }
+            return false;
+        }
+
+        private static bool IsPrivate(uint addr)  // addr in network byte order as read from the table
+        {
+            byte a = (byte)(addr & 0xFF), b = (byte)((addr >> 8) & 0xFF);
+            return a == 10 || a == 127 || a == 0 || (a == 172 && b >= 16 && b <= 31) || (a == 192 && b == 168) || (a == 169 && b == 254);
+        }
+
+        private static bool HasInternetConnection(int pid)
+        {
+            int size = 0;
+            GetExtendedTcpTable(IntPtr.Zero, ref size, false, 2 /* AF_INET */, 4 /* OWNER_PID_CONNECTIONS */, 0);
+            var buf = Marshal.AllocHGlobal(size);
+            try
+            {
+                if (GetExtendedTcpTable(buf, ref size, false, 2, 4, 0) != 0) return false;
+                int rows = Marshal.ReadInt32(buf);
+                for (int i = 0; i < rows; i++)
+                {
+                    var row = buf + 4 + i * 24;  // state, localAddr, localPort, remoteAddr, remotePort, owningPid
+                    if (Marshal.ReadInt32(row) != 5 /* ESTABLISHED */ || Marshal.ReadInt32(row + 20) != pid) continue;
+                    if (!IsPrivate((uint)Marshal.ReadInt32(row + 12))) return true;
+                }
+            }
+            catch { }
+            finally { Marshal.FreeHGlobal(buf); }
+            return false;
+        }
 
         private static int pausedPid;
         private static bool suspended, lowered;
 
-        public static bool IsOnline(string gameName)
+        private static readonly Dictionary<int, bool> onlineCache = new Dictionary<int, bool>();
+
+        public static bool IsOnline(int pid)
         {
-            var n = (gameName ?? "").ToLowerInvariant();
-            foreach (var o in OnlineGames) if (n.Contains(o)) return true;
-            return false;
+            bool known;
+            if (onlineCache.TryGetValue(pid, out known)) return known;
+            var exe = ExePath(pid);
+            string why = null;
+            if (exe != null && HasAntiCheat(exe)) why = "anti-cheat";
+            else if (HasInternetConnection(pid)) why = "internet connection";
+            if (onlineCache.Count > 50) onlineCache.Clear();
+            onlineCache[pid] = why != null;
+            HomeNav.Log("online check: " + (exe ?? ("pid " + pid)) + " -> " + (why ?? "offline"));
+            return why != null;
         }
 
         public static void Pause(int pid, string gameName) { Pause(pid, gameName, true); }
@@ -35,11 +97,12 @@ namespace Selene
             Resume();  // never leave an older one frozen
             pausedPid = pid;
             SetProcessMute(pid, true);
-            if (allowFreeze && !IsOnline(gameName)) suspended = Suspend(pid, true);
+            bool online = IsOnline(pid);
+            if (allowFreeze && !online) suspended = Suspend(pid, true);
             // not frozen (God of War un-minimises itself, online games): it kept rendering 4K at full speed behind the
             // home and Playnite stuttered -> lowest CPU and GPU priority while Playnite is in front
             if (!suspended) lowered = SetPriority(pid, false);
-            HomeNav.Log("pause: " + gameName + " (pid " + pid + ") muted" + (suspended ? ", frozen" : IsOnline(gameName) ? ", online: not frozen" : !allowFreeze ? ", not minimised: not frozen" : ", freeze failed"));
+            HomeNav.Log("pause: " + gameName + " (pid " + pid + ") muted" + (suspended ? ", frozen" : online ? ", online: not frozen" : !allowFreeze ? ", not minimised: not frozen" : ", freeze failed"));
         }
 
         public static void Resume()

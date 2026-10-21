@@ -43,6 +43,17 @@ namespace Selene
             if (Active && args.Game != null) HomeNav.GameStarting(args.Game.Id);
         }
 
+        public override void OnGameStarted(OnGameStartedEventArgs args)
+        {
+            // a game that runs as administrator gets a no-prompt launcher after it closes (automatic, any game)
+            if (Active && args.Game != null) LocalGames.WatchForAdmin(args.Game);
+        }
+
+        public override void OnGameStopped(OnGameStoppedEventArgs args)
+        {
+            if (Active && args.Game != null) LocalGames.AfterGameStopped(args.Game);
+        }
+
         public override void OnLibraryUpdated(OnLibraryUpdatedEventArgs args)
         {
             // store imports mark deleted games installed again: folder gone = not installed
