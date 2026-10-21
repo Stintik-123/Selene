@@ -62,7 +62,7 @@ namespace Selene
             var tvBackup = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "fullscreenConfig.tv.json");
             RowMode = System.IO.File.Exists(tvBackup) ? "all" : "tv";
             var app = Application.Current;
-            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["Ps5RowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); TakeOverAnikiSplash(); StartMusicOverrideWatch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
+            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["Ps5RowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
         }
 
         private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -446,8 +446,8 @@ namespace Selene
             ReplaceFadeImages(win);
             CacheNewsCards(win);
             RenderFilterTabs(win);
-            DisableAnikiTriggerPaging();
-            HookHubPageGuard();
+            // (Aniki only) DisableAnikiTriggerPaging();
+            // (Aniki only) HookHubPageGuard();
             hub.IsVisibleChanged += (s, a) => { if ((bool)a.NewValue) { FindAndPlay(win); RenderFilterTabs(win); } else { RefreshLibraryFades(); HidePreview(); ForceHorizontalLibrary(); EnsureBigScreenFilter(); if (!openingDetails) FocusLibraryLater(win); } };
             Log("hub hooked");
         }
