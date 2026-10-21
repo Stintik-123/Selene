@@ -8,13 +8,13 @@
 
     <Color x:Key="BlackColor">#FF000000</Color>
     <Color x:Key="WhiteColor">#FFFFFFFF</Color>
-    <Color x:Key="GlyphColor">#FFEC6200</Color>
-    <Color x:Key="GlyphLightColor">#FFFFAA00</Color>
-    <Color x:Key="SelectionLightColor">#FF8D919D</Color>
-    <Color x:Key="OverlayColor">#BB000000</Color>
+    <Color x:Key="GlyphColor">#FF9CCBFF</Color>  <!-- Selene: moonlight blue -->
+    <Color x:Key="GlyphLightColor">#FFEAF3FF</Color>
+    <Color x:Key="SelectionLightColor">#FFB8C7DD</Color>
+    <Color x:Key="OverlayColor">#CC03081A</Color>
     
-    <Color x:Key="ControlBackgroundColor">#FF2B354D</Color>
-    <Color x:Key="ControlBackgroundColorDark">#FF121830</Color>
+    <Color x:Key="ControlBackgroundColor">#FF1A2A4A</Color>
+    <Color x:Key="ControlBackgroundColorDark">#FF0A142C</Color>
 
     <Color x:Key="TextColor">#FFEBEBEB</Color>
     <Color x:Key="TextColorDark">#FF757575</Color>
@@ -38,14 +38,14 @@
     
     <Style x:Key="TextBlockBaseStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="{DynamicResource FontSize}" />
-        <Setter Property="FontFamily" Value="{DynamicResource FontTitilliumWebLight}" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Display" />
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     </Style>
 
     <RadialGradientBrush x:Key="MainBackgourndBrush" GradientOrigin="0.5,0.1" Center="0.5,0.2" RadiusX="0.5" RadiusY="0.7">
         <RadialGradientBrush.GradientStops>
-            <GradientStop Color="#FF091F51" Offset="0" />
-            <GradientStop Color="#FF0B1027" Offset="1.0" />
+            <GradientStop Color="#FF102A5C" Offset="0" />
+            <GradientStop Color="#FF03081A" Offset="1.0" />
         </RadialGradientBrush.GradientStops>
     </RadialGradientBrush>
 
@@ -60,13 +60,13 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="OverlayMenuBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,1.5" >
-        <GradientStop Color="#FF091F51" Offset="0"/>
-        <GradientStop Color="#FF000623" Offset="1.0"/>
+        <GradientStop Color="#F2102A5C" Offset="0"/>
+        <GradientStop Color="#F203081A" Offset="1.0"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="SelectionBrush" StartPoint="0.5,-0.5" EndPoint="1,1.5" >
-        <GradientStop Color="{DynamicResource GlyphColor}" Offset="0"/>
-        <GradientStop Color="{DynamicResource GlyphLightColor}" Offset="1.0"/>
+        <GradientStop Color="#FFFFFFFF" Offset="0"/>
+        <GradientStop Color="{DynamicResource GlyphColor}" Offset="1.0"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="GameDetailsBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,0.4" >

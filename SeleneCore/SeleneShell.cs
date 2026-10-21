@@ -46,7 +46,32 @@ namespace Selene
             library.Command = new Relay(ShowLibrary);
             hub.Command = new Relay(ShowHome);
             HomeNav.Log("shell: home/library wired");
+            DevView();
             return true;
+        }
+
+        // developer switch: %TEMP%\selene-dev-view holding "details", "library" or "menu" opens that screen a few seconds
+        // after start (to look at each screen while building Selene, without a controller)
+        private static void DevView()
+        {
+            var file = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-view");
+            if (!System.IO.File.Exists(file)) return;
+            var view = System.IO.File.ReadAllText(file).Trim().ToLowerInvariant();
+            var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+            later.Tick += (s, e) =>
+            {
+                later.Stop();
+                try
+                {
+                    var vm = main.DataContext;
+                    if (view == "library") ShowLibrary();
+                    else if (view == "details" && vm != null) vm.GetType().GetProperty("GameDetailsVisible").SetValue(vm, true, null);
+                    else if (view == "menu" && vm != null) { var c = vm.GetType().GetProperty("OpenMainMenuCommand").GetValue(vm, null) as ICommand; if (c != null) c.Execute(null); }
+                    HomeNav.Log("shell: developer view " + view);
+                }
+                catch (Exception ex) { HomeNav.Log("shell: developer view failed " + ex.Message); }
+            };
+            later.Start();
         }
 
         private static UIElement Part(string name) { return main != null ? HomeNav.FindByName(main, name) as UIElement : null; }

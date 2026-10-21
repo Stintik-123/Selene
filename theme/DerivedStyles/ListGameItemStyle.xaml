@@ -36,15 +36,21 @@
                         <Grid.RenderTransform>
                             <ScaleTransform x:Name="ScaleTransform" ScaleX="1" ScaleY="1" />
                         </Grid.RenderTransform>
-                        <ContentPresenter />
-                        <Border CornerRadius="3" BorderThickness="3" BorderBrush="{DynamicResource ControlBackgroundBrush}"
-                                Margin="-3"/>
-                        <Border x:Name="MainBorder" BorderThickness="5" BorderBrush="{DynamicResource SelectionBrush}"
-                                Margin="-5" Visibility="Collapsed" CornerRadius="3">
+                        <!-- Selene: rounded tile, white ring with a soft glow when selected (like the home row) -->
+                        <Border CornerRadius="12" ClipToBounds="True">
+                            <Border.OpacityMask>
+                                <VisualBrush>
+                                    <VisualBrush.Visual>
+                                        <Border Background="Black" CornerRadius="12" Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Grid}}"
+                                                Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Grid}}"/>
+                                    </VisualBrush.Visual>
+                                </VisualBrush>
+                            </Border.OpacityMask>
+                            <ContentPresenter />
+                        </Border>
+                        <Border x:Name="MainBorder" BorderThickness="3" BorderBrush="White" Margin="-6" Visibility="Collapsed" CornerRadius="16">
                             <Border.Effect>
-                                <DropShadowEffect ShadowDepth="0" Opacity="1"
-                                                  Color="{DynamicResource GlyphColor}"                                                  
-                                                  RenderingBias="Quality" BlurRadius="20"/>
+                                <DropShadowEffect ShadowDepth="0" Opacity="0.55" Color="White" RenderingBias="Quality" BlurRadius="18"/>
                             </Border.Effect>
                         </Border>
                     </Grid>

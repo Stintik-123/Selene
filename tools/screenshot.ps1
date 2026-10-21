@@ -9,11 +9,23 @@ public static class Win {
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
   public struct RECT { public int L, T, R, B; }
+  public delegate bool EnumProc(IntPtr h, IntPtr l);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc cb, IntPtr l);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  // Playnite's top-most visible window of at least screen-ish size (menus open in their own windows)
+  public static IntPtr TopWindow(uint pid) {
+    IntPtr found = IntPtr.Zero;
+    EnumWindows((h, l) => { uint p; GetWindowThreadProcessId(h, out p); RECT r;
+      if (p == pid && IsWindowVisible(h) && GetWindowRect(h, out r) && r.R - r.L >= 800 && r.B - r.T >= 600) { found = h; return false; }
+      return true; }, IntPtr.Zero);
+    return found;
+  }
 }
 "@
 [Win]::SetProcessDPIAware() | Out-Null
 $p = Get-Process Playnite.FullscreenApp -ErrorAction Stop | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1
-$h = $p.MainWindowHandle
+$h = [Win]::TopWindow([uint32]$p.Id); if ($h -eq [IntPtr]::Zero) { $h = $p.MainWindowHandle }
 $r = New-Object Win+RECT
 [Win]::GetWindowRect($h, [ref]$r) | Out-Null
 $w = $r.R - $r.L; $ht = $r.B - $r.T

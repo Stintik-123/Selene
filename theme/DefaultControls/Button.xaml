@@ -14,40 +14,33 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Grid Background="{TemplateBinding Background}">
-                        <TextBlock Style="{DynamicResource TextBlockBaseStyle}"
+                    <!-- Selene: rounded; selected = white with dark text (like the home's Play/Details pills) -->
+                    <Grid>
+                        <Border x:Name="Fill" CornerRadius="12" Background="{TemplateBinding Background}"
+                                BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"/>
+                        <TextBlock x:Name="Text" Style="{DynamicResource TextBlockBaseStyle}"
                                    Foreground="{TemplateBinding Foreground}"
                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                   Margin="{TemplateBinding Padding}">                            
-                                <ContentPresenter />
+                                   Margin="{TemplateBinding Padding}">
+                            <ContentPresenter />
                         </TextBlock>
-
-                        <Border BorderThickness="{TemplateBinding BorderThickness}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                x:Name="BorderStandard" />
-                        
-                        <Border x:Name="BorderFocus" Margin="0,-3,0,-3"
-                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-                                BorderBrush="{DynamicResource SelectionBrush}"
-                                BorderThickness="3" Visibility="Hidden" />
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.5" />
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Fill" Property="Background" Value="#26FFFFFF" />
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter Property="Background" Value="{DynamicResource ControlBackgroundDarkBrush}" />                            
-                            <Setter Property="Visibility" Value="Visible" TargetName="BorderFocus" />
-                            <Setter Property="Visibility" Value="Hidden" TargetName="BorderStandard" />
-                        </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{DynamicResource ControlBackgroundDarkBrush}" />
-                            <Setter Property="Visibility" Value="Visible" TargetName="BorderFocus" />
-                            <Setter Property="Visibility" Value="Hidden" TargetName="BorderStandard" />
+                            <Setter TargetName="Fill" Property="Background" Value="White" />
+                            <Setter TargetName="Fill" Property="BorderBrush" Value="White" />
+                            <Setter TargetName="Text" Property="Foreground" Value="#111111" />
+                            <Setter TargetName="Fill" Property="Effect">
+                                <Setter.Value><DropShadowEffect ShadowDepth="0" BlurRadius="18" Color="White" Opacity="0.35"/></Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Foreground" Value="{DynamicResource TextBrushDark}" />
+                            <Setter Property="Opacity" Value="0.5" />
+                            <Setter TargetName="Text" Property="Foreground" Value="{DynamicResource TextBrushDark}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
