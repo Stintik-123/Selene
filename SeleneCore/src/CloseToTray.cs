@@ -143,7 +143,7 @@ namespace Selene
                     if (menu != null && menu != w) menu.Close();
                 });
             }
-            else if (btn.Name == "PART_ButtonExitPlaynite")  // Start menu "Exit Playnite" (Aniki rewires it to video + quit)
+            else if (btn.Name == "PART_ButtonExitPlaynite")  // Start menu "Exit Playnite" (the old theme rewires it to video + quit)
             {
                 btn.Command = new ActionCommand(() =>
                 {
@@ -165,10 +165,10 @@ namespace Selene
             GamePause.Resume();
             // Settings panel / menus are separate windows: hidden with Playnite they came back without focus (the panel
             // stayed up while the pad drove the home behind it). Close them, Playnite always returns to a clean home.
-            // only Playnite's own panels/menus: our launch cover ("Ps5LaunchCover") is a window too and must stay up while
+            // only Playnite's own panels/menus: our launch cover ("SeleneLaunchCover") is a window too and must stay up while
             // the game loads (closing it showed the Windows desktop instead of the loading screen)
             foreach (Window other in Application.Current.Windows)
-                if (other != w && other.IsVisible && other.Title != "Ps5LaunchCover" && (other.GetType().Namespace ?? "").StartsWith("Playnite"))
+                if (other != w && other.IsVisible && other.Title != "SeleneLaunchCover" && (other.GetType().Namespace ?? "").StartsWith("Playnite"))
                 { try { other.Close(); HomeNav.Log("tray: closed " + other.GetType().FullName + " before hiding"); } catch { } }
             EnsureTray();
             tray.Visible = true;

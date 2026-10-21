@@ -28,7 +28,7 @@ namespace Selene
             if (app == null) return;
             // the theme reads the media folder from here (tile squares, hero art)
             app.Resources["SeleneMediaRoot"] = System.IO.Path.GetDirectoryName(SelenePaths.Media("Hero"));
-            if (!app.Resources.Contains("Ps5RowMode")) app.Resources["Ps5RowMode"] = "tv";
+            if (!app.Resources.Contains("SeleneRowMode")) app.Resources["SeleneRowMode"] = "tv";
             // the main screen's template is applied a moment after start: retry until its parts exist
             attachTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
             int tries = 0;
@@ -40,8 +40,8 @@ namespace Selene
         {
             main = Application.Current.MainWindow;
             if (main == null) return false;
-            var library = HomeNav.FindByName(main, "Ps5Nav_library") as ButtonBase;
-            var hub = HomeNav.FindByName(main, "Ps5Nav_hub") as ButtonBase;
+            var library = HomeNav.FindByName(main, "SeleneNav_library") as ButtonBase;
+            var hub = HomeNav.FindByName(main, "SeleneNav_hub") as ButtonBase;
             if (library == null || hub == null) return false;
             library.Command = new Relay(ShowLibrary);
             hub.Command = new Relay(ShowHome);

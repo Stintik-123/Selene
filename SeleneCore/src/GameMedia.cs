@@ -1,7 +1,7 @@
-// Screenshot strip for the PS5 home (ps5-news-row.xaml): when the selected game changes, find its Steam store
-// screenshots and publish them as DynamicResource Ps5Shots (list of ShotItem) + Ps5ShotsNone (Visibility).
+// Screenshot strip on the home: when the selected game changes, find its Steam store
+// screenshots and publish them as DynamicResource SeleneShots (list of ShotItem) + SeleneShotsNone (Visibility).
 // Sources, in order: Extra Metadata Loader's cached SteamAppDetails json, Steam appdetails (Steam games), Steam store
-// search by name, then IGDB through Playnite's backend (games not on Steam, e.g. HoYoverse). Images are cached in D:\PlayniteMedia\Screenshots\<game id>\. Falls back to the
+// search by name, then IGDB through Playnite's backend (games not on Steam). Images are cached in the media folder\<game id>\. Falls back to the
 // game's background art. A on a tile opens a full-screen viewer (Left/Right flip, A/B close).
 using System;
 using System.Collections.Generic;
@@ -41,8 +41,8 @@ namespace Selene
             if (debounce == null)
             {
                 StartPrefetch();
-                Application.Current.Resources["Ps5ShotsNone"] = Visibility.Collapsed;  // no "none" text before the first load
-                for (int i = 0; i < Tiles; i++) Application.Current.Resources["Ps5Shot" + i + "Vis"] = Visibility.Collapsed;
+                Application.Current.Resources["SeleneShotsNone"] = Visibility.Collapsed;  // no "none" text before the first load
+                for (int i = 0; i < Tiles; i++) Application.Current.Resources["SeleneShot" + i + "Vis"] = Visibility.Collapsed;
                 // only once the selection has settled: stepping card by card with short pauses used to load (and animate) the
                 // strip after nearly every card, and that work landed right when the next move started
                 debounce = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
@@ -62,7 +62,7 @@ namespace Selene
             var strip = stripRef != null ? stripRef.Target as FrameworkElement : null;
             if (strip == null)
             {
-                strip = HomeNav.FindByName(Application.Current.MainWindow, "Ps5ShotStrip");
+                strip = HomeNav.FindByName(Application.Current.MainWindow, "SeleneShotStrip");
                 if (strip != null) stripRef = new WeakReference(strip);
             }
             return strip;
@@ -190,7 +190,7 @@ namespace Selene
         {
             shown = Guid.Empty;
             FadeOut();
-            Application.Current.Resources["Ps5ShotsNone"] = Visibility.Collapsed;
+            Application.Current.Resources["SeleneShotsNone"] = Visibility.Collapsed;
         }
 
         private static void Apply(Guid id, List<ShotItem> items)
@@ -200,10 +200,10 @@ namespace Selene
             var res = Application.Current.Resources;
             for (int i = 0; i < Tiles; i++)
             {
-                res["Ps5Shot" + i] = i < items.Count ? items[i].Thumb : null;
-                res["Ps5Shot" + i + "Vis"] = i < items.Count ? Visibility.Visible : Visibility.Collapsed;
+                res["SeleneShot" + i] = i < items.Count ? items[i].Thumb : null;
+                res["SeleneShot" + i + "Vis"] = i < items.Count ? Visibility.Visible : Visibility.Collapsed;
             }
-            res["Ps5ShotsNone"] = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            res["SeleneShotsNone"] = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             var strip = Strip();
             if (strip != null) { strip.BeginAnimation(UIElement.OpacityProperty, null); strip.Opacity = 1; }
             // animate once per game: the same game's pictures coming back within 2 s are shown without replaying it
@@ -231,7 +231,7 @@ namespace Selene
             var dur = TimeSpan.FromMilliseconds(380);
             for (int i = 0; i < Math.Min(Tiles, current.Count); i++)
             {
-                var c = HomeNav.FindByName(strip, "Ps5ShotTile" + i) as UIElement;
+                var c = HomeNav.FindByName(strip, "SeleneShotTile" + i) as UIElement;
                 if (c == null) continue;
                 var shift = c.RenderTransform as TranslateTransform;
                 if (shift == null || shift.IsFrozen) { shift = new TranslateTransform(); c.RenderTransform = shift; }
@@ -427,7 +427,7 @@ namespace Selene
             if (pressed != "A") return false;
             var fe = focused as FrameworkElement;
             int index;
-            if (fe == null || !fe.Name.StartsWith("Ps5ShotTile") || !int.TryParse(Convert.ToString(fe.Tag), out index)) return false;
+            if (fe == null || !fe.Name.StartsWith("SeleneShotTile") || !int.TryParse(Convert.ToString(fe.Tag), out index)) return false;
             if (index >= current.Count) return false;
             OpenViewer(current, index, fe);
             return true;

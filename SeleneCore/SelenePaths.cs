@@ -38,6 +38,10 @@ namespace Selene
         // optional: game-streaming host logs (a connected streaming client changes some behaviour); empty = off
         public static string StreamLogs { get { return settings != null ? settings.StreamLogsFolder ?? "" : ""; } }
 
+        public static string StreamClientMatch { get { return settings != null ? settings.StreamClientMatch ?? "" : ""; } }
+        public static string StreamCredentials { get { return settings != null ? settings.StreamCredentialsFile ?? "" : ""; } }
+        public static string HelperTask { get { return settings != null ? settings.HelperTask ?? "" : ""; } }
+
         public static string SteamUserdata
         {
             get

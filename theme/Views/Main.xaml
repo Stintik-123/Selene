@@ -1,4 +1,4 @@
-﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -87,9 +87,9 @@
                             <!-- ================= HOME ================= -->
                             <Grid x:Name="WelcomeHubOverlay">
                                 <!-- selected game's art: Selene's hero art (media folder) over Playnite's background -->
-                                <Grid x:Name="Ps5HubGameBackground" IsHitTestVisible="False">
+                                <Grid x:Name="SeleneHubGameBackground" IsHitTestVisible="False">
                                     <FadeImage Source="{Binding SelectedGame.DisplayBackgroundImage}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
-                                    <TextBlock x:Name="Ps5HeroPath" Tag="{DynamicResource SeleneMediaRoot}" Visibility="Collapsed">
+                                    <TextBlock x:Name="SeleneHeroPath" Tag="{DynamicResource SeleneMediaRoot}" Visibility="Collapsed">
                                         <TextBlock.Text>
                                             <MultiBinding StringFormat="{}{0}\Hero\{1}.jpg">
                                                 <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
@@ -97,7 +97,7 @@
                                             </MultiBinding>
                                         </TextBlock.Text>
                                     </TextBlock>
-                                    <FadeImage Source="{Binding Text, ElementName=Ps5HeroPath}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
+                                    <FadeImage Source="{Binding Text, ElementName=SeleneHeroPath}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
                                     <Border>
                                         <Border.Background>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -118,8 +118,8 @@
                                 </Grid>
 
                                 <!-- actions Selene Core wires up (home <-> library) -->
-                                <ButtonEx x:Name="Ps5Nav_library" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
-                                <ButtonEx x:Name="Ps5Nav_hub" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
+                                <ButtonEx x:Name="SeleneNav_library" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
+                                <ButtonEx x:Name="SeleneNav_hub" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
 
                                 <Grid Margin="0,120,0,0">
                                     <Grid.RowDefinitions>
@@ -300,9 +300,9 @@
                                         </Grid.RowDefinitions>
 
                                         <!-- game row (Selene Core fills it, keeps the selection's slot, plays trailers) -->
-                                        <Grid x:Name="Ps5RowIntro" Grid.Row="0" RenderTransformOrigin="0.5,0.3">
-                                            <Grid.RenderTransform><ScaleTransform x:Name="Ps5RowIntroScale" ScaleX="1" ScaleY="1"/></Grid.RenderTransform>
-                                            <ListBoxEx x:Name="Ps5GameRow" Margin="-8,10,-80,-70" Tag="{DynamicResource Ps5RowMode}"
+                                        <Grid x:Name="SeleneRowIntro" Grid.Row="0" RenderTransformOrigin="0.5,0.3">
+                                            <Grid.RenderTransform><ScaleTransform x:Name="SeleneRowIntroScale" ScaleX="1" ScaleY="1"/></Grid.RenderTransform>
+                                            <ListBoxEx x:Name="SeleneGameRow" Margin="-8,10,-80,-70" Tag="{DynamicResource SeleneRowMode}"
                                                        SelectedIndex="1"
                                                        ItemContainerStyle="{StaticResource SeleneTileStyle}"
                                                        pbeh:FocusBahaviors.OnVisibilityFocus="True"
@@ -328,12 +328,12 @@
                                             </ListBoxEx>
                                             <!-- selected game's name; placed under the selected tile by Selene Core -->
                                             <Canvas IsHitTestVisible="False" ClipToBounds="False">
-                                                <TextBlock x:Name="Ps5TileTitle" Foreground="White" FontSize="22" FontFamily="{DynamicResource FontMain}" Opacity="0">
+                                                <TextBlock x:Name="SeleneTileTitle" Foreground="White" FontSize="22" FontFamily="{DynamicResource FontMain}" Opacity="0">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="{Binding SelectedItem.DisplayName, ElementName=Ps5GameRow}"/>
+                                                            <Setter Property="Text" Value="{Binding SelectedItem.DisplayName, ElementName=SeleneGameRow}"/>
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding SelectedItem, ElementName=Ps5GameRow}" Value="nav:library">
+                                                                <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:library">
                                                                     <Setter Property="Text" Value="{DynamicResource LOCLibrary}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
@@ -344,19 +344,19 @@
                                         </Grid>
 
                                         <!-- selected game: logo, actions, info -->
-                                        <Grid x:Name="Ps5InfoIntro" Grid.Row="1" HorizontalAlignment="Left">
-                                            <Grid.RenderTransform><TranslateTransform x:Name="Ps5InfoIntroShift" Y="0"/></Grid.RenderTransform>
+                                        <Grid x:Name="SeleneInfoIntro" Grid.Row="1" HorizontalAlignment="Left">
+                                            <Grid.RenderTransform><TranslateTransform x:Name="SeleneInfoIntroShift" Y="0"/></Grid.RenderTransform>
                                             <StackPanel Margin="0,30,0,0" HorizontalAlignment="Left" Width="900">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=Ps5GameRow}" Value="nav:library">
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:library">
                                                                 <Setter Property="Visibility" Value="Hidden"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </StackPanel.Style>
-                                                <TextBlock x:Name="Ps5LogoPath" Tag="{Api Paths.ConfigurationPath}" Visibility="Collapsed">
+                                                <TextBlock x:Name="SeleneLogoPath" Tag="{Api Paths.ConfigurationPath}" Visibility="Collapsed">
                                                     <TextBlock.Text>
                                                         <MultiBinding StringFormat="{}{0}\ExtraMetadata\games\{1}\logo.png">
                                                             <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
@@ -365,7 +365,7 @@
                                                     </TextBlock.Text>
                                                 </TextBlock>
                                                 <Grid Height="170" HorizontalAlignment="Left">
-                                                    <Image x:Name="Ps5Logo" Source="{Binding ElementName=Ps5LogoPath, Path=Text, Converter={StaticResource ImageStringToImageConverter}, NotifyOnTargetUpdated=True}"
+                                                    <Image x:Name="SeleneLogo" Source="{Binding ElementName=SeleneLogoPath, Path=Text, Converter={StaticResource ImageStringToImageConverter}, NotifyOnTargetUpdated=True}"
                                                            MaxWidth="620" MaxHeight="170" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Bottom" RenderOptions.BitmapScalingMode="Fant">
                                                         <Image.RenderTransform><TranslateTransform x:Name="LogoShift" X="0"/></Image.RenderTransform>
                                                         <Image.Triggers>
@@ -392,7 +392,7 @@
                                                             <Style TargetType="TextBlock">
                                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding ElementName=Ps5Logo, Path=Source}" Value="{x:Null}">
+                                                                    <DataTrigger Binding="{Binding ElementName=SeleneLogo, Path=Source}" Value="{x:Null}">
                                                                         <Setter Property="Visibility" Value="Visible"/>
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
@@ -436,7 +436,7 @@
                                                 </Border>
 
                                                 <StackPanel Orientation="Horizontal" Margin="2,18,0,0">
-                                                    <Button x:Name="Ps5PlayBtn" Template="{StaticResource SelenePill}" MinWidth="180" Padding="36,0" Height="60" Margin="0,0,14,0"
+                                                    <Button x:Name="SelenePlayBtn" Template="{StaticResource SelenePill}" MinWidth="180" Padding="36,0" Height="60" Margin="0,0,14,0"
                                                             VerticalAlignment="Center" Focusable="True" FocusVisualStyle="{x:Null}" Cursor="Hand">
                                                         <TextBlock FontSize="21" FontFamily="{DynamicResource FontMain}">
                                                             <TextBlock.Style>
@@ -449,7 +449,7 @@
                                                             </TextBlock.Style>
                                                         </TextBlock>
                                                     </Button>
-                                                    <Button x:Name="Ps5DetailsBtn" Template="{StaticResource SelenePill}" MinWidth="180" Padding="36,0" Height="60"
+                                                    <Button x:Name="SeleneDetailsBtn" Template="{StaticResource SelenePill}" MinWidth="180" Padding="36,0" Height="60"
                                                             VerticalAlignment="Center" Focusable="True" FocusVisualStyle="{x:Null}" Cursor="Hand">
                                                         <TextBlock FontSize="21" FontFamily="{DynamicResource FontMain}">
                                                             <TextBlock.Style>
@@ -462,7 +462,7 @@
                                                             </TextBlock.Style>
                                                         </TextBlock>
                                                     </Button>
-                                                    <Button x:Name="Ps5FavBtn" ToolTip="Favorite" Template="{StaticResource SelenePill}" MinWidth="52" Width="52" Padding="0" Height="60" Margin="14,0,0,0"
+                                                    <Button x:Name="SeleneFavBtn" ToolTip="Favorite" Template="{StaticResource SelenePill}" MinWidth="52" Width="52" Padding="0" Height="60" Margin="14,0,0,0"
                                                             VerticalAlignment="Center" Focusable="True" FocusVisualStyle="{x:Null}" Cursor="Hand">
                                                         <TextBlock FontSize="20" FontFamily="Segoe MDL2 Assets">
                                                             <TextBlock.Style>
@@ -497,7 +497,7 @@
                                         </Grid>
                                     </Grid>
 
-                                    <!-- the selected game's screenshots (Selene Core publishes Ps5Shot0-5 / Ps5ShotsNone); A opens the viewer -->
+                                    <!-- the selected game's screenshots (Selene Core publishes SeleneShot0-5 / SeleneShotsNone); A opens the viewer -->
                                     <Grid x:Name="HubBottomCards" Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="80,34,0,0" RenderTransformOrigin="0.5,0.5">
                                         <Grid.RenderTransform><TranslateTransform x:Name="HubBottomCardsShift" Y="0"/></Grid.RenderTransform>
                                         <Grid.Resources>
@@ -534,27 +534,27 @@
                                             </Style>
                                         </Grid.Resources>
                                         <StackPanel>
-                                            <TextBlock Text="No screenshots for this game" FontSize="18" FontFamily="Segoe UI" Foreground="#99FFFFFF" Visibility="{DynamicResource Ps5ShotsNone}"/>
-                                            <ScrollViewer x:Name="Ps5ShotStrip" Width="1780" Margin="-10,-10,0,0" Padding="10" Focusable="False" CanContentScroll="False"
+                                            <TextBlock Text="No screenshots for this game" FontSize="18" FontFamily="Segoe UI" Foreground="#99FFFFFF" Visibility="{DynamicResource SeleneShotsNone}"/>
+                                            <ScrollViewer x:Name="SeleneShotStrip" Width="1780" Margin="-10,-10,0,0" Padding="10" Focusable="False" CanContentScroll="False"
                                                           HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
-                                                <StackPanel x:Name="Ps5ShotTiles" Orientation="Horizontal">
-                                                    <ButtonEx x:Name="Ps5ShotTile0" Tag="0" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource Ps5Shot0Vis}">
-                                                        <Image Source="{DynamicResource Ps5Shot0}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                <StackPanel x:Name="SeleneShotTiles" Orientation="Horizontal">
+                                                    <ButtonEx x:Name="SeleneShotTile0" Tag="0" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource SeleneShot0Vis}">
+                                                        <Image Source="{DynamicResource SeleneShot0}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                     </ButtonEx>
-                                                    <ButtonEx x:Name="Ps5ShotTile1" Tag="1" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource Ps5Shot1Vis}">
-                                                        <Image Source="{DynamicResource Ps5Shot1}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    <ButtonEx x:Name="SeleneShotTile1" Tag="1" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource SeleneShot1Vis}">
+                                                        <Image Source="{DynamicResource SeleneShot1}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                     </ButtonEx>
-                                                    <ButtonEx x:Name="Ps5ShotTile2" Tag="2" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource Ps5Shot2Vis}">
-                                                        <Image Source="{DynamicResource Ps5Shot2}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    <ButtonEx x:Name="SeleneShotTile2" Tag="2" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource SeleneShot2Vis}">
+                                                        <Image Source="{DynamicResource SeleneShot2}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                     </ButtonEx>
-                                                    <ButtonEx x:Name="Ps5ShotTile3" Tag="3" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource Ps5Shot3Vis}">
-                                                        <Image Source="{DynamicResource Ps5Shot3}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    <ButtonEx x:Name="SeleneShotTile3" Tag="3" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource SeleneShot3Vis}">
+                                                        <Image Source="{DynamicResource SeleneShot3}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                     </ButtonEx>
-                                                    <ButtonEx x:Name="Ps5ShotTile4" Tag="4" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource Ps5Shot4Vis}">
-                                                        <Image Source="{DynamicResource Ps5Shot4}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    <ButtonEx x:Name="SeleneShotTile4" Tag="4" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource SeleneShot4Vis}">
+                                                        <Image Source="{DynamicResource SeleneShot4}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                     </ButtonEx>
-                                                    <ButtonEx x:Name="Ps5ShotTile5" Tag="5" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource Ps5Shot5Vis}">
-                                                        <Image Source="{DynamicResource Ps5Shot5}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    <ButtonEx x:Name="SeleneShotTile5" Tag="5" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource SeleneShot5Vis}">
+                                                        <Image Source="{DynamicResource SeleneShot5}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                     </ButtonEx>
                                                 </StackPanel>
                                             </ScrollViewer>
@@ -566,7 +566,7 @@
                             <!-- ================= TOP BAR (home + library) ================= -->
                             <Grid x:Name="HubTopBarBackground" VerticalAlignment="Top" Height="110" Margin="64,0,64,0">
                                 <!-- home: LT/RT filter tabs (drawn by Selene Core) -->
-                                <StackPanel x:Name="Ps5FilterTabs" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                <StackPanel x:Name="SeleneFilterTabs" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"
                                             Visibility="{Binding Visibility, ElementName=WelcomeHubOverlay}"/>
                                 <!-- library: Playnite's filter presets -->
                                 <FilterPresetSelector x:Name="PART_FilterPresetSelector" HorizontalAlignment="Left" VerticalAlignment="Center"

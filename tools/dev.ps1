@@ -1,15 +1,26 @@
-# Selene dev loop: restart the real Playnite on the theme you want to look at (~8 s).
-#   dev.ps1 new      -> the Selene being built (theme\ in this repo, linked into Playnite's themes folder)
-#   dev.ps1 legacy   -> Selene Legacy (the Aniki-based setup in daily use)
+# Selene dev loop: restart the real Playnite on the Selene being built, or back on the theme you were using (~8 s).
+#   dev.ps1 new    -> Selene (theme\ in this repo, linked into Playnite's themes folder); remembers the current theme
+#   dev.ps1 back   -> the theme that was active before `dev.ps1 new`
+#   -quiet         -> start Playnite in the tray (no fullscreen pop-up over the desktop while working)
 # Playnite allows only one running copy per Windows session (fixed mutex), so there is no side-by-side test instance.
-param([ValidateSet('new', 'legacy')][string]$which = 'new')
+# A Selene Core build waiting in SeleneCore\obj\stage (tools\build.ps1 while Playnite runs) is installed on the way.
+param([ValidateSet('new', 'back')][string]$which = 'new', [switch]$quiet)
 
-$ids = @{
-    new    = 'Selene_a98e0027-fa6a-4f5e-a087-bad8d69f2443'
-    legacy = 'Selene_9c048650-2da7-4ffa-ba01-b154cc195b86'
-}
+$selene = 'Selene_a98e0027-fa6a-4f5e-a087-bad8d69f2443'
+$root = Split-Path $PSScriptRoot -Parent
+$previousFile = Join-Path $root '.dev-previous-theme'
 $app = Join-Path $env:LOCALAPPDATA 'Playnite\Playnite.FullscreenApp.exe'
 $config = Join-Path $env:APPDATA 'Playnite\fullscreenConfig.json'
+
+$text = [IO.File]::ReadAllText($config)
+$current = [regex]::Match($text, '"Theme"\s*:\s*"([^"]*)"').Groups[1].Value
+if ($which -eq 'new') {
+    if ($current -ne $selene) { Set-Content $previousFile $current }
+    $target = $selene
+} else {
+    if (-not (Test-Path $previousFile)) { throw "no previous theme recorded (run dev.ps1 new first)" }
+    $target = (Get-Content $previousFile).Trim()
+}
 
 $running = Get-Process Playnite.FullscreenApp -ErrorAction SilentlyContinue
 if ($running) {
@@ -18,13 +29,12 @@ if ($running) {
     Get-Process Playnite.FullscreenApp -ErrorAction SilentlyContinue | Stop-Process -Force
 }
 
-# a Selene Core build waiting in obj\stage goes in now that Playnite has let go of the old one
-$stage = Join-Path (Split-Path $PSScriptRoot -Parent) 'SeleneCore\obj\stage'
-if (Test-Path "$stage\SeleneCore.dll") { Copy-Item "$stage\*" (Join-Path (Split-Path $PSScriptRoot -Parent) 'SeleneCore\bin') -Recurse -Force }
+$stage = Join-Path $root 'SeleneCore\obj\stage'
+if (Test-Path "$stage\SeleneCore.dll") { Copy-Item "$stage\*" (Join-Path $root 'SeleneCore\bin') -Recurse -Force }
 
 $text = [IO.File]::ReadAllText($config)
-$text = [regex]::Replace($text, '"Theme"\s*:\s*"[^"]*"', '"Theme": "' + $ids[$which] + '"')
+$text = [regex]::Replace($text, '"Theme"\s*:\s*"[^"]*"', '"Theme": "' + $target + '"')
 [IO.File]::WriteAllText($config, $text)
 
-Start-Process $app '--hidesplashscreen'
-"Playnite restarting on " + $(if ($which -eq 'new') { 'Selene (new)' } else { 'Selene Legacy' })
+if ($quiet) { Start-Process $app '--hidesplashscreen', '--startclosedtotray' } else { Start-Process $app '--hidesplashscreen' }
+"Playnite restarting on " + $target

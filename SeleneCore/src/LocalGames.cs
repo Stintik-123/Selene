@@ -1,4 +1,4 @@
-// Games installed outside a store launcher (copied/installed into D:\Games): Playnite's library update never sees them.
+// Games installed outside a store launcher (copied/installed into the game folders): Playnite's library update never sees them.
 // Before each library refresh (HomeNav.RefreshLibrary) every folder in the roots that no game points to, and whose name
 // isn't already in the library, is added as an installed game with its main exe as the Play action. The library refresh
 // that follows then runs the usual new-game setup (auto-setup-new.py: trailer, hero, logo, category, square art).
@@ -53,7 +53,7 @@ namespace Selene
                         var name = Path.GetFileName(dir);
                         if (names.Contains(Norm(name))) continue;  // a store copy already in the library
                         if (IsXboxAppFolder(dir)) continue;  // the Xbox library lists it already
-                        if (IsInstallerFolder(dir)) continue;  // a downloaded repack / setup, not an installed game
+                        if (IsInstallerFolder(dir)) continue;  // a downloaded installer, not an installed game
                         var exe = PickExe(dir);
                         if (exe == null) continue;
                         var game = new Game(name)
@@ -206,9 +206,8 @@ namespace Selene
             }
         }
 
-        // D:\Games is also the Xbox app's install folder (.GamingRoot): its games carry MicrosoftGame.Config, and the
-        // Xbox library integration already has them (Call of Duty: Modern Warfare II was added twice more as local games:
-        // once under its folder's code name "42C66953-...", once as "Call of Duty- Modern Warfare 2")
+        // a game folder can also be the Xbox app's install folder (.GamingRoot): its games carry MicrosoftGame.Config and the
+        // Xbox library integration already lists them (they showed up twice more as local games)
         private static bool IsXboxAppFolder(string dir)
         {
             foreach (var d in new[] { dir, Path.Combine(dir, "Content") })
@@ -216,8 +215,8 @@ namespace Selene
             return false;
         }
 
-        // "007 First Light [FitGirl Repack]": setup.exe + fg-01.bin... next to the real install, and it showed up as a 2nd game
-        private static readonly Regex RepackName = new Regex(@"\b(repack|fitgirl|dodi|elamigos|kaos|setup|installer)\b", RegexOptions.IgnoreCase);
+        // a downloaded installer next to the real install (setup.exe + numbered .bin archives) is not a game
+        private static readonly Regex RepackName = new Regex(@"\b(setup|installer)\b", RegexOptions.IgnoreCase);
         private static bool IsInstallerFolder(string dir)
         {
             try
@@ -272,7 +271,7 @@ namespace Selene
                 if (!xbox && !codeName && !installer) continue;
                 g.Hidden = true;  // hidden, not deleted: playtime stays, can be shown again
                 db.Games.Update(g);
-                HomeNav.Log("local game hidden (" + (xbox ? "Xbox app install, the Xbox library has it" : installer ? "installer / repack download, not the game" : "code name, not a real game name") + "): " + g.Name);
+                HomeNav.Log("local game hidden (" + (xbox ? "Xbox app install, the Xbox library has it" : installer ? "installer download, not the game" : "code name, not a real game name") + "): " + g.Name);
             }
         }
 
@@ -421,7 +420,7 @@ namespace Selene
                 var exe = play.Path.Replace("{InstallDir}", g.InstallDirectory ?? "");
                 if (!Path.IsPathRooted(exe)) exe = Path.Combine(g.InstallDirectory ?? "", exe);
                 var dir = Path.GetDirectoryName(exe);
-                // a helper started from somewhere else (Genshin: an FPS unlocker in Downloads, which keeps running after the
+                // a helper started from somewhere else (e.g. a tool started from Downloads, which keeps running after the
                 // game closes) doesn't define the game: then the install folder does
                 bool inside = !string.IsNullOrWhiteSpace(g.InstallDirectory) && dir != null
                               && Full(dir).StartsWith(Full(g.InstallDirectory));

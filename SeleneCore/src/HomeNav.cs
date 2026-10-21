@@ -1,8 +1,8 @@
-// PS5-style Left/Right for the "Ps5GameRow" list on Aniki's Welcome Hub.
-// Aniki Helper handles every Left/Right on the hub itself (nearest focusable element, else next page),
-// which skips tiles and jumps pages. A Window class handler runs before Aniki Helper's instance handler,
-// so for focus inside Ps5GameRow we move exactly one visible tile, keep it at the left edge, and mark
-// the key handled. Everything else is left to Aniki Helper.
+// console-style Left/Right for the "SeleneGameRow" list on the old theme's Welcome Hub.
+// the old theme plugin handles every Left/Right on the hub itself (nearest focusable element, else next page),
+// which skips tiles and jumps pages. A Window class handler runs before the old theme plugin's instance handler,
+// so for focus inside SeleneGameRow we move exactly one visible tile, keep it at the left edge, and mark
+// the key handled. Everything else is left to the old theme plugin.
 // Loaded by the ClaudeLibraryTools extension via Add-Type (C# 5: no ?. or string interpolation).
 using System;
 using System.Collections;
@@ -24,11 +24,11 @@ namespace Selene
         private const int AnchorSlot = 2;  // zero-based: third tile from the left
         private static bool installed;
 
-        // "tv": Handheld games hidden in the row. "all": ChildStream tablet session (playnite-mode.ps1 child keeps
-        // fullscreenConfig.tv.json only while that session runs) -> whole library.
+        // "tv": Handheld games hidden in the row. "all": a streamed (remote-session) Playnite, marked by fullscreenConfig.tv.json existing
+        // while that session runs -> whole library.
         public static string RowMode = "tv";
 
-        // ChildStream: Playnite runs in a remote session where WPF draws in SOFTWARE. The PS5 extras (trailer cards,
+        // Streamed (remote) session: Playnite runs where WPF draws in SOFTWARE. The console extras (trailer cards,
         // hub video, cached tiles, slides) made it crawl, so they are off there. TV / PC keep everything.
         [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern uint WTSGetActiveConsoleSessionId();
         private static bool? lite;
@@ -62,7 +62,7 @@ namespace Selene
             var tvBackup = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "fullscreenConfig.tv.json");
             RowMode = System.IO.File.Exists(tvBackup) ? "all" : "tv";
             var app = Application.Current;
-            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["Ps5RowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
+            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
         }
 
         private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -80,7 +80,7 @@ namespace Selene
                 {
                     if (item == null && d is ListBoxItem) item = (ListBoxItem)d;
                     var lb = d as ListBox;
-                    if (lb != null && lb.Name == "Ps5GameRow") { row = lb; break; }
+                    if (lb != null && lb.Name == "SeleneGameRow") { row = lb; break; }
                 }
                 if (row == null) { HandleHubKeys(e, focused); return; }
                 if (e.Key == Key.Up) { if (FocusTopBar(row, item)) e.Handled = true; return; }
@@ -130,7 +130,7 @@ namespace Selene
 
         // ---- the rest of the hub (news cards, other sections) ----
         // Left/Right move to the nearest item on the same row and NEVER switch hub sections (only LB/RB do);
-        // Up from the news cards returns to the selected game. Top bar keys stay with Aniki Helper.
+        // Up from the news cards returns to the selected game. Top bar keys stay with the old theme plugin.
         private static void HandleHubKeys(KeyEventArgs e, DependencyObject focused)
         {
             if (focused == null || e.Key == Key.Enter) return;
@@ -144,7 +144,7 @@ namespace Selene
             if (e.Key == Key.Up)
             {
                 if (cards == null || !IsDescendant(focused, cards)) return;
-                var row = FindByName(hubRoot, "Ps5GameRow") as ListBox;
+                var row = FindByName(hubRoot, "SeleneGameRow") as ListBox;
                 var c = row != null ? row.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, row.SelectedIndex)) as UIElement : null;
                 if (c != null) { c.Focus(); e.Handled = true; }
                 return;
@@ -223,7 +223,7 @@ namespace Selene
             return false;
         }
 
-        // Down from the row: straight to the first news card (Aniki Helper's first-time visual-tree scan caused a hitch)
+        // Down from the row: straight to the first news card (the old theme plugin's first-time visual-tree scan caused a hitch)
         private static bool FocusNews(ListBox row)
         {
             var scope = VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)));
@@ -278,7 +278,7 @@ namespace Selene
             // binding (250 ms) catches up, so keep it hidden for that moment.
             if (row.Items[cur] is string && !(row.Items[next] is string))
             {
-                var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "Ps5InfoIntro");
+                var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "SeleneInfoIntro");
                 if (info != null) info.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, 0.3, 0.25, null));
             }
 
@@ -286,7 +286,7 @@ namespace Selene
             if (panel != null && !double.IsNaN(before))
             {
                 double delta = before - target.TranslatePoint(new Point(0, 0), row).X;
-                if (Math.Abs(delta) > 1 && !Lite)  // ChildStream: instant moves (no slide)
+                if (Math.Abs(delta) > 1 && !Lite)  // streamed session: instant moves (no slide)
                 {
                     var shift = panel.RenderTransform as TranslateTransform;
                     if (shift == null) { shift = new TranslateTransform(); panel.RenderTransform = shift; }
@@ -307,7 +307,7 @@ namespace Selene
         // Restarting an animation on every press reset the row's speed each time, so a held stick looked like a chain
         // of little slides (low-fps feel without dropped frames). Now a press only moves the target: the row keeps its
         // speed and follows on a critically damped spring (no overshoot), stepped on every rendered frame.
-        // A single tap starts at full speed and eases out (PS5 feel); presses while moving add no kick (smooth hold).
+        // A single tap starts at full speed and eases out (console feel); presses while moving add no kick (smooth hold).
         private const double GlideOmega = 18;   // 1/s: a tap is ~95% there after 0.17 s
         private static TranslateTransform glideShift;
         private static double glideV;
@@ -406,7 +406,7 @@ namespace Selene
             return true;
         }
 
-        // PS5 boot-in: whenever the row becomes visible, each on-screen tile flies out from the centre of the
+        // console boot-in: whenever the row becomes visible, each on-screen tile flies out from the centre of the
         // row to its slot, one after another, with a small overshoot.
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ListBox, object> hookedRows =
             new System.Runtime.CompilerServices.ConditionalWeakTable<ListBox, object>();
@@ -423,7 +423,7 @@ namespace Selene
         {
             foreach (Window w in Application.Current.Windows)
             {
-                var row = FindByName(w, "Ps5GameRow") as ListBox;
+                var row = FindByName(w, "SeleneGameRow") as ListBox;
                 if (row != null) HookRow(row);
                 var login = FindByName(w, "AcceuilSettings");
                 var hub = FindByName(w, "WelcomeHubOverlay");
@@ -446,8 +446,6 @@ namespace Selene
             ReplaceFadeImages(win);
             CacheNewsCards(win);
             RenderFilterTabs(win);
-            // (Aniki only) DisableAnikiTriggerPaging();
-            // (Aniki only) HookHubPageGuard();
             hub.IsVisibleChanged += (s, a) => { if ((bool)a.NewValue) { FindAndPlay(win); RenderFilterTabs(win); } else { RefreshLibraryFades(); HidePreview(); ForceHorizontalLibrary(); EnsureBigScreenFilter(); if (!openingDetails) FocusLibraryLater(win); } };
             Log("hub hooked");
         }
@@ -457,7 +455,7 @@ namespace Selene
         // Image1FadeOut_Completed): with every selection changing several full-screen backgrounds, that forced a full
         // garbage collection (2-3 frozen frames, 60-150 ms) ~1 s after every second move - right in the next slide.
         // The selection-driven FadeImages (bound to SelectedGame / the hero path) are unplugged and replaced in place
-        // by Ps5Crossfade: same crossfade, image decoded off the UI thread at screen size, no forced collection.
+        // by SeleneCrossfade: same crossfade, image decoded off the UI thread at screen size, no forced collection.
         private static void ReplaceFadeImages(Window win)
         {
             int n = 0;
@@ -471,7 +469,7 @@ namespace Selene
                     if (be == null) continue;
                     string path = (be.Path != null ? be.Path.Path : "") + " " + (be.ElementName ?? "");
                     Log("fade image: " + path + " | dc=" + (fi.DataContext != null ? fi.DataContext.GetType().Name : "null") + " | in " + Ancestry(fi));
-                    if (path.IndexOf("SelectedGame", StringComparison.Ordinal) < 0 && path.IndexOf("Ps5HeroPath", StringComparison.Ordinal) < 0)
+                    if (path.IndexOf("SelectedGame", StringComparison.Ordinal) < 0 && path.IndexOf("SeleneHeroPath", StringComparison.Ordinal) < 0)
                     {
                         // left as it is, but without the fade storyboard (its completion is what calls GC.Collect)
                         var animOther = fi.GetType().GetProperty("AnimationEnabled");
@@ -497,16 +495,16 @@ namespace Selene
                         deco.Child = wrap;
                         parent = wrap;
                     }
-                    var cf = new Ps5Crossfade();
+                    var cf = new SeleneCrossfade();
                     string where = Ancestry(fi);
                     if (where.IndexOf("WelcomeHubOverlay", StringComparison.Ordinal) < 0)
                     {
                         libraryFades.Add(new WeakReference(cf));
                     }
-                    else if (path.IndexOf("Ps5HeroPath", StringComparison.Ordinal) < 0)
+                    else if (path.IndexOf("SeleneHeroPath", StringComparison.Ordinal) < 0)
                     {
                         // home background: the PS Store hero above covers it whenever there is one
-                        var heroPath = FindByName(parent, "Ps5HeroPath") as TextBlock;
+                        var heroPath = FindByName(parent, "SeleneHeroPath") as TextBlock;
                         if (heroPath != null) cf.CanLoad = () => !System.IO.File.Exists(heroPath.Text);
                     }
                     var stretch = fi.GetType().GetProperty("Stretch");
@@ -518,7 +516,7 @@ namespace Selene
                     Grid.SetRowSpan(cf, Grid.GetRowSpan(fi)); Grid.SetColumnSpan(cf, Grid.GetColumnSpan(fi));
                     Panel.SetZIndex(cf, Panel.GetZIndex(fi));
                     parent.Children.Insert(parent.Children.IndexOf(fi), cf);
-                    BindingOperations.SetBinding(cf, Ps5Crossfade.SourceProperty, be);
+                    BindingOperations.SetBinding(cf, SeleneCrossfade.SourceProperty, be);
                     // keep the original (theme storyboards may name it) but never let it change again
                     BindingOperations.ClearBinding(fi, dpd.DependencyProperty);
                     // a style binding survives ClearBinding: pin a local null over it, and no fade storyboard either
@@ -551,7 +549,7 @@ namespace Selene
         private static void CacheNewsCards(DependencyObject root)
         {
             if (Lite || root == null) return;
-            foreach (var card in FindAll(root, d => { var fe = d as FrameworkElement; return fe != null && fe.Name == "Ps5ShotStrip"; }))
+            foreach (var card in FindAll(root, d => { var fe = d as FrameworkElement; return fe != null && fe.Name == "SeleneShotStrip"; }))
                 if (card.CacheMode == null) card.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = true };
         }
 
@@ -559,7 +557,7 @@ namespace Selene
 
         private static void RefreshLibraryFades()
         {
-            foreach (var w in libraryFades) { var cf = w.Target as Ps5Crossfade; if (cf != null) cf.Refresh(); }
+            foreach (var w in libraryFades) { var cf = w.Target as SeleneCrossfade; if (cf != null) cf.Refresh(); }
         }
 
         private static List<FrameworkElement> FindAll(DependencyObject root, Func<DependencyObject, bool> match)
@@ -599,15 +597,15 @@ namespace Selene
             catch (Exception ex) { Log("horizontal: " + ex.Message); }
         }
 
-        // ---- which screen is watching: the Y700 streaming natively via Vibepollo sees every game (indies included) ----
-        // Same detection as DuoPOC\extras\wilds\wilds-mode.ps1: the newest Apollo log says whether a client is connected
-        // and its name. ChildStream runs its own Playnite (RowMode "all" from the start) and is not watched.
+        // ---- which screen is watching: a streaming client (tablet/phone) sees every game, the TV hides the Handheld category ----
+        // Optional (settings: streaming host log folder + client name): the newest streaming-host log (Sunshine-style)
+        // says whether a client is connected and its name. A Playnite started for a stream (RowMode "all") is not watched.
         private static bool startedAsChild;
 
         private static void StartDeviceModeWatch()
         {
             startedAsChild = RowMode == "all";
-            if (startedAsChild) return;
+            if (startedAsChild || string.IsNullOrWhiteSpace(SelenePaths.StreamLogs)) return;
             var dispatcher = Application.Current.Dispatcher;
             var thread = new System.Threading.Thread(() =>
             {
@@ -624,7 +622,7 @@ namespace Selene
                     }
                     System.Threading.Thread.Sleep(3000);
                 }
-            }) { IsBackground = true, Name = "Ps5DeviceMode" };
+            }) { IsBackground = true, Name = "SeleneDeviceMode" };
             thread.Start();
         }
 
@@ -646,7 +644,8 @@ namespace Selene
             var names = System.Text.RegularExpressions.Regex.Matches(text, @"Display mode for client \[([^\]]+)\]");
             if (names.Count == 0) return false;
             var client = names[names.Count - 1].Groups[1].Value;
-            return System.Text.RegularExpressions.Regex.IsMatch(client, "Y700|Lenovo", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var match = SelenePaths.StreamClientMatch;  // empty = any client
+            return match == "" || System.Text.RegularExpressions.Regex.IsMatch(client, match, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         }
 
         private static void ApplyDeviceMode(string mode)
@@ -655,7 +654,7 @@ namespace Selene
             {
                 if (startedAsChild || mode == RowMode) return;
                 RowMode = mode;
-                Application.Current.Resources["Ps5RowMode"] = mode;
+                Application.Current.Resources["SeleneRowMode"] = mode;
                 var row = LiveRow();
                 if (row != null) RebuildGames(row);
                 if (mode == "tv") EnsureBigScreenFilter();
@@ -669,9 +668,9 @@ namespace Selene
             catch (Exception ex) { Log("device mode failed: " + ex.Message); }
         }
 
-        // ---- sleeping the PC ends the stream properly (Aurora/Artemis used to freeze until they timed out) ----
-        // Any sleep (Playnite/Aniki menu, power button, Sleep tile) -> ask Vibepollo to disconnect connected clients first.
-        // Credentials: %LOCALAPPDATA%\ClaudePs5\vibepollo-cred.txt (line 1 user, line 2 password; readable by this account only).
+        // ---- sleeping the PC ends the stream properly (clients used to freeze until they timed out) ----
+        // Any sleep -> ask the streaming host (Sunshine-style web API on localhost:47990) to disconnect connected clients first.
+        // Optional: settings point at a credentials file (line 1 user, line 2 password; keep it readable by this account only).
         private static void OnPowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
         {
             if (e.Mode != Microsoft.Win32.PowerModes.Suspend) return;
@@ -680,8 +679,8 @@ namespace Selene
 
         private static void DisconnectStreamClients()
         {
-            var credFile = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClaudePs5", "vibepollo-cred.txt");
-            if (!System.IO.File.Exists(credFile)) return;
+            var credFile = SelenePaths.StreamCredentials;
+            if (string.IsNullOrWhiteSpace(credFile) || !System.IO.File.Exists(credFile)) return;
             var lines = System.IO.File.ReadAllLines(credFile);
             if (lines.Length < 2) return;
             var auth = "Basic " + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(lines[0].Trim() + ":" + lines[1].Trim()));
@@ -689,7 +688,7 @@ namespace Selene
             System.Net.ServicePointManager.ServerCertificateValidationCallback = (s, cert, chain, errors) =>
             {
                 var req = s as System.Net.HttpWebRequest;
-                return req != null && req.RequestUri.Host == "localhost";  // Vibepollo's self-signed certificate, local only
+                return req != null && req.RequestUri.Host == "localhost";  // the host's self-signed certificate, local only
             };
             string list = HttpCall("GET", "https://localhost:47990/api/clients/list", auth, null);
             int n = 0;
@@ -722,7 +721,7 @@ namespace Selene
                 return r.ReadToEnd();
         }
 
-        // TV: the library shows the "Big Screen" filter preset (tablet/ChildStream keeps the whole library)
+        // TV: the library shows the "Big Screen" filter preset (a streamed session keeps the whole library)
         private static readonly Guid BigScreenPreset = new Guid("e1fb63ec-0f24-4eaf-bfd2-68fbe05d1411");
 
         private static void EnsureBigScreenFilter()
@@ -806,7 +805,7 @@ namespace Selene
             // the hub page template may still be materialising; give layout a moment
             w.Dispatcher.BeginInvoke(new Action(() =>
             {
-                var row = FindByName(w, "Ps5GameRow") as ListBox;
+                var row = FindByName(w, "SeleneGameRow") as ListBox;
                 Log("find row: " + (row != null));
                 if (row == null) return;
                 HookRow(row);
@@ -827,12 +826,12 @@ namespace Selene
         private static void HookRow(ListBox row)
         {
             object dummy;
-            if (row == null || row.Name != "Ps5GameRow" || hookedRows.TryGetValue(row, out dummy)) return;
+            if (row == null || row.Name != "SeleneGameRow" || hookedRows.TryGetValue(row, out dummy)) return;
             hookedRows.Add(row, null);
             liveRow = new WeakReference(row);
             HookMoveCommand(row);
             UseOwnGameList(row);
-            // Aniki rebuilds the row on every LB/RB page switch and focuses its first item (a card), which made the
+            // the old theme rebuilds the row on every LB/RB page switch and focuses its first item (a card), which made the
             // row jump. Start the new row at the default spot and redirect focus that enters from outside.
             var sv0 = FindChild<ScrollViewer>(row);
             if (sv0 != null) sv0.ScrollToHorizontalOffset(Math.Max(0, FirstGameIndex(row) - AnchorSlot));
@@ -893,14 +892,14 @@ namespace Selene
             var rw = Window.GetWindow(row);
             if (rw != null) { ReplaceFadeImages(rw); CacheNewsCards(rw); RenderFilterTabs(rw); }
             // (no row.IsVisibleChanged hook: LB/RB page switches hide/show the row and must not replay anything)
-            // Aniki opens the hub at startup behind the login screen ("AcceuilSettings"), so the row is already
+            // the old theme opens the hub at startup behind the login screen ("AcceuilSettings"), so the row is already
             // visible when the user presses A: replay the intro when the login screen goes away.
             var window = Window.GetWindow(row);
             var login = window != null ? FindByName(window, "AcceuilSettings") : null;
             Log("login screen found=" + (login != null) + (login != null ? " visible=" + login.IsVisible : ""));
             if (login != null) login.IsVisibleChanged += (s, a) => { if (!(bool)a.NewValue && row.IsVisible) QueueIntro(row); };
             if (login != null) LoginScene.Attach(window, login);
-            // A visible new row after the first intro = Aniki rebuilt page 1 on an LB/RB switch: keep the user's spot
+            // A visible new row after the first intro = the old theme rebuilt page 1 on an LB/RB switch: keep the user's spot
             // (resetting changed SelectedGame -> background flash and music restart).
             if (row.IsVisible) { if (introDone && lastSelected != null) RestoreSelection(row); else QueueIntro(row); }
         }
@@ -959,7 +958,7 @@ namespace Selene
         private static void PlayPageEnter(ListBox row)
         {
             var host = VisualTreeHelper.GetParent(row) as UIElement;
-            var inf = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "Ps5InfoIntro");
+            var inf = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "SeleneInfoIntro");
             if (host != null) host.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
             if (inf != null) inf.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
             int frames = 0;
@@ -978,7 +977,7 @@ namespace Selene
             double from = lastShoulder == "LeftShoulder" ? -90 : 90;
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             var rowHost = VisualTreeHelper.GetParent(row) as UIElement;
-            var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "Ps5InfoIntro");
+            var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "SeleneInfoIntro");
             var targets = new UIElement[] { rowHost, info };
             for (int i = 0; i < targets.Length; i++)
             {
@@ -1020,7 +1019,7 @@ namespace Selene
 
         private static void ArmPreview(ListBox row)
         {
-            if (Lite) return;  // no trailer cards in ChildStream
+            if (Lite) return;  // no trailer cards in a streamed session
             if (previewArm == null)
             {
                 previewArm = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
@@ -1391,10 +1390,10 @@ namespace Selene
                 if (login != null && login.IsVisible) return;  // still behind the login screen
                 if (introDone) { PlayIntro(row); return; }
                 // first intro after start: tile art is still decoding; wait for an idle moment so the fly-in is smooth
-                var holder = FindByName(window, "Ps5RowIntro") as UIElement;
+                var holder = FindByName(window, "SeleneRowIntro") as UIElement;
                 if (holder != null) holder.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
-                var infoHold = FindByName(window, "Ps5InfoIntro") as UIElement;
-                var bgHold = FindByName(window, "Ps5HubGameBackground") as UIElement;
+                var infoHold = FindByName(window, "SeleneInfoIntro") as UIElement;
+                var bgHold = FindByName(window, "SeleneHubGameBackground") as UIElement;
                 if (infoHold != null) infoHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
                 if (bgHold != null) bgHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
                 try
@@ -1425,7 +1424,7 @@ namespace Selene
         {
             if ((DateTime.Now - lastIntro).TotalMilliseconds < 800) return;  // several watchers fire for one hub open
             lastIntro = DateTime.Now;
-            bool animate = !introDone && !Lite;  // full intro only the first time the hub is seen after Playnite starts (never in ChildStream)
+            bool animate = !introDone && !Lite;  // full intro only the first time the hub is seen after Playnite starts (never in a streamed session)
             introDone = true;
             try
             {
@@ -1463,9 +1462,9 @@ namespace Selene
 
                 // Background fades up first, game info rises in after the tiles.
                 var window = Window.GetWindow(row);
-                var bg = window != null ? FindByName(window, "Ps5HubGameBackground") : null;
+                var bg = window != null ? FindByName(window, "SeleneHubGameBackground") : null;
                 if (bg != null) bg.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, 0, 0.9, new CubicEase { EasingMode = EasingMode.EaseOut }));
-                var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "Ps5InfoIntro");
+                var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "SeleneInfoIntro");
                 if (info != null)
                 {
                     info.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, 0.9, 0.5, null));
@@ -1511,7 +1510,7 @@ namespace Selene
             }
         }
 
-        // Puts Ps5TileTitle under the selected tile (final zoomed size 160 x 1.3) and fades it in after 'delay' s.
+        // Puts SeleneTileTitle under the selected tile (final zoomed size 160 x 1.3) and fades it in after 'delay' s.
         private const double ZoomedTile = 208;
         private const double SmallTile = 160;
 
@@ -1545,7 +1544,7 @@ namespace Selene
         private static FrameworkElement FindTitle(ListBox row)
         {
             var parent = VisualTreeHelper.GetParent(row);
-            return parent != null ? FindByName(parent, "Ps5TileTitle") : null;
+            return parent != null ? FindByName(parent, "SeleneTileTitle") : null;
         }
 
         private static void PlaceTitle(ListBox row, FrameworkElement container, double delay)
@@ -1594,11 +1593,11 @@ namespace Selene
             return a;
         }
 
-        // Section cards: items "nav:<name>" at the start of the row. A runs hidden proxy button Ps5Nav_<name>;
+        // Section cards: items "nav:<name>" at the start of the row. A runs hidden proxy button SeleneNav_<name>;
         // Y (or F2) picks a card up, Left/Right moves it among the cards, Y/A drops it. Order is saved.
         private static string movingCard;
         private static readonly string CardOrderFile = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "ps5-card-order.txt");
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-card-order.txt");
 
         private static int FirstGameIndex(ListBox row)
         {
@@ -1611,7 +1610,7 @@ namespace Selene
         private static void RunCard(ListBox row, string name)
         {
             var scope = VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row));
-            var proxy = scope != null ? FindByName(scope, "Ps5Nav_" + name) as System.Windows.Controls.Primitives.ButtonBase : null;
+            var proxy = scope != null ? FindByName(scope, "SeleneNav_" + name) as System.Windows.Controls.Primitives.ButtonBase : null;
             if (proxy != null && proxy.Command != null && proxy.Command.CanExecute(proxy.CommandParameter)) proxy.Command.Execute(proxy.CommandParameter);
         }
 
@@ -1622,7 +1621,7 @@ namespace Selene
             for (; d != null; d = VisualTreeHelper.GetParent(d))
             {
                 var lb = d as ListBox;
-                if (lb != null && lb.Name == "Ps5GameRow") return lb;
+                if (lb != null && lb.Name == "SeleneGameRow") return lb;
             }
             return null;
         }
@@ -1642,7 +1641,7 @@ namespace Selene
             for (; d != null; d = VisualTreeHelper.GetParent(d))
             {
                 var lb = d as ListBox;
-                if (lb != null && lb.Name == "Ps5GameRow") return true;
+                if (lb != null && lb.Name == "SeleneGameRow") return true;
             }
             return false;
         }
@@ -1659,7 +1658,7 @@ namespace Selene
                 w.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     var hub = FindByName(w, "WelcomeHubOverlay");
-                    var proxy = FindByName(w, "Ps5Nav_hub") as System.Windows.Controls.Primitives.ButtonBase;
+                    var proxy = FindByName(w, "SeleneNav_hub") as System.Windows.Controls.Primitives.ButtonBase;
                     Log("details closed, reopening hub: hubVisible=" + (hub != null && hub.IsVisible) + " proxy=" + (proxy != null));
                     if (hub != null && hub.IsVisible) return;
                     if (proxy != null && proxy.Command != null && proxy.Command.CanExecute(null)) proxy.Command.Execute(null);
@@ -1717,8 +1716,6 @@ namespace Selene
                     };
                     check.Start();
                 }
-                if (pressed == "Start" && CloseControlCenter()) { e.Cancel(); return; }
-                if (pressed == "Start") StartFallbackCheck();
                 bool onHome = movingCard == null && movingGame == null && FocusOnHome();
                 if ((pressed == "TriggerLeft" || pressed == "TriggerRight") && onHome)
                 {
@@ -1747,7 +1744,7 @@ namespace Selene
                     var w = Window.GetWindow(item);
                     var hub = w != null ? FindByName(w, "WelcomeHubOverlay") : null;
                     var details = w != null ? FindByName(w, "PART_ElemGameDetails") : null;
-                    var proxy = w != null ? FindByName(w, "Ps5Nav_hub") as System.Windows.Controls.Primitives.ButtonBase : null;
+                    var proxy = w != null ? FindByName(w, "SeleneNav_hub") as System.Windows.Controls.Primitives.ButtonBase : null;
                     if ((hub == null || !hub.IsVisible) && (details == null || !details.IsVisible) && proxy != null && proxy.Command != null)
                     {
                         Log("B in library -> hub");
@@ -1810,9 +1807,9 @@ namespace Selene
             catch (Exception ex) { Log("Y: " + ex.Message); }
         }
 
-        // ---- Play / Details pills under the logo (Ps5PlayBtn / Ps5DetailsBtn in the home block) ----
+        // ---- Play / Details pills under the logo (SelenePlayBtn / SeleneDetailsBtn in the home block) ----
         // Down from the row lands on Play, Left/Right swaps, Up goes back to the row, A presses. Handled here because
-        // Aniki's navigation service eats hub Left/Right and A never reaches a Button as a click.
+        // the old theme's navigation service eats hub Left/Right and A never reaches a Button as a click.
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ListBox, Button[]> rowPills =
             new System.Runtime.CompilerServices.ConditionalWeakTable<ListBox, Button[]>();
 
@@ -1865,9 +1862,9 @@ namespace Selene
                 pills = new Button[3];
                 for (DependencyObject d = row; d != null && pills[0] == null; d = VisualTreeHelper.GetParent(d))
                 {
-                    pills[0] = FindByName(d, "Ps5PlayBtn") as Button;
-                    pills[1] = pills[0] != null ? FindByName(d, "Ps5DetailsBtn") as Button : null;
-                    pills[2] = pills[0] != null ? FindByName(d, "Ps5FavBtn") as Button : null;
+                    pills[0] = FindByName(d, "SelenePlayBtn") as Button;
+                    pills[1] = pills[0] != null ? FindByName(d, "SeleneDetailsBtn") as Button : null;
+                    pills[2] = pills[0] != null ? FindByName(d, "SeleneFavBtn") as Button : null;
                 }
                 if (pills[0] != null) { rowPills.Remove(row); rowPills.Add(row, pills); }
             }
@@ -1931,7 +1928,7 @@ namespace Selene
                 // then open details; closing details brings home back (WatchDetails)
                 returnToHub = true;
                 openingDetails = true;
-                var close = FindByName(w, "Ps5Nav_library") as System.Windows.Controls.Primitives.ButtonBase;
+                var close = FindByName(w, "SeleneNav_library") as System.Windows.Controls.Primitives.ButtonBase;
                 if (close != null && close.Command != null && close.Command.CanExecute(null)) close.Command.Execute(null);
                 w.Dispatcher.BeginInvoke(new Action(() =>
                 {
@@ -1942,7 +1939,7 @@ namespace Selene
             return true;
         }
 
-        // Aniki's navigation reacts to the same Down first and moves focus to the news a moment later (deferred), which
+        // the old theme's navigation reacts to the same Down first and moves focus to the news a moment later (deferred), which
         // flashed the news before Play. While the lock runs, focus may only go to the chosen pill.
         private static bool openingDetails;
 
@@ -1958,21 +1955,7 @@ namespace Selene
             return hub != null && hub.IsVisible && hub.IsAncestorOf(f);  // the whole home screen, top bar included
         }
 
-        // ---- control centre (Aniki quick-access window): Start closes it, closing slides it down ----
-        private static Window OpenControlCenter()
-        {
-            foreach (Window win in Application.Current.Windows)
-                if (win != Application.Current.MainWindow && win.IsVisible && FindByName(win, "QuickAccessPanel") != null) return win;
-            return null;
-        }
 
-        private static bool CloseControlCenter()
-        {
-            var win = OpenControlCenter();
-            if (win == null) return false;
-            win.Close();
-            return true;
-        }
 
         private static readonly HashSet<Window> ccHooked = new HashSet<Window>();
         private static readonly HashSet<Window> ccClosing = new HashSet<Window>();
@@ -1986,46 +1969,7 @@ namespace Selene
             return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
         }
 
-        private static void StartFallbackCheck()
-        {
-            bool running = false;
-            if (Api != null) foreach (var g in Api.Database.Games) if (g.IsRunning) { running = true; break; }
-            if (!running) return;
-            var pressedAt = DateTime.Now;
-            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
-            t.Tick += (s, e) =>
-            {
-                t.Stop();
-                if (ccHooked.Count > 0 || lastToolWindowAt >= pressedAt) return;  // something opened after all
-                OpenQuickAccessDirect();
-            };
-            t.Start();
-        }
 
-        // Runs the same command Aniki's Start shortcut uses (first entry of AnikiHelper_ControllerShortcuts' Start binding)
-        private static void OpenQuickAccessDirect()
-        {
-            try
-            {
-                var host = FindByName(Application.Current.MainWindow, "AnikiHelper_ControllerShortcuts") as UIElement;
-                if (host == null) { Log("start fallback: shortcuts host not found"); return; }
-                foreach (InputBinding b in host.InputBindings)
-                {
-                    var btn = b.GetType().GetProperty("Button");
-                    if (btn == null || Convert.ToString(btn.GetValue(b, null)) != "Start") continue;
-                    var arr = b.CommandParameter as Array;
-                    var first = arr != null && arr.Length > 0 ? arr.GetValue(0) as Button : null;
-                    if (first != null && first.Command != null && first.Command.CanExecute(first.CommandParameter))
-                    {
-                        first.Command.Execute(first.CommandParameter);
-                        Log("start fallback: opened the quick menu during a game");
-                        return;
-                    }
-                }
-                Log("start fallback: quick menu command not available");
-            }
-            catch (Exception ex) { Log("start fallback failed: " + ex.Message); }
-        }
 
         private static void OnAnyWindowLoaded(object sender, RoutedEventArgs e)
         {
@@ -2038,7 +1982,7 @@ namespace Selene
                 ccHooked.Add(win);
                 win.Closing += OnControlCenterClosing;
                 LightenControlCenterDim(win);
-                // opens on Power (PS5); after Aniki's own FocusFirst has run
+                // opens on Power ; after the old theme's own FocusFirst has run
                 var focusPower = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
                 focusPower.Tick += (s2, e2) =>
                 {
@@ -2051,7 +1995,7 @@ namespace Selene
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
-        // Aniki dims the whole screen behind the control centre (heavy); lighten it to a soft veil. The dim is either the
+        // the old theme dims the whole screen behind the control centre (heavy); lighten it to a soft veil. The dim is either the
         // window background or a full-size dark layer behind the panel: both are found and logged.
         private static void LightenControlCenterDim(Window win)
         {
@@ -2199,7 +2143,7 @@ namespace Selene
             }
         }
 
-        // ---- News row (ps5-news-row.xaml): big cards fade out at the bottom; focusing one slides the page up ----
+        // ---- News row: big cards fade out at the bottom; focusing one slides the page up ----
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<FrameworkElement, object> hookedNews =
             new System.Runtime.CompilerServices.ConditionalWeakTable<FrameworkElement, object>();
         private const double NewsSlide = 190;
@@ -2226,7 +2170,7 @@ namespace Selene
             if (topShift == null || topShift.IsFrozen) { topShift = new TranslateTransform(); top.RenderTransform = topShift; }
             var cardShift = cards.RenderTransform as TranslateTransform;
             if (cardShift == null || cardShift.IsFrozen) { cardShift = new TranslateTransform(); cards.RenderTransform = cardShift; }
-            var rowIntro = FindByName(top, "Ps5RowIntro") as UIElement;
+            var rowIntro = FindByName(top, "SeleneRowIntro") as UIElement;
             cards.IsKeyboardFocusWithinChanged += (s, a) =>
             {
                 bool on = (bool)a.NewValue;
@@ -2249,7 +2193,7 @@ namespace Selene
             Log("news slide hooked");
         }
 
-        // ---- library refresh: Playnite only checks its libraries about weekly, and Aniki's menu has no "Update library" ----
+        // ---- library refresh: Playnite only checks its libraries about weekly, and the old theme's menu has no "Update library" ----
         // Runs Playnite's own update-games command (what its menus use) on start and whenever Playnite comes back from the
         // tray, at most every 10 minutes, so a game installed in Epic/Steam/Xbox appears without touching a menu.
         private static DateTime lastLibraryRefresh = DateTime.MinValue;
@@ -2259,7 +2203,7 @@ namespace Selene
             try
             {
                 if ((DateTime.Now - lastLibraryRefresh).TotalMinutes < 10) return;
-                LocalGames.Scan();  // games installed outside a store (D:\Games) -> library, before the refresh's new-game setup
+                LocalGames.Scan();  // games installed outside a store (the game folders) -> library, before the refresh's new-game setup
                 var w = Application.Current.MainWindow;
                 var vm = w != null ? w.DataContext : null;
                 if (vm == null) return;
@@ -2429,7 +2373,7 @@ namespace Selene
         private static IEnumerable gameSource;
         private static System.Windows.Data.CollectionContainer gameContainer;
         private static readonly string GameOrderFile = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "ps5-game-order.txt");
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-game-order.txt");
 
         private static void UseOwnGameList(ListBox row)
         {
@@ -2460,7 +2404,7 @@ namespace Selene
         private static readonly string[] RowFilters = { "all", "installed", "recent", "favorites", "unplayed" };
         private static readonly string[] RowFilterLabels = { "All games", "Installed", "Recently played", "Favorites", "Not played yet" };
         private static readonly string RowFilterFile = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "ps5-row-filter.txt");
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-row-filter.txt");
         private static int rowFilter = -1;
         private static Border filterPill;
         private static TextBlock filterPillText;
@@ -2567,77 +2511,6 @@ namespace Selene
             Log("row filter -> " + RowFilters[rowFilter] + " (" + games.Count + " games) " + sw.ElapsedMilliseconds + " ms");
         }
 
-        // AnikiHelper jumps hub pages on LT/RT (NavigationFixService.HandleHubTriggerPageNavigation, run from its own
-        // PreProcessInput hook before ours, so cancelling the input cannot stop it). That method first asks its
-        // isWelcomeHubOpen delegate; ours answers "no" when that method is the caller, so it never pages. LT/RT are
-        // the home-row filter only. Every other caller gets Aniki's real answer.
-        private static bool triggerPagingDisabled;
-
-        private static void DisableAnikiTriggerPaging()
-        {
-            if (triggerPagingDisabled || Api == null) return;
-            try
-            {
-                const BindingFlags inst = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-                foreach (var plugin in Api.Addons.Plugins)
-                {
-                    if (plugin.GetType().Name != "AnikiHelper") continue;
-                    var svcField = plugin.GetType().GetField("horizontalFocusFixService", inst);
-                    var svc = svcField != null ? svcField.GetValue(plugin) : null;
-                    var openField = svc != null ? svc.GetType().GetField("isWelcomeHubOpen", inst) : null;
-                    var original = openField != null ? openField.GetValue(svc) as Func<bool> : null;
-                    if (original == null) { Log("trigger paging: delegate not found"); return; }
-                    Func<bool> wrapped = () => CalledFrom("HandleHubTriggerPageNavigation") || CalledFrom("HandleHubDirectPageNavigation") ? false : original();  // no hub sections
-                    openField.SetValue(svc, wrapped);
-                    triggerPagingDisabled = true;
-                    Log("trigger paging: Aniki's LT/RT page jump disabled");
-                    return;
-                }
-            }
-            catch (Exception ex) { Log("trigger paging: " + ex.Message); }
-        }
-
-        private static bool CalledFrom(string method)
-        {
-            var st = new System.Diagnostics.StackTrace(1, false);
-            for (int i = 0; i < Math.Min(8, st.FrameCount); i++)
-            {
-                var m = st.GetFrame(i).GetMethod();
-                if (m != null && m.Name == method) return true;
-            }
-            return false;
-        }
-
-        // LT/RT are the row filter, but AnikiHelper also uses the triggers to jump between hub pages (to the store) in
-        // its own controller code, which cannot be blocked. So: when Aniki's HubCurrentPage changes while a trigger is
-        // physically held and the game row had focus, the page is put straight back. LB/RB and other changes pass.
-        private static object hubPageOwner;
-        private static PropertyInfo hubPageProp;
-        private static int hubPageLast = -1;
-        private static bool hubPageRestoring;
-
-        private static void HookHubPageGuard()
-        {
-            if (hubPageOwner != null || Api == null) return;
-            try
-            {
-                foreach (var plugin in Api.Addons.Plugins)
-                {
-                    if (plugin.GetType().Name != "AnikiHelper") continue;
-                    var owner = FindWithProperty(plugin, "HubCurrentPage", 3);
-                    if (owner == null) { Log("page guard: HubCurrentPage not found"); return; }
-                    hubPageOwner = owner;
-                    hubPageProp = owner.GetType().GetProperty("HubCurrentPage");
-                    hubPageLast = Convert.ToInt32(hubPageProp.GetValue(owner, null));
-                    var npc = owner as System.ComponentModel.INotifyPropertyChanged;
-                    if (npc != null) npc.PropertyChanged += OnAnikiSettingChanged;
-                    Log("page guard on (" + owner.GetType().Name + ", page " + hubPageLast + ")");
-                    return;
-                }
-            }
-            catch (Exception ex) { Log("page guard: " + ex.Message); }
-        }
-
         private static object FindWithProperty(object root, string prop, int depth)
         {
             if (root == null) return null;
@@ -2665,27 +2538,9 @@ namespace Selene
             return false;
         }
 
-        private static void OnAnikiSettingChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName != "HubCurrentPage" || hubPageRestoring) return;
-            int now = Convert.ToInt32(hubPageProp.GetValue(sender, null));
-            // Sections removed (user choice): the home screen is the game row page only; any page change goes back to it.
-            // Store / Captures / Media open their own windows from the row's cards, so nothing is lost.
-            if (now != 1)
-            {
-                Log("page guard: hub page " + hubPageLast + " -> " + now + ", back to the home page");
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    hubPageRestoring = true;
-                    try { hubPageProp.SetValue(sender, 1, null); } finally { hubPageRestoring = false; }
-                }), System.Windows.Threading.DispatcherPriority.Send);
-                return;
-            }
-            hubPageLast = now;
-        }
 
-        // Filter tabs in the home top bar (left slot, Ps5FilterTabs from apply-ps5-topbar.py): LT / RT badges around the
-        // five filters, the active one on a white pill (PS5 tab look), the others dimmed.
+        // Filter tabs in the home top bar (left slot, SeleneFilterTabs): LT / RT badges around the
+        // five filters, the active one on a white pill (console tab look), the others dimmed.
         // New set of cards: they fade in and slide a little from the side the filter moved to (0.26 s, eased).
         private static void PlayFilterSwitch(ListBox row, int dir)
         {
@@ -2705,7 +2560,7 @@ namespace Selene
 
         private static void RenderFilterTabs(Window w, int dir)
         {
-            var host = w != null ? FindByName(w, "Ps5FilterTabs") as StackPanel : null;
+            var host = w != null ? FindByName(w, "SeleneFilterTabs") as StackPanel : null;
             if (host == null) return;
             host.Children.Clear();
             host.Children.Add(FilterBadge("LT"));
@@ -2748,10 +2603,10 @@ namespace Selene
             };
         }
 
-        // PS5-style pill just above the row; stays while a filter is on, flashes and fades for "All games"
+        // console-style pill just above the row; stays while a filter is on, flashes and fades for "All games"
         private static void ShowFilterPill(ListBox row, bool changed)
         {
-            var host = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)) ?? row, "Ps5RowIntro") as Grid;
+            var host = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)) ?? row, "SeleneRowIntro") as Grid;
             if (host == null) host = VisualTreeHelper.GetParent(row) as Grid;
             if (host == null) return;
             if (filterPill == null || VisualTreeHelper.GetParent(filterPill) != host)
@@ -2801,7 +2656,7 @@ namespace Selene
                 int byDate = Nullable.Compare(lb, la);
                 return byDate != 0 ? byDate : string.Compare(Convert.ToString(Prop(a, "Name")), Convert.ToString(Prop(b, "Name")), StringComparison.OrdinalIgnoreCase);
             });
-            // PS5: the selection keeps its slot to the very end, empty space opens on the right. Without padding the row hit
+            // console: the selection keeps its slot to the very end, empty space opens on the right. Without padding the row hit
             // its scroll limit, the selection walked to the edge and the limit shifted with the zoomed card (jiggle).
             list.AddRange(RowPads);
             bool same = list.Count == games.Count;
@@ -2868,7 +2723,7 @@ namespace Selene
             catch (Exception ex) { Log("apply card order: " + ex.Message); }
         }
 
-        // Controller battery for the hub toast: DynamicResource "Ps5PadBattery" = "none" | "wired" | "0".."3" (XInput levels).
+        // Controller battery for the hub toast: DynamicResource "SelenePadBattery" = "none" | "wired" | "0".."3" (XInput levels).
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
         private struct XInputBattery { public byte Type; public byte Level; }
 
@@ -2903,11 +2758,11 @@ namespace Selene
                 LastError = ex.ToString();
             }
             var res = Application.Current.Resources;
-            if (!Equals(res["Ps5PadBattery"], value)) res["Ps5PadBattery"] = value;
+            if (!Equals(res["SelenePadBattery"], value)) res["SelenePadBattery"] = value;
         }
 
         // ---- Guide (ring) button = home, from anywhere ----
-        // Playnite's own GuideButtonFocus never fired for the 8BitDo (its Guide shows up only through the hidden
+        // Playnite's own GuideButtonFocus never fired for some controllers (its Guide shows up only through the hidden
         // XInputGetStateEx, on whichever slot the pad has), so poll all four slots ourselves.
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
         private struct XInputStateEx { public uint Packet; public ushort Buttons; public byte LT, RT; public short LX, LY, RX, RY; }
@@ -2932,7 +2787,7 @@ namespace Selene
         private static int taskbarStateBefore = -1;
 
         // remembers the user's own taskbar state across crashes (Playnite closed without its exit step left it hidden)
-        private static readonly string TaskbarFlag = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "ps5-taskbar-before.txt");
+        private static readonly string TaskbarFlag = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-taskbar-before.txt");
         private static bool IsFullscreenApp { get { return System.Diagnostics.Process.GetCurrentProcess().ProcessName.IndexOf("Fullscreen", StringComparison.OrdinalIgnoreCase) >= 0; } }
 
         // Taskbar auto-hide is OFF (user's choice, 2026-10-10): the taskbar is left as the user set it. Only a state that an
@@ -2977,7 +2832,7 @@ namespace Selene
                     shield = new Window
                     {
                         WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, ShowActivated = false,
-                        Background = Brushes.Black, Title = "Ps5Shield"
+                        Background = Brushes.Black, Title = "SeleneShield"
                     };
                     shield.SourceInitialized += (s, e) => DisableWindowTransitions(new System.Windows.Interop.WindowInteropHelper(shield).Handle);
                 }
@@ -3120,9 +2975,9 @@ namespace Selene
         [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr w, IntPtr l);
         [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
 
-        // PS5 "Play Game" while it runs: close it (ask first), then start it fresh. WM_CLOSE first; if the game is
+        // console "Play Game" while it runs: close it (ask first), then start it fresh. WM_CLOSE first; if the game is
         // still up after 8 s its process is ended. Playnite notices the exit, then the game is started again.
-        // ---- Close Game from the home screen (PS5 style): "Closing this game or app..." with its icon, then home ----
+        // ---- Close Game from the home screen (console style): "Closing this game or app..." with its icon, then home ----
         private static Window closingWindow;
 
         private static void CloseGame(object game)
@@ -3194,14 +3049,16 @@ namespace Selene
             try { return !pr.HasExited; } catch { return true; }
         }
 
-        // the PS5Launch\Elevated Helper task runs ConsoleHelper.exe with admin rights: it reads these requests
-        // ("focus", "close <pid>") from %TEMP%\ps5-elevated.txt
+        // Optional companion helper with admin rights, started through a scheduled task (settings: admin helper task): it reads
+        // these requests ("focus", "close <pid>") from %TEMP%\selene-elevated.txt. Games running as administrator can't be
+        // focused or closed by a normal program.
         public static void RequestElevated(params string[] lines)
         {
             try
             {
-                System.IO.File.AppendAllLines(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ps5-elevated.txt"), lines);
-                var psi = new System.Diagnostics.ProcessStartInfo(@"C:\Windows\System32\schtasks.exe", "/run /tn \"PS5Launch\\Elevated Helper\"") { UseShellExecute = false, CreateNoWindow = true };
+                if (string.IsNullOrWhiteSpace(SelenePaths.HelperTask)) return;
+                System.IO.File.AppendAllLines(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-elevated.txt"), lines);
+                var psi = new System.Diagnostics.ProcessStartInfo(@"C:\Windows\System32\schtasks.exe", "/run /tn \"" + SelenePaths.HelperTask + "\"") { UseShellExecute = false, CreateNoWindow = true };
                 System.Diagnostics.Process.Start(psi);
             }
             catch (Exception ex) { Log("admin helper request failed: " + ex.Message); }
@@ -3277,7 +3134,7 @@ namespace Selene
                 closingWindow = new Window
                 {
                     WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, ShowActivated = false,
-                    AllowsTransparency = true, Background = Brushes.Transparent, Content = root, Title = "Ps5LaunchCover",
+                    AllowsTransparency = true, Background = Brushes.Transparent, Content = root, Title = "SeleneLaunchCover",
                     Left = main.Left, Top = main.Top, Width = main.ActualWidth, Height = main.ActualHeight
                 };
                 closingWindow.SourceInitialized += (s, e) => DisableWindowTransitions(new System.Windows.Interop.WindowInteropHelper(closingWindow).Handle);
@@ -3368,7 +3225,7 @@ namespace Selene
 
         private static Window coverWindow;
 
-        // PS5-style launch screen in our own window: the game's key art full screen (sharp hero art first), fading up from
+        // console-style launch screen in our own window: the game's key art full screen (sharp hero art first), fading up from
         // black with a slow continuous drift, then the logo large in the centre, easing in. Topmost and never activated, so the
         // game can start behind it; RevealGame fades it out. An opaque window (not AllowsTransparency, which is drawn in
         // software and made full-screen animation stutter); the art is bitmap-cached so the drift is a cheap GPU scale.
@@ -3442,7 +3299,7 @@ namespace Selene
                     scene.Children.Add(art);
                     scene.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
                 }
-                // light, even dim so a white logo reads on bright art (PS5 keeps the art bright)
+                // light, even dim so a white logo reads on bright art (console keeps the art bright)
                 var dim = new RadialGradientBrush { GradientOrigin = new Point(0.5, 0.5), Center = new Point(0.5, 0.5), RadiusX = 0.75, RadiusY = 0.75 };
                 dim.GradientStops.Add(new GradientStop(Color.FromArgb(0x30, 0, 0, 0), 0));
                 dim.GradientStops.Add(new GradientStop(Color.FromArgb(0x70, 0, 0, 0), 1));
@@ -3470,7 +3327,7 @@ namespace Selene
                 {
                     WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, ShowActivated = false,
                     Background = Brushes.Black, Content = root, Left = main.Left, Top = main.Top, Width = main.ActualWidth, Height = main.ActualHeight,
-                    Title = "Ps5LaunchCover"
+                    Title = "SeleneLaunchCover"
                 };
                 var cwShow = coverWindow;
                 coverWindow.SourceInitialized += (s, e) => DisableWindowTransitions(new System.Windows.Interop.WindowInteropHelper(cwShow).Handle);
@@ -3511,7 +3368,7 @@ namespace Selene
                 var easeOut = new CubicEase { EasingMode = EasingMode.EaseOut };
                 var softOut = new QuinticEase { EasingMode = EasingMode.EaseOut };
                 // art up from black, then a slow drift for as long as the game takes to load
-                // art cross-fades in over the home still (user preferred this to a PS5-style slide)
+                // art cross-fades in over the home still (user preferred this to a console-style slide)
                 drift.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.04, 1.12, TimeSpan.FromSeconds(20)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
                 drift.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.04, 1.12, TimeSpan.FromSeconds(20)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
                 dimLayer.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900)) { BeginTime = TimeSpan.FromMilliseconds(300) });
@@ -3563,7 +3420,7 @@ namespace Selene
         [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetLayeredWindowAttributes(IntPtr h, uint key, byte alpha, uint flags);
         [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern int SetWindowLong(IntPtr h, int index, int value);
 
-        // PS5: once the game's window shows up the art darkens slowly to black and stays black until the game is ready.
+        // console: once the game's window shows up the art darkens slowly to black and stays black until the game is ready.
         // (A fullscreen game takes the screen the moment its window appears, ~3 s before "ready": darkening only then
         // happened unseen behind the game, which looked like a hard cut.)
         private static Border coverBlack;
@@ -3760,7 +3617,7 @@ namespace Selene
             var waited = (DateTime.Now - launchStart).TotalSeconds;
             if (waited > 25)
             {
-                // launchers (Call of Duty: launcher -> shaders -> game) take longer: keep waiting while the game is alive
+                // launchers (launcher -> shaders -> game) take longer: keep waiting while the game is alive
                 bool alive = false;
                 try { var lg = Api != null ? Api.Database.Games.Get(launchGameId) : null; alive = lg != null && (lg.IsRunning || LocalGames.ProcessesInGameFolder(lg).Count > 0); } catch { }
                 if (!alive || waited > 120) { RevealGame(IntPtr.Zero, alive ? "timeout, 2 min" : "timeout, nothing running"); return; }
@@ -3874,7 +3731,7 @@ namespace Selene
             });
         }
 
-        // the theme's audio\Events\GameStarting.wav, moved to D:\PlayniteMedia: played on the Play press
+        // the theme's audio\Events\GameStarting.wav, moved to the media folder: played on the Play press
         private static MediaPlayer startingPlayer;
         private static void PlayStartingSound()
         {
@@ -3890,7 +3747,7 @@ namespace Selene
             catch { }
         }
 
-        // Aniki's audio\Events\GameStarted.wav was moved to D:\PlayniteMedia (Playnite played it mid-loading)
+        // the old theme's audio\Events\GameStarted.wav was moved to the media folder (Playnite played it mid-loading)
         private static MediaPlayer readyPlayer;
         private static void PlayReadySound()
         {
@@ -4067,7 +3924,7 @@ namespace Selene
             if (attached) AttachThreadInput(me, fg, false);
         }
 
-        // PS5-style switch: Playnite settles in from a slight zoom while fading in ...
+        // console-style switch: Playnite settles in from a slight zoom while fading in ...
         private static ScaleTransform RootScale(FrameworkElement root)
         {
             var st = root.RenderTransform as ScaleTransform;
@@ -4169,24 +4026,7 @@ namespace Selene
             catch (Exception ex) { Log("after-launch failed: " + ex.Message); }
         }
 
-        private static readonly Guid AnikiHelperId = new Guid("96a983a3-3f13-4dce-a474-4052b718bb52");
 
-        private static void TakeOverAnikiSplash()
-        {
-            try
-            {
-                object plugin = null;
-                foreach (var pl in Api.Addons.Plugins) if (pl.Id == AnikiHelperId) { plugin = pl; break; }
-                var settings = plugin != null ? FindSettingsWith(plugin, "GameLaunchSplashEnabled", 3) : null;
-                var prop = settings != null ? settings.GetType().GetProperty("GameLaunchSplashEnabled") : null;
-                if (prop == null) { Log("aniki splash: setting not found"); return; }
-                // Aniki's splash runs on its own thread and closed itself early; our cover window replaces it
-                if (Equals(prop.GetValue(settings, null), true)) { prop.SetValue(settings, false, null); Log("aniki splash: off (own launch cover)"); }
-                var notify = settings.GetType().GetProperty("NotifyOnGameStart");  // the "game started" pop-up
-                if (notify != null && Equals(notify.GetValue(settings, null), true)) { notify.SetValue(settings, false, null); Log("aniki: game start pop-up off"); }
-            }
-            catch (Exception ex) { Log("aniki splash failed: " + ex.Message); }
-        }
 
         private static object FindSettingsWith(object o, string propName, int depth)
         {
@@ -4246,21 +4086,6 @@ namespace Selene
             return null;
         }
 
-        // News row focused or the Steam store open: UniPlaySong plays the default music, not the game's song
-        private static void StartMusicOverrideWatch()
-        {
-            try
-            {
-                object plugin = null;
-                foreach (var pl in Api.Addons.Plugins) if (pl.Id == UniPlaySongId) { plugin = pl; break; }
-                upsSettings = plugin != null ? FindSettingsWith(plugin, "ForceDefaultMusicOverride", 3) : null;
-                if (upsSettings == null) { Log("music override: setting not found"); return; }
-            }
-            catch (Exception ex) { Log("music override failed: " + ex.Message); return; }
-            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-            timer.Tick += (s, e) => UpdateMusicOverride();
-            timer.Start();
-        }
 
         // Home: default music unless the 16:9 trailer card is open (the game's song comes with the card).
         // News row / Steam store: always default. Elsewhere (library, details) UniPlaySong behaves normally.
@@ -4305,12 +4130,6 @@ namespace Selene
             catch (Exception ex) { Log("music override: " + ex.Message); }
         }
 
-        private static Window FindAnikiSplash()
-        {
-            foreach (Window win in Application.Current.Windows)
-                if (win.GetType().Name == "GameLaunchSplashWindow" && win.IsVisible) return win;
-            return null;
-        }
 
         // the window fills (nearly) the whole monitor Playnite is on (a game / fullscreen app, not a popup)
         private static bool CoversScreen(IntPtr h, IntPtr playnite)
@@ -4431,7 +4250,7 @@ namespace Selene
                     bWasDown = bDown;
                     System.Threading.Thread.Sleep(30);
                 }
-            }) { IsBackground = true, Name = "Ps5GuideWatcher" };
+            }) { IsBackground = true, Name = "SeleneGuideWatcher" };
             thread.Start();
         }
 
@@ -4550,7 +4369,7 @@ namespace Selene
                     return;
                 }
                 var hub = FindByName(w, "WelcomeHubOverlay");
-                var proxy = FindByName(w, "Ps5Nav_hub") as System.Windows.Controls.Primitives.ButtonBase;
+                var proxy = FindByName(w, "SeleneNav_hub") as System.Windows.Controls.Primitives.ButtonBase;
                 bool opened = false;
                 if ((hub == null || !hub.IsVisible) && proxy != null && proxy.Command != null && proxy.Command.CanExecute(null)) { proxy.Command.Execute(null); opened = true; }
                 // window activation hands focus back to the last focused bar button: put it on the row's game instead
@@ -4616,10 +4435,10 @@ namespace Selene
 
     // Two stacked images; a new source is decoded on a worker thread (downscaled to the screen width, frozen) and faded
     // in over the old one. Missing/empty source fades the current image out. No GC.Collect (see ReplaceFadeImages).
-    public class Ps5Crossfade : Grid
+    public class SeleneCrossfade : Grid
     {
-        public static readonly DependencyProperty SourceProperty = DependencyProperty.Register("Source", typeof(object), typeof(Ps5Crossfade),
-            new PropertyMetadata(null, (d, e) => ((Ps5Crossfade)d).OnSource(e.NewValue)));
+        public static readonly DependencyProperty SourceProperty = DependencyProperty.Register("Source", typeof(object), typeof(SeleneCrossfade),
+            new PropertyMetadata(null, (d, e) => ((SeleneCrossfade)d).OnSource(e.NewValue)));
         public object Source { get { return GetValue(SourceProperty); } set { SetValue(SourceProperty, value); } }
         public Stretch Stretch { get { return front.Stretch; } set { front.Stretch = value; back.Stretch = value; } }
 
@@ -4642,7 +4461,7 @@ namespace Selene
         private int request;
         private const double FadeMs = 350;
 
-        public Ps5Crossfade()
+        public SeleneCrossfade()
         {
             Children.Add(back);
             Children.Add(front);

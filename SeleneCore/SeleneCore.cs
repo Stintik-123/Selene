@@ -73,8 +73,15 @@ namespace Selene
         public string StreamLogsFolder { get; set; }
         public string AvatarPath { get; set; }
         public string DisplayName { get; set; }
+        public string StreamClientMatch { get; set; }
+        public string StreamCredentialsFile { get; set; }
+        public string HelperTask { get; set; }
 
-        public SeleneSettings() { MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; AvatarPath = ""; DisplayName = ""; }
+        public SeleneSettings()
+        {
+            MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; AvatarPath = ""; DisplayName = "";
+            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = "";
+        }
     }
 
     public class SeleneSettingsViewModel : ObservableObject, ISettings
@@ -97,6 +104,7 @@ namespace Selene
             Settings.MediaFolder = editing.MediaFolder; Settings.GameFolders = editing.GameFolders;
             Settings.HelperPath = editing.HelperPath; Settings.StreamLogsFolder = editing.StreamLogsFolder;
             Settings.AvatarPath = editing.AvatarPath; Settings.DisplayName = editing.DisplayName;
+            Settings.StreamClientMatch = editing.StreamClientMatch; Settings.StreamCredentialsFile = editing.StreamCredentialsFile; Settings.HelperTask = editing.HelperTask;
         }
 
         public void EndEdit()
@@ -130,7 +138,10 @@ namespace Selene
             field("Login name. Empty = your Steam name:", s.DisplayName, v => s.DisplayName = v);
             field("Login picture (image file). Empty = your Steam avatar:", s.AvatarPath, v => s.AvatarPath = v);
             field("Optional companion helper (.exe) with admin rights. Empty = off:", s.HelperPath, v => s.HelperPath = v);
-            field("Optional game-streaming host log folder. Empty = off:", s.StreamLogsFolder, v => s.StreamLogsFolder = v);
+            field("Optional admin helper scheduled task (focus/close games that run as administrator). Empty = off:", s.HelperTask, v => s.HelperTask = v);
+            field("Optional game-streaming host log folder (a streaming client sees every game). Empty = off:", s.StreamLogsFolder, v => s.StreamLogsFolder = v);
+            field("Streaming client name to react to (regular expression). Empty = any client:", s.StreamClientMatch, v => s.StreamClientMatch = v);
+            field("Streaming host credentials file (disconnect clients before sleep). Empty = off:", s.StreamCredentialsFile, v => s.StreamCredentialsFile = v);
             return new UserControl { Content = panel };
         }
     }

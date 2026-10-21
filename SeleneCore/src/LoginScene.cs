@@ -1,14 +1,11 @@
-// PS5-style login, built in code on top of Aniki's login (inserted as the bottom layer of LoginCenterShell, so Aniki's
+// console-style login, built in code on top of the old theme's login (inserted as the bottom layer of LoginCenterShell, so the old theme's
 // clock stays and its own background is covered):
 //   scene : dark-blue blurry glow intro (first start only) -> drifting gold particles, soft spotlight from the top left,
 //           hazy floor glow
 //   stage 0 "Press the A button on your controller." with a breathing ring around an A button
 //   stage 1 "Welcome back, Matthew / Who's playing?" with "+ Add User" and the user's avatar (gold ring); A on the
-//           avatar lets the press through to Aniki (which unlocks and plays LoginConfirm.wav), B goes back.
-// Sounds (D:\PlayniteMedia\sounds): ps5-boot.wav when the login first appears after Playnite starts, ps5-press.wav on
-// "Press A", ps5-select.wav when the profile is picked. Aniki's helper plays audio\LoginConfirm.wav on EVERY A on the
-// login screen (both presses sounded the same), so that file is now silence (original: LoginConfirm.wav.orig).
-// Colours: deep blue, like the PS5 (the first warm/gold version looked brown).
+//           avatar lets the press through to the old theme (which unlocks and plays LoginConfirm.wav), B goes back.
+// Sounds (the theme's Audio folder): LoginPress.wav on "Press A", LoginSelect.wav when the profile is picked.
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -55,33 +52,33 @@ namespace Selene
                 if (System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-skip-login")))
                 {
                     login.Visibility = Visibility.Collapsed;
-                    HomeNav.Log("ps5 login: skipped (developer switch)");
+                    HomeNav.Log("login: skipped (developer switch)");
                     return;
                 }
                 var shell = HomeNav.FindByName(w, "LoginCenterShell") as Grid;
-                if (shell == null) { HomeNav.Log("ps5 login: LoginCenterShell not found"); return; }
+                if (shell == null) { HomeNav.Log("login: LoginCenterShell not found"); return; }
                 if (scene == null)
                 {
                     scene = BuildScene(w, shell);
                     Panel.SetZIndex(scene, -100);
                     shell.Children.Insert(0, scene);
-                    // Aniki's / the older Solaris-style login layout is replaced by ours
-                    foreach (var n in new[] { "Ps5SolarisLogin", "LoginHeaderBlock", "LoginProfileBlock" })
+                    // the old theme's / the older Solaris-style login layout is replaced by ours
+                    foreach (var n in new[] { "SeleneSolarisLogin", "LoginHeaderBlock", "LoginProfileBlock" })
                     {
                         var el = HomeNav.FindByName(w, n) as UIElement;
                         if (el != null) el.Visibility = Visibility.Collapsed;
                     }
-                    HomeNav.Log("ps5 login: scene attached");
+                    HomeNav.Log("login: scene attached");
                 }
                 login.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) ResetToPress(); };
                 if (login.IsVisible) { ResetToPress(); PlayBoot(); }
             }
-            catch (Exception ex) { HomeNav.Log("ps5 login attach failed: " + ex.Message); }
+            catch (Exception ex) { HomeNav.Log("login attach failed: " + ex.Message); }
         }
 
         public static bool IsActive { get { return loginRoot != null && loginRoot.IsVisible && scene != null; } }
 
-        // true = swallow the button (handled here); false = let it through (the final A unlocks Aniki's login)
+        // true = swallow the button (handled here); false = let it through (the final A unlocks the old theme's login)
         public static bool HandleButton(string pressed)
         {
             if (!IsActive) return false;
@@ -151,7 +148,7 @@ namespace Selene
             whoLayer = BuildWho(w);
             g.Children.Add(whoLayer);
 
-            // first start: dark blue blurry glow fading into the scene (PS5 boot)
+            // first start: dark blue blurry glow fading into the scene (console boot)
             if (!bootSoundPlayed)
             {
                 var intro = new Grid { Background = new SolidColorBrush(Color.FromRgb(0x05, 0x0D, 0x15)), IsHitTestVisible = false };
@@ -180,7 +177,7 @@ namespace Selene
                 fill.GradientStops.Add(new GradientStop(Color.FromArgb((byte)(bokeh ? 0x55 : 0xF0), c.R, c.G, c.B), 0));
                 fill.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, c.R, c.G, c.B), 1));
                 var dot = new Ellipse { Width = d, Height = d, Fill = fill };
-                // mostly in the lower half and along the spotlight, like the PS5
+                // mostly in the lower half and along the spotlight, like a console
                 double x = rnd.NextDouble() * size.Width;
                 double y = size.Height * (0.25 + rnd.NextDouble() * 0.75);
                 Canvas.SetLeft(dot, x); Canvas.SetTop(dot, y);
@@ -249,7 +246,7 @@ namespace Selene
             addCol.Children.Add(new TextBlock { Text = "Add User", FontSize = 22, FontFamily = new FontFamily("Segoe UI"), Foreground = new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 0) });
             // (no "Add User": Playnite has a single profile - a button that did nothing; user chose to remove it)
 
-            // the user's avatar (Aniki's animated-avatar template, same picture as its login)
+            // the user's avatar (the old theme's animated-avatar template, same picture as its login)
             var avCol = new StackPanel { Margin = new Thickness(0, -46, 0, 0) };
             var badge = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 14) };
             badge.Children.Add(new TextBlock { Text = "1", FontSize = 13, FontFamily = new FontFamily("Segoe UI"), Foreground = new SolidColorBrush(Color.FromArgb(0xC0, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Center });
@@ -268,7 +265,7 @@ namespace Selene
                     avatarTile.Child = new Image { Source = bmp, Stretch = Stretch.UniformToFill, Width = 210, Height = 210, Clip = new EllipseGeometry(new Point(105, 105), 105, 105) };
                 }
             }
-            catch (Exception ex) { HomeNav.Log("ps5 login avatar: " + ex.Message); }
+            catch (Exception ex) { HomeNav.Log("login avatar: " + ex.Message); }
             avatarRing = new Ellipse { Stroke = Brushes.White, StrokeThickness = 5, Margin = new Thickness(-10), Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 22, Color = Color.FromRgb(0x6F, 0xB4, 0xFF), Opacity = 0.8 } };
             avGrid.Children.Add(avatarTile); avGrid.Children.Add(avatarRing);
             avCol.Children.Add(avGrid);
@@ -326,7 +323,6 @@ namespace Selene
             new[] { "\uE777", "Restart", "power-restart" },
             new[] { "\uE7E8", "Shut Down", "power-off" } };
 
-        // "Tonky": the PC's name, as the PS5 says "PlayStation" (not "Playnite")
         private static string ConsoleName()
         {
             var n = (Environment.MachineName ?? "").ToLowerInvariant();
@@ -362,14 +358,14 @@ namespace Selene
         private static void RunPower(int i)
         {
             var cmd = PowerItems[i][2];
-            HomeNav.Log("ps5 login: power menu -> " + PowerItems[i][1]);
+            HomeNav.Log("login: power menu -> " + PowerItems[i][1]);
             ClosePowerMenu();
             try
             {
                 // the helper also turns the TV off first (like rest mode)
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SelenePaths.Helper, cmd) { UseShellExecute = false, CreateNoWindow = true });
             }
-            catch (Exception ex) { HomeNav.Log("ps5 login power failed: " + ex.Message); }
+            catch (Exception ex) { HomeNav.Log("login power failed: " + ex.Message); }
         }
 
         private static void ResetToPress()
@@ -384,7 +380,7 @@ namespace Selene
         private static void ShowWho()
         {
             stage = 1;
-            PlaySound(SelenePaths.ThemeAudio("LoginPress.wav"), 0.9);  // Press A: Aniki's original login sound (user's choice)
+            PlaySound(SelenePaths.ThemeAudio("LoginPress.wav"), 0.9);  // Press A: the old theme's original login sound (user's choice)
             FadeOut(pressLayer, 300);
             whoLayer.Visibility = Visibility.Visible;
             Select(1);
