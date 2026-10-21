@@ -1,81 +1,120 @@
-﻿using Playnite.SDK;
-using Playnite.SDK.Events;
-using Playnite.SDK.Models;
-using Playnite.SDK.Plugins;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
+using Playnite.SDK;
+using Playnite.SDK.Events;
+using Playnite.SDK.Plugins;
 
-namespace SeleneCore
+namespace Selene
 {
-    public class SeleneCore : GenericPlugin
+    // Selene Core: the companion add-on of the Selene fullscreen theme. Does nothing with any other theme.
+    public class SeleneCorePlugin : GenericPlugin
     {
+        public const string ThemeId = "Selene_a98e0027-fa6a-4f5e-a087-bad8d69f2443";
         private static readonly ILogger logger = LogManager.GetLogger();
+        private readonly SeleneSettingsViewModel settings;
 
-        private SeleneCoreSettingsViewModel settings { get; set; }
+        public override Guid Id { get { return Guid.Parse("cd424c29-97f4-4dd0-aa66-4d8e01cc8724"); } }
 
-        public override Guid Id { get; } = Guid.Parse("cd424c29-97f4-4dd0-aa66-4d8e01cc8724");
-
-        public SeleneCore(IPlayniteAPI api) : base(api)
+        public SeleneCorePlugin(IPlayniteAPI api) : base(api)
         {
-            settings = new SeleneCoreSettingsViewModel(this);
-            Properties = new GenericPluginProperties
-            {
-                HasSettings = true
-            };
+            settings = new SeleneSettingsViewModel(this);
+            SelenePaths.Init(this, settings.Settings);
+            Properties = new GenericPluginProperties { HasSettings = true };
         }
 
-        public override void OnGameInstalled(OnGameInstalledEventArgs args)
+        private bool Active
         {
-            // Add code to be executed when game is finished installing.
-        }
-
-        public override void OnGameStarted(OnGameStartedEventArgs args)
-        {
-            // Add code to be executed when game is started running.
-        }
-
-        public override void OnGameStarting(OnGameStartingEventArgs args)
-        {
-            // Add code to be executed when game is preparing to be started.
-        }
-
-        public override void OnGameStopped(OnGameStoppedEventArgs args)
-        {
-            // Add code to be executed when game is preparing to be started.
-        }
-
-        public override void OnGameUninstalled(OnGameUninstalledEventArgs args)
-        {
-            // Add code to be executed when game is uninstalled.
+            get { return PlayniteApi.ApplicationInfo.Mode == ApplicationMode.Fullscreen && SelenePaths.ActiveThemeId == ThemeId; }
         }
 
         public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
         {
-            // Add code to be executed when Playnite is initialized.
+            if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use, staying off"); return; }
+            HomeNav.Api = PlayniteApi;
+            HomeNav.Install();
+            HomeNav.Log("Selene Core started");
         }
 
-        public override void OnApplicationStopped(OnApplicationStoppedEventArgs args)
+        public override void OnGameStarting(OnGameStartingEventArgs args)
         {
-            // Add code to be executed when Playnite is shutting down.
+            if (Active && args.Game != null) HomeNav.GameStarting(args.Game.Id);
         }
 
         public override void OnLibraryUpdated(OnLibraryUpdatedEventArgs args)
         {
-            // Add code to be executed when library is updated.
+            // store imports mark deleted games installed again: folder gone = not installed
+            if (Active) LocalGames.MarkGoneFolders();
         }
 
-        public override ISettings GetSettings(bool firstRunSettings)
+        public override ISettings GetSettings(bool firstRunSettings) { return settings; }
+
+        public override UserControl GetSettingsView(bool firstRunSettings) { return SeleneSettingsView.Build(settings); }
+    }
+
+    public class SeleneSettings
+    {
+        public string MediaFolder { get; set; }
+        public List<string> GameFolders { get; set; }
+        public string HelperPath { get; set; }
+        public string StreamLogsFolder { get; set; }
+
+        public SeleneSettings() { MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; }
+    }
+
+    public class SeleneSettingsViewModel : ObservableObject, ISettings
+    {
+        private readonly SeleneCorePlugin plugin;
+        private SeleneSettings editing;
+        public SeleneSettings Settings { get; private set; }
+
+        public SeleneSettingsViewModel(SeleneCorePlugin plugin)
         {
-            return settings;
+            this.plugin = plugin;
+            Settings = plugin.LoadPluginSettings<SeleneSettings>() ?? new SeleneSettings();
         }
 
-        public override UserControl GetSettingsView(bool firstRunSettings)
+        public void BeginEdit() { editing = Playnite.SDK.Data.Serialization.GetClone(Settings); }
+
+        public void CancelEdit()
         {
-            return new SeleneCoreSettingsView();
+            if (editing == null) return;
+            Settings.MediaFolder = editing.MediaFolder; Settings.GameFolders = editing.GameFolders;
+            Settings.HelperPath = editing.HelperPath; Settings.StreamLogsFolder = editing.StreamLogsFolder;
+        }
+
+        public void EndEdit()
+        {
+            plugin.SavePluginSettings(Settings);
+            SelenePaths.Init(plugin, Settings);
+        }
+
+        public bool VerifySettings(out List<string> errors) { errors = new List<string>(); return true; }
+    }
+
+    // settings page, built in code (no XAML compiler needed to build Selene Core)
+    public static class SeleneSettingsView
+    {
+        public static UserControl Build(SeleneSettingsViewModel vm)
+        {
+            var s = vm.Settings;
+            var panel = new StackPanel { Margin = new Thickness(20) };
+            Func<string, string, Action<string>, TextBox> field = (label, value, set) =>
+            {
+                panel.Children.Add(new TextBlock { Text = label, Margin = new Thickness(0, 12, 0, 4) });
+                var box = new TextBox { Text = value ?? "" };
+                box.TextChanged += (o, e) => set(box.Text);
+                panel.Children.Add(box);
+                return box;
+            };
+            field("Media folder (downloaded art, preview clips, screenshots). Empty = Selene Core's own data folder:", s.MediaFolder, v => s.MediaFolder = v);
+            var games = field("Folders with games no store knows about (one per line):", string.Join(Environment.NewLine, s.GameFolders ?? new List<string>()),
+                v => s.GameFolders = new List<string>(v.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)));
+            games.AcceptsReturn = true; games.MinHeight = 60;
+            field("Optional companion helper (.exe) with admin rights. Empty = off:", s.HelperPath, v => s.HelperPath = v);
+            field("Optional game-streaming host log folder. Empty = off:", s.StreamLogsFolder, v => s.StreamLogsFolder = v);
+            return new UserControl { Content = panel };
         }
     }
 }

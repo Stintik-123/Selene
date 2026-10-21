@@ -1,0 +1,4709 @@
+// PS5-style Left/Right for the "Ps5GameRow" list on Aniki's Welcome Hub.
+// Aniki Helper handles every Left/Right on the hub itself (nearest focusable element, else next page),
+// which skips tiles and jumps pages. A Window class handler runs before Aniki Helper's instance handler,
+// so for focus inside Ps5GameRow we move exactly one visible tile, keep it at the left edge, and mark
+// the key handled. Everything else is left to Aniki Helper.
+// Loaded by the ClaudeLibraryTools extension via Add-Type (C# 5: no ?. or string interpolation).
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.ComponentModel;
+using System.Windows.Data;
+using System.Windows.Media.Imaging;
+
+namespace Selene
+{
+    public static class HomeNav
+    {
+        private const int AnchorSlot = 2;  // zero-based: third tile from the left
+        private static bool installed;
+
+        // "tv": Handheld games hidden in the row. "all": ChildStream tablet session (playnite-mode.ps1 child keeps
+        // fullscreenConfig.tv.json only while that session runs) -> whole library.
+        public static string RowMode = "tv";
+
+        // ChildStream: Playnite runs in a remote session where WPF draws in SOFTWARE. The PS5 extras (trailer cards,
+        // hub video, cached tiles, slides) made it crawl, so they are off there. TV / PC keep everything.
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern uint WTSGetActiveConsoleSessionId();
+        private static bool? lite;
+        public static bool Lite
+        {
+            get
+            {
+                if (lite == null)
+                {
+                    try { lite = (uint)System.Diagnostics.Process.GetCurrentProcess().SessionId != WTSGetActiveConsoleSessionId(); }
+                    catch { lite = false; }
+                }
+                return lite.Value;
+            }
+        }
+        public static string LastError;
+        public static Playnite.SDK.IPlayniteAPI Api;
+
+        public static void Install()
+        {
+            if (installed) return;
+            installed = true;
+            LocalGames.StartRunningWatch();
+            Smoothness.Start();
+            var libTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
+            libTimer.Tick += (s, e) => { libTimer.Stop(); RefreshLibrary("start"); };
+            libTimer.Start();
+            EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown));
+            EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnWindowPreviewGotFocus));
+            EventManager.RegisterClassHandler(typeof(ListBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnListLoaded));
+            var tvBackup = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "fullscreenConfig.tv.json");
+            RowMode = System.IO.File.Exists(tvBackup) ? "all" : "tv";
+            var app = Application.Current;
+            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["Ps5RowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); TakeOverAnikiSplash(); StartMusicOverrideWatch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
+        }
+
+        private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            try
+            {
+                // Up/Down never shrink the card; Left/Right only while moving inside the row (not in the bar below)
+                bool dirKey = e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left || e.Key == Key.Right;
+                if (!e.Handled && previewShowing && (!dirKey || ((e.Key == Key.Left || e.Key == Key.Right) && IsInRow(Keyboard.FocusedElement as DependencyObject)))) SmoothClosePreview();
+                if (e.Handled || (e.Key != Key.Left && e.Key != Key.Right && e.Key != Key.Enter && e.Key != Key.Down && e.Key != Key.Up)) return;
+                var focused = Keyboard.FocusedElement as DependencyObject;
+                ListBox row = null;
+                ListBoxItem item = null;
+                for (var d = focused; d != null; d = GetParent(d))
+                {
+                    if (item == null && d is ListBoxItem) item = (ListBoxItem)d;
+                    var lb = d as ListBox;
+                    if (lb != null && lb.Name == "Ps5GameRow") { row = lb; break; }
+                }
+                if (row == null) { HandleHubKeys(e, focused); return; }
+                if (e.Key == Key.Up) { if (FocusTopBar(row, item)) e.Handled = true; return; }
+                if (e.Key == Key.Down) { if (FocusNews(row)) e.Handled = true; return; }
+                var navItem = item != null ? item.DataContext as string : null;
+                if (e.Key == Key.Enter)
+                {
+                    Log("enter on " + (navItem ?? (item != null ? item.DataContext : row.SelectedItem)) + " api=" + (Api != null));
+                    // A on a section card opens that section instead of launching the selected game
+                    if (navItem == null || !navItem.StartsWith("nav:"))
+                    {
+                        var game = item != null ? item.DataContext : row.SelectedItem;
+                        var idProp = game != null ? game.GetType().GetProperty("Id") : null;
+                        if (Api != null && idProp != null)
+                        {
+                            e.Handled = true;
+                            StartGameNow((Guid)idProp.GetValue(game, null));
+                        }
+                        return;
+                    }
+                    e.Handled = true;
+                    if (movingCard != null) { movingCard = null; SetMoveVisual(item, false); return; }
+                    RunCard(row, navItem.Substring(4));
+                    return;
+                }
+                e.Handled = true;
+                int dir = e.Key == Key.Right ? 1 : -1;
+                if (movingCard != null && navItem == movingCard) { MoveCard(row, item, dir); return; }
+                if (movingGame != null && item != null && ReferenceEquals(item.DataContext, movingGame)) { MoveGame(row, item, dir); return; }
+
+                int cur = item != null ? row.ItemContainerGenerator.IndexFromContainer(item) : -1;
+                if (cur < 0) cur = Math.Max(0, row.SelectedIndex);
+                int next = -1;
+                for (int i = cur + dir; i >= 0 && i < row.Items.Count; i += dir)
+                {
+                    if (IsShown(row.Items[i])) { next = i; break; }
+                }
+                if (next < 0) return;
+                MoveTo(row, cur, next);
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.ToString();
+                Log(LastError);
+            }
+        }
+
+        // ---- the rest of the hub (news cards, other sections) ----
+        // Left/Right move to the nearest item on the same row and NEVER switch hub sections (only LB/RB do);
+        // Up from the news cards returns to the selected game. Top bar keys stay with Aniki Helper.
+        private static void HandleHubKeys(KeyEventArgs e, DependencyObject focused)
+        {
+            if (focused == null || e.Key == Key.Enter) return;
+            var w = Window.GetWindow(focused);
+            var hubRoot = w != null ? FindByName(w, "HubRoot") : null;
+            if (hubRoot == null || !hubRoot.IsVisible || !IsDescendant(focused, hubRoot)) return;
+            var topBar = FindByName(w, "HubTopBarBackground");
+            if (topBar != null && IsDescendant(focused, topBar)) return;
+
+            var cards = FindByName(hubRoot, "HubBottomCards");
+            if (e.Key == Key.Up)
+            {
+                if (cards == null || !IsDescendant(focused, cards)) return;
+                var row = FindByName(hubRoot, "Ps5GameRow") as ListBox;
+                var c = row != null ? row.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, row.SelectedIndex)) as UIElement : null;
+                if (c != null) { c.Focus(); e.Handled = true; }
+                return;
+            }
+            if (e.Key == Key.Down) return;
+
+            int dir = e.Key == Key.Right ? 1 : -1;
+            var me = focused as UIElement;
+            if (me == null) return;
+            var page = (cards != null && IsDescendant(focused, cards)) ? cards : hubRoot;
+            var origin = me.TranslatePoint(new Point(me.RenderSize.Width / 2, me.RenderSize.Height / 2), hubRoot);
+            UIElement best = null;
+            double bestScore = double.MaxValue;
+            foreach (var el in Focusables(page))
+            {
+                if (ReferenceEquals(el, me) || IsDescendant(el, me) || IsDescendant(me, el)) continue;
+                if (topBar != null && IsDescendant(el, topBar)) continue;
+                var c = el.TranslatePoint(new Point(el.RenderSize.Width / 2, el.RenderSize.Height / 2), hubRoot);
+                double dx = c.X - origin.X, dy = Math.Abs(c.Y - origin.Y);
+                if (dir * dx <= 20 || dy > Math.Max(80, me.RenderSize.Height * 0.75)) continue;
+                double score = Math.Abs(dx) + dy * 0.25;
+                if (score < bestScore) { bestScore = score; best = el; }
+            }
+            if (best != null) best.Focus();
+            e.Handled = true;  // at the edge: stay put (no section switch)
+        }
+
+        // the games right after (and just before) the selected one, for the screenshot strip to decode ahead
+        private static System.Collections.IList RowNeighbours(ListBox row)
+        {
+            var list = new System.Collections.ArrayList();
+            int i = row.SelectedIndex, n = row.Items.Count;
+            foreach (var d in new[] { 1, 2, 3, -1 })
+                if (i + d >= 0 && i + d < n) list.Add(row.Items[i + d]);
+            return list;
+        }
+
+        private static bool FocusTopBar(ListBox row, FrameworkElement fromItem)
+        {
+            var w = Window.GetWindow(row);
+            var bar = w != null ? FindByName(w, "HubTopBarBackground") : null;
+            if (bar == null) return false;
+            var from = fromItem ?? row;
+            double x = from.TranslatePoint(new Point(from.ActualWidth / 2, 0), w).X;
+            UIElement best = null; double bestD = double.MaxValue;
+            foreach (var el in Focusables(bar))
+            {
+                double ex = el.TranslatePoint(new Point(el.RenderSize.Width / 2, 0), w).X;
+                double d = Math.Abs(ex - x);
+                if (d < bestD) { bestD = d; best = el; }
+            }
+            if (best == null) return false;
+            best.Focus();
+            return true;
+        }
+
+        private static System.Collections.Generic.List<UIElement> Focusables(DependencyObject root)
+        {
+            var list = new System.Collections.Generic.List<UIElement>();
+            int n = VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < n; i++)
+            {
+                var c = VisualTreeHelper.GetChild(root, i);
+                var u = c as UIElement;
+                if (u != null && (!u.IsVisible || u.Opacity <= 0.01)) continue;
+                if (u != null && u.Focusable && u.IsEnabled && u.RenderSize.Width > 0) list.Add(u);
+                list.AddRange(Focusables(c));
+            }
+            return list;
+        }
+
+        private static bool IsDescendant(DependencyObject d, DependencyObject ancestor)
+        {
+            for (; d != null; d = d is Visual ? VisualTreeHelper.GetParent(d) : null)
+                if (ReferenceEquals(d, ancestor)) return true;
+            return false;
+        }
+
+        // Down from the row: straight to the first news card (Aniki Helper's first-time visual-tree scan caused a hitch)
+        private static bool FocusNews(ListBox row)
+        {
+            var scope = VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)));
+            DependencyObject hub = row;
+            for (int i = 0; i < 12 && hub != null; i++) { hub = VisualTreeHelper.GetParent(hub); var fe = hub as FrameworkElement; if (fe != null && fe.Name == "HubRoot") break; }
+            var cards = hub != null ? FindByName(hub, "HubBottomCards") : null;
+            if (cards == null) return false;
+            UIElement first = null; double bestX = double.MaxValue;
+            foreach (var el in Focusables(cards))
+            {
+                double x = el.TranslatePoint(new Point(0, 0), cards).X;
+                if (x < bestX) { bestX = x; first = el; }
+            }
+            if (first == null) return false;
+            first.Focus();
+            return true;
+        }
+
+        private static DateTime lastMoveAt = DateTime.MinValue;
+
+        private static void MoveTo(ListBox row, int cur, int next)
+        {
+            MoveToCore(row, cur, next);
+        }
+
+        private static void MoveToCore(ListBox row, int cur, int next)
+        {
+            var sv = FindChild<ScrollViewer>(row);
+            var panel = FindChild<VirtualizingStackPanel>(row);
+            double before = double.NaN;
+            var target = row.ItemContainerGenerator.ContainerFromIndex(next) as FrameworkElement;
+            if (target != null && panel != null) before = target.TranslatePoint(new Point(0, 0), row).X;
+
+            // No SelectedIndex here: the tile style selects whatever has keyboard focus, and setting both
+            // re-enters Selector and throws. Focus the tile after scrolling instead.
+            // Item-based scrolling: the selection walks to the third slot, then stays there and the row moves.
+            // ScrollViewer clamps the offset at the end, so the selection walks out to the last tile.
+            if (sv != null) sv.ScrollToHorizontalOffset(Math.Max(0, next - AnchorSlot));
+            row.UpdateLayout();
+
+            target = row.ItemContainerGenerator.ContainerFromIndex(next) as FrameworkElement;
+            if (target == null)
+            {
+                row.ScrollIntoView(row.Items[next]);
+                row.UpdateLayout();
+                target = row.ItemContainerGenerator.ContainerFromIndex(next) as FrameworkElement;
+            }
+            if (target == null) return;
+
+            ScheduleTitle(row, 230);
+            // Leaving a section card: the game info still shows the old game until the delayed SelectedGame
+            // binding (250 ms) catches up, so keep it hidden for that moment.
+            if (row.Items[cur] is string && !(row.Items[next] is string))
+            {
+                var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "Ps5InfoIntro");
+                if (info != null) info.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, 0.3, 0.25, null));
+            }
+
+            // Slide the row from where the tile was to where it is now.
+            if (panel != null && !double.IsNaN(before))
+            {
+                double delta = before - target.TranslatePoint(new Point(0, 0), row).X;
+                if (Math.Abs(delta) > 1 && !Lite)  // ChildStream: instant moves (no slide)
+                {
+                    var shift = panel.RenderTransform as TranslateTransform;
+                    if (shift == null) { shift = new TranslateTransform(); panel.RenderTransform = shift; }
+                    // start from where the row visibly IS: a quick second press used to restart from 'delta' and
+                    // drop the unfinished part of the previous slide (a little jump on every fast move)
+                    // held stick: moves arrive every ~100-150 ms; braking at the end of each slide gave a pulsing, low-fps
+                    // look, so chained moves glide at constant speed for exactly the repeat interval. A single tap eases out.
+                    double sinceLast = (DateTime.Now - lastMoveAt).TotalMilliseconds;
+                    lastMoveAt = DateTime.Now;
+                    Glide(shift, delta, sinceLast < 260);
+                }
+            }
+            target.Focus();
+            EnsureTileCaches(row);
+        }
+
+        // ---- row slide: one continuous spring instead of a new animation per press (like Playnite's library) ----
+        // Restarting an animation on every press reset the row's speed each time, so a held stick looked like a chain
+        // of little slides (low-fps feel without dropped frames). Now a press only moves the target: the row keeps its
+        // speed and follows on a critically damped spring (no overshoot), stepped on every rendered frame.
+        // A single tap starts at full speed and eases out (PS5 feel); presses while moving add no kick (smooth hold).
+        private const double GlideOmega = 18;   // 1/s: a tap is ~95% there after 0.17 s
+        private static TranslateTransform glideShift;
+        private static double glideV;
+        private static TimeSpan glideLast;
+        private static bool glideHooked;
+        private static readonly TranslateTransform glideClock = new TranslateTransform();
+
+        private static void Glide(TranslateTransform shift, double delta, bool chained)
+        {
+            if (glideShift != shift) { glideV = 0; glideShift = shift; }
+            shift.BeginAnimation(TranslateTransform.XProperty, null);
+            shift.X += delta;                       // the tiles jumped by -delta in layout: start where they were seen
+            if (!chained) glideV = -GlideOmega * shift.X;   // pure exponential ease-out from here
+            if (glideHooked) return;
+            glideHooked = true;
+            glideLast = TimeSpan.Zero;
+            CompositionTarget.Rendering += OnGlideFrame;
+            // WPF renders at 60 fps unless an animation asks for more: keep a dummy one running at the 143 Hz refresh
+            var clock = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(1)) { RepeatBehavior = RepeatBehavior.Forever };
+            Timeline.SetDesiredFrameRate(clock, 144);
+            glideClock.BeginAnimation(TranslateTransform.XProperty, clock);
+        }
+
+        private static void OnGlideFrame(object sender, EventArgs e)
+        {
+            var shift = glideShift;
+            var now = ((RenderingEventArgs)e).RenderingTime;
+            if (now == glideLast) return;           // Rendering can fire more than once per frame
+            double dt = glideLast == TimeSpan.Zero ? 1.0 / 144 : Math.Min(0.05, (now - glideLast).TotalSeconds);
+            glideLast = now;
+            if (shift == null) { StopGlide(); return; }
+            // exact critically damped step: x(t) = (x0 + (v0 + w x0) t) e^-wt
+            double x0 = shift.X, v0 = glideV, w = GlideOmega, k = Math.Exp(-w * dt), b = v0 + w * x0;
+            double x = (x0 + b * dt) * k;
+            glideV = (v0 - w * b * dt) * k;
+            if (Math.Abs(x) < 0.3 && Math.Abs(glideV) < 6) { shift.X = 0; StopGlide(); return; }
+            shift.X = x;
+        }
+
+        private static void StopGlide()
+        {
+            glideV = 0;
+            if (!glideHooked) return;
+            glideHooked = false;
+            CompositionTarget.Rendering -= OnGlideFrame;
+            glideClock.BeginAnimation(TranslateTransform.XProperty, null);
+        }
+
+        // Each tile (card + ring + sheen) is one cached picture: sliding the row moves pictures instead of redrawing
+        // every tile, shadow and effect each frame. This is what made the boot intro smooth.
+        private static void EnsureTileCaches(ListBox row)
+        {
+            if (Lite)   // software rendering: no caches, but the end padding must still be invisible
+            {
+                for (int i = 0; i < row.Items.Count; i++)
+                {
+                    var pc = row.Items[i] is RowPad ? row.ItemContainerGenerator.ContainerFromIndex(i) as UIElement : null;
+                    if (pc != null) { pc.Opacity = 0; pc.IsHitTestVisible = false; pc.Focusable = false; }
+                    var gc = !(row.Items[i] is RowPad) ? row.ItemContainerGenerator.ContainerFromIndex(i) as UIElement : null;
+                    if (gc != null && !gc.Focusable) { gc.Opacity = 1; gc.IsHitTestVisible = true; gc.Focusable = true; }
+                }
+                return;
+            }
+            for (int i = 0; i < row.Items.Count; i++)
+            {
+                var c = row.ItemContainerGenerator.ContainerFromIndex(i) as UIElement;
+                if (c != null && row.Items[i] is RowPad) { c.BeginAnimation(UIElement.OpacityProperty, null); c.Opacity = 0; c.IsHitTestVisible = false; c.Focusable = false; continue; }
+                if (c != null && !c.Focusable) { c.Opacity = 1; c.IsHitTestVisible = true; c.Focusable = true; }  // recycled from a spacer
+                if (c != null && c.CacheMode == null) c.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
+            }
+        }
+
+        // Mirrors the tile style triggers: hidden games and "Handheld" games are collapsed.
+        private static bool IsShown(object game) { return IsShownBase(game) && PassesRowFilter(game); }
+
+        // Placeholder after the last game (see RebuildGames): never shown, focused or selected.
+        public sealed class RowPad { public override string ToString() { return "pad"; } }
+        private static readonly RowPad[] RowPads = { new RowPad(), new RowPad(), new RowPad(), new RowPad(), new RowPad(), new RowPad(), new RowPad(), new RowPad(), new RowPad() };
+
+        private static bool IsShownBase(object game)
+        {
+            if (game == null || game is RowPad) return false;
+            var t = game.GetType();
+            var hidden = t.GetProperty("Hidden");
+            if (hidden != null && Equals(hidden.GetValue(game, null), true)) return false;
+            var cats = t.GetProperty("Categories");
+            var list = cats != null ? cats.GetValue(game, null) as IEnumerable : null;
+            if (list != null)
+            {
+                foreach (var c in list)
+                {
+                    var name = c != null ? c.GetType().GetProperty("Name") : null;
+                    return RowMode == "all" || !(name != null && Equals(name.GetValue(c, null), "Handheld"));
+                }
+            }
+            return true;
+        }
+
+        // PS5 boot-in: whenever the row becomes visible, each on-screen tile flies out from the centre of the
+        // row to its slot, one after another, with a small overshoot.
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ListBox, object> hookedRows =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<ListBox, object>();
+
+        private static void OnListLoaded(object sender, RoutedEventArgs e)
+        {
+            HookRow(sender as ListBox);
+        }
+
+        // The hub (and the row) can be built before this extension starts, so also look for an existing row.
+        // WPF only broadcasts Loaded to elements with instance handlers, so the class handler above can miss the
+        // row. Watch the login screen and the hub overlay instead (both exist from startup) and find the row then.
+        private static void HookExistingRows()
+        {
+            foreach (Window w in Application.Current.Windows)
+            {
+                var row = FindByName(w, "Ps5GameRow") as ListBox;
+                if (row != null) HookRow(row);
+                var login = FindByName(w, "AcceuilSettings");
+                var hub = FindByName(w, "WelcomeHubOverlay");
+                Log("watch: login=" + (login != null) + " hub=" + (hub != null) + " row=" + (row != null));
+                var win = w;
+                WatchDetails(w);
+                if (login != null) login.IsVisibleChanged += (s, a) => { if (!(bool)a.NewValue) FindAndPlay(win); };
+                HookHub(win);
+            }
+        }
+
+        // The hub overlay may not exist yet when HookExistingRows runs (Playnite builds it later on some starts),
+        // so this is also called once the row is found. Hooks each hub overlay once.
+        private static WeakReference hookedHub;
+        private static void HookHub(Window win)
+        {
+            var hub = FindByName(win, "WelcomeHubOverlay");
+            if (hub == null || (hookedHub != null && hookedHub.Target == hub)) return;
+            hookedHub = new WeakReference(hub);
+            ReplaceFadeImages(win);
+            CacheNewsCards(win);
+            RenderFilterTabs(win);
+            DisableAnikiTriggerPaging();
+            HookHubPageGuard();
+            hub.IsVisibleChanged += (s, a) => { if ((bool)a.NewValue) { FindAndPlay(win); RenderFilterTabs(win); } else { RefreshLibraryFades(); HidePreview(); ForceHorizontalLibrary(); EnsureBigScreenFilter(); if (!openingDetails) FocusLibraryLater(win); } };
+            Log("hub hooked");
+        }
+
+        // ---- no stutter from background changes ----
+        // Playnite's FadeImage calls GC.Collect() whenever its first image finishes fading out (FadeImage.
+        // Image1FadeOut_Completed): with every selection changing several full-screen backgrounds, that forced a full
+        // garbage collection (2-3 frozen frames, 60-150 ms) ~1 s after every second move - right in the next slide.
+        // The selection-driven FadeImages (bound to SelectedGame / the hero path) are unplugged and replaced in place
+        // by Ps5Crossfade: same crossfade, image decoded off the UI thread at screen size, no forced collection.
+        private static void ReplaceFadeImages(Window win)
+        {
+            int n = 0;
+            foreach (var fi in FindAll(win, d => d.GetType().Name == "FadeImage"))
+            {
+                try
+                {
+                    var dpd = DependencyPropertyDescriptor.FromName("Source", fi.GetType(), fi.GetType());
+                    if (dpd == null) continue;
+                    var be = BindingOperations.GetBindingBase(fi, dpd.DependencyProperty) as Binding;
+                    if (be == null) continue;
+                    string path = (be.Path != null ? be.Path.Path : "") + " " + (be.ElementName ?? "");
+                    Log("fade image: " + path + " | dc=" + (fi.DataContext != null ? fi.DataContext.GetType().Name : "null") + " | in " + Ancestry(fi));
+                    if (path.IndexOf("SelectedGame", StringComparison.Ordinal) < 0 && path.IndexOf("Ps5HeroPath", StringComparison.Ordinal) < 0)
+                    {
+                        // left as it is, but without the fade storyboard (its completion is what calls GC.Collect)
+                        var animOther = fi.GetType().GetProperty("AnimationEnabled");
+                        if (animOther != null && animOther.CanWrite) animOther.SetValue(fi, false, null);
+                        continue;
+                    }
+                    if (Ancestry(fi).IndexOf("WelcomeHubOverlay", StringComparison.Ordinal) < 0)
+                    {
+                        // library side: keep Playnite's own image (its sources are Playnite types), just no fade storyboard
+                        var animLib = fi.GetType().GetProperty("AnimationEnabled");
+                        if (animLib != null && animLib.CanWrite) animLib.SetValue(fi, false, null);
+                        continue;
+                    }
+                    var parent = VisualTreeHelper.GetParent(fi) as Panel;
+                    if (parent == null)
+                    {
+                        // e.g. a Border: give it a Grid holding the original (unplugged) and the replacement
+                        var deco = VisualTreeHelper.GetParent(fi) as Decorator;
+                        if (deco == null || deco.Child != fi) { Log("fade image skipped, parent " + (VisualTreeHelper.GetParent(fi) ?? (object)"null").GetType().Name); continue; }
+                        var wrap = new Grid();
+                        deco.Child = null;
+                        wrap.Children.Add(fi);
+                        deco.Child = wrap;
+                        parent = wrap;
+                    }
+                    var cf = new Ps5Crossfade();
+                    string where = Ancestry(fi);
+                    if (where.IndexOf("WelcomeHubOverlay", StringComparison.Ordinal) < 0)
+                    {
+                        libraryFades.Add(new WeakReference(cf));
+                    }
+                    else if (path.IndexOf("Ps5HeroPath", StringComparison.Ordinal) < 0)
+                    {
+                        // home background: the PS Store hero above covers it whenever there is one
+                        var heroPath = FindByName(parent, "Ps5HeroPath") as TextBlock;
+                        if (heroPath != null) cf.CanLoad = () => !System.IO.File.Exists(heroPath.Text);
+                    }
+                    var stretch = fi.GetType().GetProperty("Stretch");
+                    if (stretch != null) cf.Stretch = (Stretch)stretch.GetValue(fi, null);
+                    RenderOptions.SetBitmapScalingMode(cf, RenderOptions.GetBitmapScalingMode(fi));
+                    cf.Margin = fi.Margin; cf.HorizontalAlignment = fi.HorizontalAlignment; cf.VerticalAlignment = fi.VerticalAlignment;
+                    cf.Opacity = fi.Opacity; cf.OpacityMask = fi.OpacityMask; cf.Effect = fi.Effect; cf.IsHitTestVisible = false;
+                    Grid.SetRow(cf, Grid.GetRow(fi)); Grid.SetColumn(cf, Grid.GetColumn(fi));
+                    Grid.SetRowSpan(cf, Grid.GetRowSpan(fi)); Grid.SetColumnSpan(cf, Grid.GetColumnSpan(fi));
+                    Panel.SetZIndex(cf, Panel.GetZIndex(fi));
+                    parent.Children.Insert(parent.Children.IndexOf(fi), cf);
+                    BindingOperations.SetBinding(cf, Ps5Crossfade.SourceProperty, be);
+                    // keep the original (theme storyboards may name it) but never let it change again
+                    BindingOperations.ClearBinding(fi, dpd.DependencyProperty);
+                    // a style binding survives ClearBinding: pin a local null over it, and no fade storyboard either
+                    fi.SetValue(dpd.DependencyProperty, null);
+                    var anim = fi.GetType().GetProperty("AnimationEnabled");
+                    if (anim != null && anim.CanWrite) anim.SetValue(fi, false, null);
+                    fi.Visibility = Visibility.Collapsed;
+                    n++;
+                }
+                catch (Exception ex) { Log("fade replace failed: " + ex.Message); }
+            }
+            Log("fade images replaced: " + n);
+        }
+
+        private static string Ancestry(DependencyObject d)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; d != null && i < 40; i++)
+            {
+                d = VisualTreeHelper.GetParent(d);
+                var fe = d as FrameworkElement;
+                if (fe != null && fe.Name.Length > 0) { sb.Append(fe.Name).Append(" < "); if (sb.Length > 160) break; }
+            }
+            return sb.ToString();
+        }
+
+        // The news cards sit on the playing background video: without a cache their pictures and shadows were
+        // redrawn on every video frame (row 94 fps; cards hidden 118). Cached, they are blended as one picture.
+        // LB/RB rebuilds the page with new cards, so this runs on every row load too.
+        private static void CacheNewsCards(DependencyObject root)
+        {
+            if (Lite || root == null) return;
+            foreach (var card in FindAll(root, d => { var fe = d as FrameworkElement; return fe != null && fe.Name == "Ps5ShotStrip"; }))
+                if (card.CacheMode == null) card.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = true };
+        }
+
+        private static readonly List<WeakReference> libraryFades = new List<WeakReference>();
+
+        private static void RefreshLibraryFades()
+        {
+            foreach (var w in libraryFades) { var cf = w.Target as Ps5Crossfade; if (cf != null) cf.Refresh(); }
+        }
+
+        private static List<FrameworkElement> FindAll(DependencyObject root, Func<DependencyObject, bool> match)
+        {
+            // visual AND logical children: some theme parts (e.g. a FadeImage in a button that is not templated yet) are
+            // only in the logical tree but still animate
+            var found = new List<FrameworkElement>();
+            var visited = new HashSet<DependencyObject>();
+            var stack = new Stack<DependencyObject>();
+            stack.Push(root);
+            while (stack.Count > 0)
+            {
+                var d = stack.Pop();
+                if (!visited.Add(d)) continue;
+                var fe = d as FrameworkElement;
+                if (fe != null && match(d)) { found.Add(fe); continue; }
+                if (d is Visual) for (int i = VisualTreeHelper.GetChildrenCount(d) - 1; i >= 0; i--) stack.Push(VisualTreeHelper.GetChild(d, i));
+                foreach (var c in LogicalTreeHelper.GetChildren(d)) { var cd = c as DependencyObject; if (cd != null) stack.Push(cd); }
+            }
+            return found;
+        }
+
+        // The library always opens in the horizontal layout (Hold-Y "Change layout" may have switched it).
+        private static void ForceHorizontalLibrary()
+        {
+            try
+            {
+                Type appType = null;
+                foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
+                    if (a.GetName().Name == "Playnite") { appType = a.GetType("Playnite.PlayniteApplication"); break; }
+                var app = appType.GetProperty("Current", BindingFlags.Public | BindingFlags.Static).GetValue(null, null);
+                var settings = app.GetType().GetProperty("AppSettings").GetValue(app, null);
+                var fs = settings.GetType().GetProperty("Fullscreen").GetValue(settings, null);
+                var hl = fs.GetType().GetProperty("HorizontalLayout");
+                if (hl != null && !Equals(hl.GetValue(fs, null), true)) { hl.SetValue(fs, true, null); Log("library layout -> horizontal"); }
+            }
+            catch (Exception ex) { Log("horizontal: " + ex.Message); }
+        }
+
+        // ---- which screen is watching: the Y700 streaming natively via Vibepollo sees every game (indies included) ----
+        // Same detection as DuoPOC\extras\wilds\wilds-mode.ps1: the newest Apollo log says whether a client is connected
+        // and its name. ChildStream runs its own Playnite (RowMode "all" from the start) and is not watched.
+        private static bool startedAsChild;
+
+        private static void StartDeviceModeWatch()
+        {
+            startedAsChild = RowMode == "all";
+            if (startedAsChild) return;
+            var dispatcher = Application.Current.Dispatcher;
+            var thread = new System.Threading.Thread(() =>
+            {
+                string last = RowMode;
+                while (true)
+                {
+                    string mode = "tv";
+                    try { if (TabletStreaming()) mode = "all"; } catch { }
+                    if (mode != last)
+                    {
+                        last = mode;
+                        var m = mode;
+                        dispatcher.BeginInvoke(new Action(() => ApplyDeviceMode(m)));
+                    }
+                    System.Threading.Thread.Sleep(3000);
+                }
+            }) { IsBackground = true, Name = "Ps5DeviceMode" };
+            thread.Start();
+        }
+
+        private static bool TabletStreaming()
+        {
+            var dir = new System.IO.DirectoryInfo(SelenePaths.StreamLogs);
+            if (!dir.Exists) return false;
+            System.IO.FileInfo newest = null;
+            foreach (var f in dir.GetFiles("*.log")) if (newest == null || f.LastWriteTime > newest.LastWriteTime) newest = f;
+            if (newest == null) return false;
+            string text;
+            using (var fs = new System.IO.FileStream(newest.FullName, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete))
+            {
+                fs.Seek(Math.Max(0, fs.Length - 512 * 1024), System.IO.SeekOrigin.Begin);
+                text = new System.IO.StreamReader(fs).ReadToEnd();
+            }
+            var events = System.Text.RegularExpressions.Regex.Matches(text, "CLIENT (CONNECTED|DISCONNECTED)");
+            if (events.Count == 0 || events[events.Count - 1].Groups[1].Value != "CONNECTED") return false;
+            var names = System.Text.RegularExpressions.Regex.Matches(text, @"Display mode for client \[([^\]]+)\]");
+            if (names.Count == 0) return false;
+            var client = names[names.Count - 1].Groups[1].Value;
+            return System.Text.RegularExpressions.Regex.IsMatch(client, "Y700|Lenovo", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        private static void ApplyDeviceMode(string mode)
+        {
+            try
+            {
+                if (startedAsChild || mode == RowMode) return;
+                RowMode = mode;
+                Application.Current.Resources["Ps5RowMode"] = mode;
+                var row = LiveRow();
+                if (row != null) RebuildGames(row);
+                if (mode == "tv") EnsureBigScreenFilter();
+                else if (Api != null && Api.MainView.GetActiveFilterPreset() == BigScreenPreset)
+                {
+                    foreach (var fp in Api.Database.FilterPresets)
+                        if (fp.Name == "All") { Api.MainView.ApplyFilterPreset(fp.Id); break; }
+                }
+                Log("device mode: " + (mode == "all" ? "tablet stream (all games)" : "TV (Handheld games hidden)"));
+            }
+            catch (Exception ex) { Log("device mode failed: " + ex.Message); }
+        }
+
+        // ---- sleeping the PC ends the stream properly (Aurora/Artemis used to freeze until they timed out) ----
+        // Any sleep (Playnite/Aniki menu, power button, Sleep tile) -> ask Vibepollo to disconnect connected clients first.
+        // Credentials: %LOCALAPPDATA%\ClaudePs5\vibepollo-cred.txt (line 1 user, line 2 password; readable by this account only).
+        private static void OnPowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+        {
+            if (e.Mode != Microsoft.Win32.PowerModes.Suspend) return;
+            try { DisconnectStreamClients(); } catch (Exception ex) { Log("sleep disconnect failed: " + ex.Message); }
+        }
+
+        private static void DisconnectStreamClients()
+        {
+            var credFile = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClaudePs5", "vibepollo-cred.txt");
+            if (!System.IO.File.Exists(credFile)) return;
+            var lines = System.IO.File.ReadAllLines(credFile);
+            if (lines.Length < 2) return;
+            var auth = "Basic " + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(lines[0].Trim() + ":" + lines[1].Trim()));
+            System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;  // .NET Framework defaults to old TLS
+            System.Net.ServicePointManager.ServerCertificateValidationCallback = (s, cert, chain, errors) =>
+            {
+                var req = s as System.Net.HttpWebRequest;
+                return req != null && req.RequestUri.Host == "localhost";  // Vibepollo's self-signed certificate, local only
+            };
+            string list = HttpCall("GET", "https://localhost:47990/api/clients/list", auth, null);
+            int n = 0;
+            foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(list, "\\{[^{}]*\"connected\":true[^{}]*\\}"))
+            {
+                var uuid = System.Text.RegularExpressions.Regex.Match(m.Value, "\"uuid\":\"([^\"]+)\"").Groups[1].Value;
+                if (uuid.Length == 0) continue;
+                HttpCall("POST", "https://localhost:47990/api/clients/disconnect", auth, "{\"uuid\":\"" + uuid + "\"}");
+                n++;
+            }
+            Log("sleep: disconnected " + n + " stream client(s)");
+        }
+
+        private static string HttpCall(string method, string url, string auth, string body)
+        {
+            var req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
+            req.Method = method;
+            req.Timeout = 2500;
+            req.ReadWriteTimeout = 2500;
+            req.KeepAlive = false;
+            req.Headers["Authorization"] = auth;
+            if (body != null)
+            {
+                req.ContentType = "application/json";
+                var bytes = System.Text.Encoding.UTF8.GetBytes(body);
+                using (var s = req.GetRequestStream()) s.Write(bytes, 0, bytes.Length);
+            }
+            using (var resp = req.GetResponse())
+            using (var r = new System.IO.StreamReader(resp.GetResponseStream()))
+                return r.ReadToEnd();
+        }
+
+        // TV: the library shows the "Big Screen" filter preset (tablet/ChildStream keeps the whole library)
+        private static readonly Guid BigScreenPreset = new Guid("e1fb63ec-0f24-4eaf-bfd2-68fbe05d1411");
+
+        private static void EnsureBigScreenFilter()
+        {
+            try
+            {
+                if (Api == null || RowMode != "tv") return;
+                if (Api.MainView.GetActiveFilterPreset() != BigScreenPreset) { Api.MainView.ApplyFilterPreset(BigScreenPreset); Log("library filter -> Big Screen"); }
+            }
+            catch (Exception ex) { Log("filter: " + ex.Message); }
+        }
+
+        // Switching the layout rebuilds the library list and drops focus (controller dead). Put focus on the
+        // selected game (or the first one) once the list exists.
+        private static void FocusLibraryLater(Window w) { FocusLibraryLater(w, true); }
+
+        // fromHome=false: keep the library's own selection (coming back to a game launched from the library)
+        private static void FocusLibraryLater(Window w, bool fromHome)
+        {
+            int tries = 0;
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+            timer.Tick += (s, e) =>
+            {
+                tries++;
+                var list = FindByName(w, "PART_ListGameItems") as ListBox;
+                if (list == null || !list.IsVisible || list.Items.Count == 0) { if (tries > 15) { timer.Stop(); Log("library open: list not found/visible"); } return; }
+                timer.Stop();
+                // the game that was selected on the home row (cards excepted) is the one the library opens on
+                // (the list holds GamesCollectionViewEntry wrappers, not Game objects: match by Id)
+                int want = -1;
+                var wantId = fromHome && lastSelected != null && !(lastSelected is string) ? Prop(lastSelected, "Id") : null;
+                if (wantId != null)
+                    for (int i = 0; i < list.Items.Count; i++)
+                    {
+                        var it = list.Items[i];
+                        var g = Prop(it, "Game");
+                        if (wantId.Equals(Prop(it, "Id")) || (g != null && wantId.Equals(Prop(g, "Id")))) { want = i; break; }
+                    }
+                if (tries <= 1) Log("library open: home=" + lastSelected + " id=" + wantId + " -> index " + want + " of " + list.Items.Count
+                    + " (was " + list.SelectedIndex + ", focused=" + list.IsKeyboardFocusWithin + ", item type=" + (list.Items.Count > 0 ? list.Items[0].GetType().Name : "-") + ")");
+                if (wantId != null && want < 0 && tries <= 1) Log("library focus: " + lastSelected + " not in list");
+                if (want >= 0 && list.SelectedIndex != want) list.SelectedIndex = want;
+                else if (list.SelectedIndex < 0) list.SelectedIndex = 0;
+                if (list.IsKeyboardFocusWithin && want < 0) return;
+                // ScrollIntoView does nothing in the horizontal layout (virtualized panel, tile not generated yet):
+                // ask the panel itself to bring the index into view, then the container exists and can take focus
+                var c = list.ItemContainerGenerator.ContainerFromIndex(list.SelectedIndex) as UIElement;
+                if (c == null || !c.IsVisible)
+                {
+                    var vp = FindChild<VirtualizingPanel>(list);
+                    var vsp = vp as VirtualizingStackPanel;
+                    try
+                    {
+                        // Playnite's FullscreenTilePanel ignores BringIndexIntoView but has its own public ScrollToItem
+                        var scrollTo = vp != null ? vp.GetType().GetMethod("ScrollToItem", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(object) }, null) : null;
+                        if (scrollTo != null) scrollTo.Invoke(vp, new object[] { list.SelectedItem });
+                        else if (vsp != null) vsp.BringIndexIntoViewPublic(list.SelectedIndex);
+                        else if (vp != null) typeof(VirtualizingPanel).GetMethod("BringIndexIntoView", BindingFlags.Instance | BindingFlags.NonPublic)
+                            .Invoke(vp, new object[] { list.SelectedIndex });
+                        else list.ScrollIntoView(list.SelectedItem);
+                    }
+                    catch (Exception ex) { if (tries <= 1) Log("library scroll: " + ex.Message); }
+                    list.UpdateLayout();
+                    c = list.ItemContainerGenerator.ContainerFromIndex(list.SelectedIndex) as UIElement;
+                    if (tries <= 1) Log("library scroll: panel=" + (vp != null ? vp.GetType().Name : "none") + " container=" + (c != null));
+                }
+                if (c == null || !c.IsVisible)
+                {
+                    if (tries < 25) { timer.Start(); return; }
+                    Log("library focus: tile never appeared, focusing list");
+                    list.Focus(); return;
+                }
+                c.Focus();
+                Log("library focus -> " + list.SelectedItem + " (tile focused=" + c.IsKeyboardFocusWithin + ")");
+            };
+            timer.Start();
+        }
+
+        private static void FindAndPlay(Window w)
+        {
+            // the hub page template may still be materialising; give layout a moment
+            w.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var row = FindByName(w, "Ps5GameRow") as ListBox;
+                Log("find row: " + (row != null));
+                if (row == null) return;
+                HookRow(row);
+                HookHub(w);
+                HookNewsSlide(row);
+                if (Lite)
+                {
+                    foreach (var name in new[] { "HubBackgroundVideo" })
+                    {
+                        var v = FindByName(w, name) as MediaElement;
+                        if (v != null && v.Visibility == Visibility.Visible) { v.Stop(); v.Source = null; v.Visibility = Visibility.Collapsed; Log("lite: " + name + " off"); }
+                    }
+                }
+                QueueIntro(row);
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private static void HookRow(ListBox row)
+        {
+            object dummy;
+            if (row == null || row.Name != "Ps5GameRow" || hookedRows.TryGetValue(row, out dummy)) return;
+            hookedRows.Add(row, null);
+            liveRow = new WeakReference(row);
+            HookMoveCommand(row);
+            UseOwnGameList(row);
+            // Aniki rebuilds the row on every LB/RB page switch and focuses its first item (a card), which made the
+            // row jump. Start the new row at the default spot and redirect focus that enters from outside.
+            var sv0 = FindChild<ScrollViewer>(row);
+            if (sv0 != null) sv0.ScrollToHorizontalOffset(Math.Max(0, FirstGameIndex(row) - AnchorSlot));
+            row.PreviewGotKeyboardFocus += OnRowPreviewGotFocus;
+            // Going up to the top bar (or anywhere outside the row) must not scroll the row back to the start.
+            row.LostKeyboardFocus += (s, a) =>
+            {
+                var nf = a.NewFocus as DependencyObject;
+                if (nf != null && IsInRow(nf)) return;
+                var sv = FindChild<ScrollViewer>(row);
+                if (sv != null) heldOffset = sv.HorizontalOffset;
+            };
+            row.GotKeyboardFocus += (s, a) => { heldOffset = -1; };
+            // focus outline only while the row itself has focus (down to Play/Details or up to the top bar drops it)
+            row.IsKeyboardFocusWithinChanged += (s, a) =>
+            {
+                var win = Window.GetWindow(row);
+                if (win != null && !win.IsActive) return;  // switching to a game: leave the look alone
+                SetRowFocusLook(row, (bool)a.NewValue);
+            };
+            Action hookScroll = () =>
+            {
+                var sv = FindChild<ScrollViewer>(row);
+                if (sv == null) return;
+                sv.ScrollChanged += (s2, a2) =>
+                {
+                    if (heldOffset >= 0 && !row.IsKeyboardFocusWithin && Math.Abs(sv.HorizontalOffset - heldOffset) > 0.5)
+                    {
+                        sv.ScrollToHorizontalOffset(heldOffset);
+                    }
+                };
+            };
+            row.ItemContainerGenerator.StatusChanged += (s, a) =>
+            {
+                if (row.ItemContainerGenerator.Status == System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated) EnsureTileCaches(row);
+            };
+            row.SelectionChanged += (s, a) =>
+            {
+                if (!row.IsVisible || row.SelectedItem == null) return;
+                // an old row from before an LB/RB rebuild can still fire (its list is refreshed): only the live row
+                // decides where home resumes (the old one kept putting it back on NBA 2K26)
+                if (LiveRow() != null && !ReferenceEquals(LiveRow(), row)) return;
+                lastSelected = row.SelectedItem;
+                QueuePush(row);
+                ArmPreview(row);
+                PreloadCoverArt(row.SelectedItem);
+                GameMedia.OnSelected(row.SelectedItem, RowNeighbours(row));
+            };
+            // the game already selected when the row appears never raises SelectionChanged
+            row.IsVisibleChanged += (s, a) => { if (row.IsVisible && row.SelectedItem != null) GameMedia.OnSelected(row.SelectedItem, RowNeighbours(row)); };
+            if (row.IsVisible && row.SelectedItem != null) GameMedia.OnSelected(row.SelectedItem, RowNeighbours(row));
+            if (row.IsLoaded) hookScroll(); else row.Loaded += (s, a) => hookScroll();
+            // Selection follows focus but is NOT cleared when focus leaves the row (the old style trigger did that,
+            // which blanked SelectedGame for a moment: highlight flicker + music restart on LB/RB and overlays).
+            row.AddHandler(UIElement.GotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnRowGotFocus), true);
+            Log("row loaded, visible=" + row.IsVisible);
+            // LB/RB rebuilt the page: its new backgrounds / cards need the same treatment as the first load
+            var rw = Window.GetWindow(row);
+            if (rw != null) { ReplaceFadeImages(rw); CacheNewsCards(rw); RenderFilterTabs(rw); }
+            // (no row.IsVisibleChanged hook: LB/RB page switches hide/show the row and must not replay anything)
+            // Aniki opens the hub at startup behind the login screen ("AcceuilSettings"), so the row is already
+            // visible when the user presses A: replay the intro when the login screen goes away.
+            var window = Window.GetWindow(row);
+            var login = window != null ? FindByName(window, "AcceuilSettings") : null;
+            Log("login screen found=" + (login != null) + (login != null ? " visible=" + login.IsVisible : ""));
+            if (login != null) login.IsVisibleChanged += (s, a) => { if (!(bool)a.NewValue && row.IsVisible) QueueIntro(row); };
+            if (login != null) LoginScene.Attach(window, login);
+            // A visible new row after the first intro = Aniki rebuilt page 1 on an LB/RB switch: keep the user's spot
+            // (resetting changed SelectedGame -> background flash and music restart).
+            if (row.IsVisible) { if (introDone && lastSelected != null) RestoreSelection(row); else QueueIntro(row); }
+        }
+
+        private static object lastSelected;
+        private static double heldOffset = -1;
+        private static WeakReference liveRow;
+        private static ListBox LiveRow() { return liveRow != null ? liveRow.Target as ListBox : null; }
+
+        // The row tells Playnite which game is selected (SelectedGame drives background, info, music). Only real games
+        // are pushed, 250 ms after the selection settles (holding Left/Right stays smooth); cards and "nothing" never are.
+        private static System.Windows.Threading.DispatcherTimer pushTimer;
+
+        private static DateTime lastPushAt = DateTime.MinValue;
+
+        private static void QueuePush(ListBox row)
+        {
+            // first move after a rest goes through immediately (music fades back to the default right away);
+            // fast scrolling stays debounced so holding the stick does not stutter
+            if (pushTimer == null)
+            {
+                pushTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                pushTimer.Tick += (s, e) => { pushTimer.Stop(); lastPushAt = DateTime.Now; var r = pushTimer.Tag as ListBox; if (r != null) PushSelected(r); };
+            }
+            pushTimer.Stop();
+            pushTimer.Tag = row;
+            pushTimer.Start();
+        }
+
+        private static void PushSelected(ListBox row)
+        {
+            var game = row.SelectedItem;
+            if (game == null) return;
+            var vm = row.DataContext;
+            var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
+            if (prop == null || !prop.CanWrite) return;
+            if (game is string) { if (prop.GetValue(vm, null) != null) prop.SetValue(vm, null, null); return; }  // card: default background
+            if (!ReferenceEquals(prop.GetValue(vm, null), game)) prop.SetValue(vm, game, null);
+        }
+
+        private static string lastShoulder = "RightShoulder";
+
+        // page 1's host ContentControl is only enabled while page 1 is the active hub section
+        private static bool RowPageActive(ListBox row)
+        {
+            if (row == null || !row.IsVisible) return false;
+            for (DependencyObject d = row; d != null; d = VisualTreeHelper.GetParent(d))
+            {
+                var cc = d as ContentControl;
+                if (cc != null && !(cc is ListBoxItem) && cc.ContentTemplate != null) return cc.IsEnabled && cc.Opacity > 0.5;
+            }
+            return row.IsEnabled;
+        }
+
+        // LB/RB back to page 1: row and game info glide in from the side we came from (LB = from the left).
+        private static void PlayPageEnter(ListBox row)
+        {
+            var host = VisualTreeHelper.GetParent(row) as UIElement;
+            var inf = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "Ps5InfoIntro");
+            if (host != null) host.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+            if (inf != null) inf.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+            int frames = 0;
+            EventHandler onFrame = null;
+            onFrame = (s, e) =>
+            {
+                if (++frames < 2) return;  // first frame after the (slow) rebuild has been presented
+                CompositionTarget.Rendering -= onFrame;
+                StartPageEnter(row);
+            };
+            CompositionTarget.Rendering += onFrame;
+        }
+
+        private static void StartPageEnter(ListBox row)
+        {
+            double from = lastShoulder == "LeftShoulder" ? -90 : 90;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var rowHost = VisualTreeHelper.GetParent(row) as UIElement;
+            var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "Ps5InfoIntro");
+            var targets = new UIElement[] { rowHost, info };
+            for (int i = 0; i < targets.Length; i++)
+            {
+                var el = targets[i];
+                if (el == null) continue;
+                double delay = i * 0.06;
+                var shift = new TranslateTransform();
+                if (el == info)
+                {
+                    var existing = el.RenderTransform as TranslateTransform;
+                    if (existing != null && !existing.IsFrozen) shift = existing; else el.RenderTransform = shift;
+                }
+                else el.RenderTransform = shift;
+                el.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, delay, 0.3, null));
+                shift.BeginAnimation(TranslateTransform.XProperty, Keys(from, 0, delay, 0.38, ease));
+            }
+        }
+
+        // ---- PS3/PSP-style trailer preview ----
+        // Rest on a game for 2.5 s: the tile widens to 16:9 and plays ExtraMetadata\games\<id>\VideoTrailer.mp4 (muted)
+        // for 30 s, then shrinks back. Any press closes it at once.
+        private const double TileSize = 160, TileWide = 284;   // 16:9 at the tile height
+        private const double ZoomNormal = 1.3, ZoomPreview = 1.5;
+        private static System.Windows.Threading.DispatcherTimer previewArm;
+        private static bool previewShowing;
+        private static WeakReference previewRow, previewItem;
+        private static readonly List<WeakReference> previewFaded = new List<WeakReference>();
+
+        // Centering offset for the wide card lives on the ItemsPresenter: it is inside the row's scroll window, so the
+        // window stays put and the tiles past the right edge slide in (moving the whole row left an empty strip).
+        private static TranslateTransform PreviewShift(ListBox row)
+        {
+            var ip = FindChild<ItemsPresenter>(row);
+            UIElement host = ip != null ? (UIElement)ip : row;
+            var shift = host.RenderTransform as TranslateTransform;
+            if (shift == null || shift.IsFrozen) { shift = new TranslateTransform(); host.RenderTransform = shift; }
+            return shift;
+        }
+
+        private static void ArmPreview(ListBox row)
+        {
+            if (Lite) return;  // no trailer cards in ChildStream
+            if (previewArm == null)
+            {
+                previewArm = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
+                previewArm.Tick += (s, e) => { previewArm.Stop(); var r = previewArm.Tag as ListBox; if (r != null) ShowPreview(r); };
+            }
+            previewArm.Stop();
+            previewArm.Tag = row;
+            if (row.SelectedItem != null && !(row.SelectedItem is string)) previewArm.Start();
+        }
+
+        private static string TrailerPath(object game)
+        {
+            var id = Prop(game, "Id");
+            if (id == null || Api == null) return null;
+            // silent 60 s clip made by make-preview-clips.py (a file without audio needs no muting)
+            var path = System.IO.Path.Combine(SelenePaths.Media("PreviewClips"), id.ToString() + ".mp4");
+            return System.IO.File.Exists(path) ? path : null;
+        }
+
+        // The selected tile itself grows to a bigger 16:9 card (both sides, neighbours move aside, a bit lower like
+        // the normal zoom) and plays its trailer inside, muted, for 30 s. Any press closes it.
+        private static void ShowPreview(ListBox row)
+        {
+            try
+            {
+                if (previewShowing || !row.IsVisible || !row.IsKeyboardFocusWithin || movingCard != null || movingGame != null) return;
+                var game = row.SelectedItem;
+                var path = game is string ? null : (previewSound ? FullTrailerPath(game) ?? TrailerPath(game) : TrailerPath(game));
+                var item = row.ItemContainerGenerator.ContainerFromItem(game) as ListBoxItem;
+                if (path == null || item == null) return;
+                var tile = FindByName(item, "Tile");
+                var video = TileVideo(item, true);
+                var scale = item.Template.FindName("TileScale", item) as ScaleTransform;
+                var panel = FindChild<VirtualizingStackPanel>(row);
+                if (tile == null || video == null || scale == null || panel == null) return;
+
+                previewShowing = true;
+                UpdateMusicOverride();  // the game's song comes with the card
+                previewRow = new WeakReference(row);
+                previewItem = new WeakReference(item);
+                var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+                var dur = TimeSpan.FromMilliseconds(480);
+                double after = (TileWide + 14) * ZoomPreview;
+                // grow to the right; slide left only as far as needed to keep the card inside the row, and fade out
+                // tiles that slide past the left edge (centring the card cut the leftmost tile in half)
+                double itemLeft = item.TranslatePoint(new Point(0, 0), row).X;
+                double target = -Math.Max(0, itemLeft + after - (row.ActualWidth - 24));
+                var shift = PreviewShift(row);
+                shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, target, dur) { EasingFunction = ease });
+                previewFaded.Clear();
+                foreach (var child in panel.Children)
+                {
+                    var li = child as ListBoxItem;
+                    if (li == null || li == item || li.TranslatePoint(new Point(0, 0), row).X + target > -1) continue;
+                    li.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(260)));
+                    previewFaded.Add(new WeakReference(li));
+                }
+                tile.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(TileSize, TileWide, dur) { EasingFunction = ease });
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(ZoomNormal, ZoomPreview, dur) { EasingFunction = ease });
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(ZoomNormal, ZoomPreview, dur) { EasingFunction = ease });
+
+                video.SizeChanged -= OnTileVideoSize;
+                video.SizeChanged += OnTileVideoSize;
+                var tileGrid = VisualTreeHelper.GetParent(video) as FrameworkElement;
+                if (tileGrid != null)
+                {
+                    SizeChangedEventHandler follow = null;
+                    follow = (s, e) => { if (!previewShowing) { tileGrid.SizeChanged -= follow; return; } ClipVideoToTile(video); };
+                    tileGrid.SizeChanged += follow;
+                }
+                if (previewSound) SetUpsVideoPlaying(true);
+                video.Source = new Uri(path);
+                video.Opacity = 0;
+                video.MediaOpened -= OnPreviewOpened;
+                video.MediaOpened += OnPreviewOpened;
+                video.MediaEnded -= OnPreviewEnded;
+                video.MediaEnded += OnPreviewEnded;
+                video.Play();
+                ShowSoundBadge(item, true);
+
+                var title = FindTitle(row);
+                if (title != null) title.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(150)));
+                // the title stays hidden while the 16:9 card is open; HidePreview puts it back under the tile
+
+                Log("preview: " + game);
+            }
+            catch (Exception ex) { Log("preview failed: " + ex.Message); }
+        }
+
+        private static void OnPreviewOpened(object sender, RoutedEventArgs e)
+        {
+            var video = (MediaElement)sender;
+            if (pendingSeek.HasValue) { var seek = pendingSeek.Value; pendingSeek = null; try { video.Position = seek; } catch { } video.Opacity = 1; return; }
+            video.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(400)) { BeginTime = TimeSpan.FromMilliseconds(200) });
+        }
+
+        // ---- trailer sound (R3) ----
+        private static bool previewSound;          // stays on for the session once switched on
+        private static TimeSpan? pendingSeek;
+
+        private static string FullTrailerPath(object game)
+        {
+            var id = Prop(game, "Id");
+            if (id == null || Api == null) return null;
+            var path = System.IO.Path.Combine(Api.Paths.ConfigurationPath, "ExtraMetadata", "games", id.ToString(), "VideoTrailer.mp4");
+            return System.IO.File.Exists(path) ? path : null;
+        }
+
+        private static void ShowSoundBadge(ListBoxItem item, bool show)
+        {
+            var badge = item != null ? FindByName(item, "SoundBadge") : null;
+            var glyph = item != null ? FindByName(item, "SoundGlyph") as TextBlock : null;
+            if (badge == null) return;
+            badge.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            if (glyph != null) glyph.Text = previewSound ? "\uE767" : "\uE74F";  // volume / mute
+        }
+
+        private static void TogglePreviewSound()
+        {
+            var item = previewItem != null ? previewItem.Target as ListBoxItem : null;
+            var video = item != null ? TileVideo(item, false) : null;
+            if (video == null) return;
+            var game = item.DataContext;
+            var full = FullTrailerPath(game); var clip = TrailerPath(game);
+            if (full == null || clip == null) return;
+            var pos = video.Position;
+            previewSound = !previewSound;
+            // the silent clip starts 4 s into the trailer
+            pendingSeek = previewSound ? pos + TimeSpan.FromSeconds(4) : (pos > TimeSpan.FromSeconds(4) ? pos - TimeSpan.FromSeconds(4) : TimeSpan.Zero);
+            SetUpsVideoPlaying(previewSound);
+            video.Source = new Uri(previewSound ? full : clip);
+            video.Play();
+            ShowSoundBadge(item, true);
+            Log("trailer sound " + (previewSound ? "on" : "off"));
+        }
+
+        private static void OnPreviewEnded(object sender, RoutedEventArgs e)
+        {
+            var v = (MediaElement)sender;
+            v.Position = TimeSpan.Zero;  // loop while the card stays selected
+            v.Play();
+        }
+
+        // UniPlaySong pauses on its own "video is playing" flag (PauseOnTrailer) and resumes when it is cleared.
+        private static void SetUpsVideoPlaying(bool playing)
+        {
+            try
+            {
+                if (Api == null) return;
+                foreach (var plugin in Api.Addons.Plugins)
+                {
+                    if (plugin.Id != new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")) continue;
+                    var settings = plugin.GetSettings(false);
+                    var prop = settings != null ? settings.GetType().GetProperty("VideoIsPlaying") : null;
+        
+                    if (prop != null && prop.CanWrite) prop.SetValue(settings, playing, null);
+                    Log("UPS VideoIsPlaying=" + playing + (prop == null ? " (property not found on " + (settings == null ? "null" : settings.GetType().Name) + ")" : ""));
+                }
+            }
+            catch (Exception ex) { Log("UPS pause: " + ex.Message); }
+        }
+
+        // The video is laid out at its full 16:9 width even while the card is still narrower (it spilled past the
+        // card's sides, uneven gap to the ring). Clip it to the card's own rounded rectangle, centred.
+        private static void OnTileVideoSize(object sender, SizeChangedEventArgs e) { ClipVideoToTile((FrameworkElement)sender); }
+
+        // The trailer player only exists on the tile being previewed: a MediaElement in every tile made each row rebuild slow
+        // (and left an audio session per tile behind).
+        private static MediaElement TileVideo(ListBoxItem item, bool create)
+        {
+            var existing = FindByName(item, "TileVideo") as MediaElement;
+            if (existing != null || !create) return existing;
+            var host = FindByName(item, "TileVideoHost") as Panel;
+            if (host == null) return null;
+            var video = new MediaElement
+            {
+                Name = "TileVideo", LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close, Volume = 1,
+                Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false
+            };
+            host.Children.Add(video);
+            return video;
+        }
+
+        private static void ClipVideoToTile(FrameworkElement v)
+        {
+            var tile = VisualTreeHelper.GetParent(v) as FrameworkElement;  // the tile's Grid
+            double tw = tile != null && tile.ActualWidth > 0 ? tile.ActualWidth : v.ActualWidth;
+            double th = tile != null && tile.ActualHeight > 0 ? tile.ActualHeight : v.ActualHeight;
+            if (Math.Abs(v.Width - tw) > 0.5 || double.IsNaN(v.Width)) v.Width = tw;
+            if (Math.Abs(v.Height - th) > 0.5 || double.IsNaN(v.Height)) v.Height = th;
+            v.Clip = new RectangleGeometry(new Rect(0, 0, Math.Max(1, tw), Math.Max(1, th)), 12, 12);
+        }
+
+        // Closing because the user moved: the tile's layout snaps back at once (so navigation measures real sizes),
+        // but it is drawn shrinking from the 16:9 card to the square tile around its own centre, and the row glides
+        // from where it was instead of jumping.
+        private static void SmoothClosePreview()
+        {
+            var row = previewRow != null ? previewRow.Target as ListBox : null;
+            var item = previewItem != null ? previewItem.Target as ListBoxItem : null;
+            var tile = item != null ? FindByName(item, "Tile") : null;
+            if (row == null || item == null || tile == null) { HidePreview(false); return; }
+            var root = Window.GetWindow(row) as UIElement;
+            Point preL = tile.TranslatePoint(new Point(0, 0), root), preR = tile.TranslatePoint(new Point(tile.ActualWidth, tile.ActualHeight), root);
+            HidePreview(false);  // layout + row offset back to normal, preview animations released
+            row.UpdateLayout();
+            Point postL = tile.TranslatePoint(new Point(0, 0), root), postR = tile.TranslatePoint(new Point(tile.ActualWidth, tile.ActualHeight), root);
+            double preW = preR.X - preL.X, postW = Math.Max(1, postR.X - postL.X);
+            double preH = preR.Y - preL.Y, postH = Math.Max(1, postR.Y - postL.Y);
+            double preC = (preL.X + preR.X) / 2, postC = (postL.X + postR.X) / 2;
+            var ease = new QuinticEase { EasingMode = EasingMode.EaseOut };
+            var dur = TimeSpan.FromMilliseconds(230);
+
+            // row: start where the card's centre was, glide to the new layout
+            var shift = PreviewShift(row);
+            var back = new DoubleAnimation(preC - postC, 0, dur) { EasingFunction = ease };
+            back.Completed += (s, e) => shift.BeginAnimation(TranslateTransform.XProperty, null);
+            shift.BeginAnimation(TranslateTransform.XProperty, back);
+
+            // the old card: drawn from its wide size down to the tile
+            var shrink = new ScaleTransform(preW / postW, preH / postH);
+            tile.RenderTransformOrigin = new Point(0.5, 0);
+            tile.RenderTransform = shrink;
+            var sx = new DoubleAnimation(preW / postW, 1, dur) { EasingFunction = ease };
+            sx.Completed += (s, e) => { tile.RenderTransform = Transform.Identity; };
+            shrink.BeginAnimation(ScaleTransform.ScaleXProperty, sx);
+            shrink.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(preH / postH, 1, dur) { EasingFunction = ease });
+        }
+
+        private static void HidePreview() { HidePreview(false); }
+        private static bool HidePreview(bool animate, int ms) { bool was = previewShowing; previewMs = ms; HidePreview(animate); previewMs = 380; return was; }
+        private static int previewMs = 380;
+
+        // animate=true when the 30 s are up; false on a press (snap back instantly so navigation measures true sizes)
+        private static void HidePreview(bool animate)
+        {
+            if (previewArm != null) previewArm.Stop();
+            if (!previewShowing) return;
+            previewShowing = false;
+            UpdateMusicOverride();  // back to the default music at once
+            var row = previewRow != null ? previewRow.Target as ListBox : null;
+            var item = previewItem != null ? previewItem.Target as ListBoxItem : null;
+            if (row == null || item == null) return;
+            var tile = FindByName(item, "Tile");
+            var video = TileVideo(item, false);
+            var scale = item.Template.FindName("TileScale", item) as ScaleTransform;
+            var panel = FindChild<VirtualizingStackPanel>(row);
+            if (video != null)
+            {
+                video.BeginAnimation(UIElement.OpacityProperty, null); video.Opacity = 0; video.Stop(); video.Source = null; video.ClearValue(FrameworkElement.WidthProperty); video.ClearValue(FrameworkElement.HeightProperty);
+                video.SizeChanged -= OnTileVideoSize;
+                var vh = video.Parent as Panel;
+                if (vh != null) vh.Children.Remove(video);  // frees the player (one per tile used to cost a lot on every row rebuild)
+            }
+            ShowSoundBadge(item, false);
+            if (previewSound) SetUpsVideoPlaying(false);
+            foreach (var w in previewFaded)
+            {
+                var li = w.Target as ListBoxItem;
+                if (li == null) continue;
+                var fadeIn = new DoubleAnimation(1, TimeSpan.FromMilliseconds(230));
+                fadeIn.Completed += (s, e) => li.BeginAnimation(UIElement.OpacityProperty, null);
+                li.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+            }
+            previewFaded.Clear();
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+            var dur = TimeSpan.FromMilliseconds(animate ? previewMs : 0);
+            double zoomBack = item.IsSelected ? ZoomNormal : 1;
+            if (tile != null)
+            {
+                if (animate)
+                {
+                    var aw = new DoubleAnimation(TileWide, TileSize, dur) { EasingFunction = ease };
+                    aw.Completed += (s, e) => tile.BeginAnimation(FrameworkElement.WidthProperty, null);
+                    tile.BeginAnimation(FrameworkElement.WidthProperty, aw);
+                }
+                else tile.BeginAnimation(FrameworkElement.WidthProperty, null);
+            }
+            if (scale != null)
+            {
+                if (animate)
+                {
+                    var ax = new DoubleAnimation(zoomBack, dur) { EasingFunction = ease };
+                    ax.Completed += (s, e) => { scale.BeginAnimation(ScaleTransform.ScaleXProperty, null); scale.BeginAnimation(ScaleTransform.ScaleYProperty, null); };
+                    scale.BeginAnimation(ScaleTransform.ScaleXProperty, ax);
+                    scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(zoomBack, dur) { EasingFunction = ease });
+                }
+                else
+                {
+                    // hand control back to the tile's own selection zoom storyboard
+                    scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                    scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                }
+            }
+            var shift = PreviewShift(row);
+            if (shift != null) shift.BeginAnimation(TranslateTransform.XProperty, animate ? new DoubleAnimation(0, dur) { EasingFunction = ease } : null);
+            if (!animate) row.UpdateLayout();
+            var title = FindTitle(row);
+            if (title != null)
+            {
+                if (animate)
+                {
+                    var settle = new System.Windows.Threading.DispatcherTimer { Interval = dur + TimeSpan.FromMilliseconds(40) };
+                    settle.Tick += (s, e) => { settle.Stop(); PlaceTitle(row, item, 0); };
+                    settle.Start();
+                }
+                else PlaceTitle(row, item, 0);
+            }
+        }
+
+        private static void RestoreSelection(ListBox row)
+        {
+            ApplyCardOrder(row);
+            HookNewsSlide(row);  // LB/RB rebuilt the page: its news row is new too
+            int idx = row.Items.IndexOf(lastSelected);
+            if (idx < 0) idx = FirstGameIndex(row);
+            row.SelectedIndex = idx;
+            var sv = FindChild<ScrollViewer>(row);
+            if (sv != null) sv.ScrollToHorizontalOffset(Math.Max(0, idx - AnchorSlot));
+            row.UpdateLayout();
+            var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement;
+            if (c != null) c.Focus();
+            ScheduleTitle(row, 400);
+            PlayPageEnter(row);
+            ArmPreview(row);
+            Log("page switch: restored " + lastSelected);
+        }
+
+        private static void OnRowGotFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            var row = (ListBox)sender;
+            ListBoxItem item = null;
+            for (var d = e.NewFocus as DependencyObject; d != null && d != row; d = VisualTreeHelper.GetParent(d))
+                if (d is ListBoxItem) { item = (ListBoxItem)d; break; }
+            if (item == null || item.IsSelected) return;
+            row.Dispatcher.BeginInvoke(new Action(() => { if (item.IsKeyboardFocusWithin && !item.IsSelected) item.IsSelected = true; }),
+                System.Windows.Threading.DispatcherPriority.Input);
+        }
+
+        private static void OnRowPreviewGotFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            var row = (ListBox)sender;
+            var oldFocus = e.OldFocus as DependencyObject;
+            if (oldFocus != null && IsInRow(oldFocus)) return;  // normal movement inside the row
+            int first = FirstGameIndex(row);
+            int target = row.SelectedIndex >= 0 ? row.SelectedIndex : first;
+            var c = row.ItemContainerGenerator.ContainerFromIndex(target) as UIElement;
+            if (c == null || ReferenceEquals(e.NewFocus, c)) return;
+            e.Handled = true;  // cancel focus landing on a card / the list itself
+            row.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var sv = FindChild<ScrollViewer>(row);
+                if (sv != null) sv.ScrollToHorizontalOffset(Math.Max(0, target - AnchorSlot));
+                row.UpdateLayout();
+                var c2 = row.ItemContainerGenerator.ContainerFromIndex(target) as UIElement;
+                if (c2 != null) c2.Focus();
+            }), System.Windows.Threading.DispatcherPriority.Input);
+        }
+
+        private static void QueueIntro(ListBox row)
+        {
+            row.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var window = Window.GetWindow(row);
+                var login = window != null ? FindByName(window, "AcceuilSettings") : null;
+                Log("intro queued, login visible=" + (login != null && login.IsVisible));
+                if (login != null && login.IsVisible) return;  // still behind the login screen
+                if (introDone) { PlayIntro(row); return; }
+                // first intro after start: tile art is still decoding; wait for an idle moment so the fly-in is smooth
+                var holder = FindByName(window, "Ps5RowIntro") as UIElement;
+                if (holder != null) holder.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+                var infoHold = FindByName(window, "Ps5InfoIntro") as UIElement;
+                var bgHold = FindByName(window, "Ps5HubGameBackground") as UIElement;
+                if (infoHold != null) infoHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+                if (bgHold != null) bgHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+                try
+                {
+                    RebuildGames(row);
+                    int first0 = FirstGameIndex(row);
+                    if (first0 >= 0) { row.SelectedIndex = first0; PushSelected(row); }
+                }
+                catch { }
+                row.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    var wait = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+                    wait.Tick += (s, e) =>
+                    {
+                        wait.Stop();
+                        if (holder != null) holder.BeginAnimation(UIElement.OpacityProperty, null);
+                        PlayIntro(row);
+                    };
+                    wait.Start();
+                }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private static DateTime lastIntro;
+        private static bool introDone;
+
+        private static void PlayIntro(ListBox row)
+        {
+            if ((DateTime.Now - lastIntro).TotalMilliseconds < 800) return;  // several watchers fire for one hub open
+            lastIntro = DateTime.Now;
+            bool animate = !introDone && !Lite;  // full intro only the first time the hub is seen after Playnite starts (never in ChildStream)
+            introDone = true;
+            try
+            {
+                // The row's SelectedItem -> SelectedGame binding only pushes on change, so on open Playnite
+                // would keep its old selection (music, background) while the row shows its first game.
+                ApplyCardOrder(row);
+                RebuildGames(row);
+                int first = FirstGameIndex(row);
+                movingCard = null;
+                movingGame = null;
+                {
+                    var sv0 = FindChild<ScrollViewer>(row);
+                    if (sv0 != null) { sv0.ScrollToHorizontalOffset(Math.Max(0, first - AnchorSlot)); row.UpdateLayout(); }
+                    var fc = row.ItemContainerGenerator.ContainerFromIndex(first) as UIElement;
+                    if (fc != null) fc.Focus(); else row.SelectedIndex = first;
+                    var again = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+                    again.Tick += (s2, e2) =>
+                    {
+                        again.Stop();
+                        if (row.IsVisible && !row.IsKeyboardFocusWithin)
+                        {
+                            var fc2 = row.ItemContainerGenerator.ContainerFromIndex(FirstGameIndex(row)) as UIElement;
+                            if (fc2 != null) { fc2.Focus(); Log("refocused first game"); }
+                        }
+                    };
+                    again.Start();
+                }
+                PushSelected(row);  // hub open: Playnite's selection follows the row right away
+                ArmPreview(row);    // same game still selected -> no SelectionChanged; restart the "rested on it" timer
+
+                row.UpdateLayout();
+                ScheduleTitle(row, animate ? 1300 : 250);
+
+                if (!animate) { Log("hub reopened: default view, no intro"); return; }
+
+                // Background fades up first, game info rises in after the tiles.
+                var window = Window.GetWindow(row);
+                var bg = window != null ? FindByName(window, "Ps5HubGameBackground") : null;
+                if (bg != null) bg.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, 0, 0.9, new CubicEase { EasingMode = EasingMode.EaseOut }));
+                var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "Ps5InfoIntro");
+                if (info != null)
+                {
+                    info.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, 0.9, 0.5, null));
+                    var lift = info.RenderTransform as TranslateTransform;
+                    if (lift != null && !lift.IsFrozen) lift.BeginAnimation(TranslateTransform.YProperty, Keys(40, 0, 0.9, 0.55, new CubicEase { EasingMode = EasingMode.EaseOut }));
+                }
+                double center = row.ActualWidth / 2;
+                int k = 0;
+                for (int i = 0; i < row.Items.Count; i++)
+                {
+                    var c = row.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
+                    if (c == null || c.Visibility != Visibility.Visible || c.ActualWidth <= 0 || row.Items[i] is RowPad) continue;
+                    double x = c.TranslatePoint(new Point(0, 0), row).X;
+                    if (x + c.ActualWidth < 0) continue;
+                    if (x > row.ActualWidth) break;
+
+                    var scale = new ScaleTransform(0.35, 0.35);
+                    var shift = new TranslateTransform();
+                    var group = new TransformGroup();
+                    group.Children.Add(scale);
+                    group.Children.Add(shift);
+                    c.RenderTransformOrigin = new Point(0.5, 0.5);
+                    c.RenderTransform = group;
+
+                    double delay = 0.30 + k * 0.045;
+                    double fromX = (center - (x + c.ActualWidth / 2)) * 0.75;
+                    // fly a cached picture of the tile (its shadow effect is not redrawn every frame), live again after landing
+                    c.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };  // stays on (EnsureTileCaches)
+                    var glide = new CubicEase { EasingMode = EasingMode.EaseOut };
+                    c.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, delay, 0.35, null));
+                    shift.BeginAnimation(TranslateTransform.XProperty, Keys(fromX, 0, delay, 0.65, glide));
+                    shift.BeginAnimation(TranslateTransform.YProperty, Keys(-18, 0, delay, 0.65, glide));
+                    scale.BeginAnimation(ScaleTransform.ScaleXProperty, Keys(0.35, 1, delay, 0.65, glide));
+                    scale.BeginAnimation(ScaleTransform.ScaleYProperty, Keys(0.35, 1, delay, 0.65, glide));
+                    k++;
+                }
+                Log("intro played on " + k + " tiles");
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.ToString();
+                Log(LastError);
+            }
+        }
+
+        // Puts Ps5TileTitle under the selected tile (final zoomed size 160 x 1.3) and fades it in after 'delay' s.
+        private const double ZoomedTile = 208;
+        private const double SmallTile = 160;
+
+        // Tiles shrink/zoom and the row slides for ~0.22 s after a move, so hide the title at once and place it
+        // when the layout has settled (also keeps it hidden while Left/Right is held).
+        private static System.Windows.Threading.DispatcherTimer titleTimer;
+
+        private static void ScheduleTitle(ListBox row, int ms)
+        {
+            if (movingCard != null || movingGame != null) return;
+            var title = FindTitle(row);
+            if (title != null) { title.BeginAnimation(UIElement.OpacityProperty, null); title.Opacity = 0; }
+            if (titleTimer == null) titleTimer = new System.Windows.Threading.DispatcherTimer();
+            titleTimer.Stop();
+            titleTimer.Interval = TimeSpan.FromMilliseconds(ms);
+            titleTimer.Tag = row;
+            titleTimer.Tick -= OnTitleTimer;
+            titleTimer.Tick += OnTitleTimer;
+            titleTimer.Start();
+        }
+
+        private static void OnTitleTimer(object sender, EventArgs e)
+        {
+            titleTimer.Stop();
+            var row = titleTimer.Tag as ListBox;
+            if (row == null) return;
+            var c = row.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, row.SelectedIndex)) as FrameworkElement;
+            if (c != null) PlaceTitle(row, c, 0);
+        }
+
+        private static FrameworkElement FindTitle(ListBox row)
+        {
+            var parent = VisualTreeHelper.GetParent(row);
+            return parent != null ? FindByName(parent, "Ps5TileTitle") : null;
+        }
+
+        private static void PlaceTitle(ListBox row, FrameworkElement container, double delay)
+        {
+            if (previewShowing) return;  // no title beside the open 16:9 card
+            var title = FindTitle(row);
+            var canvas = title != null ? VisualTreeHelper.GetParent(title) as UIElement : null;
+            var tile = FindByName(container, "Tile");
+            if (title == null || canvas == null || tile == null) return;
+            var p = RestingPoint(tile, container, canvas);
+            // right edge of the highlight ring (it sits outside the card), measured where the row will come to rest:
+            // the continuous slide may still be running, so its remaining offset is taken out
+            var edge = FindByName(container, "Ring") ?? tile;
+            double animated = p.X - RestingLeftRaw(tile, canvas);       // minus the container's intro/drop offset
+            var panel = FindChild<VirtualizingStackPanel>(row);
+            var slide = panel != null ? panel.RenderTransform as TranslateTransform : null;
+            if (slide != null) animated -= slide.X;                       // minus what is left of the row's slide
+            double right = edge.TranslatePoint(new Point(edge.ActualWidth, 0), canvas).X + animated;
+            right = Math.Max(right, RestingLeftRaw(tile, canvas) + animated + ZoomedTile);
+            Canvas.SetLeft(title, right + 16);
+            Canvas.SetTop(title, p.Y + SmallTile + 14);
+            title.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, delay, 0.2, null));
+        }
+
+        internal static FrameworkElement FindByName(DependencyObject root, string n)
+        {
+            int k = VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < k; i++)
+            {
+                var ch = VisualTreeHelper.GetChild(root, i);
+                var fe = ch as FrameworkElement;
+                if (fe != null && fe.Name == n) return fe;
+                var hit = FindByName(ch, n);
+                if (hit != null) return hit;
+            }
+            return null;
+        }
+
+        // Holds 'from' until 'delay', then eases to 'to' over 'duration' seconds.
+        private static DoubleAnimationUsingKeyFrames Keys(double from, double to, double delay, double duration, IEasingFunction ease)
+        {
+            var a = new DoubleAnimationUsingKeyFrames();
+            a.KeyFrames.Add(new DiscreteDoubleKeyFrame(from, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            a.KeyFrames.Add(new DiscreteDoubleKeyFrame(from, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(delay))));
+            a.KeyFrames.Add(new EasingDoubleKeyFrame(to, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(delay + duration)), ease));
+            return a;
+        }
+
+        // Section cards: items "nav:<name>" at the start of the row. A runs hidden proxy button Ps5Nav_<name>;
+        // Y (or F2) picks a card up, Left/Right moves it among the cards, Y/A drops it. Order is saved.
+        private static string movingCard;
+        private static readonly string CardOrderFile = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "ps5-card-order.txt");
+
+        private static int FirstGameIndex(ListBox row)
+        {
+            int i = 0;
+            while (i < row.Items.Count && row.Items[i] is string) i++;
+            if (i < row.Items.Count && row.Items[i] is RowPad) return i - 1;   // filter left no games: last nav card
+            return i;
+        }
+
+        private static void RunCard(ListBox row, string name)
+        {
+            var scope = VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row));
+            var proxy = scope != null ? FindByName(scope, "Ps5Nav_" + name) as System.Windows.Controls.Primitives.ButtonBase : null;
+            if (proxy != null && proxy.Command != null && proxy.Command.CanExecute(proxy.CommandParameter)) proxy.Command.Execute(proxy.CommandParameter);
+        }
+
+        private static bool returnToHub;
+
+        private static ListBox FindRow(DependencyObject d)
+        {
+            for (; d != null; d = VisualTreeHelper.GetParent(d))
+            {
+                var lb = d as ListBox;
+                if (lb != null && lb.Name == "Ps5GameRow") return lb;
+            }
+            return null;
+        }
+
+        private static bool InLibraryList(DependencyObject d)
+        {
+            for (; d != null; d = VisualTreeHelper.GetParent(d))
+            {
+                var lb = d as ListBox;
+                if (lb != null) return lb.Name == "PART_ListGameItems" || lb.Name == "PART_ListGameItemsDetailed";
+            }
+            return false;
+        }
+
+        private static bool IsInRow(DependencyObject d)
+        {
+            for (; d != null; d = VisualTreeHelper.GetParent(d))
+            {
+                var lb = d as ListBox;
+                if (lb != null && lb.Name == "Ps5GameRow") return true;
+            }
+            return false;
+        }
+
+        private static void WatchDetails(Window w)
+        {
+            var details = FindByName(w, "PART_ElemGameDetails");
+            Log("details view found=" + (details != null));
+            if (details == null) return;
+            details.IsVisibleChanged += (s, a) =>
+            {
+                if ((bool)a.NewValue || !returnToHub) return;
+                returnToHub = false;
+                w.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    var hub = FindByName(w, "WelcomeHubOverlay");
+                    var proxy = FindByName(w, "Ps5Nav_hub") as System.Windows.Controls.Primitives.ButtonBase;
+                    Log("details closed, reopening hub: hubVisible=" + (hub != null && hub.IsVisible) + " proxy=" + (proxy != null));
+                    if (hub != null && hub.IsVisible) return;
+                    if (proxy != null && proxy.Command != null && proxy.Command.CanExecute(null)) proxy.Command.Execute(null);
+                }), System.Windows.Threading.DispatcherPriority.Background);
+            };
+        }
+
+        private static void OnPreProcessInput(object sender, PreProcessInputEventArgs e)
+        {
+            try
+            {
+                var ke = e.StagingItem.Input as KeyEventArgs;
+                // Playnite also turns LT/RT into PageUp/PageDown, which scrolled the hub to the last section. On the game
+                // row the triggers are the filter only, so those keys are dropped there.
+                if (ke != null && (ke.Key == Key.PageUp || ke.Key == Key.PageDown || ke.Key == Key.Home || ke.Key == Key.End)
+                    && (ke.RoutedEvent == Keyboard.KeyDownEvent || ke.RoutedEvent == Keyboard.PreviewKeyDownEvent))
+                {
+                    if (FocusOnHome()) { e.Cancel(); return; }
+                }
+                if (ke == null || ke.GetType().Name != "GameControllerInputEventArgs") return;
+                var mainW = Application.Current.MainWindow;
+                if (mainW != null && (mainW.WindowState == WindowState.Minimized || !PlayniteInFront()))
+                {
+                    e.Cancel();  // Playnite out of sight: the pad belongs to whatever is in front (a menu here could restart the PC)
+                    return;
+                }
+                if (ke.RoutedEvent != Keyboard.KeyDownEvent) return;
+                var button = ke.GetType().GetProperty("Button");
+                if (button == null) return;
+                var pressed = button.GetValue(ke, null).ToString();
+                HideCursorForController();
+                if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
+                if (GameMedia.HandleButton(pressed, Keyboard.FocusedElement)) { e.Cancel(); return; }
+                if (pressed == "RightStick" && previewShowing) { TogglePreviewSound(); e.Cancel(); return; }
+                // A still launches the game below; Up/Down leave the card playing (only sideways moves shrink it)
+                bool dirPad = pressed.StartsWith("DPad") || (pressed.StartsWith("LeftStick") && pressed != "LeftStick");
+                bool sideways = dirPad && (pressed.EndsWith("Left") || pressed.EndsWith("Right"));
+                if (previewShowing && pressed != "A" && (!dirPad || (sideways && IsInRow(Keyboard.FocusedElement as DependencyObject)))) SmoothClosePreview();
+                if (HandleInfoButtons(pressed, dirPad)) { e.Cancel(); return; }
+                var item = Keyboard.FocusedElement as ListBoxItem;
+// per-press file logging removed (disk write on the UI thread every move)
+                //                 Log("pad " + pressed + " focus=" + (Keyboard.FocusedElement == null ? "null" : Keyboard.FocusedElement.GetType().Name) + " item=" + (item != null ? item.DataContext : null));
+                if ((pressed == "LeftShoulder" || pressed == "RightShoulder") && FocusOnHome()) { e.Cancel(); return; }  // no sections on home
+                if (pressed == "LeftShoulder" || pressed == "RightShoulder")
+                {
+                    lastShoulder = pressed;
+                    var r0 = LiveRow();
+                    bool wasActive = RowPageActive(r0);
+                    var check = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
+                    check.Tick += (s2, e2) =>
+                    {
+                        check.Stop();
+                        var r1 = LiveRow();
+                        if (!wasActive && RowPageActive(r1) && ReferenceEquals(r0, r1)) PlayPageEnter(r1);  // rebuilt rows animate in RestoreSelection
+                    };
+                    check.Start();
+                }
+                if (pressed == "Start" && CloseControlCenter()) { e.Cancel(); return; }
+                if (pressed == "Start") StartFallbackCheck();
+                bool onHome = movingCard == null && movingGame == null && FocusOnHome();
+                if ((pressed == "TriggerLeft" || pressed == "TriggerRight") && onHome)
+                {
+                    CycleRowFilter(pressed == "TriggerRight" ? 1 : -1);   // also brings focus back to the game row
+                    e.Cancel();
+                    return;
+                }
+                if (pressed == "X" && onHome)
+                {
+                    var hr = LiveRow();
+                    var sel = hr != null ? hr.SelectedItem : null;
+                    if (sel != null && !(sel is string) && !(sel is RowPad)) { ToggleFavorite(sel); e.Cancel(); return; }
+                }
+                if (pressed == "X" && item != null && IsInRow(item)) returnToHub = true;
+                if (pressed == "B" && item != null && IsInRow(item) && (movingCard != null || movingGame != null))
+                {
+                    // B leaves move mode (item stays where it is), nothing else happens
+                    movingCard = null;
+                    movingGame = null;
+                    SetMoveVisual(item, false);
+                    e.Cancel();
+                    return;
+                }
+                if (pressed == "B" && item != null && InLibraryList(item))
+                {
+                    var w = Window.GetWindow(item);
+                    var hub = w != null ? FindByName(w, "WelcomeHubOverlay") : null;
+                    var details = w != null ? FindByName(w, "PART_ElemGameDetails") : null;
+                    var proxy = w != null ? FindByName(w, "Ps5Nav_hub") as System.Windows.Controls.Primitives.ButtonBase : null;
+                    if ((hub == null || !hub.IsVisible) && (details == null || !details.IsVisible) && proxy != null && proxy.Command != null)
+                    {
+                        Log("B in library -> hub");
+                        proxy.Command.Execute(null);
+                        e.Cancel();
+                        return;
+                    }
+                }
+                if (pressed == "X" && item != null && IsInRow(item) && CanReturnToGame())
+                {
+                    var g = item.DataContext;
+                    var running = g == null || g is string ? null : Prop(g, "IsRunning");
+                    if (running is bool && (bool)running) { e.Cancel(); CloseGame(g); return; }
+                }
+                if (pressed == "A" && item != null && CanReturnToGame())
+                {
+                    var g = item.DataContext;
+                    var running = g == null || g is string ? null : Prop(g, "IsRunning");
+                    if (running is bool && (bool)running)
+                    {
+                        Log("A on running game -> back to it: " + g);
+                        ReturnToGame(Window.GetWindow(item));
+                        e.Cancel();
+                        return;
+                    }
+                }
+                if (pressed == "A" && item != null && IsInRow(item))
+                {
+                    var nav = item.DataContext as string;
+                    if (nav != null && nav.StartsWith("nav:"))
+                    {
+                        if (movingCard != null) { movingCard = null; SetMoveVisual(item, false); }
+                        else RunCard(FindRow(item), nav.Substring(4));
+                    }
+                    else if (movingGame != null) { movingGame = null; SetMoveVisual(item, false); }
+                    else
+                    {
+                        var idProp = item.DataContext != null ? item.DataContext.GetType().GetProperty("Id") : null;
+                        if (Api != null && idProp != null) StartGameNow((Guid)idProp.GetValue(item.DataContext, null));
+                    }
+                    e.Cancel();
+                    return;
+                }
+                if (pressed != "Y") return;
+                if (item == null || !IsInRow(item)) return;
+                var name = item.DataContext as string;
+                if (name != null && name.StartsWith("nav:"))
+                {
+                    movingCard = movingCard == null ? name : null;
+                    SetMoveVisual(item, movingCard != null);
+                }
+                else if (item.DataContext != null)
+                {
+                    if (RowFilters[RowFilter] == "recent") { e.Cancel(); return; }  // order there is last played, not arranged
+                    movingGame = movingGame == null ? item.DataContext : null;
+                    SetMoveVisual(item, movingGame != null);
+                }
+                e.Cancel();
+            }
+            catch (Exception ex) { Log("Y: " + ex.Message); }
+        }
+
+        // ---- Play / Details pills under the logo (Ps5PlayBtn / Ps5DetailsBtn in the home block) ----
+        // Down from the row lands on Play, Left/Right swaps, Up goes back to the row, A presses. Handled here because
+        // Aniki's navigation service eats hub Left/Right and A never reaches a Button as a click.
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ListBox, Button[]> rowPills =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<ListBox, Button[]>();
+
+        // ---- mouse cursor hides while the controller is in use ----
+        private static bool cursorHidden;
+        private static Point lastMousePos = new Point(double.NaN, double.NaN);
+        private static bool cursorHooked;
+
+        private static DateTime ignoreMouseUntil = DateTime.MinValue;
+
+        private static void HideCursorForController()
+        {
+            if (cursorHidden) return;
+            var w = Application.Current.MainWindow;
+            if (w == null) return;
+            if (!cursorHooked)
+            {
+                cursorHooked = true;
+                w.PreviewMouseMove += (s, e) =>
+                {
+                    var pos = e.GetPosition(w);
+                    if (DateTime.Now < ignoreMouseUntil) { lastMousePos = pos; return; }   // window switch (Guide), not the user
+                    // WPF also raises MouseMove when the cursor is hidden/shown or content moves under it: only a real move counts
+                    bool moved = double.IsNaN(lastMousePos.X) || Math.Abs(pos.X - lastMousePos.X) > 3 || Math.Abs(pos.Y - lastMousePos.Y) > 3;
+                    lastMousePos = pos;
+                    if (moved && cursorHidden) { cursorHidden = false; Mouse.OverrideCursor = null; }
+                };
+            }
+            try { lastMousePos = Mouse.GetPosition(w); } catch { }
+            cursorHidden = true;
+            Mouse.OverrideCursor = Cursors.None;
+        }
+
+        private static bool HandleInfoButtons(string pressed, bool dirPad)
+        {
+            var focused = Keyboard.FocusedElement as FrameworkElement;
+            var row = LiveRow();
+            if (row == null || !row.IsVisible) return false;
+            var w = Window.GetWindow(row);
+            bool down = dirPad && pressed.EndsWith("Down"), up = dirPad && pressed.EndsWith("Up");
+            bool left = dirPad && pressed.EndsWith("Left"), right = dirPad && pressed.EndsWith("Right");
+            // cheap exits first: this runs on every controller press, and left/right inside the row never concerns the pills
+            if (!dirPad && pressed != "A") return false;
+            bool inRow = focused != null && IsInRow(focused);
+            if (inRow && !down) return false;
+            // the pills next to the LIVE row (LB/RB rebuilds leave hidden copies of the hub page around), found once per row
+            Button[] pills;
+            if (!rowPills.TryGetValue(row, out pills) || pills[0] == null)
+            {
+                pills = new Button[3];
+                for (DependencyObject d = row; d != null && pills[0] == null; d = VisualTreeHelper.GetParent(d))
+                {
+                    pills[0] = FindByName(d, "Ps5PlayBtn") as Button;
+                    pills[1] = pills[0] != null ? FindByName(d, "Ps5DetailsBtn") as Button : null;
+                    pills[2] = pills[0] != null ? FindByName(d, "Ps5FavBtn") as Button : null;
+                }
+                if (pills[0] != null) { rowPills.Remove(row); rowPills.Add(row, pills); }
+            }
+            Button play = pills[0], details = pills[1], fav = pills[2];
+            if (play == null || details == null || !play.IsVisible) return false;
+
+            if (focused != null && IsInRow(focused) && down && movingCard == null && movingGame == null)
+            {
+                var it = row.SelectedItem;
+                if (it == null || it is string) return false;  // cards keep their own Down
+                FocusPill(play);
+                return true;
+            }
+            bool onPlay = ReferenceEquals(focused, play), onDetails = ReferenceEquals(focused, details), onFav = fav != null && ReferenceEquals(focused, fav);
+            // Up from anything below the pills on the home screen (Library News / Latest News) lands on Play, not the row
+            if (up && !onPlay && !onDetails && !onFav && focused != null && !IsInRow(focused) && w != null)
+            {
+                var hub = FindByName(w, "WelcomeHubOverlay");
+                if (hub != null && hub.IsVisible && focused.IsVisible && hub.IsAncestorOf(focused))
+                {
+                    double focusedY = focused.TranslatePoint(new Point(0, 0), w).Y;
+                    double playBottom = play.TranslatePoint(new Point(0, play.ActualHeight), w).Y;
+                    var it = row.SelectedItem;
+                    if (focusedY > playBottom && it != null && !(it is string)) { FocusPill(play); return true; }
+                }
+            }
+            if (!onPlay && !onDetails && !onFav) return false;
+            if (up) { ReleasePillLock(); FocusRowSoon(0); return true; }
+            if (left || right)
+            {
+                // Play | Details | Favourite (ends stay put)
+                var order = fav != null && fav.IsVisible ? new[] { play, details, fav } : new[] { play, details };
+                int at = onPlay ? 0 : onDetails ? 1 : 2;
+                FocusPill(order[Math.Max(0, Math.Min(order.Length - 1, at + (left ? -1 : 1)))]);
+                return true;
+            }
+            if (pressed != "A") { if (down) ReleasePillLock(); return false; }
+            ReleasePillLock();
+
+            var game = row.SelectedItem;
+            if (game == null || game is string) return true;
+            if (onFav) { ToggleFavorite(game); return true; }
+            var running = Prop(game, "IsRunning");
+            bool isRunning = running is bool && (bool)running && CanReturnToGame();
+            HidePreview();
+            if (onPlay)
+            {
+                if (isRunning) { ReturnToGame(w); return true; }
+                var id = Prop(game, "Id");
+                if (id is Guid && Api != null) { Log("play button -> " + game); StartGameNow((Guid)id); }
+                return true;
+            }
+            if (isRunning) { CloseGame(game); return true; }
+            PushSelected(row);
+            var vm = row.DataContext;
+            var cmd = vm != null ? vm.GetType().GetProperty("ToggleGameDetailsCommand") : null;
+            var command = cmd != null ? cmd.GetValue(vm, null) as ICommand : null;
+            if (command != null)
+            {
+                // the details view lives under the home overlay: close the overlay first (as the Library card does),
+                // then open details; closing details brings home back (WatchDetails)
+                returnToHub = true;
+                openingDetails = true;
+                var close = FindByName(w, "Ps5Nav_library") as System.Windows.Controls.Primitives.ButtonBase;
+                if (close != null && close.Command != null && close.Command.CanExecute(null)) close.Command.Execute(null);
+                w.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try { command.Execute(null); } finally { openingDetails = false; }
+                    Log("details button -> " + game);
+                }), System.Windows.Threading.DispatcherPriority.Background);
+            }
+            return true;
+        }
+
+        // Aniki's navigation reacts to the same Down first and moves focus to the news a moment later (deferred), which
+        // flashed the news before Play. While the lock runs, focus may only go to the chosen pill.
+        private static bool openingDetails;
+
+        // focus somewhere on the visible home page (row, pills, news...), not in the top bar or an overlay window
+        private static bool FocusOnHome()
+        {
+            var f = Keyboard.FocusedElement as DependencyObject;
+            if (f == null) return false;
+            if (IsInRow(f)) return true;
+            var w = Window.GetWindow(f);
+            if (w == null || w != Application.Current.MainWindow) return false;
+            var hub = FindByName(w, "WelcomeHubOverlay");
+            return hub != null && hub.IsVisible && hub.IsAncestorOf(f);  // the whole home screen, top bar included
+        }
+
+        // ---- control centre (Aniki quick-access window): Start closes it, closing slides it down ----
+        private static Window OpenControlCenter()
+        {
+            foreach (Window win in Application.Current.Windows)
+                if (win != Application.Current.MainWindow && win.IsVisible && FindByName(win, "QuickAccessPanel") != null) return win;
+            return null;
+        }
+
+        private static bool CloseControlCenter()
+        {
+            var win = OpenControlCenter();
+            if (win == null) return false;
+            win.Close();
+            return true;
+        }
+
+        private static readonly HashSet<Window> ccHooked = new HashSet<Window>();
+        private static readonly HashSet<Window> ccClosing = new HashSet<Window>();
+
+        private static DateTime lastToolWindowAt = DateTime.MinValue;
+
+        private static bool PlayniteInFront()
+        {
+            uint pid;
+            GetWindowThreadProcessId(GetForegroundWindow(), out pid);
+            return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+        }
+
+        private static void StartFallbackCheck()
+        {
+            bool running = false;
+            if (Api != null) foreach (var g in Api.Database.Games) if (g.IsRunning) { running = true; break; }
+            if (!running) return;
+            var pressedAt = DateTime.Now;
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+            t.Tick += (s, e) =>
+            {
+                t.Stop();
+                if (ccHooked.Count > 0 || lastToolWindowAt >= pressedAt) return;  // something opened after all
+                OpenQuickAccessDirect();
+            };
+            t.Start();
+        }
+
+        // Runs the same command Aniki's Start shortcut uses (first entry of AnikiHelper_ControllerShortcuts' Start binding)
+        private static void OpenQuickAccessDirect()
+        {
+            try
+            {
+                var host = FindByName(Application.Current.MainWindow, "AnikiHelper_ControllerShortcuts") as UIElement;
+                if (host == null) { Log("start fallback: shortcuts host not found"); return; }
+                foreach (InputBinding b in host.InputBindings)
+                {
+                    var btn = b.GetType().GetProperty("Button");
+                    if (btn == null || Convert.ToString(btn.GetValue(b, null)) != "Start") continue;
+                    var arr = b.CommandParameter as Array;
+                    var first = arr != null && arr.Length > 0 ? arr.GetValue(0) as Button : null;
+                    if (first != null && first.Command != null && first.Command.CanExecute(first.CommandParameter))
+                    {
+                        first.Command.Execute(first.CommandParameter);
+                        Log("start fallback: opened the quick menu during a game");
+                        return;
+                    }
+                }
+                Log("start fallback: quick menu command not available");
+            }
+            catch (Exception ex) { Log("start fallback failed: " + ex.Message); }
+        }
+
+        private static void OnAnyWindowLoaded(object sender, RoutedEventArgs e)
+        {
+            var win = sender as Window;
+            if (win != null && win != Application.Current.MainWindow) lastToolWindowAt = DateTime.Now;
+            if (win == null || win == Application.Current.MainWindow || ccHooked.Contains(win)) return;
+            win.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (ccHooked.Contains(win) || FindByName(win, "QuickAccessPanel") == null) return;
+                ccHooked.Add(win);
+                win.Closing += OnControlCenterClosing;
+                LightenControlCenterDim(win);
+                // opens on Power (PS5); after Aniki's own FocusFirst has run
+                var focusPower = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
+                focusPower.Tick += (s2, e2) =>
+                {
+                    focusPower.Stop();
+                    var power = FindByName(win, "QuickAccessPowerButton") as UIElement;
+                    if (power != null && power.IsVisible) { power.Focus(); Keyboard.Focus(power); }
+                };
+                focusPower.Start();
+                win.Closed += (s, a) => { ccHooked.Remove(win); ccClosing.Remove(win); };
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        // Aniki dims the whole screen behind the control centre (heavy); lighten it to a soft veil. The dim is either the
+        // window background or a full-size dark layer behind the panel: both are found and logged.
+        private static void LightenControlCenterDim(Window win)
+        {
+            try
+            {
+                var bg = win.Background as SolidColorBrush;
+                Log("control centre window: transparent=" + win.AllowsTransparency + " background=" + (bg != null ? bg.Color.ToString() : (win.Background == null ? "null" : win.Background.GetType().Name)));
+                if (win.AllowsTransparency && bg != null && bg.Color.A > 0x50)
+                    win.Background = new SolidColorBrush(Color.FromArgb(0x50, bg.Color.R, bg.Color.G, bg.Color.B));
+                var panel = FindByName(win, "QuickAccessPanel");
+                var walk = new Stack<DependencyObject>();
+                walk.Push(win);
+                while (walk.Count > 0)
+                {
+                    var d0 = walk.Pop();
+                    if (d0 is Visual) for (int i = VisualTreeHelper.GetChildrenCount(d0) - 1; i >= 0; i--) walk.Push(VisualTreeHelper.GetChild(d0, i));
+                    var fe = d0 as FrameworkElement;
+                    if (fe == null || !(fe is Border || fe is System.Windows.Shapes.Rectangle || fe is Grid || fe is ContentPresenter)) continue;
+                    if (fe is ContentPresenter) continue;
+                    if (panel != null && (panel.IsAncestorOf(fe) || ReferenceEquals(fe, panel))) continue;
+                    if (fe.ActualWidth < win.ActualWidth * 0.9 || fe.ActualHeight < win.ActualHeight * 0.9) continue;
+                    Brush b = fe is Border ? ((Border)fe).Background : fe is Grid ? ((Grid)fe).Background : ((System.Windows.Shapes.Rectangle)fe).Fill;
+                    var sb = b as SolidColorBrush;
+                    if (sb == null || sb.Color.A < 0x30 || sb.Color.R > 0x40 || sb.Color.G > 0x40 || sb.Color.B > 0x40) continue;
+                    Log("control centre dim layer: " + fe.GetType().Name + " '" + fe.Name + "' " + sb.Color + " -> lighter");
+                    fe.Opacity = Math.Min(fe.Opacity, 0.45);
+                }
+            }
+            catch (Exception ex) { Log("control centre dim: " + ex.Message); }
+        }
+
+        private static void OnControlCenterClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var win = sender as Window;
+            var panel = win != null ? FindByName(win, "QuickAccessPanel") as UIElement : null;
+            if (panel == null || ccClosing.Contains(win)) return;   // second pass: really close
+            e.Cancel = true;
+            ccClosing.Add(win);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+            var slide = new TranslateTransform();
+            panel.RenderTransform = slide;
+            slide.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, 70, TimeSpan.FromMilliseconds(180)) { EasingFunction = ease });
+            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(180)) { EasingFunction = ease };
+            fade.Completed += (s, a) => { try { win.Close(); } catch { } };
+            panel.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+
+        private static void RemoveFromRowAnimated(object game)
+        {
+            var row = LiveRow();
+            if (row == null || games == null) return;
+            int k = games.IndexOf(game);
+            if (k < 0) return;
+            object next = null;
+            if (k + 1 < games.Count && !(games[k + 1] is RowPad)) next = games[k + 1];
+            else if (k - 1 >= 0) next = games[k - 1];
+            var c = row.ItemContainerGenerator.ContainerFromItem(game) as UIElement;
+            Action finish = () =>
+            {
+                RebuildGames(row);
+                row.UpdateLayout();
+                int idx = next != null ? row.Items.IndexOf(next) : -1;
+                if (idx < 0) idx = FirstGameIndex(row);
+                if (idx < 0) return;
+                row.SelectedIndex = idx;
+                var sv = FindChild<ScrollViewer>(row);
+                if (sv != null) sv.ScrollToHorizontalOffset(Math.Max(0, idx - AnchorSlot));
+                row.UpdateLayout();
+                var nc = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement;
+                if (nc != null) nc.Focus();
+                EnsureTileCaches(row);
+                ScheduleTitle(row, 200);
+            };
+            if (c == null || Lite) { finish(); return; }
+            var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+            var shrink = new ScaleTransform(1, 1);
+            c.RenderTransformOrigin = new Point(0.5, 0.5);
+            c.RenderTransform = shrink;
+            shrink.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.8, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
+            shrink.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.8, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
+            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease };
+            fade.Completed += (s, a) => { c.BeginAnimation(UIElement.OpacityProperty, null); c.Opacity = 1; c.RenderTransform = null; finish(); };
+            c.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+
+        // Favourite pill: flips the game's Favorite flag in the Playnite database (the heart fills via SelectedGame.Favorite).
+        private static void ToggleFavorite(object game)
+        {
+            try
+            {
+                var id = Prop(game, "Id");
+                if (!(id is Guid) || Api == null) return;
+                var g = Api.Database.Games.Get((Guid)id);
+                if (g == null) return;
+                g.Favorite = !g.Favorite;
+                Api.Database.Games.Update(g);
+                Log("favorite " + (g.Favorite ? "on" : "off") + " -> " + g.Name);
+                if (!g.Favorite && RowFilters[RowFilter] == "favorites") RemoveFromRowAnimated(game);
+            }
+            catch (Exception ex) { Log("favorite: " + ex.Message); }
+        }
+        private static DateTime pillLockUntil = DateTime.MinValue;
+        private static WeakReference pillTarget;
+
+        private static void OnWindowPreviewGotFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (DateTime.Now > pillLockUntil || pillTarget == null) return;
+            var target = pillTarget.Target as Button;
+            if (target == null || ReferenceEquals(e.NewFocus, target)) return;
+            e.Handled = true;  // refuse the stray move
+        }
+
+        private static void ReleasePillLock() { pillLockUntil = DateTime.MinValue; pillTarget = null; }
+
+        private static void FocusPill(Button b)
+        {
+            pillTarget = new WeakReference(b);
+            pillLockUntil = DateTime.Now.AddMilliseconds(350);
+            b.Focus();
+            Keyboard.Focus(b);
+            int n = 0;
+            var timer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(40) };
+            timer.Tick += (s, e) =>
+            {
+                n++;
+                // the user moved on (Up to the row, the other pill, A): stop, or focus bounces back to this pill
+                if (pillTarget == null || !ReferenceEquals(pillTarget.Target, b)) { timer.Stop(); return; }
+                if (!b.IsKeyboardFocused) { b.Focus(); Keyboard.Focus(b); }
+                if (n >= 6) { timer.Stop(); Log("pill focus " + b.Name + ": focused=" + b.IsKeyboardFocused + " now=" + (Keyboard.FocusedElement == null ? "null" : Keyboard.FocusedElement.GetType().Name)); }
+            };
+            timer.Start();
+        }
+
+        private static void SetRowFocusLook(ListBox row, bool focused)
+        {
+            for (int i = 0; i < row.Items.Count; i++)
+            {
+                var c = row.ItemContainerGenerator.ContainerFromIndex(i) as ListBoxItem;
+                if (c == null) continue;
+                foreach (var name in new[] { "Ring", "Shine" })
+                {
+                    var el = FindByName(c, name);
+                    if (el != null) el.Visibility = focused || !c.IsSelected ? Visibility.Visible : Visibility.Hidden;
+                }
+            }
+        }
+
+        // ---- News row (ps5-news-row.xaml): big cards fade out at the bottom; focusing one slides the page up ----
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<FrameworkElement, object> hookedNews =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<FrameworkElement, object>();
+        private const double NewsSlide = 190;
+
+        private static void HookNewsSlide(ListBox row)
+        {
+            FrameworkElement cards = null, top = null;
+            for (DependencyObject d = row; d != null && cards == null; d = VisualTreeHelper.GetParent(d))
+            {
+                cards = FindByName(d, "HubBottomCards") as FrameworkElement;
+                if (cards != null) top = FindByName(d, "HubTopProfileSummary") as FrameworkElement;
+            }
+            object dummy;
+            if (cards == null || top == null || hookedNews.TryGetValue(cards, out dummy)) return;
+            hookedNews.Add(cards, null);
+            var fadeStop = new GradientStop(Color.FromArgb(0, 0, 0, 0), 0.92);
+            var mask = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+            mask.GradientStops.Add(new GradientStop(Colors.Black, 0));
+            mask.GradientStops.Add(new GradientStop(Colors.Black, 0.42));
+            mask.GradientStops.Add(fadeStop);
+            cards.OpacityMask = mask;
+            // move with render transforms (GPU, no re-layout each frame) and fade the game row out on the way up
+            var topShift = top.RenderTransform as TranslateTransform;
+            if (topShift == null || topShift.IsFrozen) { topShift = new TranslateTransform(); top.RenderTransform = topShift; }
+            var cardShift = cards.RenderTransform as TranslateTransform;
+            if (cardShift == null || cardShift.IsFrozen) { cardShift = new TranslateTransform(); cards.RenderTransform = cardShift; }
+            var rowIntro = FindByName(top, "Ps5RowIntro") as UIElement;
+            cards.IsKeyboardFocusWithinChanged += (s, a) =>
+            {
+                bool on = (bool)a.NewValue;
+                var win = Window.GetWindow(cards);
+                if (win != null && !win.IsActive) return;
+                if (on) HidePreview();
+                var dur = TimeSpan.FromMilliseconds(460);
+                var ease = new QuinticEase { EasingMode = EasingMode.EaseInOut };
+                double y = on ? -NewsSlide : 0;
+                topShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(y, dur) { EasingFunction = ease });
+                cardShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(y, dur) { EasingFunction = ease });
+                fadeStop.BeginAnimation(GradientStop.ColorProperty, new ColorAnimation(on ? Colors.Black : Color.FromArgb(0, 0, 0, 0), dur) { EasingFunction = ease });
+                if (rowIntro != null)
+                {
+                    var fade = new DoubleAnimation(on ? 0 : 1, TimeSpan.FromMilliseconds(on ? 260 : 380)) { BeginTime = TimeSpan.FromMilliseconds(on ? 0 : 120), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                    if (!on) fade.Completed += (s2, e2) => rowIntro.BeginAnimation(UIElement.OpacityProperty, null);
+                    rowIntro.BeginAnimation(UIElement.OpacityProperty, fade);
+                }
+            };
+            Log("news slide hooked");
+        }
+
+        // ---- library refresh: Playnite only checks its libraries about weekly, and Aniki's menu has no "Update library" ----
+        // Runs Playnite's own update-games command (what its menus use) on start and whenever Playnite comes back from the
+        // tray, at most every 10 minutes, so a game installed in Epic/Steam/Xbox appears without touching a menu.
+        private static DateTime lastLibraryRefresh = DateTime.MinValue;
+
+        public static void RefreshLibrary(string why)
+        {
+            try
+            {
+                if ((DateTime.Now - lastLibraryRefresh).TotalMinutes < 10) return;
+                LocalGames.Scan();  // games installed outside a store (D:\Games) -> library, before the refresh's new-game setup
+                var w = Application.Current.MainWindow;
+                var vm = w != null ? w.DataContext : null;
+                if (vm == null) return;
+                ICommand cmd = null;
+                foreach (var name in new[] { "UpdateGamesCommand", "UpdateLibraryCommand" })
+                {
+                    var pi = vm.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    cmd = pi != null ? pi.GetValue(vm, null) as ICommand : null;
+                    if (cmd != null) break;
+                }
+                if (cmd == null)
+                {
+                    // Fullscreen mode has no command for it; Playnite's base view model has UpdateLibrary(metadata, partial, checkUpdates)
+                    var sigs = new System.Text.StringBuilder();
+                    foreach (var m in vm.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                    {
+                        if (m.Name != "UpdateLibrary") continue;
+                        var ps = m.GetParameters();
+                        sigs.Append("(" + string.Join(",", Array.ConvertAll(ps, x => x.ParameterType.Name + " " + x.Name)) + ") ");
+                        if (ps.Length == 3 && Array.TrueForAll(ps, x => x.ParameterType == typeof(bool)))
+                        {
+                            lastLibraryRefresh = DateTime.Now;
+                            // (metaForNewGames, updateIntegrations, updateEmu): covers/metadata for new games, store libraries, no emulators
+                            m.Invoke(vm, new object[] { true, true, false });
+                            Log("library refresh started via UpdateLibrary(" + string.Join(",", Array.ConvertAll(ps, x => x.Name)) + ") (" + why + ")");
+                            return;
+                        }
+                    }
+                    Log("library refresh: no usable UpdateLibrary: " + sigs);
+                    return;
+                }
+                if (!cmd.CanExecute(null)) { Log("library refresh: busy (" + why + ")"); return; }
+                lastLibraryRefresh = DateTime.Now;
+                cmd.Execute(null);
+                Log("library refresh started (" + why + ")");
+            }
+            catch (Exception ex) { Log("library refresh failed: " + ex.Message); }
+        }
+
+        private static void HookMoveCommand(ListBox row)
+        {
+            row.CommandBindings.Add(new CommandBinding(ApplicationCommands.Properties, (s, e) =>
+            {
+                var item = Keyboard.FocusedElement as ListBoxItem;
+                var name = item != null ? item.DataContext as string : null;
+                if (name == null || !name.StartsWith("nav:")) return;
+                movingCard = movingCard == null ? name : null;
+                SetMoveVisual(item, movingCard != null);
+            }));
+        }
+
+        // Move mode: the card drops down (no fading, it looked like it vanished) and the title becomes a hint.
+        private static void SetMoveVisual(ListBoxItem item, bool on)
+        {
+            item.BeginAnimation(UIElement.OpacityProperty, null);
+            item.Opacity = 1;
+            var lift = item.RenderTransform as TransformGroup;
+            TranslateTransform shift = null;
+            if (lift != null) foreach (var tr in lift.Children) if (tr is TranslateTransform) shift = (TranslateTransform)tr;
+            if (shift == null || shift.IsFrozen)
+            {
+                var g = new TransformGroup();
+                g.Children.Add(new ScaleTransform(1, 1));
+                shift = new TranslateTransform();
+                g.Children.Add(shift);
+                item.RenderTransform = g;
+            }
+            shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(on ? 16 : 0, TimeSpan.FromMilliseconds(160)));
+
+            var row = FindRow(item);
+            var title = row != null ? FindTitle(row) as TextBlock : null;
+            if (title == null) return;
+            if (on)
+            {
+                // [<][>] Move   (Y) Done - white button glyphs like the Play / Details pills
+                title.Inlines.Clear();
+                title.Inlines.Add(new System.Windows.Documents.InlineUIContainer(Keycap("\u25C0", false)) { BaselineAlignment = BaselineAlignment.Center });
+                title.Inlines.Add(new System.Windows.Documents.InlineUIContainer(Keycap("\u25B6", false)) { BaselineAlignment = BaselineAlignment.Center });
+                title.Inlines.Add(new System.Windows.Documents.Run(" Move      "));
+                title.Inlines.Add(new System.Windows.Documents.InlineUIContainer(Keycap("Y", true)) { BaselineAlignment = BaselineAlignment.Center });
+                title.Inlines.Add(new System.Windows.Documents.Run(" Done"));
+                title.BeginAnimation(UIElement.OpacityProperty, null);
+                title.Opacity = 1;
+                PlaceHint(row, item);
+            }
+            else
+            {
+                title.Inlines.Clear();
+                title.ClearValue(TextBlock.TextProperty);
+                PlaceTitle(row, item, 0);
+            }
+        }
+
+        // Move hint sits under the held (zoomed) tile, placed without any fade so it stays steady while moving.
+        private static void PlaceHint(ListBox row, FrameworkElement container)
+        {
+            var title = FindTitle(row);
+            var canvas = title != null ? VisualTreeHelper.GetParent(title) as UIElement : null;
+            var tile = FindByName(container, "Tile");
+            if (title == null || canvas == null || tile == null) return;
+            var p = RestingPoint(tile, container, canvas);
+            Canvas.SetLeft(title, p.X + 2);
+            Canvas.SetTop(title, p.Y + ZoomedTile + 16 + 22);  // below the dropped (move mode) tile and its ring
+        }
+
+        // Tile position without the container's animated offsets (move-mode drop / intro), so the name never lands
+        // in a half-animated spot.
+        private static double RestingLeftRaw(FrameworkElement tile, UIElement canvas) { return tile.TranslatePoint(new Point(0, 0), canvas).X; }
+
+        private static Point RestingPoint(FrameworkElement tile, FrameworkElement container, UIElement canvas)
+        {
+            var p = tile.TranslatePoint(new Point(0, 0), canvas);
+            var group = container.RenderTransform as TransformGroup;
+            if (group != null)
+                foreach (var tr in group.Children)
+                {
+                    var tt = tr as TranslateTransform;
+                    if (tt != null) { p.X -= tt.X; p.Y -= tt.Y; }
+                }
+            return p;
+        }
+
+        // While moving, keep the held item in the anchor slot like normal navigation (no jump afterwards).
+        private static void KeepAnchored(ListBox row, ListBoxItem item)
+        {
+            var sv = FindChild<ScrollViewer>(row);
+            int idx = row.ItemContainerGenerator.IndexFromContainer(item);
+            if (sv != null && idx >= 0) sv.ScrollToHorizontalOffset(Math.Max(0, idx - AnchorSlot));
+            row.UpdateLayout();
+        }
+
+        private static FrameworkElement Keycap(string glyph, bool round)
+        {
+            var text = new TextBlock
+            {
+                Text = glyph, Foreground = Brushes.Black, FontWeight = FontWeights.Bold,
+                FontSize = round ? 16 : 12, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+            };
+            return new Border
+            {
+                Width = 28, Height = 28, Margin = new Thickness(0, 0, 6, 0), Background = Brushes.White,
+                CornerRadius = new CornerRadius(round ? 14 : 7), Child = text
+            };
+        }
+
+        private static void MoveCard(ListBox row, ListBoxItem item, int dir)
+        {
+            var items = row.ItemsSource as System.Windows.Data.CompositeCollection;
+            if (items == null) return;
+            int i = items.IndexOf(movingCard);
+            int j = i + dir;
+            if (i < 0 || j < 0 || j >= items.Count || !(items[j] is string)) return;
+            // Move the neighbour, never the selected card: removing the selected item re-enters Selector and throws.
+            var other = items[j];
+            items.RemoveAt(j);
+            items.Insert(i, other);
+            row.UpdateLayout();
+            KeepAnchored(row, item);
+            item.Focus();
+            PlaceHint(row, item);
+            SaveCardOrder(items);
+        }
+
+        // ---- games: own list so the user can pin an order ----
+        private static object movingGame;
+        private static System.Collections.ObjectModel.ObservableCollection<object> games;
+        private static IEnumerable gameSource;
+        private static System.Windows.Data.CollectionContainer gameContainer;
+        private static readonly string GameOrderFile = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "ps5-game-order.txt");
+
+        private static void UseOwnGameList(ListBox row)
+        {
+            var items = row.ItemsSource as System.Windows.Data.CompositeCollection;
+            if (items == null) return;
+            foreach (var o in items)
+            {
+                var cc = o as System.Windows.Data.CollectionContainer;
+                if (cc == null) continue;
+                var view = cc.Collection as System.ComponentModel.ICollectionView;
+                gameSource = view != null ? view.SourceCollection : cc.Collection;
+                games = new System.Collections.ObjectModel.ObservableCollection<object>();
+                cc.Collection = games;
+                gameContainer = cc;
+                RebuildGames(row);
+                Log("own game list: " + games.Count + " games");
+                return;
+            }
+        }
+
+        private static object Prop(object o, string name)
+        {
+            var pi = o != null ? o.GetType().GetProperty(name) : null;
+            return pi != null ? pi.GetValue(o, null) : null;
+        }
+
+        // ---- home-row filter (LT / RT): All, Installed, Recently played, Favorites, Not played yet ----
+        private static readonly string[] RowFilters = { "all", "installed", "recent", "favorites", "unplayed" };
+        private static readonly string[] RowFilterLabels = { "All games", "Installed", "Recently played", "Favorites", "Not played yet" };
+        private static readonly string RowFilterFile = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "ps5-row-filter.txt");
+        private static int rowFilter = -1;
+        private static Border filterPill;
+        private static TextBlock filterPillText;
+
+        private static int RowFilter
+        {
+            get
+            {
+                if (rowFilter < 0)
+                {
+                    rowFilter = 0;
+                    try { if (System.IO.File.Exists(RowFilterFile)) rowFilter = Math.Max(0, Array.IndexOf(RowFilters, System.IO.File.ReadAllText(RowFilterFile).Trim())); } catch { }
+                }
+                return rowFilter;
+            }
+        }
+
+        private static bool PassesRowFilter(object game)
+        {
+            if (game == null || game is string || game is RowPad) return true;
+            switch (RowFilters[RowFilter])
+            {
+                case "installed": return Equals(Prop(game, "IsInstalled"), true);
+                case "recent": { var la = Prop(game, "LastActivity") as DateTime?; return la.HasValue && la.Value > DateTime.Now.AddDays(-30); }
+                case "favorites": return Equals(Prop(game, "Favorite"), true);
+                case "unplayed": { var pt = Prop(game, "Playtime"); return pt == null || Convert.ToUInt64(pt) == 0; }
+                default: return true;
+            }
+        }
+
+        // LT/RT: the row is rebuilt on every press (~10-40 ms now that tiles are light). Grouping quick presses made the
+        // filter look selected twice when the delayed rebuild landed after the burst.
+        private static int filterDir;
+
+        private static void CycleRowFilter(int dir)
+        {
+            var row = LiveRow();
+            if (row == null) return;
+            rowFilter = (RowFilter + dir + RowFilters.Length) % RowFilters.Length;
+            try { System.IO.File.WriteAllText(RowFilterFile, RowFilters[rowFilter]); } catch { }
+            filterDir = dir;
+            ApplyRowFilter(row);
+        }
+
+        // The row keeps 12 tiles behind / 16 ahead built (CacheLength) so moving is smooth, but building all ~40 at once was
+        // the ~105 ms switch freeze. On a switch only the visible tiles (+ a few) are built; the cache grows back over the
+        // next frames, a few tiles per step.
+        private static System.Windows.Threading.DispatcherTimer cacheGrow;
+        private static readonly VirtualizationCacheLength[] cacheSteps =
+        {
+            new VirtualizationCacheLength(3, 5), new VirtualizationCacheLength(5, 8), new VirtualizationCacheLength(8, 11),
+            new VirtualizationCacheLength(10, 14), new VirtualizationCacheLength(12, 16),
+        };
+        private static int cacheStep;
+
+        private static void ShrinkRowCache(ListBox row)
+        {
+            if (cacheGrow != null) cacheGrow.Stop();
+            VirtualizingPanel.SetCacheLength(row, new VirtualizationCacheLength(1, 2));
+            cacheStep = 0;
+            var rowRef = new WeakReference(row);
+            if (cacheGrow == null)
+            {
+                cacheGrow = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(70) };
+                cacheGrow.Tick += (s, e) =>
+                {
+                    var r = cacheGrow.Tag as WeakReference;
+                    var lb = r != null ? r.Target as ListBox : null;
+                    if (lb == null || cacheStep >= cacheSteps.Length) { cacheGrow.Stop(); return; }
+                    VirtualizingPanel.SetCacheLength(lb, cacheSteps[cacheStep++]);
+                    if (cacheStep == cacheSteps.Length) { cacheGrow.Stop(); lb.Dispatcher.BeginInvoke(new Action(() => EnsureTileCaches(lb)), System.Windows.Threading.DispatcherPriority.Background); }
+                };
+            }
+            cacheGrow.Tag = rowRef;
+            cacheGrow.Interval = TimeSpan.FromMilliseconds(350);  // first step after the switch animation has started
+            cacheGrow.Start();
+            EventHandler fast = null;
+            fast = (s, e) => { cacheGrow.Tick -= fast; cacheGrow.Interval = TimeSpan.FromMilliseconds(70); };
+            cacheGrow.Tick += fast;
+        }
+
+        private static void ApplyRowFilter(ListBox row)
+        {
+            int dir = filterDir;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            HidePreview(false, 0);
+            ShrinkRowCache(row);
+            RebuildGames(row);
+            row.UpdateLayout();
+            int idx = FirstGameIndex(row);
+            if (idx >= 0)
+            {
+                row.SelectedIndex = idx;
+                var sv = FindChild<ScrollViewer>(row);
+                if (sv != null) sv.ScrollToHorizontalOffset(Math.Max(0, idx - AnchorSlot));
+                row.UpdateLayout();
+                var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement;
+                if (c != null) c.Focus();
+                EnsureTileCaches(row);
+                ScheduleTitle(row, 230);
+            }
+            RenderFilterTabs(Window.GetWindow(row), dir);
+            PlayFilterSwitch(row, dir);
+            Log("row filter -> " + RowFilters[rowFilter] + " (" + games.Count + " games) " + sw.ElapsedMilliseconds + " ms");
+        }
+
+        // AnikiHelper jumps hub pages on LT/RT (NavigationFixService.HandleHubTriggerPageNavigation, run from its own
+        // PreProcessInput hook before ours, so cancelling the input cannot stop it). That method first asks its
+        // isWelcomeHubOpen delegate; ours answers "no" when that method is the caller, so it never pages. LT/RT are
+        // the home-row filter only. Every other caller gets Aniki's real answer.
+        private static bool triggerPagingDisabled;
+
+        private static void DisableAnikiTriggerPaging()
+        {
+            if (triggerPagingDisabled || Api == null) return;
+            try
+            {
+                const BindingFlags inst = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+                foreach (var plugin in Api.Addons.Plugins)
+                {
+                    if (plugin.GetType().Name != "AnikiHelper") continue;
+                    var svcField = plugin.GetType().GetField("horizontalFocusFixService", inst);
+                    var svc = svcField != null ? svcField.GetValue(plugin) : null;
+                    var openField = svc != null ? svc.GetType().GetField("isWelcomeHubOpen", inst) : null;
+                    var original = openField != null ? openField.GetValue(svc) as Func<bool> : null;
+                    if (original == null) { Log("trigger paging: delegate not found"); return; }
+                    Func<bool> wrapped = () => CalledFrom("HandleHubTriggerPageNavigation") || CalledFrom("HandleHubDirectPageNavigation") ? false : original();  // no hub sections
+                    openField.SetValue(svc, wrapped);
+                    triggerPagingDisabled = true;
+                    Log("trigger paging: Aniki's LT/RT page jump disabled");
+                    return;
+                }
+            }
+            catch (Exception ex) { Log("trigger paging: " + ex.Message); }
+        }
+
+        private static bool CalledFrom(string method)
+        {
+            var st = new System.Diagnostics.StackTrace(1, false);
+            for (int i = 0; i < Math.Min(8, st.FrameCount); i++)
+            {
+                var m = st.GetFrame(i).GetMethod();
+                if (m != null && m.Name == method) return true;
+            }
+            return false;
+        }
+
+        // LT/RT are the row filter, but AnikiHelper also uses the triggers to jump between hub pages (to the store) in
+        // its own controller code, which cannot be blocked. So: when Aniki's HubCurrentPage changes while a trigger is
+        // physically held and the game row had focus, the page is put straight back. LB/RB and other changes pass.
+        private static object hubPageOwner;
+        private static PropertyInfo hubPageProp;
+        private static int hubPageLast = -1;
+        private static bool hubPageRestoring;
+
+        private static void HookHubPageGuard()
+        {
+            if (hubPageOwner != null || Api == null) return;
+            try
+            {
+                foreach (var plugin in Api.Addons.Plugins)
+                {
+                    if (plugin.GetType().Name != "AnikiHelper") continue;
+                    var owner = FindWithProperty(plugin, "HubCurrentPage", 3);
+                    if (owner == null) { Log("page guard: HubCurrentPage not found"); return; }
+                    hubPageOwner = owner;
+                    hubPageProp = owner.GetType().GetProperty("HubCurrentPage");
+                    hubPageLast = Convert.ToInt32(hubPageProp.GetValue(owner, null));
+                    var npc = owner as System.ComponentModel.INotifyPropertyChanged;
+                    if (npc != null) npc.PropertyChanged += OnAnikiSettingChanged;
+                    Log("page guard on (" + owner.GetType().Name + ", page " + hubPageLast + ")");
+                    return;
+                }
+            }
+            catch (Exception ex) { Log("page guard: " + ex.Message); }
+        }
+
+        private static object FindWithProperty(object root, string prop, int depth)
+        {
+            if (root == null) return null;
+            var type = root.GetType();
+            if (type.GetProperty(prop) != null) return root;
+            if (depth <= 0 || type.Namespace == "System") return null;
+            const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            foreach (var f in type.GetFields(any))
+            {
+                if (f.FieldType.IsValueType || f.FieldType == typeof(string)) continue;
+                object v; try { v = f.GetValue(root); } catch { continue; }
+                var hit = FindWithProperty(v, prop, depth - 1);
+                if (hit != null) return hit;
+            }
+            return null;
+        }
+
+        private static bool TriggerHeld()
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                XInputStateEx s;
+                try { if (XInputGetStateEx(i, out s) == 0 && (s.LT > 60 || s.RT > 60)) return true; } catch { return false; }
+            }
+            return false;
+        }
+
+        private static void OnAnikiSettingChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != "HubCurrentPage" || hubPageRestoring) return;
+            int now = Convert.ToInt32(hubPageProp.GetValue(sender, null));
+            // Sections removed (user choice): the home screen is the game row page only; any page change goes back to it.
+            // Store / Captures / Media open their own windows from the row's cards, so nothing is lost.
+            if (now != 1)
+            {
+                Log("page guard: hub page " + hubPageLast + " -> " + now + ", back to the home page");
+                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    hubPageRestoring = true;
+                    try { hubPageProp.SetValue(sender, 1, null); } finally { hubPageRestoring = false; }
+                }), System.Windows.Threading.DispatcherPriority.Send);
+                return;
+            }
+            hubPageLast = now;
+        }
+
+        // Filter tabs in the home top bar (left slot, Ps5FilterTabs from apply-ps5-topbar.py): LT / RT badges around the
+        // five filters, the active one on a white pill (PS5 tab look), the others dimmed.
+        // New set of cards: they fade in and slide a little from the side the filter moved to (0.26 s, eased).
+        private static void PlayFilterSwitch(ListBox row, int dir)
+        {
+            if (Lite) return;
+            var ip = FindChild<ItemsPresenter>(row);
+            var target = (UIElement)FindChild<VirtualizingStackPanel>(row) ?? ip;
+            if (target == null) return;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            target.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
+            // the panel's own TranslateTransform carries the row slide: offset that, the spring brings it home
+            var shift = target.RenderTransform as TranslateTransform;
+            if (shift == null || shift.IsFrozen) { shift = new TranslateTransform(); target.RenderTransform = shift; }
+            Glide(shift, 60 * dir, false);
+        }
+
+        private static void RenderFilterTabs(Window w) { RenderFilterTabs(w, 0); }
+
+        private static void RenderFilterTabs(Window w, int dir)
+        {
+            var host = w != null ? FindByName(w, "Ps5FilterTabs") as StackPanel : null;
+            if (host == null) return;
+            host.Children.Clear();
+            host.Children.Add(FilterBadge("LT"));
+            for (int i = 0; i < RowFilters.Length; i++)
+            {
+                bool on = i == RowFilter;
+                var label = new TextBlock
+                {
+                    Text = RowFilterLabels[i], FontSize = 19, FontFamily = new FontFamily("Segoe UI Variable Display"),
+                    FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = on ? new SolidColorBrush(Color.FromRgb(0x10, 0x12, 0x18)) : new SolidColorBrush(Color.FromArgb(0xB4, 0xFF, 0xFF, 0xFF))
+                };
+                var tab = new Border
+                {
+                    Child = label, CornerRadius = new CornerRadius(18), Padding = new Thickness(16, 5, 16, 7), Margin = new Thickness(2, 0, 2, 0),
+                    Background = on ? (Brush)new SolidColorBrush(Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF)) : Brushes.Transparent,
+                    VerticalAlignment = VerticalAlignment.Center, RenderTransformOrigin = new Point(0.5, 0.5)
+                };
+                host.Children.Add(tab);
+                if (on && dir != 0)
+                {
+                    var pop = new ScaleTransform(0.86, 0.86);
+                    tab.RenderTransform = pop;
+                    var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                    pop.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.86, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+                    pop.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.86, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+                    tab.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.4, 1, TimeSpan.FromMilliseconds(160)));
+                }
+            }
+            host.Children.Add(FilterBadge("RT"));
+        }
+
+        private static Border FilterBadge(string text)
+        {
+            return new Border
+            {
+                Child = new TextBlock { Text = text, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
+                Width = 34, Height = 22, CornerRadius = new CornerRadius(6), Margin = new Thickness(6, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center,
+                BorderBrush = new SolidColorBrush(Color.FromArgb(0xC0, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1.5)
+            };
+        }
+
+        // PS5-style pill just above the row; stays while a filter is on, flashes and fades for "All games"
+        private static void ShowFilterPill(ListBox row, bool changed)
+        {
+            var host = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)) ?? row, "Ps5RowIntro") as Grid;
+            if (host == null) host = VisualTreeHelper.GetParent(row) as Grid;
+            if (host == null) return;
+            if (filterPill == null || VisualTreeHelper.GetParent(filterPill) != host)
+            {
+                if (filterPill != null) { var old = VisualTreeHelper.GetParent(filterPill) as Panel; if (old != null) old.Children.Remove(filterPill); }
+                filterPillText = new TextBlock { Foreground = Brushes.White, FontSize = 17, FontFamily = new FontFamily("Segoe UI Variable Display"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+                var hint = new TextBlock { Text = "LT \u25C2  \u25B8 RT", Foreground = new SolidColorBrush(Color.FromArgb(0xB0, 0xFF, 0xFF, 0xFF)), FontSize = 13, Margin = new Thickness(14, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                var sp = new StackPanel { Orientation = Orientation.Horizontal };
+                sp.Children.Add(filterPillText);
+                sp.Children.Add(hint);
+                filterPill = new Border
+                {
+                    Child = sp, CornerRadius = new CornerRadius(17), Padding = new Thickness(16, 5, 16, 6),
+                    Background = new SolidColorBrush(Color.FromArgb(0x66, 0x10, 0x14, 0x1C)),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1),
+                    HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+                    Margin = new Thickness(8, -40, 0, 0), IsHitTestVisible = false, Opacity = 0
+                };
+                Panel.SetZIndex(filterPill, 50);
+                host.Children.Add(filterPill);
+            }
+            filterPillText.Text = RowFilterLabels[RowFilter] + "  \u00B7  " + games.Count;
+            bool keep = RowFilter != 0;
+            if (!changed) { filterPill.BeginAnimation(UIElement.OpacityProperty, null); filterPill.Opacity = keep ? 1 : 0; return; }
+            filterPill.BeginAnimation(UIElement.OpacityProperty, keep ? (AnimationTimeline)
+                new DoubleAnimation(1, TimeSpan.FromMilliseconds(180))
+                : Keys(1, 0, 1.4, 0.4, null));
+        }
+
+
+        private static void RebuildGames(ListBox row)
+        {
+            if (games == null || gameSource == null) return;
+            var pinned = new System.Collections.Generic.List<string>();
+            try { if (System.IO.File.Exists(GameOrderFile)) pinned.AddRange(System.IO.File.ReadAllLines(GameOrderFile)); } catch { }
+            var list = new System.Collections.Generic.List<object>();
+            foreach (var g in gameSource) if (IsShown(g)) list.Add(g);
+            // Recently played is strictly last-played first (no manual order there)
+            if (RowFilters[RowFilter] == "recent") pinned.Clear();
+            list.Sort((a, b) =>
+            {
+                int pa = pinned.IndexOf(Convert.ToString(Prop(a, "Id"))), pb = pinned.IndexOf(Convert.ToString(Prop(b, "Id")));
+                if (pa < 0) pa = int.MaxValue;
+                if (pb < 0) pb = int.MaxValue;
+                if (pa != pb) return pa.CompareTo(pb);
+                var la = Prop(a, "LastActivity") as DateTime?; var lb = Prop(b, "LastActivity") as DateTime?;
+                int byDate = Nullable.Compare(lb, la);
+                return byDate != 0 ? byDate : string.Compare(Convert.ToString(Prop(a, "Name")), Convert.ToString(Prop(b, "Name")), StringComparison.OrdinalIgnoreCase);
+            });
+            // PS5: the selection keeps its slot to the very end, empty space opens on the right. Without padding the row hit
+            // its scroll limit, the selection walked to the edge and the limit shifted with the zoomed card (jiggle).
+            list.AddRange(RowPads);
+            bool same = list.Count == games.Count;
+            for (int i = 0; same && i < list.Count; i++) same = ReferenceEquals(list[i], games[i]);
+            if (same) return;
+            // nothing in the row may hold focus/selection while the list is replaced (Selector re-entrancy)
+            if (row.IsKeyboardFocusWithin) Keyboard.ClearFocus();
+            row.SelectedIndex = -1;
+            // one swap instead of Clear + 90 Adds (each Add re-laid the row out: the filter switch stuttered). Tiles are built
+            // fresh; they are light now (no per-tile video player, cached cover).
+            if (gameContainer != null)
+            {
+                games = new System.Collections.ObjectModel.ObservableCollection<object>(list);
+                gameContainer.Collection = games;
+            }
+            else
+            {
+                games.Clear();
+                foreach (var g in list) games.Add(g);
+            }
+        }
+
+        private static void MoveGame(ListBox row, ListBoxItem item, int dir)
+        {
+            int k = games.IndexOf(movingGame), n = k + dir;
+            if (k < 0 || n < 0 || n >= games.Count || games[n] is RowPad) return;
+            games.Move(n, k);  // move the neighbour; the selected game is never removed
+            row.UpdateLayout();
+            KeepAnchored(row, item);
+            item.Focus();
+            PlaceHint(row, item);
+            // pin everything from the start of the row up to the moved pair, in the order now shown
+            var ids = new System.Collections.Generic.List<string>();
+            for (int i = 0; i <= Math.Max(k, n); i++) ids.Add(Convert.ToString(Prop(games[i], "Id")));
+            try { System.IO.File.WriteAllLines(GameOrderFile, ids.ToArray()); } catch (Exception ex) { Log("save game order: " + ex.Message); }
+        }
+
+        private static void SaveCardOrder(System.Windows.Data.CompositeCollection items)
+        {
+            try
+            {
+                var names = new System.Collections.Generic.List<string>();
+                foreach (var o in items) { var s = o as string; if (s != null) names.Add(s); }
+                System.IO.File.WriteAllLines(CardOrderFile, names.ToArray());
+            }
+            catch (Exception ex) { Log("save card order: " + ex.Message); }
+        }
+
+        private static void ApplyCardOrder(ListBox row)
+        {
+            try
+            {
+                var items = row.ItemsSource as System.Windows.Data.CompositeCollection;
+                if (items == null || !System.IO.File.Exists(CardOrderFile)) return;
+                int slot = 0;
+                foreach (var line in System.IO.File.ReadAllLines(CardOrderFile))
+                {
+                    int i = items.IndexOf(line.Trim());
+                    if (i < 0) continue;
+                    if (i != slot) { var o = items[i]; items.RemoveAt(i); items.Insert(slot, o); }
+                    slot++;
+                }
+            }
+            catch (Exception ex) { Log("apply card order: " + ex.Message); }
+        }
+
+        // Controller battery for the hub toast: DynamicResource "Ps5PadBattery" = "none" | "wired" | "0".."3" (XInput levels).
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct XInputBattery { public byte Type; public byte Level; }
+
+        [System.Runtime.InteropServices.DllImport("xinput1_4.dll")]
+        private static extern int XInputGetBatteryInformation(int userIndex, byte devType, ref XInputBattery info);
+
+        private static System.Windows.Threading.DispatcherTimer batteryTimer;
+
+        private static void StartBatteryPolling()
+        {
+            UpdateBattery();
+            batteryTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
+            batteryTimer.Tick += (s, e) => UpdateBattery();
+            batteryTimer.Start();
+        }
+
+        private static void UpdateBattery()
+        {
+            string value = "none";
+            try
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    var info = new XInputBattery();
+                    if (XInputGetBatteryInformation(i, 0, ref info) != 0 || info.Type == 0) continue;  // 0 = disconnected
+                    value = info.Type == 1 ? "wired" : Math.Min((int)info.Level, 3).ToString();
+                    break;
+                }
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.ToString();
+            }
+            var res = Application.Current.Resources;
+            if (!Equals(res["Ps5PadBattery"], value)) res["Ps5PadBattery"] = value;
+        }
+
+        // ---- Guide (ring) button = home, from anywhere ----
+        // Playnite's own GuideButtonFocus never fired for the 8BitDo (its Guide shows up only through the hidden
+        // XInputGetStateEx, on whichever slot the pad has), so poll all four slots ourselves.
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct XInputStateEx { public uint Packet; public ushort Buttons; public byte LT, RT; public short LX, LY, RX, RY; }
+
+        [System.Runtime.InteropServices.DllImport("xinput1_4.dll", EntryPoint = "#100")]
+        private static extern int XInputGetStateEx(int userIndex, out XInputStateEx state);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hwnd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool BringWindowToTop(IntPtr hwnd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hwnd, int cmd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, IntPtr pid);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool AttachThreadInput(uint from, uint to, bool attach);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+        [System.Runtime.InteropServices.DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+        // ---- taskbar auto-hide while the fullscreen console runs (it popped up between screens) ----
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct APPBARDATA { public int cbSize; public IntPtr hWnd; public uint uCallbackMessage; public uint uEdge; public RECT rc; public IntPtr lParam; }
+        [System.Runtime.InteropServices.DllImport("shell32.dll")] private static extern IntPtr SHAppBarMessage(uint msg, ref APPBARDATA data);
+        private static int taskbarStateBefore = -1;
+
+        // remembers the user's own taskbar state across crashes (Playnite closed without its exit step left it hidden)
+        private static readonly string TaskbarFlag = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "ps5-taskbar-before.txt");
+        private static bool IsFullscreenApp { get { return System.Diagnostics.Process.GetCurrentProcess().ProcessName.IndexOf("Fullscreen", StringComparison.OrdinalIgnoreCase) >= 0; } }
+
+        // Taskbar auto-hide is OFF (user's choice, 2026-10-10): the taskbar is left as the user set it. Only a state that an
+        // older, crashed fullscreen run left behind (flag file) is put back.
+        private static void AutoHideTaskbar()
+        {
+            try
+            {
+                int saved = -1;
+                if (System.IO.File.Exists(TaskbarFlag)) int.TryParse(System.IO.File.ReadAllText(TaskbarFlag).Trim(), out saved);
+                if (saved < 0) return;
+                var abd = new APPBARDATA { cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(APPBARDATA)), lParam = new IntPtr(saved) };
+                SHAppBarMessage(10 /* ABM_SETSTATE */, ref abd);
+                System.IO.File.Delete(TaskbarFlag);
+                Log("taskbar: restored after an unclean exit");
+            }
+            catch (Exception ex) { Log("taskbar restore failed: " + ex.Message); }
+        }
+
+        private static void RestoreTaskbar()
+        {
+            try
+            {
+                if (taskbarStateBefore < 0) return;
+                var abd = new APPBARDATA { cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(APPBARDATA)), lParam = new IntPtr(taskbarStateBefore) };
+                SHAppBarMessage(10, ref abd);
+                if (System.IO.File.Exists(TaskbarFlag)) System.IO.File.Delete(TaskbarFlag);
+            }
+            catch { }
+        }
+
+        private static Window shield;
+
+        // a plain black, topmost, never-activated window over the TV; its last rendered frame is black, so showing it
+        // again is instant and clean
+        private static void ShowShield(Window main)
+        {
+            try
+            {
+                if (shield == null)
+                {
+                    shield = new Window
+                    {
+                        WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, ShowActivated = false,
+                        Background = Brushes.Black, Title = "Ps5Shield"
+                    };
+                    shield.SourceInitialized += (s, e) => DisableWindowTransitions(new System.Windows.Interop.WindowInteropHelper(shield).Handle);
+                }
+                shield.Left = main.Left; shield.Top = main.Top; shield.Width = main.ActualWidth; shield.Height = main.ActualHeight;
+                bool firstTimeHere = !shield.IsVisible;
+                shield.Show();
+                var autoHide = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
+                autoHide.Tick += (s2, e2) => { autoHide.Stop(); if (shield != null && shield.IsVisible) { shield.Hide(); Log("shield: still up after 1 s -> removed"); } };
+                autoHide.Start();
+                SetWindowPos(new System.Windows.Interop.WindowInteropHelper(shield).Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
+                if (firstTimeHere && main.ActualWidth > 100)
+                {
+                    // make sure the shield is actually on screen before Playnite comes forward (the first press showed
+                    // Playnite's old bright picture for 3 frames while the shield was still being moved/sized)
+                    shield.UpdateLayout();
+                    shield.Dispatcher.Invoke(new Action(() => { }), System.Windows.Threading.DispatcherPriority.Render);
+                    System.Threading.Thread.Sleep(35);
+                }
+            }
+            catch (Exception ex) { Log("shield failed: " + ex.Message); }
+        }
+
+        // render the shield once at startup, off-screen, so its first real appearance is already black
+        private static void WarmShield()
+        {
+            try
+            {
+                var main = Application.Current.MainWindow;
+                if (main == null) return;
+                var off = new Window { Left = -20000, Top = -20000, Width = 64, Height = 64 };
+                ShowShield(off);
+                shield.Left = -20000; shield.Top = -20000;
+                var t0 = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+                t0.Tick += (s, e) => { t0.Stop(); HideShield(); };
+                t0.Start();
+            }
+            catch (Exception ex) { Log("shield warm-up failed: " + ex.Message); }
+        }
+
+        private static void HideShield()
+        {
+            if (shield != null && shield.IsVisible) shield.Hide();
+        }
+
+        private static void SetCloak(IntPtr hwnd, bool on)
+        {
+            int v = on ? 1 : 0;
+            try { DwmSetWindowAttribute(hwnd, 13 /* DWMWA_CLOAK */, ref v, sizeof(int)); } catch { }
+        }
+
+        // No Windows minimise/restore animation for Playnite (it minimises on game start; coming back slid up from the taskbar)
+        private static void DisableWindowTransitions(IntPtr hwnd)
+        {
+            int on = 1;
+            try { DwmSetWindowAttribute(hwnd, 3 /* DWMWA_TRANSITIONS_FORCEDISABLED */, ref on, sizeof(int)); } catch { }
+        }
+
+        private const ushort GuideBit = 0x0400;
+        private static bool leftFromHub = true;  // where Playnite was when it lost focus (game start): hub or library
+        private static IntPtr gameWindow = IntPtr.Zero;
+        private static bool guideSwitching;  // GoHomeFromGuide runs its own enter animation
+        // Games that just started often pull themselves to the front once more (PoE2 did ~3 s after Guide brought
+        // Playnite up). For a few seconds after Guide, a jump back by the game's own process is undone.
+        private static DateTime stealGuardUntil = DateTime.MinValue;
+        private static DateTime stealGuardStart = DateTime.MinValue;
+        private static System.Windows.Threading.DispatcherTimer guardEndTimer;
+
+        private static void StartStealGuard(Window w)
+        {
+            stealGuardStart = DateTime.Now;
+            stealGuardUntil = DateTime.Now.AddSeconds(8);
+            w.Topmost = true;
+            if (guardEndTimer == null)
+            {
+                guardEndTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+                guardEndTimer.Tick += (s, e) =>
+                {
+                    if (DateTime.Now < stealGuardUntil) return;
+                    if (launching && coverCancelledByGuide) { stealGuardUntil = DateTime.Now.AddSeconds(3); return; }  // still loading
+                    guardEndTimer.Stop();
+                    var mw = Application.Current.MainWindow;
+                    if (mw != null && !launching) mw.Topmost = false;
+                };
+            }
+            guardEndTimer.Start();
+        }
+
+        private static void StopStealGuard(Window w)
+        {
+            stealGuardUntil = DateTime.MinValue;
+            if (guardEndTimer != null) guardEndTimer.Stop();
+            if (w != null && !launching) w.Topmost = false;
+        }  // the window Guide pulled us away from (the running game)
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool IsWindow(IntPtr hwnd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+        // Guide pauses the game like a console: muted, and frozen unless it is an online game (GamePause.cs)
+        private static void PauseRunningGame()
+        {
+            try
+            {
+                if (gameWindow == IntPtr.Zero) return;
+                uint pid;
+                GetWindowThreadProcessId(gameWindow, out pid);
+                if (pid == 0 || pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id) return;
+                string name = null;
+                if (Api != null) foreach (var g in Api.Database.Games) if (g.IsRunning) { name = g.Name; break; }
+                // only a game Playnite is running, and never the Windows shell: Guide on the desktop "paused" Explorer
+                // (freezing it would hang the taskbar and desktop)
+                string proc = "";
+                try { proc = System.Diagnostics.Process.GetProcessById((int)pid).ProcessName.ToLowerInvariant(); } catch { }
+                if (name == null || proc == "explorer" || proc == "shellexperiencehost" || proc == "startmenuexperiencehost" || proc == "searchhost")
+                {
+                    Log("pause skipped: " + (name == null ? "no game running" : proc));
+                    return;
+                }
+                bool online = GamePause.IsOnline(name ?? "");
+                if (!online) ShowWindow(gameWindow, 7);  // SW_SHOWMINNOACTIVE: parked, so Windows will not ghost it once frozen
+                var target = gameWindow;
+                var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(online ? 1 : 450) };
+                later.Tick += (s, e) =>
+                {
+                    later.Stop();
+                    if (gameWindow != target) return;  // already went back
+                    bool parked = online || IsIconic(target);
+                    GamePause.Pause((int)pid, name ?? "", parked);
+                };
+                later.Start();
+            }
+            catch (Exception ex) { Log("pause failed: " + ex.Message); }
+        }
+
+        private static bool AnyGameRunning()
+        {
+            try { if (Api != null) foreach (var g in Api.Database.Games) if (g.IsRunning) return true; } catch { }
+            return false;
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr w, IntPtr l);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+
+        // PS5 "Play Game" while it runs: close it (ask first), then start it fresh. WM_CLOSE first; if the game is
+        // still up after 8 s its process is ended. Playnite notices the exit, then the game is started again.
+        // ---- Close Game from the home screen (PS5 style): "Closing this game or app..." with its icon, then home ----
+        private static Window closingWindow;
+
+        private static void CloseGame(object game)
+        {
+            try
+            {
+                var id = Prop(game, "Id");
+                if (!(id is Guid) || Api == null) return;
+                var g0 = Api.Database.Games.Get((Guid)id);
+                var name = Convert.ToString(Prop(game, "Name"));
+                var main = Application.Current.MainWindow;
+                ShowClosingScreen(main, g0, name);
+                GamePause.Resume();
+                // the game's processes: its window if we know it, else everything running from its folder
+                var pids = new System.Collections.Generic.HashSet<int>();
+                if (gameWindow != IntPtr.Zero) { uint wp; GetWindowThreadProcessId(gameWindow, out wp); if (wp != 0) pids.Add((int)wp); PostMessage(gameWindow, 0x0010, IntPtr.Zero, IntPtr.Zero); }
+                foreach (var pid in LocalGames.ProcessesInGameFolder(g0)) pids.Add(pid);
+                var adminPids = new System.Collections.Generic.List<string>();
+                foreach (var pid in pids)
+                {
+                    try
+                    {
+                        var pr = System.Diagnostics.Process.GetProcessById(pid);
+                        try { var gone = pr.HasExited; } catch { adminPids.Add("close " + pid); continue; }  // runs as admin
+                        if (pr.MainWindowHandle != IntPtr.Zero) pr.CloseMainWindow();
+                    }
+                    catch { }
+                }
+                if (adminPids.Count > 0) RequestElevated(adminPids.ToArray());
+                Log("close game: " + name + " (" + pids.Count + " process(es)" + (adminPids.Count > 0 ? ", " + adminPids.Count + " via the admin helper" : "") + ")");
+                var started = DateTime.Now;
+                bool killed = false;
+                var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+                timer.Tick += (s, e) =>
+                {
+                    var secs = (DateTime.Now - started).TotalSeconds;
+                    bool alive = false;
+                    foreach (var pid in pids) if (ProcessAlive(pid)) alive = true;
+                    var gNow = Api.Database.Games.Get((Guid)id);
+                    if (!alive && gNow != null && gNow.IsRunning && LocalGames.IsMarkedRunning(gNow.Id)) { gNow.IsRunning = false; Api.Database.Games.Update(gNow); }
+                    // the home still showed "Now playing / Resume" for ~2 s after: wait until Playnite has seen the game stop
+                    bool playniteSeesIt = gNow == null || !gNow.IsRunning || secs > 12;
+                    if (!alive && secs >= 1.4 && playniteSeesIt)
+                    {
+                        timer.Stop();
+                        gameWindow = IntPtr.Zero;
+                        Log("close game: " + name + " closed after " + secs.ToString("0.0") + " s");
+                        HideClosingScreen();
+                        return;
+                    }
+                    if (alive && secs > 4 && !killed)
+                    {
+                        killed = true;
+                        foreach (var pid in pids) try { System.Diagnostics.Process.GetProcessById(pid).Kill(); } catch { }
+                        Log("close game: ended " + name + " (did not close in 4 s)");
+                    }
+                    if (secs > 20) { timer.Stop(); gameWindow = IntPtr.Zero; HideClosingScreen(); Log("close game: gave up on " + name); }
+                };
+                timer.Start();
+            }
+            catch (Exception ex) { Log("close game failed: " + ex.Message); HideClosingScreen(); }
+        }
+
+        // an admin process can't be opened from here (HasExited throws): it counted as closed while still running
+        private static bool ProcessAlive(int pid)
+        {
+            System.Diagnostics.Process pr;
+            try { pr = System.Diagnostics.Process.GetProcessById(pid); } catch { return false; }
+            try { return !pr.HasExited; } catch { return true; }
+        }
+
+        // the PS5Launch\Elevated Helper task runs ConsoleHelper.exe with admin rights: it reads these requests
+        // ("focus", "close <pid>") from %TEMP%\ps5-elevated.txt
+        public static void RequestElevated(params string[] lines)
+        {
+            try
+            {
+                System.IO.File.AppendAllLines(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ps5-elevated.txt"), lines);
+                var psi = new System.Diagnostics.ProcessStartInfo(@"C:\Windows\System32\schtasks.exe", "/run /tn \"PS5Launch\\Elevated Helper\"") { UseShellExecute = false, CreateNoWindow = true };
+                System.Diagnostics.Process.Start(psi);
+            }
+            catch (Exception ex) { Log("admin helper request failed: " + ex.Message); }
+        }
+
+        private static void ShowClosingScreen(Window main, Playnite.SDK.Models.Game g, string name)
+        {
+            try
+            {
+                HideClosingScreen();
+                var root = new Grid { Opacity = 0, Background = Brushes.Black };
+                // the home's own animated background, a little dimmed
+                string bgVideo = SelenePaths.ThemeFile("Media", "home-background.mp4");
+                if (System.IO.File.Exists(bgVideo))
+                {
+                    var me = new MediaElement { Source = new Uri(bgVideo), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close, IsMuted = true, Stretch = Stretch.UniformToFill };
+                    me.MediaEnded += (s, e) => { me.Position = TimeSpan.Zero; me.Play(); };
+                    root.Children.Add(me);
+                    me.Play();
+                }
+                var veil = new RadialGradientBrush { Center = new Point(0.5, 0.48), GradientOrigin = new Point(0.5, 0.48), RadiusX = 0.7, RadiusY = 0.75 };
+                veil.GradientStops.Add(new GradientStop(Color.FromArgb(0x55, 0, 0, 0), 0));
+                veil.GradientStops.Add(new GradientStop(Color.FromArgb(0xB0, 0, 0, 0), 1));
+                root.Children.Add(new Border { Background = veil });
+
+                var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, RenderTransformOrigin = new Point(0.5, 0.5) };
+                var lift = new TranslateTransform(0, 18);
+                stack.RenderTransform = lift;
+                string icon = null;
+                if (g != null && Api != null)
+                {
+                    var sq = System.IO.Path.Combine(SelenePaths.Media("Square"), g.Id + ".jpg");
+                    if (System.IO.File.Exists(sq)) icon = sq;
+                    else if (!string.IsNullOrEmpty(g.CoverImage)) icon = Api.Database.GetFullFilePath(g.CoverImage);
+                    else if (!string.IsNullOrEmpty(g.Icon)) icon = Api.Database.GetFullFilePath(g.Icon);
+                }
+                if (icon != null && System.IO.File.Exists(icon))
+                {
+                    var tile = new Border
+                    {
+                        Width = 220, Height = 220, CornerRadius = new CornerRadius(26), ClipToBounds = true, HorizontalAlignment = HorizontalAlignment.Center,
+                        Background = new ImageBrush(LoadNow(icon, 440)) { Stretch = Stretch.UniformToFill },
+                        BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(2),
+                        Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 46, Opacity = 0.65, Color = Colors.Black }
+                    };
+                    stack.Children.Add(tile);
+                }
+                stack.Children.Add(new TextBlock
+                {
+                    Text = name, FontSize = 38, FontFamily = new FontFamily("Segoe UI Variable Display"), FontWeight = FontWeights.SemiBold, Foreground = Brushes.White,
+                    HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 34, 0, 0), TextAlignment = TextAlignment.Center
+                });
+                var status = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 14, 0, 0) };
+                status.Children.Add(new TextBlock { Text = "Closing this game or app", FontSize = 24, FontFamily = new FontFamily("Segoe UI"), Foreground = new SolidColorBrush(Color.FromArgb(0xB8, 0xFF, 0xFF, 0xFF)), VerticalAlignment = VerticalAlignment.Center });
+                // three soft pulsing dots
+                for (int i = 0; i < 3; i++)
+                {
+                    var dot = new System.Windows.Shapes.Ellipse { Width = 7, Height = 7, Fill = Brushes.White, Margin = new Thickness(i == 0 ? 12 : 6, 6, 0, 0), Opacity = 0.25, VerticalAlignment = VerticalAlignment.Center };
+                    dot.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.25, 1, TimeSpan.FromMilliseconds(480)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromMilliseconds(i * 160) });
+                    status.Children.Add(dot);
+                }
+                stack.Children.Add(status);
+                root.Children.Add(stack);
+
+                closingWindow = new Window
+                {
+                    WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, ShowActivated = false,
+                    AllowsTransparency = true, Background = Brushes.Transparent, Content = root, Title = "Ps5LaunchCover",
+                    Left = main.Left, Top = main.Top, Width = main.ActualWidth, Height = main.ActualHeight
+                };
+                closingWindow.SourceInitialized += (s, e) => DisableWindowTransitions(new System.Windows.Interop.WindowInteropHelper(closingWindow).Handle);
+                closingWindow.Show();
+                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = ease });
+                lift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(18, 0, TimeSpan.FromMilliseconds(520)) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } });
+            }
+            catch (Exception ex) { Log("closing screen failed: " + ex.Message); }
+        }
+
+        private static void HideClosingScreen()
+        {
+            var cw = closingWindow;
+            closingWindow = null;
+            if (cw == null) return;
+            var content = cw.Content as UIElement;
+            if (content == null) { try { cw.Close(); } catch { } return; }
+            var anim = new DoubleAnimation(0, TimeSpan.FromMilliseconds(420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+            anim.Completed += (s, e) => { try { cw.Close(); } catch { } };
+            content.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+
+        private static void RestartGame(object game)
+        {
+            try
+            {
+                var id = Prop(game, "Id");
+                if (!(id is Guid) || Api == null) return;
+                var name = Convert.ToString(Prop(game, "Name"));
+                var answer = Api.Dialogs.ShowMessage("Close " + name + " and start it again?" + Environment.NewLine + "Unsaved progress will be lost.", "Restart game",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (answer != MessageBoxResult.Yes) return;
+                var target = gameWindow;
+                uint pid;
+                GetWindowThreadProcessId(target, out pid);
+                GamePause.Resume();
+                PostMessage(target, 0x0010 /* WM_CLOSE */, IntPtr.Zero, IntPtr.Zero);
+                Log("restart: closing " + name + " (pid " + pid + ")");
+                var started = DateTime.Now;
+                bool killed = false;
+                var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+                timer.Tick += (s, e) =>
+                {
+                    var g = Api.Database.Games.Get((Guid)id);
+                    if (g == null) { timer.Stop(); return; }
+                    var secs = (DateTime.Now - started).TotalSeconds;
+                    if (!g.IsRunning)
+                    {
+                        timer.Stop();
+                        gameWindow = IntPtr.Zero;
+                        Log("restart: " + name + " closed after " + secs.ToString("0.0") + " s, starting again");
+                        StartGameNow((Guid)id);
+                        return;
+                    }
+                    if (secs > 8 && !killed && pid != 0)
+                    {
+                        killed = true;
+                        try { System.Diagnostics.Process.GetProcessById((int)pid).Kill(); Log("restart: ended process " + pid); } catch (Exception ex) { Log("restart: kill failed: " + ex.Message); }
+                    }
+                    if (secs > 30) { timer.Stop(); Log("restart: gave up, " + name + " still running"); }
+                };
+                timer.Start();
+            }
+            catch (Exception ex) { Log("restart failed: " + ex.Message); }
+        }
+
+        // ---- Launch cover: keep the loading screen up until the game is really there ----
+        // Called by the ClaudeLibraryTools extension (OnGameStarting). Playnite's loading screen stays on top (Topmost) so
+        // windowed start-up screens, black windows and launchers stay hidden behind it. When a window of another process
+        // covers the whole screen for ~0.75 s, the loading screen fades to black and the game is brought forward (that
+        // black frame is also what Windows remembers, so the first Guide press has no stale picture). Gives up after 45 s
+        // (a launcher or dialog may need input); Guide during loading cancels it.
+        private static bool launching;
+        private static bool coverCancelledByGuide;
+        private static Guid launchGameId = Guid.Empty;
+        private static IntPtr steamDialog = IntPtr.Zero;
+        private static int steamDialogTicks;
+        private static DateTime launchStart;
+        private static System.Windows.Threading.DispatcherTimer launchTimer;
+        private static DateTime gameWindowSeenAt = DateTime.MinValue;
+        private static IntPtr lastGameWindow = IntPtr.Zero;
+        private static readonly HashSet<int> gamePids = new HashSet<int>();
+        private static DateTime gamePidsAt = DateTime.MinValue, soundSince = DateTime.MinValue, lastSoundAt = DateTime.MinValue;
+        private static int soundTick;
+
+        public static void GameStarting() { GameStarting(Guid.Empty); }
+
+        private static Window coverWindow;
+
+        // PS5-style launch screen in our own window: the game's key art full screen (sharp hero art first), fading up from
+        // black with a slow continuous drift, then the logo large in the centre, easing in. Topmost and never activated, so the
+        // game can start behind it; RevealGame fades it out. An opaque window (not AllowsTransparency, which is drawn in
+        // software and made full-screen animation stutter); the art is bitmap-cached so the drift is a cheap GPU scale.
+        // Play: the loading screen's hero art (4K jpg) and logo are decoded ahead, while the game is only selected
+        private static readonly Dictionary<string, System.Windows.Media.Imaging.BitmapImage> coverArt = new Dictionary<string, System.Windows.Media.Imaging.BitmapImage>();
+        private static readonly Queue<string> coverArtOrder = new Queue<string>();
+
+        private static void CoverArtPaths(Guid gameId, out string bg, out string logo)
+        {
+            bg = null; logo = null;
+            if (gameId == Guid.Empty || Api == null) return;
+            var hero = System.IO.Path.Combine(SelenePaths.Media("Hero"), gameId + ".jpg");
+            var g = Api.Database.Games.Get(gameId);
+            if (System.IO.File.Exists(hero)) bg = hero;
+            else if (g != null && !string.IsNullOrEmpty(g.BackgroundImage)) bg = Api.Database.GetFullFilePath(g.BackgroundImage);
+            var lp = System.IO.Path.Combine(Api.Paths.ConfigurationPath, "ExtraMetadata", "games", gameId.ToString(), "logo.png");
+            if (System.IO.File.Exists(lp)) logo = lp;
+        }
+
+        private static void PreloadCoverArt(object item)
+        {
+            try
+            {
+                var id = item != null && !(item is string) ? Prop(item, "Id") : null;
+                if (!(id is Guid)) return;
+                var main = Application.Current.MainWindow;
+                if (main == null) return;
+                int width = (int)Math.Max(1920, main.ActualWidth);
+                string bg, logo;
+                CoverArtPaths((Guid)id, out bg, out logo);
+                var jobs = new List<KeyValuePair<string, int>>();
+                if (bg != null) jobs.Add(new KeyValuePair<string, int>(bg, width));
+                if (logo != null) jobs.Add(new KeyValuePair<string, int>(logo, 0));
+                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    foreach (var j in jobs)
+                    {
+                        var key = j.Key + "|" + j.Value;
+                        lock (coverArt) { if (coverArt.ContainsKey(key)) continue; }
+                        System.Windows.Media.Imaging.BitmapImage bmp;
+                        try { bmp = Decode(j.Key, j.Value); } catch { continue; }  // frozen: usable from the UI thread
+                        lock (coverArt)
+                        {
+                            if (coverArt.ContainsKey(key)) continue;
+                            coverArt[key] = bmp;
+                            coverArtOrder.Enqueue(key);
+                            while (coverArtOrder.Count > 12) coverArt.Remove(coverArtOrder.Dequeue());  // a few games' worth
+                        }
+                    }
+                });
+            }
+            catch { }
+        }
+
+        private static void ShowCoverWindow(Window main, Guid gameId)
+        {
+            try
+            {
+                if (coverWindow != null) { try { coverWindow.Close(); } catch { } coverWindow = null; }
+                string bg, logo;
+                CoverArtPaths(gameId, out bg, out logo);
+                var root = new Grid { Background = Brushes.Black, ClipToBounds = true };
+                // (no snapshot of the home any more: the whole window fades in over the live home instead, see below)
+                var scene = new Grid { RenderTransformOrigin = new Point(0.5, 0.5) };
+                var drift = new ScaleTransform(1.04, 1.04);
+                scene.RenderTransform = drift;
+                if (bg != null && System.IO.File.Exists(bg))
+                {
+                    var art = new Image { Source = LoadNow(bg, (int)Math.Max(1920, main.ActualWidth)), Stretch = Stretch.UniformToFill };
+                    RenderOptions.SetBitmapScalingMode(art, BitmapScalingMode.HighQuality);
+                    scene.Children.Add(art);
+                    scene.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
+                }
+                // light, even dim so a white logo reads on bright art (PS5 keeps the art bright)
+                var dim = new RadialGradientBrush { GradientOrigin = new Point(0.5, 0.5), Center = new Point(0.5, 0.5), RadiusX = 0.75, RadiusY = 0.75 };
+                dim.GradientStops.Add(new GradientStop(Color.FromArgb(0x30, 0, 0, 0), 0));
+                dim.GradientStops.Add(new GradientStop(Color.FromArgb(0x70, 0, 0, 0), 1));
+                root.Children.Add(scene);
+                var dimLayer = new Border { Background = dim, Opacity = 0 };
+                root.Children.Add(dimLayer);
+                FrameworkElement logoEl = null;
+                var logoScale = new ScaleTransform(0.94, 0.94);
+                if (logo != null)
+                {
+                    logoEl = new Image
+                    {
+                        Source = LoadNow(logo, 0), MaxWidth = Math.Min(980, main.ActualWidth * 0.5), MaxHeight = Math.Min(420, main.ActualHeight * 0.38),
+                        Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                        Opacity = 0, RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = logoScale,
+                        Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.55 }
+                    };
+                    RenderOptions.SetBitmapScalingMode(logoEl, BitmapScalingMode.HighQuality);
+                    root.Children.Add(logoEl);
+                }
+                coverBlack = new Border { Background = Brushes.Black, Opacity = 0, IsHitTestVisible = false };
+                root.Children.Add(coverBlack);
+                coverDark = false;
+                coverWindow = new Window
+                {
+                    WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, ShowActivated = false,
+                    Background = Brushes.Black, Content = root, Left = main.Left, Top = main.Top, Width = main.ActualWidth, Height = main.ActualHeight,
+                    Title = "Ps5LaunchCover"
+                };
+                var cwShow = coverWindow;
+                coverWindow.SourceInitialized += (s, e) => DisableWindowTransitions(new System.Windows.Interop.WindowInteropHelper(cwShow).Handle);
+                // The loading screen fades in over the live home INSIDE Playnite's own window (GPU, smooth), then moves into
+                // the topmost window that covers the launch (same picture: no visible change). A separate window can't fade
+                // over the home: layered alpha did nothing (popped in), the old home snapshot cost ~700 ms.
+                var host = CoverFadeHost(main);
+                if (host == null) Log("loading screen: no panel to fade in over (" + (main.Content == null ? "null" : main.Content.GetType().Name) + "), shown directly");
+                if (host != null && main.IsVisible && !CloseToTray.IsHidden)
+                {
+                    cwShow.Content = null;
+                    var overlay = new Grid { Opacity = 0, IsHitTestVisible = false };
+                    Grid.SetRowSpan(overlay, 99); Grid.SetColumnSpan(overlay, 99);
+                    Panel.SetZIndex(overlay, 100000);
+                    overlay.Children.Add(root);
+                    host.Children.Add(overlay);
+                    Action handOver = null;
+                    handOver = () =>
+                    {
+                        if (removeCoverOverlay != handOver) return;
+                        removeCoverOverlay = null;
+                        overlay.Children.Remove(root);
+                        host.Children.Remove(overlay);
+                        if (coverWindow != cwShow) return;  // cancelled meanwhile
+                        cwShow.Content = root;
+                        cwShow.Show();
+                        var startLogo = pendingLogo;
+                        pendingLogo = null;
+                        if (startLogo != null) startLogo();
+                    };
+                    removeCoverOverlay = handOver;
+                    var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(360)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                    fadeIn.Completed += (s, e) => handOver();
+                    overlay.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+                }
+                else coverWindow.Show();
+
+                var easeOut = new CubicEase { EasingMode = EasingMode.EaseOut };
+                var softOut = new QuinticEase { EasingMode = EasingMode.EaseOut };
+                // art up from black, then a slow drift for as long as the game takes to load
+                // art cross-fades in over the home still (user preferred this to a PS5-style slide)
+                drift.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.04, 1.12, TimeSpan.FromSeconds(20)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
+                drift.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.04, 1.12, TimeSpan.FromSeconds(20)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
+                dimLayer.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900)) { BeginTime = TimeSpan.FromMilliseconds(300) });
+                pendingLogo = null;
+                if (logoEl != null)
+                {
+                    // logo: a soft fade while it rises gently into place (no zoom - user preference). It starts after the art
+                    // has faded in (it used to fade in together with the art and looked like it just appeared)
+                    var at = TimeSpan.FromMilliseconds(60);
+                    logoScale.ScaleX = 1; logoScale.ScaleY = 1;
+                    var rise = new TranslateTransform(0, 30);
+                    var logoGroup = new TransformGroup();
+                    logoGroup.Children.Add(logoScale);
+                    logoGroup.Children.Add(rise);
+                    logoEl.RenderTransform = logoGroup;
+                    var logoTarget = logoEl;
+                    Action startLogo = () =>
+                    {
+                        logoTarget.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(750)) { BeginTime = at, EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
+                        rise.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(1000)) { BeginTime = at, EasingFunction = softOut });
+                    };
+                    if (removeCoverOverlay != null) pendingLogo = startLogo;  // still fading in inside Playnite's window
+                    else startLogo();
+                }
+            }
+            catch (Exception ex) { Log("cover window failed: " + ex.Message); }
+        }
+
+        private static System.Windows.Media.Imaging.BitmapImage LoadNow(string path, int decodeWidth)
+        {
+            var key = path + "|" + decodeWidth;
+            System.Windows.Media.Imaging.BitmapImage ready;
+            lock (coverArt) { if (coverArt.TryGetValue(key, out ready)) return ready; }
+            return Decode(path, decodeWidth);
+        }
+
+        private static System.Windows.Media.Imaging.BitmapImage Decode(string path, int decodeWidth)
+        {
+            var bmp = new System.Windows.Media.Imaging.BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;  // decoded here, ready on the first frame
+            if (decodeWidth > 0) bmp.DecodePixelWidth = decodeWidth;
+            bmp.UriSource = new Uri(path);
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetLayeredWindowAttributes(IntPtr h, uint key, byte alpha, uint flags);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern int SetWindowLong(IntPtr h, int index, int value);
+
+        // PS5: once the game's window shows up the art darkens slowly to black and stays black until the game is ready.
+        // (A fullscreen game takes the screen the moment its window appears, ~3 s before "ready": darkening only then
+        // happened unseen behind the game, which looked like a hard cut.)
+        private static Border coverBlack;
+        private static bool coverDark;
+
+        // Playnite's screen comes back with a short fade instead of popping in
+        public static void FadeInRoot(UIElement root)
+        {
+            if (root == null) return;
+            double from = root.Opacity;
+            if (from >= 0.99 && !root.HasAnimatedProperties) return;
+            var a = new DoubleAnimation(Math.Min(from, 0.0), 1, TimeSpan.FromMilliseconds(380)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+            a.Completed += (s, e) => root.BeginAnimation(UIElement.OpacityProperty, null);
+            root.BeginAnimation(UIElement.OpacityProperty, a);
+        }
+
+        private static void DarkenCover(bool on)
+        {
+            if (coverBlack == null || on == coverDark) return;
+            coverDark = on;
+            coverBlack.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(on ? 1 : 0, TimeSpan.FromMilliseconds(on ? 1000 : 500))
+            { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
+            Log("launch cover: " + (on ? "darkening (game window appeared)" : "brightening again (it was a passing window)"));
+        }
+
+        // the outermost window-sized Panel of Playnite's window (its Content is a Border/ContentControl, not a Panel)
+        private static Panel coverHost;
+        private static Panel CoverFadeHost(Window main)
+        {
+            if (coverHost != null && coverHost.IsVisible && Window.GetWindow(coverHost) == main) return coverHost;
+            coverHost = null;
+            var queue = new Queue<KeyValuePair<DependencyObject, int>>();
+            var start = main.Content as DependencyObject;
+            if (start == null) return null;
+            queue.Enqueue(new KeyValuePair<DependencyObject, int>(start, 0));
+            while (queue.Count > 0)
+            {
+                var cur = queue.Dequeue();
+                var panel = cur.Key as Panel;
+                if (panel != null && !panel.IsItemsHost && panel.ActualWidth >= main.ActualWidth - 4 && panel.ActualHeight >= main.ActualHeight - 4
+                    && (panel is Grid || panel is Canvas || panel is DockPanel))
+                {
+                    coverHost = panel;
+                    Log("loading screen: fades in over " + panel.GetType().Name + " '" + panel.Name + "' (depth " + cur.Value + ")");
+                    return panel;
+                }
+                if (cur.Value >= 8) continue;
+                int n = VisualTreeHelper.GetChildrenCount(cur.Key);
+                for (int i = 0; i < n; i++) queue.Enqueue(new KeyValuePair<DependencyObject, int>(VisualTreeHelper.GetChild(cur.Key, i), cur.Value + 1));
+            }
+            return null;
+        }
+
+        // set while the loading screen is still fading in inside Playnite's window (before it moves to its own window)
+        private static Action removeCoverOverlay;
+        private static Action pendingLogo;
+
+        private static void CloseCoverWindow(bool fade, Action after)
+        {
+            if (removeCoverOverlay != null) { var r = removeCoverOverlay; coverWindow = null; r(); }
+            var cw = coverWindow;
+            coverWindow = null;
+            if (cw == null) { if (after != null) after(); return; }
+            var black = coverBlack;
+            coverBlack = null;
+            if (!fade || black == null) { if (after != null) after(); try { cw.Close(); } catch { } return; }
+            Action fadeIntoGame = () =>
+            {
+                // black now: the game comes forward under it, then the black fades away (0.7 s) so the game fades in
+                // (a game in exclusive fullscreen still cuts in: nothing can be drawn over it)
+                if (after != null) after();
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(cw).Handle;
+                if (hwnd == IntPtr.Zero) { try { cw.Close(); } catch { } return; }
+                SetWindowLong(hwnd, -20 /* GWL_EXSTYLE */, GetWindowLong(hwnd, -20) | 0x80000 /* WS_EX_LAYERED */ | 0x20 /* WS_EX_TRANSPARENT */);
+                SetLayeredWindowAttributes(hwnd, 0, 255, 0x2 /* LWA_ALPHA */);
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                var fadeIn = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(15) };
+                fadeIn.Tick += (s2, e2) =>
+                {
+                    double ms = clock.ElapsedMilliseconds - 300;  // a beat of black while the game draws its first frames
+                    double k = Math.Max(0, Math.Min(1, ms / 700.0));
+                    double eased = k * k * (3 - 2 * k);
+                    SetWindowPos(hwnd, new IntPtr(-1) /* HWND_TOPMOST */, 0, 0, 0, 0, 0x0013 /* NOSIZE|NOMOVE|NOACTIVATE */);
+                    SetLayeredWindowAttributes(hwnd, 0, (byte)(255 * (1 - eased)), 0x2);
+                    if (k >= 1) { fadeIn.Stop(); try { cw.Close(); } catch { } }
+                };
+                fadeIn.Start();
+            };
+            if (coverDark) { fadeIntoGame(); return; }
+            var anim = new DoubleAnimation(1, TimeSpan.FromMilliseconds(800)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
+            anim.Completed += (s, e) => fadeIntoGame();
+            black.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+
+        // Play pressed: the loading screen goes up at once. Playnite only starts the game after its OnGameStarting script
+        // hook has run (~1 s through PowerShell), and the loading screen used to wait for that hook too.
+        private static DateTime earlyCoverAt = DateTime.MinValue;
+        private static bool startingSeen;
+
+        private static void StartGameNow(Guid id)
+        {
+            if (Api == null) return;
+            var g = Api.Database.Games.Get(id);
+            if (g != null && g.IsInstalled && !g.IsRunning && !launching)
+            {
+                try
+                {
+                    startingSeen = false;
+                    PlayStartingSound();  // Playnite played it when IT started the game (~1 s after the press now)
+                    var swCover = System.Diagnostics.Stopwatch.StartNew();
+                    GameStarting(id);
+                    earlyCoverAt = DateTime.Now;
+                    Log("play: loading screen up at once (" + g.Name + ", built in " + swCover.ElapsedMilliseconds + " ms)");
+                    // Playnite may still refuse (error dialog behind the loading screen): never keep covering it
+                    var guard = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+                    guard.Tick += (s, e) => { guard.Stop(); if (launching && launchGameId == id && !startingSeen) AbortLaunchCover(IntPtr.Zero, "Playnite did not start the game"); };
+                    guard.Start();
+                }
+                catch (Exception ex) { Log("play: early loading screen failed " + ex.Message); }
+            }
+            // Playnite starts the game on the UI thread and runs every plugin's "game starting" step there: the fade-in and the
+            // logo froze mid-way and then jumped (looked like a delay). Let them play first; the loading screen covers the wait.
+            Action start = () =>
+            {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                Api.StartGame(id);
+                Log("play: Playnite's start took " + sw.ElapsedMilliseconds + " ms on the UI thread");
+            };
+            if (launching && launchGameId == id)
+            {
+                var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(950) };
+                later.Tick += (s, e) => { later.Stop(); if (launching && launchGameId == id) start(); else Log("play: cancelled before the game was started"); };
+                later.Start();
+            }
+            else Application.Current.Dispatcher.BeginInvoke(start, System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        public static void GameStarting(Guid gameId)
+        {
+            var app = Application.Current;
+            if (app == null) return;
+            app.Dispatcher.Invoke(new Action(() =>
+            {
+                var w = app.MainWindow;
+                if (w == null) return;
+                if (launching && (launchGameId == gameId || gameId == Guid.Empty) && (DateTime.Now - earlyCoverAt).TotalSeconds < 15)
+                {
+                    startingSeen = true;  // Playnite's hook for the launch we already covered: nothing to do, let it start the game
+                    Log("game starting: loading screen already up");
+                    return;
+                }
+                if (previewShowing)
+                {
+                    var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+                    later.Tick += (s, e) => { later.Stop(); HidePreview(); };
+                    later.Start();
+                }
+                var hub = FindByName(w, "WelcomeHubOverlay");
+                leftFromHub = hub == null || hub.IsVisible;
+                launching = true;
+                launchStart = DateTime.Now;
+                gameWindowSeenAt = DateTime.MinValue;
+                lastGameWindow = IntPtr.Zero;
+                gamePids.Clear();
+                gamePidsAt = DateTime.MinValue;
+                soundSince = DateTime.MinValue;
+                lastSoundAt = DateTime.MinValue;
+                launchGameId = gameId;
+                coverCancelledByGuide = false;
+                steamDialog = IntPtr.Zero;
+                steamDialogTicks = 0;
+                var phase = System.Diagnostics.Stopwatch.StartNew();
+                if (removeCoverOverlay != null) removeCoverOverlay();  // a previous one still fading
+                SnapshotWindows();
+                long tSnap = phase.ElapsedMilliseconds;
+                ShowCoverWindow(w, gameId);
+                long tCover = phase.ElapsedMilliseconds;
+                MinimizeSteamMainWindow();
+                Log("game starting: timings windows=" + tSnap + " ms, loading screen=" + (tCover - tSnap) + " ms, steam=" + (phase.ElapsedMilliseconds - tCover) + " ms");
+                if (launchTimer == null)
+                {
+                    launchTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                    launchTimer.Tick += (s, e) => CheckGameReady();
+                }
+                launchTimer.Start();
+                Log("game starting: loading screen kept on top");
+            }));
+        }
+
+        private static void CheckGameReady()
+        {
+            var w = Application.Current.MainWindow;
+            if (!launching || w == null) { if (launchTimer != null) launchTimer.Stop(); return; }
+            var waited = (DateTime.Now - launchStart).TotalSeconds;
+            if (waited > 25)
+            {
+                // launchers (Call of Duty: launcher -> shaders -> game) take longer: keep waiting while the game is alive
+                bool alive = false;
+                try { var lg = Api != null ? Api.Database.Games.Get(launchGameId) : null; alive = lg != null && (lg.IsRunning || LocalGames.ProcessesInGameFolder(lg).Count > 0); } catch { }
+                if (!alive || waited > 120) { RevealGame(IntPtr.Zero, alive ? "timeout, 2 min" : "timeout, nothing running"); return; }
+            }
+            var me = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+            double elapsed = (DateTime.Now - launchStart).TotalSeconds;
+            if (elapsed > 3 && launchGameId != Guid.Empty && Api != null)
+            {
+                var g = Api.Database.Games.Get(launchGameId);
+                if (g != null && !g.IsRunning && !g.IsLaunching) { AbortLaunchCover(IntPtr.Zero, "game is not starting"); return; }
+            }
+            // a Steam window that stays up (e.g. "Game already running" error) needs the user: show it
+            var sd = FindSteamDialog();
+            if (sd != IntPtr.Zero && sd == steamDialog) steamDialogTicks++; else { steamDialog = sd; steamDialogTicks = 0; }
+            if (sd != IntPtr.Zero && steamDialogTicks >= 30) { AbortLaunchCover(sd, "Steam dialog"); return; }
+            // ONE rule for every game (no per-game timing): the game is ready when it is really showing something -
+            //   its own (nearly) full-screen window is up AND it is making sound (intro logos / menu music)
+            // Fallbacks: window up 12 s but silent -> show it; sound for 10 s but no full-screen window (windowed game) ->
+            // show it; nothing of the game running after 25 s -> back to Playnite (timeouts above).
+            // (A big window alone revealed too early: launchers, splash screens, black windows before the first frame.)
+            var found = FindFullscreenGameWindow(me);
+            var now = DateTime.Now;
+            if ((now - gamePidsAt).TotalSeconds >= 1)
+            {
+                gamePidsAt = now;
+                gamePids.Clear();
+                try { var lg = Api != null ? Api.Database.Games.Get(launchGameId) : null; if (lg != null) foreach (var pid in LocalGames.ProcessesInGameFolder(lg)) gamePids.Add(pid); } catch { }
+            }
+            uint foundPid = 0;
+            if (found != IntPtr.Zero) GetWindowThreadProcessId(found, out foundPid);
+            // a full-screen window of some other program (not from the game's folder) doesn't count as the game
+            bool ours = found != IntPtr.Zero && (gamePids.Count == 0 || gamePids.Contains((int)foundPid));
+            if (found != IntPtr.Zero && found != lastGameWindow)
+            {
+                // COD sat behind the loading screen without focus until a button was pressed: the game gets the focus as soon
+                // as its window shows (the loading screen stays on top)
+                lastGameWindow = found;
+                if (gameWindowSeenAt == DateTime.MinValue) gameWindowSeenAt = now;
+                if (!coverCancelledByGuide) ForceForeground(found);
+            }
+            if (++soundTick % 3 == 0)
+            {
+                var listen = new HashSet<int>(gamePids);
+                if (foundPid != 0) listen.Add((int)foundPid);
+                float peak = GamePause.PeakOf(listen);
+                if (peak > 0.01f) { if (soundSince == DateTime.MinValue) { soundSince = now; Log("launch: the game is making sound (" + (now - launchStart).TotalSeconds.ToString("0.0") + " s)"); } lastSoundAt = now; }
+                else if (soundSince != DateTime.MinValue && (now - lastSoundAt).TotalSeconds > 2) soundSince = DateTime.MinValue;  // a blip, not the game
+            }
+            bool sounding = soundSince != DateTime.MinValue && (now - soundSince).TotalSeconds >= 0.4;
+            IntPtr readyWindow = IntPtr.Zero;
+            string why = null;
+            if (ours && sounding) { readyWindow = found; why = "game window + sound"; }
+            else if (gameWindowSeenAt != DateTime.MinValue && (now - gameWindowSeenAt).TotalSeconds >= 12 && lastGameWindow != IntPtr.Zero && IsWindow(lastGameWindow))
+            { readyWindow = lastGameWindow; why = "game window up 12 s, no sound"; }
+            else if (soundSince != DateTime.MinValue && (now - soundSince).TotalSeconds >= 10 && found == IntPtr.Zero)
+            {
+                foreach (var pid in gamePids)
+                {
+                    try { var h = System.Diagnostics.Process.GetProcessById(pid).MainWindowHandle; if (h != IntPtr.Zero && IsWindowVisible(h)) { readyWindow = h; break; } } catch { }
+                }
+                why = "game sound for 10 s (windowed game)";
+                if (readyWindow == IntPtr.Zero) readyWindow = GetForegroundWindow();
+            }
+            if (why != null)
+            {
+                if (coverCancelledByGuide)
+                {
+                    launching = false;
+                    launchTimer.Stop();
+                    gameWindow = readyWindow;
+                    PlayReadySound();
+                    if (DateTime.Now < stealGuardUntil || w.Topmost) { stealGuardStart = DateTime.Now; stealGuardUntil = DateTime.Now.AddSeconds(8); }  // it may grab once more
+                    Log("game ready in the background (Resume to play)");
+                    return;
+                }
+                RevealGame(readyWindow, why);
+                return;
+            }
+            // Wilds marks its own start-up windows topmost too and the newest topmost window wins: push the loading screen
+            // back above them every tick, without taking focus from the game
+            var coverHwnd = coverWindow != null ? new System.Windows.Interop.WindowInteropHelper(coverWindow).Handle : IntPtr.Zero;
+            // ...but once the art has darkened to black, let the game come over it: pushing back over a game that is already
+            // drawing made its first frame blink through for a moment
+            if (coverHwnd != IntPtr.Zero && !coverDark) SetWindowPos(coverHwnd, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);  // HWND_TOPMOST, NOSIZE | NOMOVE | NOACTIVATE
+        }
+
+        private static void RevealGame(IntPtr game, string why)
+        {
+            launching = false;
+            if (launchTimer != null) launchTimer.Stop();
+            var w = Application.Current.MainWindow;
+            if (w == null) return;
+            var root = w.Content as UIElement;
+            PlayReadySound();
+            Log("launch cover: revealing game (" + why + ", " + (DateTime.Now - launchStart).TotalSeconds.ToString("0.0") + " s)");
+            if (root != null) root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));  // main window black behind
+            w.Topmost = false;
+            CloseCoverWindow(true, () =>
+            {
+                var target = game != IntPtr.Zero ? game : GetForegroundWindow();
+                var me = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+                if (target != IntPtr.Zero && target != me) { gameWindow = target; ForceForeground(target); }
+                else if (root != null) FadeInRoot(root);  // nothing to show: Playnite back
+            });
+        }
+
+        // the theme's audio\Events\GameStarting.wav, moved to D:\PlayniteMedia: played on the Play press
+        private static MediaPlayer startingPlayer;
+        private static void PlayStartingSound()
+        {
+            try
+            {
+                string path = SelenePaths.ThemeAudio("GameStarting.wav");
+                if (!System.IO.File.Exists(path)) return;
+                if (startingPlayer == null) { startingPlayer = new MediaPlayer(); startingPlayer.Open(new Uri(path)); }
+                startingPlayer.Stop();
+                startingPlayer.Position = TimeSpan.Zero;
+                startingPlayer.Play();
+            }
+            catch { }
+        }
+
+        // Aniki's audio\Events\GameStarted.wav was moved to D:\PlayniteMedia (Playnite played it mid-loading)
+        private static MediaPlayer readyPlayer;
+        private static void PlayReadySound()
+        {
+            try
+            {
+                string path = SelenePaths.ThemeAudio("GameReady.wav");
+                if (!System.IO.File.Exists(path)) return;
+                if (readyPlayer == null) { readyPlayer = new MediaPlayer(); readyPlayer.Open(new Uri(path)); }
+                readyPlayer.Position = TimeSpan.Zero;
+                readyPlayer.Volume = 1.0;
+                // Playnite hides (and mutes itself) in the tray while a game starts: unmute just for the chime
+                bool hidden = CloseToTray.IsHidden;
+                if (hidden) CloseToTray.SetOwnAudioMute(false);
+                readyPlayer.Play();
+                if (hidden)
+                {
+                    var remute = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2500) };
+                    remute.Tick += (s, e) => { remute.Stop(); if (CloseToTray.IsHidden) CloseToTray.SetOwnAudioMute(true); };
+                    remute.Start();
+                }
+            }
+            catch (Exception ex) { Log("ready sound failed: " + ex.Message); }
+        }
+
+        // launch failed or Steam wants attention: drop the cover, show Playnite (or the dialog)
+        private static void AbortLaunchCover(IntPtr bringForward, string why)
+        {
+            launching = false;
+            if (launchTimer != null) launchTimer.Stop();
+            var w = Application.Current.MainWindow;
+            if (w != null)
+            {
+                w.Topmost = false;
+                var root = w.Content as UIElement;
+                if (root != null) FadeInRoot(root);
+            }
+            // Playnite hides in the tray while a game starts: bring it back, or there is only the black desktop
+            CloseCoverWindow(true, () => { if (bringForward != IntPtr.Zero) ForceForeground(bringForward); else if (w != null) { if (CloseToTray.IsHidden) CloseToTray.ShowFromTray(); w.Activate(); FocusRowSoon(0); } });
+            Log("launch cover: aborted (" + why + ")");
+        }
+
+        private static readonly string[] SteamProcesses = { "steam", "steamwebhelper" };
+
+        private static string ProcessNameOf(IntPtr h)
+        {
+            uint pid;
+            GetWindowThreadProcessId(h, out pid);
+            try { return System.Diagnostics.Process.GetProcessById((int)pid).ProcessName.ToLowerInvariant(); } catch { return ""; }
+        }
+
+        // a new, visible, dialog-sized Steam window (not its main client window)
+        private static IntPtr FindSteamDialog()
+        {
+            IntPtr result = IntPtr.Zero;
+            EnumWindows((h, l) =>
+            {
+                if (!IsWindowVisible(h) || IsIconic(h) || preLaunchWindows.Contains(h)) return true;
+                if (Array.IndexOf(SteamProcesses, ProcessNameOf(h)) < 0) return true;
+                RECT r;
+                if (!GetWindowRect(h, out r)) return true;
+                int wdt = r.Right - r.Left, hgt = r.Bottom - r.Top;
+                if (wdt < 250 || hgt < 120 || wdt > 1400 || hgt > 900) return true;  // dialogs only
+                int ex = GetWindowLong(h, -20);
+                if ((ex & 0x20) != 0 || (ex & 0x80) != 0) return true;  // overlays / tool windows
+                result = h;
+                return false;
+            }, IntPtr.Zero);
+            return result;
+        }
+
+        // Steam's library window flashed up for a moment when it started the game: tuck it away first
+        private static void MinimizeSteamMainWindow()
+        {
+            try
+            {
+                EnumWindows((h, l) =>
+                {
+                    if (!IsWindowVisible(h) || IsIconic(h)) return true;
+                    if (Array.IndexOf(SteamProcesses, ProcessNameOf(h)) < 0) return true;
+                    RECT r;
+                    if (!GetWindowRect(h, out r)) return true;
+                    if (r.Right - r.Left < 900 || r.Bottom - r.Top < 600) return true;  // the big client window only
+                    ShowWindow(h, 7);  // SW_SHOWMINNOACTIVE
+                    Log("launch: Steam main window minimised");
+                    return true;
+                }, IntPtr.Zero);
+            }
+            catch (Exception ex) { Log("steam minimise failed: " + ex.Message); }
+        }
+
+        private static void EndLaunchCover()
+        {
+            if (!launching) return;
+            launching = false;
+            if (launchTimer != null) launchTimer.Stop();
+            var w = Application.Current.MainWindow;
+            if (w != null) w.Topmost = false;
+            CloseCoverWindow(false, null);
+            Log("launch cover: cancelled by Guide");
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
+        private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc cb, IntPtr lParam);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hwnd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr hwnd, int index);
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder sb, int max);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out RECT r);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+        [System.Runtime.InteropServices.DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attr, out int value, int size);
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)] private struct RECT { public int Left, Top, Right, Bottom; }
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)] private struct MONITORINFO { public int Size; public RECT Monitor, Work; public uint Flags; }
+
+        private static readonly string[] NotGameProcesses = { "explorer", "steam", "steamwebhelper", "nvidia overlay", "nvcontainer", "nvidia app", "textinputhost",
+            "applicationframehost", "shellexperiencehost", "searchhost", "startmenuexperiencehost", "gamebar", "gamebarftserver", "discord", "playnite.fullscreenapp", "playnite.desktopapp" };
+
+        private static readonly HashSet<IntPtr> preLaunchWindows = new HashSet<IntPtr>();
+
+        private static void SnapshotWindows()
+        {
+            preLaunchWindows.Clear();
+            EnumWindows((h, l) => { preLaunchWindows.Add(h); return true; }, IntPtr.Zero);
+        }
+
+        private static IntPtr FindFullscreenGameWindow(IntPtr playnite)
+        {
+            var mi = new MONITORINFO { Size = System.Runtime.InteropServices.Marshal.SizeOf(typeof(MONITORINFO)) };
+            if (!GetMonitorInfo(MonitorFromWindow(playnite, 2), ref mi)) return IntPtr.Zero;
+            int mw = mi.Monitor.Right - mi.Monitor.Left, mh = mi.Monitor.Bottom - mi.Monitor.Top;
+            uint ownPid = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+            IntPtr result = IntPtr.Zero;
+            EnumWindows((h, l) =>
+            {
+                if (h == playnite || !IsWindowVisible(h) || IsIconic(h)) return true;
+                int st = GetWindowLong(h, -16);  // GWL_STYLE
+                if ((st & 0x00C00000) == 0x00C00000) return true;  // WS_CAPTION: a normal window sized to the screen, not full-screen
+                int ex = GetWindowLong(h, -20);  // GWL_EXSTYLE
+                if ((ex & 0x20) != 0 || (ex & 0x80) != 0 || (ex & 0x08000000) != 0) return true;  // transparent / tool / no-activate (overlays)
+                int cloaked;
+                if (DwmGetWindowAttribute(h, 14, out cloaked, 4) == 0 && cloaked != 0) return true;
+                RECT r;
+                if (!GetWindowRect(h, out r)) return true;
+                int ix = Math.Min(r.Right, mi.Monitor.Right) - Math.Max(r.Left, mi.Monitor.Left);
+                int iy = Math.Min(r.Bottom, mi.Monitor.Bottom) - Math.Max(r.Top, mi.Monitor.Top);
+                // (nearly) the whole screen with no caption: COD's window sat a little short of full size for ~33 s while its
+                // music already played. A maximised normal app has a caption (skipped above).
+                if (ix < mw * 0.9 || iy < mh * 0.9) return true;
+                if (preLaunchWindows.Contains(h)) return true;  // only windows that appeared after Play
+                uint pid;
+                GetWindowThreadProcessId(h, out pid);
+                if (pid == ownPid) return true;
+                var cls = new System.Text.StringBuilder(64);
+                GetClassName(h, cls, 64);
+                var c = cls.ToString();
+                if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c.StartsWith("CEF-OSC")) return true;
+                string name;
+                try { name = System.Diagnostics.Process.GetProcessById((int)pid).ProcessName.ToLowerInvariant(); } catch { return true; }
+                if (Array.IndexOf(NotGameProcesses, name) >= 0) return true;
+                result = h;
+                return false;
+            }, IntPtr.Zero);
+            return result;
+        }
+
+        private static bool CanReturnToGame() { return gameWindow != IntPtr.Zero && IsWindow(gameWindow) && AnyGameRunning(); }
+
+        private static void ForceForeground(IntPtr hwnd)
+        {
+            if (IsIconic(hwnd)) ShowWindow(hwnd, 9);  // SW_RESTORE
+            uint fg = GetWindowThreadProcessId(GetForegroundWindow(), IntPtr.Zero), me = GetCurrentThreadId();
+            bool attached = fg != 0 && fg != me && AttachThreadInput(me, fg, true);
+            BringWindowToTop(hwnd);
+            SetForegroundWindow(hwnd);
+            if (attached) AttachThreadInput(me, fg, false);
+        }
+
+        // PS5-style switch: Playnite settles in from a slight zoom while fading in ...
+        private static ScaleTransform RootScale(FrameworkElement root)
+        {
+            var st = root.RenderTransform as ScaleTransform;
+            if (st != null && !st.IsFrozen) return st;
+            if (root.RenderTransform != null && !root.RenderTransform.Value.IsIdentity) return null;  // theme owns it: fade only
+            st = new ScaleTransform();
+            root.RenderTransformOrigin = new Point(0.5, 0.5);
+            root.RenderTransform = st;
+            return st;
+        }
+
+        private static void PlayEnterAnimation(Window w)
+        {
+            var root = w.Content as FrameworkElement;
+            if (root == null) return;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var dur = TimeSpan.FromMilliseconds(320);
+            // animate one cached bitmap instead of re-rendering every tile/effect per frame (first Guide press of each
+            // game stuttered while the game was still loading and busy on the GPU)
+            root.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
+            var fadeIn = new DoubleAnimation(0, 1, dur) { EasingFunction = ease };
+            fadeIn.Completed += (s2, e2) => root.CacheMode = null;
+            root.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+            var sc = RootScale(root);
+            if (sc != null)
+            {
+                sc.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.06, 1, dur) { EasingFunction = ease });
+                sc.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.06, 1, dur) { EasingFunction = ease });
+            }
+        }
+
+        // ... and on the way back it zooms towards you and fades out, then the game comes forward
+        private static void ReturnToGame(Window w)
+        {
+            var target = gameWindow;
+            var root = w.Content as FrameworkElement;
+            StopStealGuard(w);  // the user asked for the game
+            HidePreview();
+            Action go = () =>
+            {
+                GamePause.Resume();
+                ForceForeground(target);
+                // Playnite stays blank behind the game (restoring it there made Windows show that stale bright frame
+                // on the next Guide press); Activated fades it back in. Retry once, and if the game still didn't
+                // come forward, fade Playnite back in rather than leaving a black screen.
+                var verify = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+                int attempt = 0;
+                verify.Tick += (s, e) =>
+                {
+                    attempt++;
+                    bool ok = GetForegroundWindow() == target;
+                    if (!ok && attempt == 1) { ForceForeground(target); return; }
+                    verify.Stop();
+                    Log("guide -> back to game (foreground=" + ok + ", attempts=" + attempt + ")");
+                    if (!ok && w.IsActive) PlayEnterAnimation(w);
+                };
+                verify.Start();
+            };
+            if (root == null) { go(); return; }
+            var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+            var dur = TimeSpan.FromMilliseconds(220);
+            root.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
+            var fade = new DoubleAnimation(0, dur) { EasingFunction = ease, FillBehavior = FillBehavior.HoldEnd };
+            fade.Completed += (s, e) => { root.CacheMode = null; go(); };
+            var st = RootScale(root);
+            if (st != null)
+            {
+                st.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.05, dur) { EasingFunction = ease });
+                st.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.05, dur) { EasingFunction = ease });
+            }
+            root.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+
+        // Playnite's "After launching a game: Minimize" fires several seconds after a Steam game starts (when it detects
+        // the process), which threw the first Guide press straight back to the game. GameStarting() already blanks
+        // Playnite behind the game, so switch the option to None (Playnite saves it on exit like a normal change).
+        private static void KeepPlayniteOpenOnLaunch()
+        {
+            try
+            {
+                var appType = Type.GetType("Playnite.PlayniteApplication, Playnite");
+                var current = appType != null ? appType.GetProperty("Current", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).GetValue(null, null) : null;
+                var settings = current != null ? appType.GetProperty("AppSettings", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).GetValue(current, null) : null;
+                var prop = settings != null ? settings.GetType().GetProperty("AfterLaunch") : null;
+                if (prop == null) { Log("after-launch: setting not found"); return; }
+                var none = Enum.Parse(prop.PropertyType, "None");
+                if (!Equals(prop.GetValue(settings, null), none)) { prop.SetValue(settings, none, null); Log("after-launch: Minimize -> None"); }
+                // Volume: 100% (set here earlier) was much louder than games once the system volume is raised for them.
+                // Bring the old forced 100% down once (music 45%, sounds 50%); any level the user picks afterwards stays.
+                var fs = settings.GetType().GetProperty("Fullscreen") != null ? settings.GetType().GetProperty("Fullscreen").GetValue(settings, null) : null;
+                if (fs != null)
+                    foreach (var pair in new[] { new KeyValuePair<string, double>("BackgroundVolume", 0.45), new KeyValuePair<string, double>("InterfaceVolume", 0.5) })
+                    {
+                        var vp = fs.GetType().GetProperty(pair.Key);
+                        if (vp == null) continue;
+                        if (Convert.ToDouble(vp.GetValue(fs, null)) >= 0.99) { vp.SetValue(fs, Convert.ChangeType(pair.Value, vp.PropertyType), null); Log("volume: " + pair.Key + " 100% -> " + (pair.Value * 100) + "%"); }
+                    }
+            }
+            catch (Exception ex) { Log("after-launch failed: " + ex.Message); }
+        }
+
+        private static readonly Guid AnikiHelperId = new Guid("96a983a3-3f13-4dce-a474-4052b718bb52");
+
+        private static void TakeOverAnikiSplash()
+        {
+            try
+            {
+                object plugin = null;
+                foreach (var pl in Api.Addons.Plugins) if (pl.Id == AnikiHelperId) { plugin = pl; break; }
+                var settings = plugin != null ? FindSettingsWith(plugin, "GameLaunchSplashEnabled", 3) : null;
+                var prop = settings != null ? settings.GetType().GetProperty("GameLaunchSplashEnabled") : null;
+                if (prop == null) { Log("aniki splash: setting not found"); return; }
+                // Aniki's splash runs on its own thread and closed itself early; our cover window replaces it
+                if (Equals(prop.GetValue(settings, null), true)) { prop.SetValue(settings, false, null); Log("aniki splash: off (own launch cover)"); }
+                var notify = settings.GetType().GetProperty("NotifyOnGameStart");  // the "game started" pop-up
+                if (notify != null && Equals(notify.GetValue(settings, null), true)) { notify.SetValue(settings, false, null); Log("aniki: game start pop-up off"); }
+            }
+            catch (Exception ex) { Log("aniki splash failed: " + ex.Message); }
+        }
+
+        private static object FindSettingsWith(object o, string propName, int depth)
+        {
+            if (o == null || depth < 0) return null;
+            if (o.GetType().GetProperty(propName) != null) return o;
+            foreach (var pr in o.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                if (pr.GetIndexParameters().Length > 0 || !pr.Name.Contains("Settings")) continue;
+                object v;
+                try { v = pr.GetValue(o, null); } catch { continue; }
+                var r = FindSettingsWith(v, propName, depth - 1);
+                if (r != null) return r;
+            }
+            return null;
+        }
+
+        private static readonly Guid UniPlaySongId = new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+        private static object upsSettings;
+        private static WeakReference storeOverlayRef;
+        private static DateTime lastStoreSearch = DateTime.MinValue;
+        private static bool upsOverride;
+
+        // UniPlaySong "continues the same song" for the home music (its private _lastDefaultMusicPath), so every start
+        // came back to one track. Seed that with a random track from the folder: a different song per Playnite start,
+        // and UniPlaySong still picks a new random one when a song ends.
+        private static void ShuffleFirstHomeSong(object plugin)
+        {
+            try
+            {
+                var folder = Convert.ToString(upsSettings.GetType().GetProperty("DefaultMusicFolderPath").GetValue(upsSettings, null));
+                if (string.IsNullOrEmpty(folder) || !System.IO.Directory.Exists(folder)) return;
+                var files = System.IO.Directory.GetFiles(folder, "*.mp3");
+                if (files.Length < 2) return;
+                var svc = FindWithField(plugin, "_lastDefaultMusicPath", 4);
+                if (svc == null) { Log("music shuffle: playback service not found"); return; }
+                var pick = files[new Random().Next(files.Length)];
+                svc.GetType().GetField("_lastDefaultMusicPath", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(svc, pick);
+                Log("music shuffle: first home song " + System.IO.Path.GetFileName(pick));
+            }
+            catch (Exception ex) { Log("music shuffle: " + ex.Message); }
+        }
+
+        private static object FindWithField(object root, string field, int depth)
+        {
+            if (root == null) return null;
+            const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            var type = root.GetType();
+            if (type.GetField(field, any) != null) return root;
+            if (depth <= 0 || type.Namespace == "System" || type.IsPrimitive) return null;
+            foreach (var f in type.GetFields(any))
+            {
+                if (f.FieldType.IsValueType || f.FieldType == typeof(string) || f.FieldType.IsArray) continue;
+                object v; try { v = f.GetValue(root); } catch { continue; }
+                var hit = FindWithField(v, field, depth - 1);
+                if (hit != null) return hit;
+            }
+            return null;
+        }
+
+        // News row focused or the Steam store open: UniPlaySong plays the default music, not the game's song
+        private static void StartMusicOverrideWatch()
+        {
+            try
+            {
+                object plugin = null;
+                foreach (var pl in Api.Addons.Plugins) if (pl.Id == UniPlaySongId) { plugin = pl; break; }
+                upsSettings = plugin != null ? FindSettingsWith(plugin, "ForceDefaultMusicOverride", 3) : null;
+                if (upsSettings == null) { Log("music override: setting not found"); return; }
+            }
+            catch (Exception ex) { Log("music override failed: " + ex.Message); return; }
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            timer.Tick += (s, e) => UpdateMusicOverride();
+            timer.Start();
+        }
+
+        // Home: default music unless the 16:9 trailer card is open (the game's song comes with the card).
+        // News row / Steam store: always default. Elsewhere (library, details) UniPlaySong behaves normally.
+        private static WeakReference hubOverlayRef;
+        private static DateTime lastHubSearch = DateTime.MinValue;
+
+        private static void UpdateMusicOverride()
+        {
+            if (upsSettings == null) return;
+            try
+            {
+                var w = Application.Current.MainWindow;
+                if (w == null) return;
+                var focused = Keyboard.FocusedElement as DependencyObject;
+                bool onNews = false;  // focus inside the live news row (hidden hub copies exist after LB/RB)
+                for (var d = focused; d != null && !onNews; d = GetParent(d)) { var fe = d as FrameworkElement; if (fe != null && fe.Name == "HubBottomCards") onNews = true; }
+                // the store overlay is looked up rarely: a full visual-tree search 4x a second made the row stutter
+                var store = storeOverlayRef != null ? storeOverlayRef.Target as FrameworkElement : null;
+                if (store == null && (DateTime.Now - lastStoreSearch).TotalSeconds > 3)
+                {
+                    lastStoreSearch = DateTime.Now;
+                    store = FindByName(w, "SteamStoreOverlay") as FrameworkElement;
+                    if (store != null) storeOverlayRef = new WeakReference(store);
+                }
+                bool inStore = store != null && store.IsVisible;
+                var row = LiveRow();
+                bool onHome = row != null && row.IsVisible;
+                // other home sections (Features & Apps, etc.): the hub is up but the game row is not -> home music, not the game's
+                var hub = hubOverlayRef != null ? hubOverlayRef.Target as FrameworkElement : null;
+                if (hub == null && (DateTime.Now - lastHubSearch).TotalSeconds > 3)
+                {
+                    lastHubSearch = DateTime.Now;
+                    hub = FindByName(w, "WelcomeHubOverlay") as FrameworkElement;
+                    if (hub != null) hubOverlayRef = new WeakReference(hub);
+                }
+                bool otherSection = hub != null && hub.IsVisible && !onHome;
+                bool want = onNews || inStore || otherSection || (onHome && !previewShowing);
+                if (want == upsOverride) return;
+                upsOverride = want;
+                upsSettings.GetType().GetProperty("ForceDefaultMusicOverride").SetValue(upsSettings, want, null);
+            }
+            catch (Exception ex) { Log("music override: " + ex.Message); }
+        }
+
+        private static Window FindAnikiSplash()
+        {
+            foreach (Window win in Application.Current.Windows)
+                if (win.GetType().Name == "GameLaunchSplashWindow" && win.IsVisible) return win;
+            return null;
+        }
+
+        // the window fills (nearly) the whole monitor Playnite is on (a game / fullscreen app, not a popup)
+        private static bool CoversScreen(IntPtr h, IntPtr playnite)
+        {
+            if (h == IntPtr.Zero) return false;
+            var mi = new MONITORINFO { Size = System.Runtime.InteropServices.Marshal.SizeOf(typeof(MONITORINFO)) };
+            if (!GetMonitorInfo(MonitorFromWindow(playnite, 2), ref mi)) return false;
+            RECT r;
+            if (!GetWindowRect(h, out r)) return false;
+            int mw = mi.Monitor.Right - mi.Monitor.Left, mh = mi.Monitor.Bottom - mi.Monitor.Top;
+            int ix = Math.Min(r.Right, mi.Monitor.Right) - Math.Max(r.Left, mi.Monitor.Left);
+            int iy = Math.Min(r.Bottom, mi.Monitor.Bottom) - Math.Max(r.Top, mi.Monitor.Top);
+            return ix >= mw * 0.9 && iy >= mh * 0.9;
+        }
+
+        private static void StartGuideWatcher()
+        {
+            var dispatcher = Application.Current.Dispatcher;
+            var mw = Application.Current.MainWindow;
+            if (mw != null)
+            {
+                mw.Background = Brushes.Black;
+                mw.StateChanged += (s, e) => { if (mw.WindowState == WindowState.Minimized) StopStealGuard(mw); };
+                mw.Deactivated += (s, e) =>
+                {
+                    if (mw.WindowState == WindowState.Minimized) { StopStealGuard(mw); return; }  // minimized on purpose: let it go
+                    if (launching && !coverCancelledByGuide) return;  // the loading screen stays up (launch cover) until the game is ready
+                    if (DateTime.Now < stealGuardUntil)
+                    {
+                        var me2 = new System.Windows.Interop.WindowInteropHelper(mw).Handle;
+                        var reclaim = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(60) };
+                        reclaim.Tick += (s3, e3) =>
+                        {
+                            reclaim.Stop();
+                            if (mw.WindowState == WindowState.Minimized) { StopStealGuard(mw); return; }
+                            var fg = GetForegroundWindow();
+                            uint fgPid;
+                            GetWindowThreadProcessId(fg, out fgPid);
+                            string who = "?";
+                            try { who = System.Diagnostics.Process.GetProcessById((int)fgPid).ProcessName; } catch { }
+                            bool own = fgPid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+                            bool otherScreen = fg != IntPtr.Zero && MonitorFromWindow(fg, 2) != MonitorFromWindow(me2, 2);
+                            if (!own && !otherScreen && DateTime.Now < stealGuardUntil)
+                            {
+                                // any window jumping over Playnite on the TV right after Guide (the game or a helper of it)
+                                if (fg != IntPtr.Zero && fg != me2) gameWindow = fg;  // that is where the game really lives now
+                                // Playnite is Topmost meanwhile, so the grab is invisible; keep guarding while it continues
+                                var extended = DateTime.Now.AddSeconds(3);
+                                var cap = stealGuardStart.AddSeconds(launching ? 120 : 30);  // a background load can take a while
+                                if (extended > stealGuardUntil) stealGuardUntil = extended < cap ? extended : cap;
+                                ForceForeground(me2);
+                                mw.Activate();
+                                Log("guide: " + who + " jumped to the front, Playnite kept");
+                            }
+                            else Log("guide guard: focus went to " + who + " (own=" + own + ", other screen=" + otherScreen + ")");
+                        };
+                        reclaim.Start();
+                        return;
+                    }
+                    var hub = FindByName(mw, "WelcomeHubOverlay");
+                    leftFromHub = hub == null || hub.IsVisible;
+                    // Windows shows the last frame Playnite drew when it comes back, before any animation can run (a
+                    // full-brightness flash, then the fade): blank the content - but ONLY when a full-screen window of another
+                    // program (a game) really covers Playnite. Blanking on every focus loss left Playnite black on screen
+                    // behind popups, notifications and small windows.
+                    var root = mw.Content as UIElement;
+                    if (root == null) return;
+                    var check = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
+                    check.Tick += (s2, e2) =>
+                    {
+                        check.Stop();
+                        if (mw.IsActive) return;
+                        uint pid;
+                        var fgw = GetForegroundWindow();
+                        GetWindowThreadProcessId(fgw, out pid);
+                        var me = new System.Windows.Interop.WindowInteropHelper(mw).Handle;
+                        if (pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id) return;  // one of Playnite's own windows
+                        if (MonitorFromWindow(fgw, 2) != MonitorFromWindow(me, 2)) return;  // e.g. clicking the desk monitor
+                        if (!CoversScreen(fgw, me)) return;  // a popup / small window: Playnite stays as it is
+                        root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+                    };
+                    check.Start();
+                };
+                // back by any route (Guide, Alt-Tab, game exit): fade in from the blank frame
+                mw.Activated += (s, e) =>
+                {
+                    var root = mw.Content as UIElement;
+                    if (root != null && root.Opacity < 0.01 && !guideSwitching) PlayEnterAnimation(mw);
+                };
+                var h = new System.Windows.Interop.WindowInteropHelper(mw).Handle;
+                if (h != IntPtr.Zero) DisableWindowTransitions(h); else mw.SourceInitialized += (s, e) => DisableWindowTransitions(new System.Windows.Interop.WindowInteropHelper(mw).Handle);
+            }
+            var thread = new System.Threading.Thread(() =>
+            {
+                bool wasDown = false, bWasDown = false;
+                DateTime last = DateTime.MinValue;
+                while (true)
+                {
+                    bool down = false, bDown = false;
+                    try
+                    {
+                        for (int i = 0; i < 4; i++)
+                        {
+                            XInputStateEx s;
+                            if (XInputGetStateEx(i, out s) != 0) continue;
+                            if ((s.Buttons & GuideBit) != 0) down = true;
+                            if ((s.Buttons & 0x2000) != 0) bDown = true;  // B
+                        }
+                    }
+                    catch (Exception ex) { Log("guide watcher stopped: " + ex.Message); return; }
+                    if (down && !wasDown && (DateTime.Now - last).TotalMilliseconds > 600)
+                    {
+                        last = DateTime.Now;
+                        dispatcher.BeginInvoke(new Action(GoHomeFromGuide));
+                    }
+                    wasDown = down;
+                    if (bDown && !bWasDown && launching) dispatcher.BeginInvoke(new Action(() => { if (launching) AbortLaunchCover(IntPtr.Zero, "B pressed"); }));
+                    bWasDown = bDown;
+                    System.Threading.Thread.Sleep(30);
+                }
+            }) { IsBackground = true, Name = "Ps5GuideWatcher" };
+            thread.Start();
+        }
+
+        private static void FocusRowSoon(int ms)
+        {
+            var timer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(Math.Max(1, ms)) };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+                var row = LiveRow();
+                if (row == null || !row.IsVisible || row.IsKeyboardFocusWithin) return;
+                int idx = row.SelectedIndex >= 0 ? row.SelectedIndex : FirstGameIndex(row);
+                if (idx < 0) return;
+                var sv = FindChild<ScrollViewer>(row);
+                if (row.ItemContainerGenerator.ContainerFromIndex(idx) == null && sv != null) { sv.ScrollToHorizontalOffset(Math.Max(0, idx - AnchorSlot)); row.UpdateLayout(); }
+                var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement;
+                if (c == null) return;
+                c.Focus();
+                ArmPreview(row);
+                Log("row focus -> " + row.Items[idx] + " (in row=" + row.IsKeyboardFocusWithin + ")");
+            };
+            timer.Start();
+        }
+
+        private static void GoHomeFromGuide()
+        {
+            try
+            {
+                // Guide is a controller action: keep the cursor hidden through the window switch
+                ignoreMouseUntil = DateTime.Now.AddMilliseconds(1500);
+                cursorHidden = false;
+                HideCursorForController();
+                var w = Application.Current.MainWindow;
+                if (w == null) return;
+                if (CloseToTray.IsHidden) { CloseToTray.Unhide(); Log("guide -> unhidden from tray"); }
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+                DisableWindowTransitions(hwnd);
+                if (launching) { Log("guide ignored: game still loading"); return; }  // stay on the loading screen until the game starts
+                bool wasBehind = GetForegroundWindow() != hwnd;
+                if (!wasBehind && CanReturnToGame()) { ReturnToGame(w); return; }  // like the PS button: toggle back
+                if (wasBehind)
+                {
+                    guideSwitching = true;
+                    ShowShield(w);  // black over everything at once: no desktop, no taskbar
+                    SetCloak(hwnd, true);  // and Playnite's old picture can never be shown while it comes forward
+                    gameWindow = GetForegroundWindow();
+                    StartStealGuard(w);
+                    var root = w.Content as UIElement;
+                    if (root != null) root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));  // no stale frame before the fade-in
+                    // a background process may not steal focus: borrow the foreground thread's input queue for the call
+                    if (IsIconic(hwnd)) ShowWindow(hwnd, 9);  // SW_RESTORE (back to maximised)
+                    uint fg = GetWindowThreadProcessId(GetForegroundWindow(), IntPtr.Zero), me = GetCurrentThreadId();
+                    bool attached = fg != 0 && fg != me && AttachThreadInput(me, fg, true);
+                    BringWindowToTop(hwnd);
+                    SetForegroundWindow(hwnd);
+                    if (attached) AttachThreadInput(me, fg, false);
+                    w.Activate();
+                    var focusCheck = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                    focusCheck.Tick += (sf, ef) =>
+                    {
+                        focusCheck.Stop();
+                        if (PlayniteInFront()) return;
+                        // Windows won't let a normal program take the focus from one running as administrator: Playnite was
+                        // on screen but deaf to the controller until the mouse was clicked
+                        Log("guide: focus refused (game running as admin?) -> admin helper");
+                        RequestElevated("focus " + hwnd.ToInt64());
+                    };
+                    focusCheck.Start();
+                    // never left on a black screen (the game's music-less home playing behind black): whatever happened
+                    // above, once Playnite is in front it is visible
+                    var neverBlack = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+                    neverBlack.Tick += (sb, eb) =>
+                    {
+                        neverBlack.Stop();
+                        if (!PlayniteInFront()) return;
+                        bool fixedUp = false;
+                        if (shield != null && shield.IsVisible) { HideShield(); fixedUp = true; }
+                        SetCloak(hwnd, false);
+                        var r = w.Content as UIElement;
+                        if (r != null && r.Opacity < 0.99) { FadeInRoot(r); fixedUp = true; }
+                        if (fixedUp) Log("guide: Playnite was still hidden/black after 1.2 s -> shown");
+                    };
+                    neverBlack.Start();
+                    // Windows would first show the picture it kept of Playnite from before the game (a bright flash).
+                    // Stay cloaked until Playnite has drawn its black starting frame, then show it and fade in.
+                    var cloakHwnd = hwnd;
+                    int frames = 0;
+                    EventHandler reveal = null;
+                    bool revealed = false;
+                    Action doReveal = () =>
+                    {
+                        if (revealed) return;
+                        revealed = true;
+                        CompositionTarget.Rendering -= reveal;
+                        SetCloak(cloakHwnd, false);
+                        HideShield();
+                        PlayEnterAnimation(w);
+                    };
+                    reveal = (s2, e2) => { if (++frames >= 3) doReveal(); };
+                    CompositionTarget.Rendering += reveal;
+                    var safety = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+                    safety.Tick += (s3, e3) => { safety.Stop(); doReveal(); };  // never stay invisible
+                    safety.Start();
+                    guideSwitching = false;
+                    PauseRunningGame();
+                }
+                HidePreview();
+                if (wasBehind && !leftFromHub)
+                {
+                    // the game was started from the library / game details: go back there, not home
+                    var list = FindByName(w, "PART_ListGameItems") as ListBox;
+                    var details = FindByName(w, "PART_ElemGameDetails");
+                    if (details != null && details.IsVisible) { }
+                    else if (list != null && list.IsVisible && !list.IsKeyboardFocusWithin) FocusLibraryLater(w, false);
+                    Log("guide -> back to library/details (was behind=True, now foreground=" + (GetForegroundWindow() == hwnd) + ")");
+                    return;
+                }
+                var hub = FindByName(w, "WelcomeHubOverlay");
+                var proxy = FindByName(w, "Ps5Nav_hub") as System.Windows.Controls.Primitives.ButtonBase;
+                bool opened = false;
+                if ((hub == null || !hub.IsVisible) && proxy != null && proxy.Command != null && proxy.Command.CanExecute(null)) { proxy.Command.Execute(null); opened = true; }
+                // window activation hands focus back to the last focused bar button: put it on the row's game instead
+                // (twice: once after the hub opens, again after WPF's own activation focus restore)
+                FocusRowSoon(0);
+                FocusRowSoon(300);
+                Log("guide -> home (was behind=" + wasBehind + ", now foreground=" + (GetForegroundWindow() == hwnd) + ", hub opened=" + opened + ")");
+            }
+            catch (Exception ex)
+            {
+                Log("guide home failed: " + ex.Message);
+                try { HideShield(); SetCloak(new System.Windows.Interop.WindowInteropHelper(Application.Current.MainWindow).Handle, false); } catch { }
+                var root = Application.Current.MainWindow != null ? Application.Current.MainWindow.Content as UIElement : null;
+                if (root != null) FadeInRoot(root);  // never leave Playnite faded out
+            }
+        }
+
+        public static string FullPath(string path)
+        {
+            if (string.IsNullOrEmpty(path) || System.IO.Path.IsPathRooted(path) || path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return path;
+            try { return Api != null ? Api.Database.GetFullFilePath(path) : path; } catch { return path; }
+        }
+
+        public static string FindFocusedName()
+        {
+            var f = Keyboard.FocusedElement as FrameworkElement;
+            if (f == null) return null;
+            for (DependencyObject d = f; d != null; d = GetParent(d))
+            {
+                var fe = d as FrameworkElement;
+                if (fe != null && (fe.Name == "WelcomeHubOverlay" || fe.Name == "PART_ListGameItems" || fe.Name == "PART_ElemGameDetails" || fe.Name == "AcceuilSettings")) return fe.Name;
+            }
+            return f.GetType().Name;
+        }
+
+        public static string ThemeDir { get { return SelenePaths.ThemeDir; } }
+
+        public static void Log(string s)
+        {
+            try { System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene.log"), DateTime.Now.ToString("HH:mm:ss.fff ") + s + Environment.NewLine); } catch { }
+        }
+
+        private static DependencyObject GetParent(DependencyObject d)
+        {
+            if (d is Visual || d is System.Windows.Media.Media3D.Visual3D) return VisualTreeHelper.GetParent(d);
+            var fce = d as FrameworkContentElement;
+            return fce != null ? fce.Parent : null;
+        }
+
+        private static T FindChild<T>(DependencyObject root) where T : DependencyObject
+        {
+            if (root == null) return null;
+            int n = VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < n; i++)
+            {
+                var c = VisualTreeHelper.GetChild(root, i);
+                var hit = c as T ?? FindChild<T>(c);
+                if (hit != null) return hit;
+            }
+            return null;
+        }
+    }
+
+    // Two stacked images; a new source is decoded on a worker thread (downscaled to the screen width, frozen) and faded
+    // in over the old one. Missing/empty source fades the current image out. No GC.Collect (see ReplaceFadeImages).
+    public class Ps5Crossfade : Grid
+    {
+        public static readonly DependencyProperty SourceProperty = DependencyProperty.Register("Source", typeof(object), typeof(Ps5Crossfade),
+            new PropertyMetadata(null, (d, e) => ((Ps5Crossfade)d).OnSource(e.NewValue)));
+        public object Source { get { return GetValue(SourceProperty); } set { SetValue(SourceProperty, value); } }
+        public Stretch Stretch { get { return front.Stretch; } set { front.Stretch = value; back.Stretch = value; } }
+
+        // WPF itself forces a full garbage collection (MS.Internal.MemoryPressure -> GC.Collect(2)) when big bitmaps
+        // are created in a row: four 1080p backgrounds per move did that ~1 s after every second move. So: load only
+        // what is visible, wait until the selection rests, and reuse recently decoded pictures.
+        public Func<bool> CanLoad;
+        public static bool Disabled;  // test harness switch
+        private static readonly Dictionary<string, ImageSource> decoded = new Dictionary<string, ImageSource>();
+        private static readonly LinkedList<string> decodedOrder = new LinkedList<string>();
+        private const int DecodedMax = 8;
+        private System.Windows.Threading.DispatcherTimer settle;
+        private object pending;
+        private object shown = DependencyProperty.UnsetValue;
+
+        public void Refresh() { Load(Source); }
+
+        private Image front = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
+        private Image back = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
+        private int request;
+        private const double FadeMs = 350;
+
+        public Ps5Crossfade()
+        {
+            Children.Add(back);
+            Children.Add(front);
+        }
+
+        private void OnSource(object value)
+        {
+            pending = value;
+            if (settle == null)
+            {
+                settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+                settle.Tick += (s, e) => { settle.Stop(); Load(pending); };
+            }
+            settle.Stop();
+            settle.Start();
+        }
+
+        private void Load(object value)
+        {
+            if (Disabled || (CanLoad != null && !CanLoad())) return;
+            if (Equals(value, shown)) return;
+            shown = value;
+            int id = ++request;
+            var ready = value as ImageSource;
+            if (ready != null) { Show(ready); return; }
+            var path = HomeNav.FullPath(value as string);
+            if (string.IsNullOrEmpty(path) || (!path.StartsWith("http", StringComparison.OrdinalIgnoreCase) && !System.IO.File.Exists(path))) { Show(null); return; }
+            ImageSource hit;
+            if (decoded.TryGetValue(path, out hit)) { decodedOrder.Remove(path); decodedOrder.AddFirst(path); Show(hit); return; }
+            int width = (int)Math.Max(1280, SystemParameters.PrimaryScreenWidth);
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    var bi = new BitmapImage();
+                    bi.BeginInit();
+                    bi.CacheOption = BitmapCacheOption.OnLoad;
+                    bi.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+                    bi.UriSource = new Uri(path);
+                    bi.DecodePixelWidth = width;
+                    bi.EndInit();
+                    bi.Freeze();
+                    return (ImageSource)bi;
+                }
+                catch { return null; }
+            }).ContinueWith(task =>
+            {
+                if (task.Result != null && !decoded.ContainsKey(path))
+                {
+                    decoded[path] = task.Result;
+                    decodedOrder.AddFirst(path);
+                    while (decodedOrder.Count > DecodedMax) { decoded.Remove(decodedOrder.Last.Value); decodedOrder.RemoveLast(); }
+                }
+                if (id == request) Show(task.Result);  // a newer selection wins
+            }, System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        private void Show(ImageSource img)
+        {
+            var ease = new QuadraticEase { EasingMode = EasingMode.EaseInOut };
+            if (img == null)
+            {
+                front.BeginAnimation(OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(FadeMs)) { EasingFunction = ease });
+                return;
+            }
+            // the old picture goes behind, the new one fades in on top; the old one is released after the fade
+            var old = front;
+            front = back; back = old;
+            Children.Remove(front); Children.Add(front);
+            front.BeginAnimation(OpacityProperty, null);
+            front.Opacity = 0;
+            front.Source = img;
+            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(FadeMs)) { EasingFunction = ease };
+            var leaving = back;
+            fadeIn.Completed += (s, e) => { if (leaving != front) { leaving.BeginAnimation(OpacityProperty, null); leaving.Opacity = 0; leaving.Source = null; } };
+            front.BeginAnimation(OpacityProperty, fadeIn);
+        }
+    }
+}

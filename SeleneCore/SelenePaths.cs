@@ -1,0 +1,95 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using Playnite.SDK.Plugins;
+
+namespace Selene
+{
+    // Every folder Selene Core uses, from its settings (no machine-specific paths in the code)
+    public static class SelenePaths
+    {
+        private static Plugin plugin;
+        private static SeleneSettings settings;
+
+        public static void Init(Plugin owner, SeleneSettings s) { plugin = owner; settings = s; themeDir = null; }
+
+        // downloaded art, preview clips, screenshots: the user's choice, else the add-on's own data folder
+        public static string Media(string sub)
+        {
+            var root = settings != null && !string.IsNullOrWhiteSpace(settings.MediaFolder)
+                ? settings.MediaFolder
+                : Path.Combine(plugin != null ? plugin.GetPluginUserDataPath() : Path.GetTempPath(), "Media");
+            var dir = Path.Combine(root, sub);
+            if (Path.GetExtension(sub) == "") { try { Directory.CreateDirectory(dir); } catch { } }
+            return dir;
+        }
+
+        // folders scanned for games that no store knows about (empty = off)
+        public static string[] GameFolders
+        {
+            get { return settings != null && settings.GameFolders != null ? settings.GameFolders.Where(f => !string.IsNullOrWhiteSpace(f)).ToArray() : new string[0]; }
+        }
+
+        // optional companion program (TV/controller helper with admin rights); empty = those features are off
+        public static string Helper { get { return settings != null ? settings.HelperPath ?? "" : ""; } }
+
+        // optional: game-streaming host logs (a connected streaming client changes some behaviour); empty = off
+        public static string StreamLogs { get { return settings != null ? settings.StreamLogsFolder ?? "" : ""; } }
+
+        public static string SteamUserdata
+        {
+            get
+            {
+                try
+                {
+                    using (var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam"))
+                    {
+                        var p = k != null ? k.GetValue("SteamPath") as string : null;
+                        if (!string.IsNullOrEmpty(p)) return Path.Combine(p.Replace('/', '\\'), "userdata");
+                    }
+                }
+                catch { }
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam", "userdata");
+            }
+        }
+
+        public static string PlayniteConfig
+        {
+            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite"); }
+        }
+
+        // the fullscreen theme Playnite is set to
+        public static string ActiveThemeId
+        {
+            get
+            {
+                try
+                {
+                    var m = Regex.Match(File.ReadAllText(Path.Combine(PlayniteConfig, "fullscreenConfig.json")), "\"Theme\"\\s*:\\s*\"([^\"]+)\"");
+                    return m.Success ? m.Groups[1].Value : "";
+                }
+                catch { return ""; }
+            }
+        }
+
+        private static string themeDir;
+        public static string ThemeDir
+        {
+            get
+            {
+                if (themeDir != null) return themeDir;
+                var fs = Path.Combine(PlayniteConfig, "Themes", "Fullscreen");
+                var id = ActiveThemeId;
+                themeDir = id != "" && Directory.Exists(Path.Combine(fs, id)) ? Path.Combine(fs, id) : fs;
+                return themeDir;
+            }
+        }
+
+        public static string ThemeFile(params string[] parts) { return Path.Combine(new[] { ThemeDir }.Concat(parts).ToArray()); }
+
+        // sounds come from the theme (it decides how Selene sounds)
+        public static string ThemeAudio(string file) { return ThemeFile("Audio", file); }
+    }
+}
