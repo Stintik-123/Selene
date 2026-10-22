@@ -100,4 +100,5 @@ See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Selene is not affiliated w
 
 ## License
 
-[MIT](LICENSE)
+The code is [MIT](LICENSE). The Selene name and the crescent crown logo are not covered by the MIT license:
+forks and derived themes are welcome, but please give them your own name and logo.
