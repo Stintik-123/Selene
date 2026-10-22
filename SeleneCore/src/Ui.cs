@@ -305,43 +305,38 @@ namespace Selene
     // one line about it, and what the buttons do as pills (badge inside) with a small note beside them
     public class DetailPanel
     {
-        public readonly Grid Root = new Grid();
+        public readonly StackPanel Root = new StackPanel();
         private readonly Ellipse circle;
         private readonly TextBlock glyph, title, chipText, about, note;
         private readonly Border chip;
         private readonly StackPanel actions;
 
+        // everything centred: icon, name and chip on one line, the line about it, then the action pills and the note
         public DetailPanel(double width)
         {
             Root.Width = width;
             Root.HorizontalAlignment = HorizontalAlignment.Center;
-            Root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            Root.ColumnDefinitions.Add(new ColumnDefinition());
-            var badge = new Grid { Width = 76, Height = 76, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 0, 26, 0) };
+            var head = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+            var badge = new Grid { Width = 52, Height = 52, Margin = new Thickness(0, 0, 16, 0), VerticalAlignment = VerticalAlignment.Center };
             circle = new Ellipse();
-            glyph = new TextBlock { FontFamily = Ui.Glyphs, FontSize = 32, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            glyph = new TextBlock { FontFamily = Ui.Glyphs, FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             badge.Children.Add(circle);
             badge.Children.Add(glyph);
-            Root.Children.Add(badge);
-
-            var col = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetColumn(col, 1);
-            var head = new StackPanel { Orientation = Orientation.Horizontal };
+            head.Children.Add(badge);
             title = new TextBlock { FontSize = 28, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center };
             chipText = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, FontFamily = Ui.Body };
             chip = new Border { Child = chipText, CornerRadius = new CornerRadius(12), Padding = new Thickness(11, 3, 11, 4), Margin = new Thickness(14, 2, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             head.Children.Add(title);
             head.Children.Add(chip);
-            col.Children.Add(head);
-            about = new TextBlock { FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.82), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
-            col.Children.Add(about);
-            var foot = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0) };
+            Root.Children.Add(head);
+            about = new TextBlock { FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.82), TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, MaxHeight = 52, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 10, 0, 0) };
+            Root.Children.Add(about);
+            var foot = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 16, 0, 0) };
             actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            note = new TextBlock { FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = width - 380 };
+            note = new TextBlock { FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = width - 260 };
             foot.Children.Add(actions);
             foot.Children.Add(note);
-            col.Children.Add(foot);
-            Root.Children.Add(col);
+            Root.Children.Add(foot);
         }
 
         // actions: pairs of button + label, e.g. "A", "Install"; the first is drawn as the main one
@@ -368,7 +363,7 @@ namespace Selene
             chip.Visibility = string.IsNullOrEmpty(status) ? Visibility.Collapsed : Visibility.Visible;
             about.Text = text;
             note.Text = noteText ?? "";
-            note.Margin = new Thickness(buttons.Length > 0 ? 18 : 0, 0, 0, 0);
+            note.Margin = new Thickness(buttons.Length > 0 ? 8 : 0, 0, 0, 0);
             actions.Children.Clear();
             for (int i = 0; i + 1 < buttons.Length; i += 2) actions.Children.Add(Ui.ActionPill(buttons[i], buttons[i + 1], i == 0));
         }

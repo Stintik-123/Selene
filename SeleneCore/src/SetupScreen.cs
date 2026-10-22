@@ -55,7 +55,7 @@ namespace Selene
             col.Children.Add(grid);
             info = new DetailPanel(960);
             info.Root.Margin = new Thickness(0, 34, 0, 0);
-            info.Root.MinHeight = 120;
+            info.Root.Height = 156;   // fixed: a taller or shorter text must not shift the centred screen
             col.Children.Add(info.Root);
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 30, 0, 0) };
             installAll = new Pill("Install all", 240);
