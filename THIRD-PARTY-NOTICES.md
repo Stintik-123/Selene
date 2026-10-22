@@ -10,7 +10,7 @@ released under Creative Commons Zero (CC0): http://creativecommons.org/publicdom
 The original license file is included as `theme/Audio/LICENSE-Kenney-Interface-Sounds.txt`.
 
 ## Cinzel
-The "SELENE" lettering in the logo (`tools/art/selene-wordmark.svg`, `docs/logo`) is set in Cinzel and converted
+The lettering in the logo and banner (`tools/art/selene-wordmark.svg`, `selene-tagline.svg`, `docs/logo`) is set in Cinzel and converted
 to outlines; the font itself is not included. Cinzel - https://github.com/NDISCOVER/Cinzel -
 SIL Open Font License 1.1, Copyright 2020 The Cinzel Project Authors.
 

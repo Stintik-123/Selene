@@ -4,6 +4,7 @@
 Needs rsvg-convert (librsvg) and Pillow. Re-run after changing the design: python3 tools/make_art.py
 """
 import math
+import random
 import re
 import subprocess
 import tempfile
@@ -48,8 +49,8 @@ def inner(svg_file):
 
 
 MARK_BOX, MARK = inner("selene-mark.svg")
-WORD_BOX, WORD = inner("selene-wordmark.svg")
-WORD_W, WORD_H = (float(v) for v in WORD_BOX.split()[2:])
+WORDMARK = inner("selene-wordmark.svg")
+TAGLINE = inner("selene-tagline.svg")
 
 
 def mark(cx, cy, size, color, opacity=1.0, shine=False, glow_color="#9CCBFF", glow_opacity=0.32):
@@ -60,10 +61,12 @@ def mark(cx, cy, size, color, opacity=1.0, shine=False, glow_color="#9CCBFF", gl
             f'style="color:{color}" opacity="{opacity}" overflow="visible">{body}</svg>')
 
 
-def wordmark(cx, y, width, color):
-    height = width * WORD_H / WORD_W
-    return (f'<svg x="{cx - width / 2}" y="{y}" width="{width}" height="{height}" viewBox="{WORD_BOX}" '
-            f'style="color:{color}">{WORD}</svg>')
+def lettering(art, cx, y, width, color, opacity=1.0):
+    box, body = art
+    box_w, box_h = (float(v) for v in box.split()[2:])
+    height = width * box_h / box_w
+    return (f'<svg x="{cx - width / 2}" y="{y}" width="{width}" height="{height}" viewBox="{box}" '
+            f'style="color:{color}" opacity="{opacity}">{body}</svg>')
 
 
 def doc(width, height, body, defs=""):
@@ -108,8 +111,28 @@ def lockup(background, ink, shine):
     body = (f'<rect width="{w}" height="{h}" fill="{background}"/>'
             + (mark(w / 2, 300, 380, ink, shine=True) if shine
                else mark(w / 2, 300, 380, ink, glow_color="#4A78C8", glow_opacity=0.22))
-            + wordmark(w / 2, 560, 640, ink))
+            + lettering(WORDMARK, w / 2, 560, 640, ink))
     return doc(w, h, body)
+
+
+def banner():
+    """1280x640 social preview: the login's moonlit sky with the logo and tagline."""
+    w, h = 1280, 640
+    defs = (f'<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">'
+            f'<stop offset="0" stop-color="{NAVY_TOP}"/><stop offset="1" stop-color="{NAVY_BOTTOM}"/></linearGradient>'
+            '<radialGradient id="spot" cx="0.16" cy="-0.12" r="0.9">'
+            '<stop offset="0" stop-color="#5C86C9" stop-opacity="0.35"/><stop offset="1" stop-color="#5C86C9" stop-opacity="0"/></radialGradient>'
+            '<radialGradient id="haze" cx="0.5" cy="1.05" r="0.7">'
+            '<stop offset="0" stop-color="#1E3F7A" stop-opacity="0.45"/><stop offset="1" stop-color="#1E3F7A" stop-opacity="0"/></radialGradient>')
+    rng = random.Random(7)
+    stars = "".join(f'<circle cx="{rng.uniform(0, w):.1f}" cy="{rng.uniform(0, h):.1f}" r="{rng.choice((0.8, 1.1, 1.5))}" '
+                    f'fill="{MOONLIGHT}" opacity="{rng.uniform(0.15, 0.6):.2f}"/>' for _ in range(110))
+    body = (f'<rect width="{w}" height="{h}" fill="url(#sky)"/><rect width="{w}" height="{h}" fill="url(#spot)"/>'
+            f'<rect width="{w}" height="{h}" fill="url(#haze)"/>{stars}'
+            + mark(w / 2, 225, 270, MOONLIGHT, shine=True)
+            + lettering(WORDMARK, w / 2, 392, 500, MOONLIGHT)
+            + lettering(TAGLINE, w / 2, 474, 500, MOONLIGHT, 0.78))
+    return doc(w, h, body, defs)
 
 
 render(mark_alone(), IMAGES / "applogo_clean.png")
@@ -124,6 +147,8 @@ for name, background, ink, shine in (("dark", NAVY, MOONLIGHT, True), ("light", 
     (LOGO_DIR / f"selene-logo-{name}.svg").write_text(svg, encoding="utf-8")
     print("wrote", (LOGO_DIR / f"selene-logo-{name}.svg").relative_to(ROOT))
     render(svg, LOGO_DIR / f"selene-logo-{name}.png")
+
+render(banner(), LOGO_DIR / "selene-banner.png")
 
 with tempfile.TemporaryDirectory() as tmp:
     big = Path(tmp) / "icon.png"

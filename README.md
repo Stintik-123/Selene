@@ -1,15 +1,18 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/logo/selene-logo-dark.png">
-    <img src="docs/logo/selene-logo-light.png" alt="Selene" width="420">
-  </picture>
+  <img src="docs/logo/selene-banner.png" alt="Selene - fullscreen theme for Playnite">
 </p>
 
-# Selene
+<p align="center">
+  <img src="https://img.shields.io/badge/version-0.9.0-9CCBFF?style=flat-square" alt="Version 0.9.0">
+  <img src="https://img.shields.io/badge/Playnite-10%2B-1A2A4A?style=flat-square" alt="Playnite 10+">
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-1A2A4A?style=flat-square" alt="Windows 10 | 11">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-1A2A4A?style=flat-square" alt="MIT license"></a>
+</p>
 
-A calm, console-style fullscreen theme for [Playnite](https://playnite.link), named after the Greek goddess of the moon.
-Selene comes with **Selene Core**, a companion add-on that brings the home screen, the login and the launch
-experience to life.
+<p align="center">
+  A calm, console-style fullscreen theme for <a href="https://playnite.link">Playnite</a>, named after the Greek goddess of the moon.<br>
+  Selene comes with <b>Selene Core</b>, a companion add-on that brings the home screen, the login and the launch experience to life.
+</p>
 
 ![Home](docs/screenshots/home.png)
 
