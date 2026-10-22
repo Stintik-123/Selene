@@ -6,3 +6,4 @@ obj/
 .dev-previous-theme
 dist/
 .superpowers/
+theme/Audio/*.old
