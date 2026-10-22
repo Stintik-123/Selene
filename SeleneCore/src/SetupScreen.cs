@@ -239,14 +239,15 @@ namespace Selene
             if (dir == "DPadLeft") return from > 0 && cardRow[from - 1] == cardRow[from] ? from - 1 : -1;
             if (dir == "DPadRight") return from + 1 < items.Count && cardRow[from + 1] == cardRow[from] ? from + 1 : -1;
             int row = cardRow[from] + (dir == "DPadUp" ? -1 : 1);
-            return row < 0 || row > cardRow[items.Count - 1] ? -1 : Nearest(row, cardX[from]);
+            return row < 0 || row > cardRow[items.Count - 1] ? -1 : Nearest(row, cardX[from], dir == "DPadDown");
         }
 
-        private int Nearest(int row, double x)
+        // a card exactly between two: going down picks the right one, going up the left one (so up then down comes back)
+        private int Nearest(int row, double x, bool tieRight = true)
         {
             int best = -1;
             for (int i = 0; i < items.Count; i++)
-                if (cardRow[i] == row && (best < 0 || Math.Abs(cardX[i] - x) <= Math.Abs(cardX[best] - x) + 0.5)) best = i;   // a tie goes right
+                if (cardRow[i] == row && (best < 0 || (tieRight ? Math.Abs(cardX[i] - x) <= Math.Abs(cardX[best] - x) + 0.5 : Math.Abs(cardX[i] - x) < Math.Abs(cardX[best] - x) - 0.5))) best = i;
             return best;
         }
 
