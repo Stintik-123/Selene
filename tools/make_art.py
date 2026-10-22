@@ -28,11 +28,16 @@ SHINE = ('<linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">'
 
 
 def glow(color, opacity):
-    # bell-shaped falloff so the halo melts into the background instead of ending in a visible edge
-    stops = "".join(f'<stop offset="{t / 10}" stop-color="{color}" stop-opacity="{opacity * math.exp(-(t / 10 * 2.4) ** 2):.4f}"/>'
-                    for t in range(11))
+    # full strength out to the full moon's ring (r ~11 of 26), then a smooth fade so the halo surrounds the ring
+    def strength(t):
+        if t <= 0.42:
+            return 1.0
+        u = (t - 0.42) / 0.58
+        return (1 - u * u * (3 - 2 * u)) ** 1.6
+    stops = "".join(f'<stop offset="{t / 20}" stop-color="{color}" stop-opacity="{opacity * strength(t / 20):.4f}"/>'
+                    for t in range(21))
     return (f'<defs><radialGradient id="glow">{stops}</radialGradient>{SHINE}</defs>'
-            '<circle cx="50" cy="42" r="24" fill="url(#glow)"/>')
+            '<circle cx="50" cy="42" r="26" fill="url(#glow)"/>')
 
 
 def inner(svg_file):
@@ -47,7 +52,7 @@ WORD_BOX, WORD = inner("selene-wordmark.svg")
 WORD_W, WORD_H = (float(v) for v in WORD_BOX.split()[2:])
 
 
-def mark(cx, cy, size, color, opacity=1.0, shine=False, glow_color="#9CCBFF", glow_opacity=0.55):
+def mark(cx, cy, size, color, opacity=1.0, shine=False, glow_color="#9CCBFF", glow_opacity=0.32):
     body = glow(glow_color, glow_opacity) + MARK
     if shine:
         body = body.replace('id="crescent" fill="currentColor"', 'id="crescent" fill="url(#shine)"')
@@ -102,7 +107,7 @@ def lockup(background, ink, shine):
     w, h = 1200, 800
     body = (f'<rect width="{w}" height="{h}" fill="{background}"/>'
             + (mark(w / 2, 300, 380, ink, shine=True) if shine
-               else mark(w / 2, 300, 380, ink, glow_color="#4A78C8", glow_opacity=0.4))
+               else mark(w / 2, 300, 380, ink, glow_color="#4A78C8", glow_opacity=0.22))
             + wordmark(w / 2, 560, 640, ink))
     return doc(w, h, body)
 
