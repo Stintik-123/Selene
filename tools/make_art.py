@@ -50,7 +50,6 @@ def inner(svg_file):
 
 MARK_BOX, MARK = inner("selene-mark.svg")
 WORDMARK = inner("selene-wordmark.svg")
-TAGLINE = inner("selene-tagline.svg")
 
 
 def mark(cx, cy, size, color, opacity=1.0, shine=False, glow_color="#9CCBFF", glow_opacity=0.32):
@@ -116,7 +115,7 @@ def lockup(background, ink, shine):
 
 
 def banner():
-    """1280x640 social preview: the login's moonlit sky with the logo and tagline."""
+    """1280x640 social preview: the login's moonlit sky with the logo."""
     w, h = 1280, 640
     defs = (f'<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">'
             f'<stop offset="0" stop-color="{NAVY_TOP}"/><stop offset="1" stop-color="{NAVY_BOTTOM}"/></linearGradient>'
@@ -129,9 +128,8 @@ def banner():
                     f'fill="{MOONLIGHT}" opacity="{rng.uniform(0.15, 0.6):.2f}"/>' for _ in range(110))
     body = (f'<rect width="{w}" height="{h}" fill="url(#sky)"/><rect width="{w}" height="{h}" fill="url(#spot)"/>'
             f'<rect width="{w}" height="{h}" fill="url(#haze)"/>{stars}'
-            + mark(w / 2, 225, 270, MOONLIGHT, shine=True)
-            + lettering(WORDMARK, w / 2, 392, 500, MOONLIGHT)
-            + lettering(TAGLINE, w / 2, 474, 500, MOONLIGHT, 0.78))
+            + mark(w / 2, 250, 280, MOONLIGHT, shine=True)
+            + lettering(WORDMARK, w / 2, 424, 500, MOONLIGHT))
     return doc(w, h, body, defs)
 
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo/selene-banner.png" alt="Selene - fullscreen theme for Playnite">
+  <img src="docs/logo/selene-banner.png" alt="Selene">
 </p>
 
 <p align="center">
