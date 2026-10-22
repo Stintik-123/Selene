@@ -370,7 +370,6 @@
                                             <Grid.RenderTransform><TranslateTransform x:Name="SeleneInfoIntroShift" Y="0"/></Grid.RenderTransform>
                                             <!-- the library card selected: what it is, a few numbers, what A does -->
                                             <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="900" Opacity="0">
-                                                <StackPanel.RenderTransform><TranslateTransform X="0"/></StackPanel.RenderTransform>
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -381,7 +380,7 @@
                                                                     <BeginStoryboard>
                                                                         <Storyboard>
                                                                             <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
-                                                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="-30" To="0" BeginTime="0:0:0.12" Duration="0:0:0.35"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                            <ThicknessAnimation Storyboard.TargetProperty="Margin" From="-30,40,0,0" To="0,40,0,0" BeginTime="0:0:0.12" Duration="0:0:0.35"><ThicknessAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ThicknessAnimation.EasingFunction></ThicknessAnimation>
                                                                         </Storyboard>
                                                                     </BeginStoryboard>
                                                                 </DataTrigger.EnterActions>
@@ -420,7 +419,6 @@
                                             </StackPanel>
                                             <!-- the store card selected: what it is, a few numbers, what A does -->
                                             <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="900" Opacity="0">
-                                                <StackPanel.RenderTransform><TranslateTransform X="0"/></StackPanel.RenderTransform>
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -431,7 +429,7 @@
                                                                     <BeginStoryboard>
                                                                         <Storyboard>
                                                                             <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
-                                                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="-30" To="0" BeginTime="0:0:0.12" Duration="0:0:0.35"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                            <ThicknessAnimation Storyboard.TargetProperty="Margin" From="-30,40,0,0" To="0,40,0,0" BeginTime="0:0:0.12" Duration="0:0:0.35"><ThicknessAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ThicknessAnimation.EasingFunction></ThicknessAnimation>
                                                                         </Storyboard>
                                                                     </BeginStoryboard>
                                                                 </DataTrigger.EnterActions>
