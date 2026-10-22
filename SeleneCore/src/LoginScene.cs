@@ -351,7 +351,7 @@ namespace Selene
             glow = halo;
             var word = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(16, 26, 0, 0) };
             foreach (var c in "SELENE")
-                word.Children.Add(new TextBlock { Text = c.ToString(), FontSize = 30, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(0, 0, 16, 0) });
+                word.Children.Add(new TextBlock { Text = c.ToString(), FontSize = 34, FontFamily = Ui.Wordmark, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(0, 0, 18, 0) });
             col.Children.Add(word);
             content = col;
             Root.Children.Add(col);

@@ -141,6 +141,14 @@ namespace Selene
         // a picture someone picked (or their Steam avatar): copied into Selene Core's data so it survives the original moving
         public static string KeepPicture(string source)
         {
+            // the same picture kept before (e.g. the Steam avatar picked again): that copy
+            var folder = Path.Combine(Path.GetDirectoryName(file), "avatars");
+            if (Directory.Exists(folder))
+            {
+                var print = Fingerprint(source);
+                var same = Directory.GetFiles(folder).FirstOrDefault(f => Fingerprint(f) == print);
+                if (same != null) return same;
+            }
             var target = NewPicturePath(Path.GetExtension(source));
             File.Copy(source, target);
             return target;
@@ -151,8 +159,34 @@ namespace Selene
         {
             var folder = Path.Combine(Path.GetDirectoryName(file), "avatars");
             if (!Directory.Exists(folder)) return new List<string>();
+            var seen = new HashSet<string>();
             return new DirectoryInfo(folder).GetFiles().Where(f => f.Extension == ".png" || f.Extension == ".jpg" || f.Extension == ".jpeg" || f.Extension == ".gif")
-                .OrderByDescending(f => f.LastWriteTimeUtc).Select(f => f.FullName).ToList();
+                .OrderByDescending(f => f.LastWriteTimeUtc)
+                .Where(f => seen.Add(Fingerprint(f.FullName)))   // identical copies show once
+                .Select(f => f.FullName).ToList();
+        }
+
+        private static string Fingerprint(string path)
+        {
+            try
+            {
+                using (var md5 = System.Security.Cryptography.MD5.Create())
+                using (var stream = File.OpenRead(path))
+                    return BitConverter.ToString(md5.ComputeHash(stream));
+            }
+            catch (IOException) { return path; }
+        }
+
+        // removes a picture someone added; false when a profile still uses it
+        public static bool DeletePicture(string path)
+        {
+            if (!IsKeptPicture(path) || store.Profiles.Any(p => string.Equals(AvatarFile(p), path, StringComparison.OrdinalIgnoreCase))) return false;
+            var print = Fingerprint(path);
+            // identical copies (shown as one) go too
+            foreach (var other in Directory.GetFiles(Path.GetDirectoryName(path)))
+                if (Fingerprint(other) == print && !store.Profiles.Any(p => string.Equals(AvatarFile(p), other, StringComparison.OrdinalIgnoreCase)))
+                    File.Delete(other);
+            return true;
         }
 
         public static bool IsKeptPicture(string path)

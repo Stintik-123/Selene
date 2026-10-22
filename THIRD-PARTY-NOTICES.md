@@ -12,7 +12,8 @@ Not from Kenney: `navigation.wav`, `activation.wav`, `CloseAdditionalView.wav`, 
 
 ## Cinzel
 The "SELENE" lettering in the logo and banner (`tools/art/selene-wordmark.svg`, `docs/logo`) is set in Cinzel and converted
-to outlines; the font itself is not included. Cinzel - https://github.com/NDISCOVER/Cinzel -
+to outlines; the intro's SELENE word uses the font itself, included as `theme/Fonts/Cinzel.ttf` with its license
+(`theme/Fonts/Cinzel-OFL.txt`). Cinzel - https://github.com/NDISCOVER/Cinzel -
 SIL Open Font License 1.1, Copyright 2020 The Cinzel Project Authors.
 
 ## Theme palettes

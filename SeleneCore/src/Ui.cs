@@ -16,6 +16,20 @@ namespace Selene
         public static readonly FontFamily Display = new FontFamily("Segoe UI Variable Display");
         public static readonly FontFamily Body = new FontFamily("Segoe UI");
         public static readonly FontFamily Glyphs = new FontFamily("Segoe MDL2 Assets");
+        private static FontFamily cinzel;
+
+        // Cinzel, the logo's lettering (theme\Fonts\Cinzel.ttf), for the SELENE word; Segoe when it's missing
+        public static FontFamily Wordmark
+        {
+            get
+            {
+                if (cinzel != null) return cinzel;
+                var folder = SelenePaths.ThemeFile("Fonts");
+                cinzel = System.IO.File.Exists(System.IO.Path.Combine(folder, "Cinzel.ttf"))
+                    ? new FontFamily(new Uri(folder.TrimEnd('\\') + "\\"), "./#Cinzel") : Display;
+                return cinzel;
+            }
+        }
 
         // ---------------- text ----------------
         public static TextBlock Text(string text, double size, double alpha = 1, FontFamily font = null)

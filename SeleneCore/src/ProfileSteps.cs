@@ -479,6 +479,8 @@ namespace Selene
             private readonly ScrollingGrid grid;
             private int index;
             private AvatarCrop crop;   // framing your own picture, on top of the grid
+            private Dialog confirm;    // removing a picture someone added
+            private readonly FrameworkElement removeHint;
 
             public AvatarStep(ProfileSteps owner) : base(owner)
             {
@@ -495,6 +497,11 @@ namespace Selene
                 grid.Viewport.Margin = new Thickness(0, 290, 0, 0);
                 foreach (var f in files) AddTile(f, grid.Panel.Children.Count);
                 Root.Children.Add(grid.Viewport);
+                var hint = Ui.Prompts(false, Ui.Prompt("X", "Remove picture"));
+                hint.Margin = new Thickness(200, 0, 0, 48);
+                hint.Visibility = Visibility.Collapsed;
+                removeHint = hint;
+                Root.Children.Add(hint);
                 // the current avatar (editing), else the first built-in one
                 var current = Profiles.AvatarFile(new Profile { Avatar = owner.Avatar });
                 index = current != null ? files.FindIndex(f => f != null && string.Equals(f, current, StringComparison.OrdinalIgnoreCase)) : -1;
@@ -527,10 +534,12 @@ namespace Selene
             {
                 for (int i = 0; i < tiles.Count; i++) tiles[i].Focus(i == index);
                 grid.Reveal(index);
+                removeHint.Visibility = Profiles.IsKeptPicture(files[index]) ? Visibility.Visible : Visibility.Collapsed;
             }
 
             public override void Move(string dir)
             {
+                if (confirm != null) { confirm.Handle(dir); return; }
                 if (crop != null) { crop.Handle(dir); return; }
                 int next = Ui.GridMove(index, dir, tiles.Count, Columns);
                 if (next < 0) return;
@@ -541,12 +550,39 @@ namespace Selene
 
             public override bool OnB()
             {
+                if (confirm != null) { confirm.Handle("B"); return true; }
                 if (crop == null) return false;
                 crop.Handle("B");
                 return true;
             }
 
-            public override void Extra(string button) { if (crop != null) crop.Handle(button); }
+            public override void Extra(string button)
+            {
+                if (confirm != null) { if (button == "X") confirm.Answer(true); return; }
+                if (crop != null) { crop.Handle(button); return; }
+                if (button == "X" && Profiles.IsKeptPicture(files[index])) RemovePicture(index);
+            }
+
+            // X on a picture someone added: asks, then deletes it (not while a profile uses it)
+            private void RemovePicture(int at)
+            {
+                var file = files[at];
+                Owner.ShowChrome(false);
+                confirm = new Dialog("\uE7BA", "Remove this picture?", "It goes from the pictures you added. Built-in avatars stay.", "Remove", "Keep",
+                    () =>
+                    {
+                        confirm = null;
+                        Owner.ShowChrome(true);
+                        if (!Profiles.DeletePicture(file)) { Ui.Shake(tiles[at].Root); Ui.Back(); return; }
+                        grid.Panel.Children.RemoveAt(at);
+                        tiles.RemoveAt(at);
+                        files.RemoveAt(at);
+                        index = Math.Min(at, files.Count - 1);
+                        ShowFocus();
+                    },
+                    () => { confirm = null; Owner.ShowChrome(true); });
+                confirm.Open(Root);
+            }
 
             private void CloseCrop()
             {
@@ -558,6 +594,7 @@ namespace Selene
 
             public override bool OnA()
             {
+                if (confirm != null) { confirm.Handle("A"); return true; }
                 if (crop != null) { crop.Handle("A"); return true; }
                 var f = files[index];
                 if (f != null)
@@ -717,8 +754,10 @@ namespace Selene
                 var themeName = theme != null ? theme.Name : "";
                 files.Add(null); groups.Add(themeName);
                 var all = Wallpapers.All();
+                var own = ThemePalettes.DefaultWallpaper(Owner.Theme);
                 foreach (var w in all.Where(w => w.Group == themeName).Concat(all.Where(w => w.Group != themeName)))
                 {
+                    if (string.Equals(w.File, own, StringComparison.OrdinalIgnoreCase)) continue;   // that's "Theme's own"
                     files.Add(w.File);
                     groups.Add(w.Group);
                 }
