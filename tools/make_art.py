@@ -21,8 +21,12 @@ NAVY_TOP = "#102A5C"
 NAVY_BOTTOM = "#03081A"
 PAPER = "#F4F7FB"
 
-# horizontal centre of the mark's drawing inside its 100x100 box is 50; vertical centre of the ink is ~53.5
-MARK_INK_CENTER_Y = 53.5
+# moonlight shine for dark backgrounds: the crescent fades from white to pale blue, the full moon glows
+SHINE = ('<defs><linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">'
+         '<stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#DCE9FF"/><stop offset="1" stop-color="#8FB4EC"/>'
+         '</linearGradient><radialGradient id="glow">'
+         '<stop offset="0" stop-color="#9CCBFF" stop-opacity="0.45"/><stop offset="1" stop-color="#9CCBFF" stop-opacity="0"/>'
+         '</radialGradient></defs><circle cx="50" cy="42" r="18" fill="url(#glow)"/>')
 
 
 def inner(svg_file):
@@ -37,9 +41,12 @@ WORD_BOX, WORD = inner("selene-wordmark.svg")
 WORD_W, WORD_H = (float(v) for v in WORD_BOX.split()[2:])
 
 
-def mark(x, y, size, color, opacity=1.0):
-    return (f'<svg x="{x}" y="{y}" width="{size}" height="{size}" viewBox="{MARK_BOX}" '
-            f'style="color:{color}" opacity="{opacity}">{MARK}</svg>')
+def mark(cx, cy, size, color, opacity=1.0, shine=False):
+    body = MARK
+    if shine:
+        body = SHINE + body.replace('id="crescent" fill="currentColor"', 'id="crescent" fill="url(#shine)"')
+    return (f'<svg x="{cx - size / 2}" y="{cy - size / 2}" width="{size}" height="{size}" viewBox="{MARK_BOX}" '
+            f'style="color:{color}" opacity="{opacity}">{body}</svg>')
 
 
 def wordmark(cx, y, width, color):
@@ -67,31 +74,28 @@ def render(svg, out_png, width=None):
 
 
 def mark_alone(size=256):
-    s = size * 0.9
-    return doc(size, size, mark((size - s) / 2, size / 2 - s * MARK_INK_CENTER_Y / 100, s, MOONLIGHT))
+    return doc(size, size, mark(size / 2, size / 2, size * 0.92, MOONLIGHT, shine=True))
 
 
 def mark_on_disc(size=256):
     defs = (f'<linearGradient id="bg" x1="0.25" y1="0" x2="0.75" y2="1">'
             f'<stop offset="0" stop-color="{NAVY_TOP}"/><stop offset="1" stop-color="{NAVY_BOTTOM}"/></linearGradient>')
-    s = size * 0.72
     body = (f'<circle cx="{size / 2}" cy="{size / 2}" r="{size / 2}" fill="url(#bg)"/>'
-            + mark((size - s) / 2, size / 2 - s * MARK_INK_CENTER_Y / 100, s, MOONLIGHT))
+            + mark(size / 2, size / 2, size * 0.68, MOONLIGHT, shine=True))
     return doc(size, size, body, defs)
 
 
 def cover():
     defs = (f'<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">'
             f'<stop offset="0" stop-color="{NAVY_TOP}"/><stop offset="1" stop-color="{NAVY_BOTTOM}"/></linearGradient>')
-    body = '<rect width="600" height="900" fill="url(#bg)"/>' + mark(150, 450 - 300 * MARK_INK_CENTER_Y / 100, 300, MOONLIGHT, 0.35)
+    body = '<rect width="600" height="900" fill="url(#bg)"/>' + mark(300, 450, 260, MOONLIGHT, 0.35, shine=True)
     return doc(600, 900, body, defs)
 
 
-def lockup(background, ink):
+def lockup(background, ink, shine):
     w, h = 1200, 800
-    s = 380
     body = (f'<rect width="{w}" height="{h}" fill="{background}"/>'
-            + mark((w - s) / 2, 90, s, ink)
+            + mark(w / 2, 300, 380, ink, shine=shine)
             + wordmark(w / 2, 560, 640, ink))
     return doc(w, h, body)
 
@@ -102,8 +106,8 @@ render(mark_on_disc(), IMAGES / "applogo_full.png", width=512)
 render(mark_on_disc(), ROOT / "SeleneCore" / "icon.png")
 render(cover(), IMAGES / "custom_cover_background.png")
 
-for name, background, ink in (("dark", NAVY, MOONLIGHT), ("light", PAPER, NAVY)):
-    svg = lockup(background, ink)
+for name, background, ink, shine in (("dark", NAVY, MOONLIGHT, True), ("light", PAPER, NAVY, False)):
+    svg = lockup(background, ink, shine)
     (LOGO_DIR / f"selene-logo-{name}.svg").parent.mkdir(parents=True, exist_ok=True)
     (LOGO_DIR / f"selene-logo-{name}.svg").write_text(svg, encoding="utf-8")
     print("wrote", (LOGO_DIR / f"selene-logo-{name}.svg").relative_to(ROOT))

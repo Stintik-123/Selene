@@ -1,9 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Selene's crescent crown: a horns-up moon holding a full moon, with two sparkles. Drawn in currentColor. -->
-  <path fill="currentColor" d="M23.109 44.577 A31 31 0 1 0 76.891 44.577 A27 27 0 1 1 23.109 44.577 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="14 24 72 72">
+  <!-- Selene's crescent crown: a horns-up moon holding a glowing full moon. Drawn in currentColor;
+       make_art.py adds the moonlight shine on dark backgrounds. -->
+  <path id="crescent" fill="currentColor" d="M23.109 44.577 A31 31 0 1 0 76.891 44.577 A27 27 0 1 1 23.109 44.577 Z"/>
   <circle cx="50" cy="42" r="9" fill="none" stroke="currentColor" stroke-width="3.2"/>
-  <path fill="currentColor" d="M17 30 l1.6 4.4 4.4 1.6 -4.4 1.6 -1.6 4.4 -1.6 -4.4 -4.4 -1.6 4.4 -1.6z"/>
-  <path fill="currentColor" d="M83 30 l1.6 4.4 4.4 1.6 -4.4 1.6 -1.6 4.4 -1.6 -4.4 -4.4 -1.6 4.4 -1.6z"/>
-  <circle cx="26" cy="18" r="1.6" fill="currentColor"/>
-  <circle cx="74" cy="18" r="1.6" fill="currentColor"/>
+  <circle cx="50" cy="42" r="3.2" fill="currentColor"/>
 </svg>
