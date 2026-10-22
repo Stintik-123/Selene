@@ -19,6 +19,13 @@ The color themes in `theme/Palettes` are generated from the palettes of [Omarchy
 themes (MIT License, Copyright (c) David Heinemeier Hansson), copied into `tools/palettes`. Many are based on open
 color schemes by their own authors: Catppuccin, Everforest, Flexoki, Gruvbox, Kanagawa, Nord, Rose Pine and Tokyo Night.
 
+## Add-ons installed by the setup
+Selene's first-launch setup installs these Playnite add-ons through Playnite's own installer; they are not bundled and
+keep their own licenses: Extra Metadata Loader (darklinkpower), Ludusavi (mtkennerly), HowLongToBeat and GameActivity
+(Lacro59), Playnite Achievements (justin-delano), DuplicateHider (felixkmh), UniPlaySong (aHuddini) and Audio Switcher
+(Naerian). For save backups it also downloads the [Ludusavi](https://github.com/mtkennerly/ludusavi) program
+(MIT License, Copyright (c) 2020 Matthew T. Kennerly) into Selene Core's data folder.
+
 ## Avatars
 The profile pictures in `theme/Avatars` are Xbox gamer pictures from Microsoft's public gamerpic server
 (`<pack>-<number>.jpg` matches the original file names). They remain the property of Microsoft and the respective

@@ -51,7 +51,9 @@
 
 - Playnite 10 or newer (fullscreen mode), Windows 10 / 11
 - A controller is recommended (Xbox-style); keyboard works too
-- Optional: [Extra Metadata Loader](https://github.com/darklinkpower/PlayniteExtensionsCollection) for game logos and trailers
+- Selene's first-launch setup installs the add-ons it works with: Extra Metadata Loader, Ludusavi (plus the
+  Ludusavi program for save backups), HowLongToBeat, Playnite Achievements, DuplicateHider, GameActivity, UniPlaySong
+  and Audio Switcher
 
 ## Install
 

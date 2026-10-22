@@ -26,6 +26,9 @@ namespace Selene
             return dir;
         }
 
+        // Selene Core's own data folder (profiles, downloaded helpers)
+        public static string DataFolder { get { return plugin != null ? plugin.GetPluginUserDataPath() : Path.Combine(Path.GetTempPath(), "SeleneCore"); } }
+
         // folders scanned for games that no store knows about (empty = off)
         public static string[] GameFolders
         {

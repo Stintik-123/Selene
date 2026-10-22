@@ -12,7 +12,7 @@ $sdk = Join-Path $env:LOCALAPPDATA 'Playnite\Playnite.SDK.dll'
 New-Item -ItemType Directory -Force $out, $stage | Out-Null
 $sources = @(Get-ChildItem $core -Filter *.cs) + @(Get-ChildItem (Join-Path $core 'src') -Filter *.cs) | ForEach-Object { $_.FullName }
 $refs = @('System.dll', 'System.Core.dll', 'System.Xaml.dll', 'System.Drawing.dll', 'System.Windows.Forms.dll', 'System.Web.Extensions.dll',
-          'Microsoft.CSharp.dll', "$fw\WPF\WindowsBase.dll", "$fw\WPF\PresentationCore.dll", "$fw\WPF\PresentationFramework.dll", $sdk) |
+          'Microsoft.CSharp.dll', 'System.IO.Compression.dll', 'System.IO.Compression.FileSystem.dll', "$fw\WPF\WindowsBase.dll", "$fw\WPF\PresentationCore.dll", "$fw\WPF\PresentationFramework.dll", $sdk) |
         ForEach-Object { "/r:$_" }
 & "$fw\csc.exe" /nologo /target:library /optimize+ /nowarn:1701,1702 "/out:$stage\SeleneCore.dll" $refs $sources
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
