@@ -93,6 +93,11 @@ into `%APPDATA%\Playnite\Themes\Fullscreen\Selene_a98e0027-fa6a-4f5e-a087-bad8d6
 
 - Built on [Playnite](https://github.com/JosefNemec/Playnite)'s fullscreen theme template (MIT).
 - Interface sounds: [Kenney](https://kenney.nl) - *Interface Sounds* (CC0).
+- Wallpapers: from the theme collection of [Omarchy](https://github.com/basecamp/omarchy) by DHH and its theme
+  contributors, with art by Katsushika Hokusai, Charles William Wyllie, Jan Brueghel the Younger, DVAULTZ, Maxteabag
+  and other artists. Each wallpaper stays its artist's property; see
+  [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md#wallpapers). Artists can ask for a different credit or removal by
+  opening an issue.
 - Artwork (crescent crown logo, icons, default cover) is Selene's own, drawn in `tools/art` and exported by
   `tools/make_art.py`. The logo lettering is [Cinzel](https://github.com/NDISCOVER/Cinzel) (SIL Open Font License).
 
