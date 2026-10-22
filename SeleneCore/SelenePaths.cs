@@ -87,6 +87,8 @@ namespace Selene
             catch { }
         }
 
+        public static string SteamId { get { ReadSteamUser(); return steamId; } }
+
         public static string AvatarImage
         {
             get

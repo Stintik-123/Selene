@@ -489,8 +489,8 @@ namespace Selene
 
         public static FrameworkElement Avatar(Profile p, double size)
         {
-            var pic = Wallpapers.Load(Profiles.AvatarFile(p), (int)(size * 2));
-            if (pic != null) return new Ellipse { Width = size, Height = size, Fill = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } };
+            var pic = AnimatedAvatar.Brush(Profiles.AvatarFile(p), (int)(size * 2));   // GIFs play
+            if (pic != null) return new Ellipse { Width = size, Height = size, Fill = pic };
             // no picture: the first letter on the profile's accent
             var g = new Grid { Width = size, Height = size };
             var accent = Accent(p);

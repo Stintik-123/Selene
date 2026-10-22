@@ -151,7 +151,7 @@ namespace Selene
         {
             var folder = Path.Combine(Path.GetDirectoryName(file), "avatars");
             if (!Directory.Exists(folder)) return new List<string>();
-            return new DirectoryInfo(folder).GetFiles().Where(f => f.Extension == ".png" || f.Extension == ".jpg" || f.Extension == ".jpeg")
+            return new DirectoryInfo(folder).GetFiles().Where(f => f.Extension == ".png" || f.Extension == ".jpg" || f.Extension == ".jpeg" || f.Extension == ".gif")
                 .OrderByDescending(f => f.LastWriteTimeUtc).Select(f => f.FullName).ToList();
         }
 

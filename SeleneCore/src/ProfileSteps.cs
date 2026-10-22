@@ -490,7 +490,7 @@ namespace Selene
                 Header("Choose your avatar", "Pick one, or use your own picture.");
                 files.Add(null);
                 files.AddRange(Profiles.KeptPictures());   // pictures added before
-                var steam = SelenePaths.AvatarImage;
+                var steam = AnimatedAvatar.Steam ?? SelenePaths.AvatarImage;   // the animated one when the account has it
                 if (!string.IsNullOrEmpty(steam) && System.IO.File.Exists(steam)) files.Add(steam);
                 files.AddRange(Profiles.BuiltInAvatars());
                 grid = new ScrollingGrid(Columns, 118, 560);
@@ -504,7 +504,12 @@ namespace Selene
                 var current = Profiles.AvatarFile(new Profile { Avatar = owner.Avatar });
                 index = current != null ? files.FindIndex(f => f != null && string.Equals(f, current, StringComparison.OrdinalIgnoreCase)) : -1;
                 if (index < 0) index = Math.Min(1, files.Count - 1);   // the Steam avatar when there is one, else the first of ours
-                Ui.LoadInOrder(files.Select(f => f ?? "").ToList(), 192, (i, pic) => tiles[i].Face.Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill });
+                Ui.LoadInOrder(files.Select(f => f ?? "").ToList(), 192, (i, pic) =>
+                {
+                    var f = i < files.Count ? files[i] : null;
+                    tiles[i].Face.Background = f != null && f.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)
+                        ? AnimatedAvatar.Brush(f, 192) : new ImageBrush(pic) { Stretch = Stretch.UniformToFill };
+                });
             }
 
             public override void Shown() { ShowFocus(); }
@@ -577,7 +582,7 @@ namespace Selene
                     CloseCrop();
                     files.Insert(1, saved);
                     var t = AddTile(saved, 1);
-                    t.Face.Background = new ImageBrush(Wallpapers.Load(saved, 192)) { Stretch = Stretch.UniformToFill };
+                    t.Face.Background = AnimatedAvatar.Brush(saved, 192);
                     index = 1;
                     ShowFocus();
                     Ui.Pop(t.Root);
