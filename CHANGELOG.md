@@ -5,7 +5,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Favorites and Recently played belong to whoever is signed in (the heart, the Favorites tab and the order of the row).
-- Selene's own theme has its own wallpaper: a moonlit night with a glowing crescent.
+- New cursor and boot sounds, made for Selene: a crystal tick when moving, a harp arpeggio on the logo intro.
 - First launch: the crescent crown intro, a setup check (install the add-ons Selene works with, set up save backups), then making your profile: name (on-screen keyboard), avatar, theme and background, each theme and background shown live on your real home.
 - "Who's playing?" replaces the old login: profiles glow in their own theme's color; add, edit (Y) or remove (X twice); power menu below.
 - Extensions menu, Selene: switch profile, edit profile, setup check.

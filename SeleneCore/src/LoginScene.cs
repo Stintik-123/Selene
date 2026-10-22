@@ -291,7 +291,7 @@ namespace Selene
             timer.Tick += (s, e) =>
             {
                 ticks++;
-                if (ticks == 1) Ui.Chime();
+                if (ticks == 1) Ui.Boot();
                 if (ticks >= 6) Next();
             };
             timer.Start();

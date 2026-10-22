@@ -131,8 +131,8 @@ into `%APPDATA%\Playnite\Themes\Fullscreen\Selene_a98e0027-fa6a-4f5e-a087-bad8d6
   and other artists. Each wallpaper stays its artist's property; see
   [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md#wallpapers). Artists can ask for a different credit or removal by
   opening an issue.
-- Artwork (crescent crown logo, icons, default cover, Selene's moonlit wallpaper) is Selene's own, drawn in `tools/art`
-  and exported by `tools/make_art.py`, and by `tools/make_wallpaper.py`. The logo lettering is [Cinzel](https://github.com/NDISCOVER/Cinzel) (SIL Open Font License).
+- Artwork (crescent crown logo, icons, default cover) is Selene's own, drawn in `tools/art` and exported by
+  `tools/make_art.py`. The cursor and boot sounds are Selene's own too, synthesized by `tools/make_sounds.py`. The logo lettering is [Cinzel](https://github.com/NDISCOVER/Cinzel) (SIL Open Font License).
 
 See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Selene is not affiliated with any console maker.
 
