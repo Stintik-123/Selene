@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime_sparkle", "Success.wav": "success_sparkle", "LoginSelect.wav": "signin_boot", "OpenPanel.wav": "panel_open", "Alert.wav": "alert_soft"}
+CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_tone", "Key.wav": "key_tap", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime_sparkle", "Success.wav": "success_sparkle", "LoginSelect.wav": "signin_boot", "OpenPanel.wav": "panel_open", "Alert.wav": "alert_soft"}
 
 
 def note(name):
@@ -440,6 +440,25 @@ def success_sparkle():
     return normalize(fade_tail(s[:int(total * RATE)], 0.35), 0.16)
 
 
+def confirm_tone():
+    # A / select: two quick warm glass notes on the boot chime's pitches, clearly lower and rounder than the move tick
+    total = 0.45
+    s = add(ping(2040, 2040, 0, 0.0, 0.003, 0.01, 0.06, 0.8, total),
+            ping(2775, 2775, 0, 0.045, 0.003, 0.012, 0.09, 1.0, total),
+            ping(5550, 5550, 0, 0.045, 0.002, 0.0, 0.03, 0.12, total))
+    s = reverb(lowpass(s, 0.7), 0.15, 0.25)
+    return normalize(fade_tail(s, 0.1), 0.2)
+
+
+def key_tap():
+    # typing a letter, erasing, flipping a switch: one soft warm tap from the same family
+    total = 0.25
+    s = add(ping(2775, 2775, 0, 0.0, 0.002, 0.006, 0.045, 1.0, total),
+            ping(5550, 5550, 0, 0.0, 0.002, 0.0, 0.02, 0.15, total))
+    s = reverb(lowpass(s, 0.7), 0.1, 0.15)
+    return normalize(fade_tail(s, 0.06), 0.14)
+
+
 def signin_chime():
     # picking a profile: the boot chime's two tones struck together, its answer a fifth up a beat later, a soft bloom
     total = 1.9
@@ -451,7 +470,7 @@ def signin_chime():
     return normalize(fade_tail(s, 0.4), 0.18)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime, boot_chime_sparkle, alert_soft, panel_open, signin_boot, success_soft, success_bloom, success_sparkle)}
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime, boot_chime_sparkle, alert_soft, panel_open, signin_boot, success_soft, success_bloom, success_sparkle, confirm_tone, key_tap)}
 
 
 def write(path, samples):

@@ -446,6 +446,7 @@ namespace Selene
             ReplaceFadeImages(win);
             CacheNewsCards(win);
             RenderFilterTabs(win);
+            HomeHints.Attach(win);
             hub.IsVisibleChanged += (s, a) => { if ((bool)a.NewValue) { FindAndPlay(win); RenderFilterTabs(win); } else { RefreshLibraryFades(); HidePreview(); ForceHorizontalLibrary(); EnsureBigScreenFilter(); if (!openingDetails) FocusLibraryLater(win); } };
             Log("hub hooked");
         }
@@ -1208,12 +1209,30 @@ namespace Selene
         // UniPlaySong pauses on its own "video is playing" flag (PauseOnTrailer) and resumes when it is cleared.
         private static bool? musicPaused;
 
-        // the music add-on (UniPlaySong) stays quiet on cards and behind the login screens
-        private static void PauseMusic(bool pause)
+        // no game's song on the cards and behind the login screens: the music add-on (UniPlaySong) plays its default
+        // track there instead (like the old theme's login music); on a game, that game's song
+        private static void PauseMusic(bool onCard)
         {
-            if (musicPaused == pause) return;
-            musicPaused = pause;
-            SetUpsVideoPlaying(pause || (previewShowing && previewSound));
+            if (musicPaused == onCard) return;
+            musicPaused = onCard;
+            SetUpsSetting("ForceDefaultMusicOverride", onCard);
+        }
+
+        private static void SetUpsSetting(string name, bool value)
+        {
+            try
+            {
+                if (Api == null) return;
+                foreach (var plugin in Api.Addons.Plugins)
+                {
+                    if (plugin.Id != new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")) continue;
+                    var settings = plugin.GetSettings(false);
+                    var prop = settings != null ? settings.GetType().GetProperty(name) : null;
+                    if (prop != null && prop.CanWrite) prop.SetValue(settings, value, null);
+                    Log("UPS " + name + "=" + value + (prop == null ? " (not found)" : ""));
+                }
+            }
+            catch (Exception ex) { Log("UPS " + name + ": " + ex.Message); }
         }
 
         private static void SetUpsVideoPlaying(bool playing)
@@ -2369,8 +2388,14 @@ namespace Selene
         }
 
         // Move mode: the card drops down (no fading, it looked like it vanished) and the title becomes a hint.
+        // for the home's button hints
+        internal static bool Moving { get { return movingCard != null || movingGame != null; } }
+        internal static bool InRow(DependencyObject d) { return IsInRow(d); }
+        internal static bool HasTrailer(object game) { return game != null && !(game is string) && TrailerPath(game) != null; }
+
         private static void SetMoveVisual(ListBoxItem item, bool on)
         {
+            item.Dispatcher.BeginInvoke(new Action(HomeHints.Update), System.Windows.Threading.DispatcherPriority.Background);
             item.BeginAnimation(UIElement.OpacityProperty, null);
             item.Opacity = 1;
             var lift = item.RenderTransform as TransformGroup;

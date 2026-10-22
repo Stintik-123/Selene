@@ -157,7 +157,8 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("sound " + file + ": " + ex.Message); }
         }
 
-        public static void Tick() { Play("navigation.wav", 0.7); }
+        public static void Tick() { Play("navigation.wav", 0.7); }      // moving
+        public static void Key() { Play("Key.wav", 0.8); }              // typing, erasing, flipping a switch
         public static void Confirm() { Play("activation.wav", 0.85); }
         public static void Back() { Play("CloseAdditionalView.wav", 0.8); }
         public static void Chime() { Play("Success.wav", 0.85); }   // something finished: a profile made, a setup step done

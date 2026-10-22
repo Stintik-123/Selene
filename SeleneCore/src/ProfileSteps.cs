@@ -406,7 +406,7 @@ namespace Selene
                 Ui.Pop(keys[row][col].Root);
                 if (v == "done") return false;
                 if (v == "erase") Erase();
-                else if (v == "shift") { shift = !shift; Ui.Tick(); UpdateCase(); }
+                else if (v == "shift") { shift = !shift; Ui.Key(); UpdateCase(); }
                 else if (v == "space") Type(" ");
                 else Type(v);
                 return true;
@@ -441,7 +441,7 @@ namespace Selene
                     AddLetter(s, true);
                     shift = false;
                 }
-                Ui.Tick();
+                Ui.Key();
                 UpdateCase();
             }
 
@@ -457,7 +457,7 @@ namespace Selene
                 if (Owner.Name.Length == 0) { Ui.Shake(field); return; }
                 Owner.Name = Owner.Name.Substring(0, Owner.Name.Length - 1);
                 letters.Children.RemoveAt(letters.Children.Count - 1);
-                Ui.Tick();
+                Ui.Key();
                 UpdateCase();
             }
 
@@ -832,7 +832,7 @@ namespace Selene
                 if (button != "X") return;
                 var looks = Profiles.HomeBackgrounds;
                 Owner.Look = looks[(Array.IndexOf(looks, Owner.Look) + 1) % looks.Length];
-                Ui.Tick();
+                Ui.Key();
                 ShowLook(true);
             }
 
