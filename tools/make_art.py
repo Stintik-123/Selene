@@ -21,12 +21,15 @@ NAVY_TOP = "#102A5C"
 NAVY_BOTTOM = "#03081A"
 PAPER = "#F4F7FB"
 
-# moonlight shine for dark backgrounds: the crescent fades from white to pale blue, the full moon glows
-SHINE = ('<defs><linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">'
-         '<stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#DCE9FF"/><stop offset="1" stop-color="#8FB4EC"/>'
-         '</linearGradient><radialGradient id="glow">'
-         '<stop offset="0" stop-color="#9CCBFF" stop-opacity="0.45"/><stop offset="1" stop-color="#9CCBFF" stop-opacity="0"/>'
-         '</radialGradient></defs><circle cx="50" cy="42" r="18" fill="url(#glow)"/>')
+# moonlight shine for dark backgrounds: the crescent goes from pure white to moonlight
+SHINE = ('<linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">'
+         f'<stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="{MOONLIGHT}"/></linearGradient>')
+
+
+def glow(color, opacity):
+    return (f'<defs><radialGradient id="glow"><stop offset="0" stop-color="{color}" stop-opacity="{opacity}"/>'
+            f'<stop offset="1" stop-color="{color}" stop-opacity="0"/></radialGradient>{SHINE}</defs>'
+            '<circle cx="50" cy="42" r="18" fill="url(#glow)"/>')
 
 
 def inner(svg_file):
@@ -41,10 +44,10 @@ WORD_BOX, WORD = inner("selene-wordmark.svg")
 WORD_W, WORD_H = (float(v) for v in WORD_BOX.split()[2:])
 
 
-def mark(cx, cy, size, color, opacity=1.0, shine=False):
-    body = MARK
+def mark(cx, cy, size, color, opacity=1.0, shine=False, glow_color="#9CCBFF", glow_opacity=0.45):
+    body = glow(glow_color, glow_opacity) + MARK
     if shine:
-        body = SHINE + body.replace('id="crescent" fill="currentColor"', 'id="crescent" fill="url(#shine)"')
+        body = body.replace('id="crescent" fill="currentColor"', 'id="crescent" fill="url(#shine)"')
     return (f'<svg x="{cx - size / 2}" y="{cy - size / 2}" width="{size}" height="{size}" viewBox="{MARK_BOX}" '
             f'style="color:{color}" opacity="{opacity}">{body}</svg>')
 
@@ -95,7 +98,8 @@ def cover():
 def lockup(background, ink, shine):
     w, h = 1200, 800
     body = (f'<rect width="{w}" height="{h}" fill="{background}"/>'
-            + mark(w / 2, 300, 380, ink, shine=shine)
+            + (mark(w / 2, 300, 380, ink, shine=True) if shine
+               else mark(w / 2, 300, 380, ink, glow_color="#4A78C8", glow_opacity=0.35))
             + wordmark(w / 2, 560, 640, ink))
     return doc(w, h, body)
 
