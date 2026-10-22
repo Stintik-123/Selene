@@ -246,7 +246,7 @@ namespace Selene
         {
             int best = -1;
             for (int i = 0; i < items.Count; i++)
-                if (cardRow[i] == row && (best < 0 || Math.Abs(cardX[i] - x) < Math.Abs(cardX[best] - x))) best = i;
+                if (cardRow[i] == row && (best < 0 || Math.Abs(cardX[i] - x) <= Math.Abs(cardX[best] - x) + 0.5)) best = i;   // a tie goes right
             return best;
         }
 
