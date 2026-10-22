@@ -943,6 +943,8 @@ namespace Selene
             var row = LiveRow();
             if (row == null || previewGame == on) return;
             previewGame = on;
+            // the preview's game must not start its song: the music add-on pauses while it's shown (default music after)
+            SetUpsVideoPlaying(on || (previewShowing && previewSound));
             if (!on) { previewGameObj = null; ClearSelectedGame(); return; }
             int idx = FirstGameIndex(row);
             if (idx < 0 || idx >= row.Items.Count || row.Items[idx] is string || row.Items[idx] is RowPad) { previewGame = false; return; }
