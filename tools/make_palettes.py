@@ -69,6 +69,13 @@ def shade(color, keep):
     return "#" + "".join("%02X" % round(int(h[i:i + 2], 16) * keep) for i in (0, 2, 4))
 
 
+def saturation(color):
+    h = color.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    hi, lo = max(r, g, b), min(r, g, b)
+    return 0 if hi == 0 else (hi - lo) / hi
+
+
 def contrast(a, b):
     hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
     return (hi + 0.05) / (lo + 0.05)
@@ -94,8 +101,16 @@ def xaml(theme_id, name, c, wallpaper):
     # Selene's own keys: focus fill/ring (the accent), text on it (whichever of background/foreground reads better),
     # text over game art, the scrim that darkens (or, in light themes, lightens) art, glass panels, success green
     focus = c.get("focus", c["accent"])
+    # a grey accent (White, Vantablack...) makes a dull focus on the dark glass: focus in the theme's lightest color
+    # instead (its background in light themes, its bright text in dark ones)
+    if "focus" not in c and saturation(focus) < 0.15:
+        focus = bg if c.get("mode", "dark") == "light" else c.get("bright_foreground", fg)
     bright = c.get("bright_foreground", fg)
     on_focus = c.get("on_focus", max((bg, bright), key=lambda x: contrast(x, focus)))
+    # warnings sit on the dark glass and over art: a red that doesn't stand out there (grey palettes) becomes a clear red
+    warning = c.get("red", "#FF6B6B")
+    if contrast(warning, c.get("glass", shade(fg, 0.55) if c.get("mode", "dark") == "light" else dark)) < 3 or saturation(warning) < 0.3:
+        warning = "#FF6B6B"
     # over game art a light scrim washes the picture out, so light themes keep a dark scrim and glass (a deep shade of
     # their own text color) with their light background color as the text on it; their light side stays in the
     # gradient, wallpaper, accent and Playnite's own panels
@@ -157,7 +172,7 @@ def xaml(theme_id, name, c, wallpaper):
         f'        <GradientStop Color="{argb(dark, "00")}" Offset="0.0" />',
         f'        <GradientStop Color="{argb(darker, "EE")}" Offset="0.8" />',
         "    </LinearGradientBrush>",
-        f'    <SolidColorBrush x:Key="WarningBrush" Color="{argb(c.get("red", "#FF6B6B"))}" />',
+        f'    <SolidColorBrush x:Key="WarningBrush" Color="{argb(warning)}" />',
         "</ResourceDictionary>",
         "",
     ]

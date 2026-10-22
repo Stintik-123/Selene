@@ -15,8 +15,8 @@
     <Color x:Key="ControlBackgroundColorDark">#FFF5F5F5</Color>
     <Color x:Key="TextColor">#FF000000</Color>
     <Color x:Key="TextColorDark">#FFC0C0C0</Color>
-    <Color x:Key="SeleneFocusColor">#FF6E6E6E</Color>
-    <Color x:Key="SeleneOnFocusColor">#FFFFFFFF</Color>
+    <Color x:Key="SeleneFocusColor">#FFFFFFFF</Color>
+    <Color x:Key="SeleneOnFocusColor">#FF000000</Color>
     <Color x:Key="SeleneInkColor">#FFFFFFFF</Color>
     <Color x:Key="SeleneScrimColor">#FF000000</Color>
     <Color x:Key="SeleneGlassColor">#FF000000</Color>
@@ -31,8 +31,8 @@
     <SolidColorBrush x:Key="SelectionLightBrush" Color="#FF000000" />
     <SolidColorBrush x:Key="OverlayBrush" Color="#CCE8E8E8" />
     <SolidColorBrush x:Key="CheckBoxCheckMarkBkBrush" Color="#FFF5F5F5" />
-    <SolidColorBrush x:Key="SeleneFocusBrush" Color="#FF6E6E6E" />
-    <SolidColorBrush x:Key="SeleneOnFocusBrush" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="SeleneFocusBrush" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="SeleneOnFocusBrush" Color="#FF000000" />
     <SolidColorBrush x:Key="SeleneInkBrush" Color="#FFFFFFFF" />
     <SolidColorBrush x:Key="SeleneInk90Brush" Color="#FFFFFFFF" Opacity="0.9" />
     <SolidColorBrush x:Key="SeleneInk60Brush" Color="#FFFFFFFF" Opacity="0.6" />
@@ -45,10 +45,10 @@
     <SolidColorBrush x:Key="SeleneGlassSolidBrush" Color="#FF000000" Opacity="0.88" />
     <SolidColorBrush x:Key="SeleneGlassLightBrush" Color="#FF000000" Opacity="0.45" />
     <SolidColorBrush x:Key="SeleneSuccessBrush" Color="#FF3A3A3A" />
-    <DropShadowEffect x:Key="SeleneFocusGlow" ShadowDepth="0" BlurRadius="18" Color="#FF6E6E6E" Opacity="0.35" />
-    <DropShadowEffect x:Key="SeleneFocusGlowStrong" ShadowDepth="0" BlurRadius="18" Color="#FF6E6E6E" Opacity="0.55" />
+    <DropShadowEffect x:Key="SeleneFocusGlow" ShadowDepth="0" BlurRadius="18" Color="#FFFFFFFF" Opacity="0.35" />
+    <DropShadowEffect x:Key="SeleneFocusGlowStrong" ShadowDepth="0" BlurRadius="18" Color="#FFFFFFFF" Opacity="0.55" />
     <LinearGradientBrush x:Key="SelectionBrush" StartPoint="0.5,-0.5" EndPoint="1,1.5">
-        <GradientStop Color="#FF6E6E6E" Offset="0" />
+        <GradientStop Color="#FFFFFFFF" Offset="0" />
         <GradientStop Color="#FF6E6E6E" Offset="1.0" />
     </LinearGradientBrush>
 
@@ -72,5 +72,5 @@
         <GradientStop Color="#00F5F5F5" Offset="0.0" />
         <GradientStop Color="#EEE8E8E8" Offset="0.8" />
     </LinearGradientBrush>
-    <SolidColorBrush x:Key="WarningBrush" Color="#FF2A2A2A" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#FFFF6B6B" />
 </ResourceDictionary>

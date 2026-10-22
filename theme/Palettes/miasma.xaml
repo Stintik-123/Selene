@@ -72,5 +72,5 @@
         <GradientStop Color="#00191919" Offset="0.0" />
         <GradientStop Color="#EE121212" Offset="0.8" />
     </LinearGradientBrush>
-    <SolidColorBrush x:Key="WarningBrush" Color="#FF685742" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#FFFF6B6B" />
 </ResourceDictionary>
