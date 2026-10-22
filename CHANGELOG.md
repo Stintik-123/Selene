@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- First launch: the crescent crown intro, a setup check (install the add-ons Selene works with, set up save backups), then making your profile: name (on-screen keyboard), avatar, theme and background, each theme and background shown live on your real home.
+- "Who's playing?" replaces the old login: profiles glow in their own theme's color; add, edit (Y) or remove (X twice); power menu below.
+- Extensions menu, Selene: switch profile, edit profile, setup check.
 - Every screen follows the color theme: text, focus rings, buttons, glass panels and the shading over game art.
 - The home blends the selected game's art into your wallpaper with a glow in the theme's color (or pick art only / wallpaper only).
 - New crescent crown logo with a glowing full moon; new icons, default cover and README banner.

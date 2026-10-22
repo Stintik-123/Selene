@@ -91,6 +91,12 @@ namespace Selene
             if (!Ready(api)) throw new InvalidOperationException("the Ludusavi add-on still doesn't point at " + program);
         }
 
+        // the slow part of Setup (the download), safe to run off the UI thread; Setup then only points the add-on
+        public static void DownloadIfNeeded(IPlayniteAPI api)
+        {
+            if (!Ready(api) && OnPath() == null && !File.Exists(Exe)) Download();
+        }
+
         private static void Download()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;

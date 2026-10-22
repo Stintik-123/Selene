@@ -105,6 +105,17 @@ namespace Selene
             HomeNav.Log("shell: home");
         }
 
+        // brings the login layer back (switch profile, setup check, edit profile from the menu)
+        public static void ShowLogin()
+        {
+            var login = Part("AcceuilSettings");
+            if (login == null) return;
+            login.BeginAnimation(UIElement.OpacityProperty, null);
+            login.Opacity = 0;
+            login.Visibility = Visibility.Visible;
+            login.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
+
         // the login layer goes when the profile is picked (it was the theme plugin's job before)
         public static void HideLogin()
         {

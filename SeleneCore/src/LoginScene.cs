@@ -1,31 +1,31 @@
-// console-style login, built in code on top of the old theme's login (inserted as the bottom layer of LoginCenterShell, so the old theme's
-// clock stays and its own background is covered):
-//   scene : dark-blue blurry glow intro (first start only) -> drifting gold particles, soft spotlight from the top left,
-//           hazy floor glow
-//   stage 0 "Press the A button on your controller." with a breathing ring around an A button
-//   stage 1 "Welcome back, Matthew / Who's playing?" with "+ Add User" and the user's avatar (gold ring); A on the
-//           avatar lets the press through to the old theme (which unlocks and plays LoginConfirm.wav), B goes back.
-// Sounds (the theme's Audio folder): LoginPress.wav on "Press A", LoginSelect.wav when the profile is picked.
+// The login layer (AcceuilSettings in Main.xaml), built in code into LoginCenterShell:
+//   backdrop : the profile's wallpaper over the theme's gradient, a breathing accent spotlight, drifting particles
+//   first start of Playnite: logo intro (crescent crown rises in, its full moon glows, chime) ->
+//   no profiles yet: setup check -> profile steps (name, avatar, theme, background) -> Who's playing?
+//   otherwise: Who's playing? (A signs in, Add runs the profile steps, Y edits, X removes; power menu below)
+// The menu (Extensions) can bring it back for switching profile, editing the profile or the setup check.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace Selene
 {
     public static class LoginScene
     {
-        private static Grid scene, pressLayer, whoLayer;
+        private static Window window;
         private static FrameworkElement loginRoot;
-        private static int stage;            // 0 press, 1 who's playing
-        private static int whoIndex = 1;     // 0 add user, 1 avatar
-        private static Border addTile, avatarTile;
-        private static Ellipse avatarRing, addRing;
-        private static bool bootSoundPlayed, keysHooked;
-        private static MediaPlayer bootPlayer, blipPlayer;
+        private static Grid scene, stage;
+        private static Screen current;
+        private static bool keysHooked, introPlayed;
+        // what to show the next time the layer opens (set by the menu), instead of Who's playing?
+        private static Func<Screen> pending;
         private static readonly Random rnd = new Random(7);
 
         public static void Attach(Window w, FrameworkElement login)
@@ -33,21 +33,29 @@ namespace Selene
             try
             {
                 if (w == null || login == null) return;
+                window = w;
                 loginRoot = login;
-                // keyboard works too (Enter = A, Esc = B, arrows): not everyone has a controller plugged in
+                // keyboard works too (Enter = A, Esc = B, arrows, typing on the name step): not everyone has a controller
                 if (!keysHooked)
                 {
                     keysHooked = true;
-                    w.PreviewKeyDown += (s, e) =>
-                    {
-                        if (!IsActive) return;
-                        string b = e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Space ? "A"
-                                 : e.Key == System.Windows.Input.Key.Escape || e.Key == System.Windows.Input.Key.Back ? "B"
-                                 : e.Key == System.Windows.Input.Key.Left ? "DPadLeft" : e.Key == System.Windows.Input.Key.Right ? "DPadRight"
-                                 : e.Key == System.Windows.Input.Key.Up ? "DPadUp" : e.Key == System.Windows.Input.Key.Down ? "DPadDown" : null;
-                        if (b != null) { HandleButton(b); e.Handled = true; }
-                    };
+                    w.PreviewKeyDown += OnKey;
+                    w.PreviewTextInput += OnText;
                 }
+                var shell = HomeNav.FindByName(w, "LoginCenterShell") as Grid;
+                if (shell == null) { HomeNav.Log("login: LoginCenterShell not found"); return; }
+                if (scene == null)
+                {
+                    scene = BuildScene();
+                    Panel.SetZIndex(scene, -100);
+                    shell.Children.Insert(0, scene);
+                    HomeNav.Log("login: scene attached");
+                }
+                login.IsVisibleChanged += (s, e) =>
+                {
+                    if ((bool)e.NewValue) Open();
+                    else if (current != null) { current.Hidden(); stage.Children.Clear(); current = null; }
+                };
                 // developer switch: %TEMP%\selene-skip-login skips the login (to look at the home while building Selene)
                 if (System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-skip-login")))
                 {
@@ -55,132 +63,180 @@ namespace Selene
                     HomeNav.Log("login: skipped (developer switch)");
                     return;
                 }
-                var shell = HomeNav.FindByName(w, "LoginCenterShell") as Grid;
-                if (shell == null) { HomeNav.Log("login: LoginCenterShell not found"); return; }
-                if (scene == null)
-                {
-                    scene = BuildScene(w, shell);
-                    Panel.SetZIndex(scene, -100);
-                    shell.Children.Insert(0, scene);
-                    // the old theme's / the older Solaris-style login layout is replaced by ours
-                    foreach (var n in new[] { "SeleneSolarisLogin", "LoginHeaderBlock", "LoginProfileBlock" })
-                    {
-                        var el = HomeNav.FindByName(w, n) as UIElement;
-                        if (el != null) el.Visibility = Visibility.Collapsed;
-                    }
-                    HomeNav.Log("login: scene attached");
-                }
-                login.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) ResetToPress(); };
-                if (login.IsVisible) { ResetToPress(); PlayBoot(); }
+                if (login.IsVisible) Open();
+                DevKeys();
             }
-            catch (Exception ex) { HomeNav.Log("login attach failed: " + ex.Message); }
+            catch (Exception ex) { HomeNav.Log("login attach failed: " + ex); }
         }
 
-        public static bool IsActive { get { return loginRoot != null && loginRoot.IsVisible && scene != null; } }
+        public static bool IsActive { get { return loginRoot != null && loginRoot.IsVisible && scene != null && current != null; } }
 
-        // true = swallow the button (handled here); false = let it through (the final A unlocks the old theme's login)
+        // controller buttons (from HomeNav's input hook): everything goes to the screen while the login layer is up
         public static bool HandleButton(string pressed)
         {
             if (!IsActive) return false;
-            if (stage == 0)
-            {
-                if (pressed == "A" || pressed == "Start") { ShowWho(); return true; }
-                return true;  // nothing else on the press screen
-            }
-            bool up = pressed == "DPadUp" || pressed == "LeftStickUp", down = pressed == "DPadDown" || pressed == "LeftStickDown";
-            if (menuOpen)
-            {
-                if (pressed == "B") { ClosePowerMenu(); return true; }
-                if (up && menuIndex > 0) { menuIndex--; ShowMenuSelection(); Blip(); }
-                else if (down && menuIndex < PowerItems.Length - 1) { menuIndex++; ShowMenuSelection(); Blip(); }
-                else if (pressed == "A") RunPower(menuIndex);
-                return true;
-            }
-            if (pressed == "B") { ResetToPress(); Blip(); return true; }
-            if (down && whoIndex != 2) { Select(2); return true; }
-            if (up && whoIndex == 2) { Select(1); return true; }
-            if (whoIndex != 2 && (pressed == "DPadRight" || pressed == "LeftStickRight")) { Select(1); return true; }
-            if (pressed == "A")
-            {
-                if (whoIndex == 2) { OpenPowerMenu(); return true; }
-                if (whoIndex == 0) { Shake(addTile); return true; }  // adding users isn't a thing here
-                FadeOut(whoLayer, 260);
-                PlaySound(SelenePaths.ThemeAudio("LoginSelect.wav"), 0.9);  // profile picked: the theme's own sign-in sound
-                stage = 2;
-                SeleneShell.HideLogin();  // the login layer is Selene's own now
-                return true;
-            }
+            try { current.Handle(Ui.Normalize(pressed)); }
+            catch (Exception ex) { HomeNav.Log("login: " + pressed + " failed: " + ex); }
             return true;
         }
 
-        // ---------------- scene ----------------
-        private static Grid BuildScene(Window w, Grid shell)
+        private static void OnKey(object sender, KeyEventArgs e)
         {
-            var g = new Grid { IsHitTestVisible = false, ClipToBounds = true };
-            var bg = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
-            bg.GradientStops.Add(new GradientStop(Color.FromRgb(0x10, 0x2A, 0x5C), 0));
-            bg.GradientStops.Add(new GradientStop(Color.FromRgb(0x08, 0x17, 0x3A), 0.6));
-            bg.GradientStops.Add(new GradientStop(Color.FromRgb(0x03, 0x08, 0x18), 1));
-            g.Children.Add(new Border { Background = bg });
+            if (!IsActive || e.GetType().Name == "GameControllerInputEventArgs") return;
+            var key = e.Key == Key.System ? e.SystemKey : e.Key;
+            if (current.WantsText)
+            {
+                if (key == Key.Back) { current.Erase(); e.Handled = true; return; }
+                if (key == Key.Space) return;   // typed as text
+                if (key == Key.Enter) { HandleButton("Start"); e.Handled = true; return; }   // Enter = done
+            }
+            string b = key == Key.Enter || key == Key.Space ? "A"
+                     : key == Key.Escape || key == Key.Back ? "B"
+                     : key == Key.Left ? "DPadLeft" : key == Key.Right ? "DPadRight"
+                     : key == Key.Up ? "DPadUp" : key == Key.Down ? "DPadDown"
+                     : key == Key.Delete ? "X" : key == Key.F2 ? "Y" : key == Key.Tab ? "Start" : null;
+            if (b != null) { HandleButton(b); e.Handled = true; }
+        }
 
-            // soft spotlight from the top left, slowly breathing
+        private static void OnText(object sender, TextCompositionEventArgs e)
+        {
+            if (!IsActive || !current.WantsText || string.IsNullOrEmpty(e.Text) || char.IsControl(e.Text[0])) return;
+            current.Type(e.Text);
+            e.Handled = true;
+        }
+
+        // developer switch: %TEMP%\selene-dev-keys holds "<ms> <button>" pairs (e.g. "3000 A 800 DPadRight"), pressed in turn
+        // after start, to walk through the screens without a controller
+        private static void DevKeys()
+        {
+            var file = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-keys");
+            if (!System.IO.File.Exists(file)) return;
+            var parts = System.IO.File.ReadAllText(file).Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+            var queue = new Queue<string[]>();
+            for (int i = 0; i + 1 < parts.Length; i += 2) queue.Enqueue(new[] { parts[i], parts[i + 1] });
+            var timer = new DispatcherTimer();
+            Action next = null;
+            next = () =>
+            {
+                if (queue.Count == 0) return;
+                var step = queue.Peek();
+                int ms;
+                timer.Interval = TimeSpan.FromMilliseconds(int.TryParse(step[0], out ms) ? ms : 500);
+                timer.Start();
+            };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+                var step = queue.Dequeue();
+                HomeNav.Log("dev key " + step[1]);
+                if (step[1].StartsWith("type:") && current != null) current.Type(step[1].Substring(5));
+                else HandleButton(step[1]);
+                next();
+            };
+            next();
+        }
+
+        // ---------------- flow ----------------
+        private static void Open()
+        {
+            if (scene == null) return;
+            var next = pending;
+            pending = null;
+            if (next != null) Show(next(), 0);
+            else if (!introPlayed) { introPlayed = true; Show(new IntroScreen(), 0); }
+            else Show(Start(), 0);
+        }
+
+        // where the login starts after the intro
+        public static Screen Start()
+        {
+            if (Profiles.LoadError == null && Profiles.FirstRun) return new SetupScreen(true);
+            return new WhoScreen(null);
+        }
+
+        // switches screens: the old one slides out to one side and fades, the new one comes in from the other
+        // (dir 1 = forward, -1 = back, 0 = cross-fade)
+        public static void Show(Screen next, int dir)
+        {
+            var old = current;
+            current = next;
+            stage.Children.Add(next.Root);
+            if (old != null)
+            {
+                old.Hidden();
+                var r = old.Root;
+                r.IsHitTestVisible = false;
+                Ui.Slide(r, 0, -dir * 90, r.Opacity, 0, 240, () => stage.Children.Remove(r));
+            }
+            Ui.Slide(next.Root, dir * 90, 0, 0, 1, 320);
+            next.Shown();
+        }
+
+        // signed in (or carrying on without profiles): the layer fades away to the home
+        public static void Finish()
+        {
+            SeleneShell.HideLogin();
+        }
+
+        // menu actions: open the layer on a given screen
+        public static void OpenWith(Func<Screen> screen)
+        {
+            if (scene == null) return;
+            if (loginRoot.IsVisible) { Show(screen(), 1); return; }
+            pending = screen;
+            SeleneShell.ShowLogin();
+        }
+
+        // ---------------- backdrop ----------------
+        private static Grid BuildScene()
+        {
+            var g = new Grid { ClipToBounds = true };
+            var gradient = new Border();
+            gradient.SetResourceReference(Border.BackgroundProperty, "MainBackgourndBrush");
+            g.Children.Add(gradient);
+            var wallpaper = new Image { Stretch = Stretch.UniformToFill };
+            wallpaper.SetResourceReference(Image.SourceProperty, "SeleneWallpaper");
+            RenderOptions.SetBitmapScalingMode(wallpaper, BitmapScalingMode.HighQuality);
+            g.Children.Add(wallpaper);
+            g.Children.Add(new Border { Background = Ink.Brush("SeleneScrimColor", 0.5) });
+
+            // soft spotlight in the theme's accent from the top left, slowly breathing
             var spot = new RadialGradientBrush { Center = new Point(0.16, -0.12), GradientOrigin = new Point(0.16, -0.12), RadiusX = 0.62, RadiusY = 1.15 };
-            spot.GradientStops.Add(new GradientStop(Color.FromArgb(0x60, 0xB8, 0xD8, 0xFF), 0));
-            spot.GradientStops.Add(new GradientStop(Color.FromArgb(0x22, 0x7F, 0xB2, 0xFF), 0.45));
-            spot.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, 0x7F, 0xB2, 0xFF), 1));
+            spot.GradientStops.Add(Ink.Stop("GlyphColor", 0.36, 0));
+            spot.GradientStops.Add(Ink.Stop("GlyphColor", 0.12, 0.45));
+            spot.GradientStops.Add(Ink.Stop("GlyphColor", 0, 1));
             var spotLayer = new Border { Background = spot };
             spotLayer.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.75, 1, TimeSpan.FromSeconds(9)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase() });
             g.Children.Add(spotLayer);
 
             // hazy floor glow
             var haze = new RadialGradientBrush { Center = new Point(0.5, 1.02), GradientOrigin = new Point(0.5, 1.02), RadiusX = 0.95, RadiusY = 0.34 };
-            haze.GradientStops.Add(new GradientStop(Color.FromArgb(0x40, 0x4A, 0x8C, 0xE8), 0));
-            haze.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, 0x4A, 0x8C, 0xE8), 1));
+            haze.GradientStops.Add(Ink.Stop("GlyphColor", 0.22, 0));
+            haze.GradientStops.Add(Ink.Stop("GlyphColor", 0, 1));
             g.Children.Add(new Border { Background = haze });
 
-            // drifting particles (gold + a few white), and a handful of big soft bokeh
-            var canvas = new Canvas();
+            var canvas = new Canvas { IsHitTestVisible = false };
             g.Children.Add(canvas);
             g.SizeChanged += (s, e) => { if (canvas.Children.Count == 0 && e.NewSize.Width > 0) FillParticles(canvas, e.NewSize); };
 
-            pressLayer = BuildPress();
-            g.Children.Add(pressLayer);
-            whoLayer = BuildWho(w);
-            g.Children.Add(whoLayer);
-
-            // first start: dark blue blurry glow fading into the scene (console boot)
-            if (!bootSoundPlayed)
-            {
-                var intro = new Grid { Background = new SolidColorBrush(Color.FromRgb(0x05, 0x0D, 0x15)), IsHitTestVisible = false };
-                foreach (var b in new[] { new double[] { 0.30, 0.45, 0.55 }, new double[] { 0.62, 0.40, 0.70 }, new double[] { 0.80, 0.70, 0.45 }, new double[] { 0.15, 0.80, 0.40 } })
-                {
-                    var br = new RadialGradientBrush { Center = new Point(b[0], b[1]), GradientOrigin = new Point(b[0], b[1]), RadiusX = b[2] * 0.6, RadiusY = b[2] };
-                    br.GradientStops.Add(new GradientStop(Color.FromArgb(0x90, 0x1E, 0x4A, 0x68), 0));
-                    br.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, 0x1E, 0x4A, 0x68), 1));
-                    intro.Children.Add(new Border { Background = br });
-                }
-                g.Children.Add(intro);
-                intro.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(2400)) { BeginTime = TimeSpan.FromMilliseconds(900), EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
-            }
+            stage = new Grid();
+            g.Children.Add(stage);
             return g;
         }
 
         private static void FillParticles(Canvas canvas, Size size)
         {
-            for (int i = 0; i < 90; i++)
+            for (int i = 0; i < 80; i++)
             {
-                bool bokeh = i < 12;
+                bool bokeh = i < 10;
                 double d = bokeh ? 14 + rnd.NextDouble() * 34 : 2 + rnd.NextDouble() * 5;
-                bool gold = rnd.NextDouble() < 0.72;
-                var c = gold ? Color.FromRgb(0x9C, 0xCB, 0xFF) : Color.FromRgb(0xFF, 0xFF, 0xFF);  // light blue + white
+                var key = rnd.NextDouble() < 0.72 ? "GlyphColor" : "SeleneInkColor";
                 var fill = new RadialGradientBrush();
-                fill.GradientStops.Add(new GradientStop(Color.FromArgb((byte)(bokeh ? 0x55 : 0xF0), c.R, c.G, c.B), 0));
-                fill.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, c.R, c.G, c.B), 1));
+                fill.GradientStops.Add(Ink.Stop(key, bokeh ? 0.33 : 0.94, 0));
+                fill.GradientStops.Add(Ink.Stop(key, 0, 1));
                 var dot = new Ellipse { Width = d, Height = d, Fill = fill };
-                // mostly in the lower half and along the spotlight, like a console
-                double x = rnd.NextDouble() * size.Width;
-                double y = size.Height * (0.25 + rnd.NextDouble() * 0.75);
-                Canvas.SetLeft(dot, x); Canvas.SetTop(dot, y);
+                Canvas.SetLeft(dot, rnd.NextDouble() * size.Width);
+                Canvas.SetTop(dot, size.Height * (0.25 + rnd.NextDouble() * 0.75));
                 var tr = new TranslateTransform();
                 dot.RenderTransform = tr;
                 double dur = 16 + rnd.NextDouble() * 18;
@@ -197,298 +253,306 @@ namespace Selene
                 canvas.Children.Add(dot);
             }
         }
+    }
 
-        // ---------------- stage 0: press A ----------------
-        private static Grid BuildPress()
+    // ---------------- logo intro ----------------
+    // about 2.6 s: the crescent crown rises in, the full moon's glow breathes once, a chime, then on to the next screen
+    public class IntroScreen : Screen
+    {
+        private readonly FrameworkElement content;
+        private readonly UIElement glow;
+        private DispatcherTimer timer;
+        private bool done;
+
+        public IntroScreen()
         {
-            var g = new Grid();
-            var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 40, 0, 0) };
-            stack.Children.Add(new TextBlock { Text = "Press the A button on your controller.", FontSize = 26, FontFamily = new FontFamily("Segoe UI"), Foreground = new SolidColorBrush(Color.FromArgb(0xE0, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Center });
-            var ringHost = new Grid { Width = 220, Height = 220, Margin = new Thickness(0, 46, 0, 0), HorizontalAlignment = HorizontalAlignment.Center };
-            for (int i = 0; i < 2; i++)
-            {
-                var ring = new Ellipse { Width = 74, Height = 74, Stroke = Brushes.White, StrokeThickness = 2, Opacity = 0, RenderTransformOrigin = new Point(0.5, 0.5) };
-                var sc = new ScaleTransform(1, 1);
-                ring.RenderTransform = sc;
-                var begin = TimeSpan.FromMilliseconds(i * 1100);
-                var dur = TimeSpan.FromMilliseconds(2200);
-                sc.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 2.4, dur) { BeginTime = begin, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-                sc.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 2.4, dur) { BeginTime = begin, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-                ring.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.85, 0, dur) { BeginTime = begin, RepeatBehavior = RepeatBehavior.Forever });
-                ringHost.Children.Add(ring);
-            }
-            var button = new Grid { Width = 74, Height = 74 };
-            button.Children.Add(new Ellipse { Fill = Brushes.White, Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 24, Color = Colors.White, Opacity = 0.45 } });
-            button.Children.Add(new TextBlock { Text = "A", FontSize = 36, FontWeight = FontWeights.SemiBold, FontFamily = new FontFamily("Segoe UI"), Foreground = new SolidColorBrush(Color.FromRgb(0x1A, 0x1C, 0x20)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -3, 0, 0) });
-            ringHost.Children.Add(button);
-            stack.Children.Add(ringHost);
-            g.Children.Add(stack);
-            return g;
+            var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            UIElement halo;
+            col.Children.Add(Ui.Mark(190, out halo));
+            glow = halo;
+            var word = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(16, 26, 0, 0) };
+            foreach (var c in "SELENE")
+                word.Children.Add(new TextBlock { Text = c.ToString(), FontSize = 30, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(0, 0, 16, 0) });
+            col.Children.Add(word);
+            content = col;
+            Root.Children.Add(col);
         }
 
-        // ---------------- stage 1: who's playing ----------------
-        private static Grid BuildWho(Window w)
+        public override void Shown()
         {
-            var g = new Grid { Visibility = Visibility.Collapsed, Opacity = 0 };
-            var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -30, 0, 0) };
-            col.Children.Add(new TextBlock { Text = "Welcome back", FontSize = 40, FontFamily = new FontFamily("Segoe UI Variable Display"), Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center });
-            col.Children.Add(new TextBlock { Text = "Who's using this controller?", FontSize = 22, FontFamily = new FontFamily("Segoe UI"), Foreground = new SolidColorBrush(Color.FromArgb(0xB0, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 10, 0, 0) });
+            Ui.Rise(content, 120, 16, 900);
+            var breathe = new DoubleAnimationUsingKeyFrames();
+            breathe.KeyFrames.Add(new LinearDoubleKeyFrame(0.4, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            breathe.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1300)), new SineEase { EasingMode = EasingMode.EaseInOut }));
+            breathe.KeyFrames.Add(new EasingDoubleKeyFrame(0.7, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2400)), new SineEase { EasingMode = EasingMode.EaseInOut }));
+            glow.BeginAnimation(UIElement.OpacityProperty, breathe);
+            int ticks = 0;
+            timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+            timer.Tick += (s, e) =>
+            {
+                ticks++;
+                if (ticks == 1) Ui.Chime();
+                if (ticks >= 6) Next();
+            };
+            timer.Start();
+        }
 
+        public override void Handle(string button)
+        {
+            if (button == "A" || button == "B" || button == "Start") Next();
+        }
+
+        public override void Hidden() { if (timer != null) timer.Stop(); }
+
+        private void Next()
+        {
+            if (done) return;
+            done = true;
+            timer.Stop();
+            LoginScene.Show(LoginScene.Start(), 0);
+        }
+    }
+
+    // ---------------- Who's playing? ----------------
+    public class WhoScreen : Screen
+    {
+        private readonly List<Profile> profiles;
+        private readonly List<Tile> tiles = new List<Tile>();
+        private readonly List<FrameworkElement> items = new List<FrameworkElement>();
+        private readonly Tile power;
+        private readonly Border menu;
+        private readonly List<Border> menuRows = new List<Border>();
+        private readonly TextBlock hint;
+        private int index;            // profiles, then Add (or Continue when profiles couldn't load)
+        private bool onPower, menuOpen, leaving;
+        private int menuIndex;
+        private Guid removeArmed = Guid.Empty;
+        private DateTime removeArmedAt;
+
+        // glyph (Segoe MDL2 Assets), label, helper command, built-in fallback
+        private static readonly string[][] PowerItems = {
+            new[] { "\uE708", "Sleep", "power-sleep", "rundll32.exe|powrprof.dll,SetSuspendState 0,1,0" },
+            new[] { "\uE777", "Restart", "power-restart", "shutdown.exe|/r /t 0" },
+            new[] { "\uE7E8", "Shut down", "power-off", "shutdown.exe|/s /t 0" } };
+
+        public WhoScreen(Guid? focus)
+        {
+            profiles = Profiles.All.ToList();
+            var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -60, 0, 0) };
+            col.Children.Add(Ui.Title("Who's playing?"));
+            if (Profiles.LoadError != null)
+                col.Children.Add(Ui.Sub("Profiles couldn't be loaded (" + Profiles.LoadError + "). You can still play; nothing is saved this time."));
             var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 70, 0, 0) };
-            // + Add User
-            var addCol = new StackPanel { Margin = new Thickness(0, 0, 70, 0) };
-            var addGrid = new Grid { Width = 170, Height = 170 };
-            addTile = new Border { CornerRadius = new CornerRadius(85), Background = new SolidColorBrush(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)), RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = new ScaleTransform(1, 1) };
-            addTile.Child = new TextBlock { Text = "+", FontSize = 70, FontWeight = FontWeights.Light, Foreground = new SolidColorBrush(Color.FromArgb(0xD0, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -8, 0, 0) };
-            addRing = new Ellipse { Stroke = Brushes.White, StrokeThickness = 5, Margin = new Thickness(-8), Opacity = 0 };
-            addGrid.Children.Add(addTile); addGrid.Children.Add(addRing);
-            addCol.Children.Add(addGrid);
-            addCol.Children.Add(new TextBlock { Text = "Add User", FontSize = 22, FontFamily = new FontFamily("Segoe UI"), Foreground = new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 0) });
-            // (no "Add User": Playnite has a single profile - a button that did nothing; user chose to remove it)
-
-            // the user's avatar (the old theme's animated-avatar template, same picture as its login)
-            var avCol = new StackPanel { Margin = new Thickness(0, -46, 0, 0) };
-            var badge = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 14) };
-            badge.Children.Add(new TextBlock { Text = "1", FontSize = 13, FontFamily = new FontFamily("Segoe UI"), Foreground = new SolidColorBrush(Color.FromArgb(0xC0, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Center });
-            badge.Children.Add(new TextBlock { Text = "\uE7FC", FontSize = 22, FontFamily = new FontFamily("Segoe MDL2 Assets"), Foreground = new SolidColorBrush(Color.FromArgb(0xC0, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Center });
-            avCol.Children.Add(badge);
-            var avGrid = new Grid { Width = 210, Height = 210 };
-            avatarTile = new Border { CornerRadius = new CornerRadius(105), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x11, 0x11, 0x11)), RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = new ScaleTransform(1.08, 1.08) };
-            try
-            {
-                // the user's picture: Selene Core's setting, else the Steam account's avatar
-                var pic = SelenePaths.AvatarImage;
-                if (pic != null && System.IO.File.Exists(pic))
-                {
-                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
-                    bmp.BeginInit(); bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bmp.DecodePixelWidth = 420; bmp.UriSource = new Uri(pic); bmp.EndInit(); bmp.Freeze();
-                    avatarTile.Child = new Image { Source = bmp, Stretch = Stretch.UniformToFill, Width = 210, Height = 210, Clip = new EllipseGeometry(new Point(105, 105), 105, 105) };
-                }
-            }
-            catch (Exception ex) { HomeNav.Log("login avatar: " + ex.Message); }
-            if (avatarTile.Child == null)
-            {
-                var silhouette = new Canvas { Width = 96, Height = 96 };
-                var fill = new SolidColorBrush(Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF));
-                silhouette.Children.Add(new Ellipse { Width = 40, Height = 40, Fill = fill, Margin = new Thickness(28, 6, 0, 0) });
-                silhouette.Children.Add(new System.Windows.Shapes.Path
-                {
-                    Fill = fill,
-                    Data = Geometry.Parse("M 8,96 A 40,36 0 0 1 88,96 Z")
-                });
-                avatarTile.Child = silhouette;
-            }
-            avatarRing = new Ellipse { Stroke = Brushes.White, StrokeThickness = 5, Margin = new Thickness(-10), Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 22, Color = Color.FromRgb(0x6F, 0xB4, 0xFF), Opacity = 0.8 } };
-            avGrid.Children.Add(avatarTile); avGrid.Children.Add(avatarRing);
-            avCol.Children.Add(avGrid);
-            var userName = SelenePaths.UserName;
-            avCol.Children.Add(new TextBlock { Text = userName, FontSize = 26, FontFamily = new FontFamily("Segoe UI"), Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 24, 0, 0) });
-            row.Children.Add(avCol);
+            foreach (var p in profiles) AddItem(row, Avatar(p, 170), p.Name, Accent(p));
+            if (Profiles.LoadError != null) AddItem(row, Glyph("\uE72A", 54), "Continue", null);
+            else AddItem(row, Glyph("\uE710", 60), "Add", null);
             col.Children.Add(row);
-            g.Children.Add(col);
+            hint = Ui.Text("", 18, 0.6);
+            hint.Margin = new Thickness(0, 34, 0, 0);
+            col.Children.Add(hint);
+            Root.Children.Add(col);
 
-            // bottom centre: power button (Down from the profiles), A opens Sleep / Restart / Shut down
-            var powerGrid = new Grid { Width = 64, Height = 64, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 56) };
-            powerTile = new Border { CornerRadius = new CornerRadius(32), Background = new SolidColorBrush(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)), RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = new ScaleTransform(1, 1) };
-            powerTile.Child = new TextBlock { Text = "\uE7E8", FontSize = 24, FontFamily = new FontFamily("Segoe MDL2 Assets"), Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            powerRing = new Ellipse { Stroke = Brushes.White, StrokeThickness = 3, Margin = new Thickness(-6), Opacity = 0 };
-            powerGrid.Children.Add(powerTile); powerGrid.Children.Add(powerRing);
-            g.Children.Add(powerGrid);
-
-            powerMenu = new Border { CornerRadius = new CornerRadius(14), Background = new SolidColorBrush(Color.FromArgb(0xF0, 0x14, 0x22, 0x44)), BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1),
-                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 140), Padding = new Thickness(8), Width = 320, Visibility = Visibility.Collapsed, Opacity = 0 };
+            // power button, bottom centre (Down from the profiles): Sleep / Restart / Shut down
+            power = new Tile(64, 64, 32, 5);
+            power.Face.Child = new TextBlock { Text = "\uE7E8", FontSize = 24, FontFamily = Ui.Glyphs, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            power.Root.HorizontalAlignment = HorizontalAlignment.Center;
+            power.Root.VerticalAlignment = VerticalAlignment.Bottom;
+            power.Root.Margin = new Thickness(0, 0, 0, 56);
+            Root.Children.Add(power.Root);
+            menu = new Border
+            {
+                CornerRadius = new CornerRadius(16), Background = Ink.Brush("SeleneGlassColor", 0.94), BorderBrush = Ink.Brush("SeleneInkColor", 0.2), BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 140),
+                Padding = new Thickness(8), Width = 320, Visibility = Visibility.Collapsed
+            };
             var menuStack = new StackPanel();
-            menuRows.Clear();
             foreach (var item in PowerItems)
             {
-                var rowB = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(18, 12, 18, 12) };
-                var rowS = new StackPanel { Orientation = Orientation.Horizontal };
-                rowS.Children.Add(new TextBlock { Text = item[0], FontSize = 20, FontFamily = new FontFamily("Segoe MDL2 Assets"), Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Width = 36 });
-                rowS.Children.Add(new TextBlock { Text = item[1], FontSize = 22, FontFamily = new FontFamily("Segoe UI"), Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center });
-                rowB.Child = rowS;
-                menuRows.Add(rowB);
-                menuStack.Children.Add(rowB);
+                var r = new Border { CornerRadius = new CornerRadius(10), Padding = new Thickness(18, 12, 18, 12) };
+                var rs = new StackPanel { Orientation = Orientation.Horizontal };
+                rs.Children.Add(new TextBlock { Text = item[0], FontSize = 20, FontFamily = Ui.Glyphs, VerticalAlignment = VerticalAlignment.Center, Width = 36 });
+                rs.Children.Add(new TextBlock { Text = item[1], FontSize = 22, FontFamily = Ui.Body, VerticalAlignment = VerticalAlignment.Center });
+                r.Child = rs;
+                menuRows.Add(r);
+                menuStack.Children.Add(r);
             }
-            powerMenu.Child = menuStack;
-            g.Children.Add(powerMenu);
+            menu.Child = menuStack;
+            Root.Children.Add(menu);
 
-            // bottom right: (A) Select
-            var hint = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 60, 50) };
-            var aDot = new Grid { Width = 34, Height = 34 };
-            aDot.Children.Add(new Ellipse { Fill = Brushes.White });
-            aDot.Children.Add(new TextBlock { Text = "A", FontSize = 18, FontWeight = FontWeights.SemiBold, Foreground = new SolidColorBrush(Color.FromRgb(0x1A, 0x1C, 0x20)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
-            hint.Children.Add(aDot);
-            hint.Children.Add(new TextBlock { Text = "Select", FontSize = 22, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) });
-            g.Children.Add(hint);
+            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Select")));
+            if (profiles.Count > 0) Root.Children.Add(Ui.Prompts(false, Ui.Prompt("Y", "Edit profile"), Ui.Prompt("X", "Remove")));
+
+            var active = Profiles.Active;
+            var want = focus ?? (active != null ? active.Id : Guid.Empty);
+            index = Math.Max(0, profiles.FindIndex(p => p.Id == want));
+        }
+
+        private void AddItem(Panel row, FrameworkElement face, string name, Color? accent)
+        {
+            var tile = new Tile(170, 170, 85, 9) { FocusScale = 1.1 };
+            tile.Face.Child = face;
+            tile.Face.ClipToBounds = true;
+            if (accent.HasValue) tile.Tint(accent.Value);
+            var item = new StackPanel { Margin = new Thickness(28, 0, 28, 0) };
+            item.Children.Add(tile.Root);
+            item.Children.Add(new TextBlock { Text = name, FontSize = 24, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 26, 0, 0), MaxWidth = 220, TextTrimming = TextTrimming.CharacterEllipsis });
+            row.Children.Add(item);
+            tiles.Add(tile);
+            items.Add(item);
+        }
+
+        // each profile glows in its own theme's accent
+        private static Color? Accent(Profile p)
+        {
+            var theme = ThemePalettes.Find(string.IsNullOrEmpty(p.Theme) ? ThemePalettes.DefaultId : p.Theme);
+            if (theme == null || string.IsNullOrEmpty(theme.Accent)) return null;
+            try { return (Color)ColorConverter.ConvertFromString(theme.Accent); } catch (FormatException) { return null; }
+        }
+
+        public static FrameworkElement Avatar(Profile p, double size)
+        {
+            var pic = Wallpapers.Load(Profiles.AvatarFile(p), (int)(size * 2));
+            if (pic != null) return new Ellipse { Width = size, Height = size, Fill = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } };
+            // no picture: the first letter on the profile's accent
+            var g = new Grid { Width = size, Height = size };
+            var accent = Accent(p);
+            g.Children.Add(new Ellipse { Fill = accent.HasValue ? new SolidColorBrush(accent.Value) : (Brush)Ink.Brush("GlyphColor") });
+            g.Children.Add(new TextBlock { Text = string.IsNullOrEmpty(p.Name) ? "?" : p.Name.Substring(0, 1).ToUpperInvariant(), FontSize = size * 0.42, FontFamily = Ui.Display, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
             return g;
         }
 
-        // ---------------- transitions ----------------
-        private static Border powerTile, powerMenu;
-        private static Ellipse powerRing;
-        private static readonly List<Border> menuRows = new List<Border>();
-        private static bool menuOpen;
-        private static int menuIndex;
-        // glyph (Segoe MDL2 Assets), label, ConsoleHelper command
-        private static readonly string[][] PowerItems = {
-            new[] { "\uE708", "Sleep", "power-sleep" },
-            new[] { "\uE777", "Restart", "power-restart" },
-            new[] { "\uE7E8", "Shut Down", "power-off" } };
-
-        private static string ConsoleName()
+        private static FrameworkElement Glyph(string glyph, double size)
         {
-            var n = (Environment.MachineName ?? "").ToLowerInvariant();
-            return n.Length == 0 ? "Console" : char.ToUpperInvariant(n[0]) + n.Substring(1);
+            return new TextBlock { Text = glyph, FontSize = size, FontFamily = Ui.Glyphs, Foreground = Ink.Brush("SeleneInkColor", 0.85), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         }
 
-        private static void OpenPowerMenu()
+        public override void Shown()
         {
-            menuOpen = true; menuIndex = 0;
-            ShowMenuSelection();
-            powerMenu.Visibility = Visibility.Visible;
-            FadeIn(powerMenu, 200, 0);
-            var rise = new TranslateTransform(0, 14);
-            powerMenu.RenderTransform = rise;
-            rise.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(14, 0, TimeSpan.FromMilliseconds(260)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-            PlaySound(ThemeAudio("OpenPanel.wav"), 0.8);
+            for (int i = 0; i < items.Count; i++) Ui.Rise(items[i], 160 + i * 55);
+            Ui.Rise(power.Root, 200 + items.Count * 55);
+            ShowFocus();
         }
 
-        private static void ClosePowerMenu()
+        private void ShowFocus()
         {
-            if (!menuOpen) return;
-            menuOpen = false;
-            FadeOut(powerMenu, 160);
-            PlaySound(ThemeAudio("CloseAdditionalView.wav"), 0.8);
+            for (int i = 0; i < tiles.Count; i++) tiles[i].Focus(!onPower && i == index);
+            power.Focus(onPower);
+            hint.Text = onPower ? "Sleep, restart or shut down" : "";
         }
 
-        private static void ShowMenuSelection()
+        public override void Handle(string b)
+        {
+            if (leaving) return;
+            if (menuOpen) { HandleMenu(b); return; }
+            if (b == "DPadDown" && !onPower) { onPower = true; Ui.Tick(); ShowFocus(); return; }
+            if (b == "DPadUp" && onPower) { onPower = false; Ui.Tick(); ShowFocus(); return; }
+            if (!onPower && (b == "DPadLeft" || b == "DPadRight"))
+            {
+                int next = index + (b == "DPadLeft" ? -1 : 1);
+                if (next < 0 || next >= tiles.Count) return;
+                index = next;
+                removeArmed = Guid.Empty;
+                Ui.Tick();
+                ShowFocus();
+                return;
+            }
+            if (b == "A")
+            {
+                if (onPower) { OpenMenu(); return; }
+                if (index < profiles.Count) { SignIn(index); return; }
+                Ui.Confirm();
+                if (Profiles.LoadError != null) { leaving = true; LoginScene.Finish(); return; }
+                LoginScene.Show(new ProfileSteps(null, () => new WhoScreen(null)), 1);
+                return;
+            }
+            if (onPower || index >= profiles.Count) return;
+            if (b == "Y") { Ui.Confirm(); LoginScene.Show(new ProfileSteps(profiles[index], () => new WhoScreen(profiles[index].Id)), 1); return; }
+            if (b == "X") Remove(profiles[index]);
+        }
+
+        private void SignIn(int i)
+        {
+            leaving = true;
+            Ui.Play("LoginSelect.wav", 0.9);
+            for (int k = 0; k < items.Count; k++) if (k != i) Ui.Fade(items[k], 0, 220);
+            Ui.ScaleTo(tiles[i].Root, 1.22, 380);
+            Profiles.SignIn(profiles[i].Id);
+            var later = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
+            later.Tick += (s, e) => { later.Stop(); LoginScene.Finish(); };
+            later.Start();
+        }
+
+        // X twice: removes the profile (its favorites and playtime go with it; the games stay)
+        private void Remove(Profile p)
+        {
+            if (removeArmed != p.Id || (DateTime.Now - removeArmedAt).TotalSeconds > 4)
+            {
+                removeArmed = p.Id;
+                removeArmedAt = DateTime.Now;
+                hint.Text = "Press X again to remove " + p.Name + " (favorites and playtime go with it; games stay)";
+                Ui.Shake(items[index]);
+                Ui.Back();
+                return;
+            }
+            Profiles.Remove(p.Id);
+            Ui.Back();
+            LoginScene.Show(Profiles.FirstRun ? (Screen)new ProfileSteps(null, () => new WhoScreen(null)) : new WhoScreen(null), 0);
+        }
+
+        private void OpenMenu()
+        {
+            menuOpen = true;
+            menuIndex = 0;
+            ShowMenu();
+            menu.Visibility = Visibility.Visible;
+            Ui.Rise(menu, 0, 14, 240);
+            Ui.Play("OpenPanel.wav", 0.8);
+        }
+
+        private void ShowMenu()
         {
             for (int i = 0; i < menuRows.Count; i++)
-                menuRows[i].Background = i == menuIndex ? new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)) : Brushes.Transparent;
+            {
+                bool on = i == menuIndex;
+                menuRows[i].Background = on ? (Brush)Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
+                foreach (TextBlock t in ((StackPanel)menuRows[i].Child).Children)
+                    t.Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor");
+            }
         }
 
-        private static void RunPower(int i)
+        private void HandleMenu(string b)
         {
-            var cmd = PowerItems[i][2];
-            HomeNav.Log("login: power menu -> " + PowerItems[i][1]);
-            ClosePowerMenu();
+            if (b == "B")
+            {
+                menuOpen = false;
+                Ui.Fade(menu, 0, 160, 0, () => { if (!menuOpen) menu.Visibility = Visibility.Collapsed; });
+                Ui.Back();
+            }
+            else if (b == "DPadUp" && menuIndex > 0) { menuIndex--; Ui.Tick(); ShowMenu(); }
+            else if (b == "DPadDown" && menuIndex < menuRows.Count - 1) { menuIndex++; Ui.Tick(); ShowMenu(); }
+            else if (b == "A") RunPower(menuIndex);
+        }
+
+        private void RunPower(int i)
+        {
+            var item = PowerItems[i];
+            HomeNav.Log("login: power menu -> " + item[1]);
+            Ui.Confirm();
+            menuOpen = false;
+            menu.Visibility = Visibility.Collapsed;
             try
             {
-                // the helper also turns the TV off first (like rest mode)
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SelenePaths.Helper, cmd) { UseShellExecute = false, CreateNoWindow = true });
+                // the optional companion helper does it its own way (e.g. turns the TV off first); else Windows' own commands
+                var helper = SelenePaths.Helper;
+                var parts = item[3].Split('|');
+                var start = !string.IsNullOrEmpty(helper) && System.IO.File.Exists(helper)
+                    ? new System.Diagnostics.ProcessStartInfo(helper, item[2])
+                    : new System.Diagnostics.ProcessStartInfo(parts[0], parts[1]);
+                start.UseShellExecute = false;
+                start.CreateNoWindow = true;
+                System.Diagnostics.Process.Start(start);
             }
             catch (Exception ex) { HomeNav.Log("login power failed: " + ex.Message); }
-        }
-
-        private static void ResetToPress()
-        {
-            stage = 0; whoIndex = 1;
-            menuOpen = false;
-            if (powerMenu != null) { powerMenu.BeginAnimation(UIElement.OpacityProperty, null); powerMenu.Opacity = 0; powerMenu.Visibility = Visibility.Collapsed; }
-            if (whoLayer != null) { whoLayer.BeginAnimation(UIElement.OpacityProperty, null); whoLayer.Opacity = 0; whoLayer.Visibility = Visibility.Collapsed; }
-            if (pressLayer != null) { pressLayer.Visibility = Visibility.Visible; FadeIn(pressLayer, 450, 0); }
-        }
-
-        private static void ShowWho()
-        {
-            stage = 1;
-            PlaySound(SelenePaths.ThemeAudio("LoginPress.wav"), 0.9);  // Press A: the old theme's original login sound (user's choice)
-            FadeOut(pressLayer, 300);
-            whoLayer.Visibility = Visibility.Visible;
-            Select(1);
-            FadeIn(whoLayer, 520, 220);
-            var rise = new TranslateTransform(0, 24);
-            whoLayer.RenderTransform = rise;
-            rise.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(24, 0, TimeSpan.FromMilliseconds(700)) { BeginTime = TimeSpan.FromMilliseconds(220), EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } });
-        }
-
-        private static void Select(int i)
-        {
-            if (avatarTile == null) return;
-            if (i != whoIndex) Blip();
-            whoIndex = i;
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            Action<Border, Ellipse, bool> look = (tile, ring, on) =>
-            {
-                var sc = tile.RenderTransform as ScaleTransform;
-                if (sc != null)
-                {
-                    sc.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(on ? 1.08 : 0.94, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
-                    sc.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(on ? 1.08 : 0.94, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
-                }
-                ring.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(on ? 1 : 0, TimeSpan.FromMilliseconds(200)));
-            };
-            look(addTile, addRing, i == 0);
-            look(avatarTile, avatarRing, i == 1);
-            if (powerTile != null) look(powerTile, powerRing, i == 2);
-        }
-
-        private static void Shake(FrameworkElement el)
-        {
-            var tr = new TranslateTransform();
-            var group = new TransformGroup();
-            if (el.RenderTransform != null && el.RenderTransform != Transform.Identity) group.Children.Add(el.RenderTransform);
-            group.Children.Add(tr);
-            el.RenderTransform = group;
-            var a = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromMilliseconds(360) };
-            foreach (var kv in new[] { new[] { 0.0, 0 }, new[] { 0.15, -10 }, new[] { 0.35, 9 }, new[] { 0.55, -6 }, new[] { 0.75, 4 }, new[] { 1.0, 0 } })
-                a.KeyFrames.Add(new LinearDoubleKeyFrame(kv[1], KeyTime.FromPercent(kv[0])));
-            tr.BeginAnimation(TranslateTransform.XProperty, a);
-        }
-
-        private static void FadeIn(UIElement el, int ms, int delay)
-        {
-            el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(delay), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-        }
-
-        private static void FadeOut(UIElement el, int ms)
-        {
-            if (el == null) return;
-            var a = new DoubleAnimation(0, TimeSpan.FromMilliseconds(ms)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
-            a.Completed += (s, e) => { if (el.Opacity < 0.01) el.Visibility = Visibility.Collapsed; };
-            el.BeginAnimation(UIElement.OpacityProperty, a);
-        }
-
-        // ---------------- sounds ----------------
-        private static void PlayBoot()
-        {
-            if (bootSoundPlayed) return;
-            bootSoundPlayed = true;
-            string path = SelenePaths.ThemeAudio("Boot.wav");
-            if (!System.IO.File.Exists(path)) return;
-            try { bootPlayer = new MediaPlayer(); bootPlayer.Open(new Uri(path)); bootPlayer.Volume = 0.9; bootPlayer.Play(); } catch { }
-        }
-
-        private static readonly List<MediaPlayer> playing = new List<MediaPlayer>();
-
-        private static void PlaySound(string path, double volume)
-        {
-            if (!System.IO.File.Exists(path)) return;
-            try
-            {
-                var mp = new MediaPlayer();
-                playing.Add(mp);  // kept alive until it finishes
-                mp.MediaEnded += (s, e) => { mp.Close(); playing.Remove(mp); };
-                mp.Open(new Uri(path)); mp.Volume = volume; mp.Play();
-            }
-            catch { }
-        }
-
-        private static string ThemeAudio(string file)
-        {
-            return SelenePaths.ThemeAudio(file);
-        }
-
-        private static void Blip()
-        {
-            var path = ThemeAudio("navigation.wav");
-            if (!System.IO.File.Exists(path)) return;
-            try
-            {
-                if (blipPlayer == null) { blipPlayer = new MediaPlayer(); blipPlayer.Open(new Uri(path)); }
-                blipPlayer.Position = TimeSpan.Zero; blipPlayer.Volume = 0.7; blipPlayer.Play();
-            }
-            catch { }
         }
     }
 }

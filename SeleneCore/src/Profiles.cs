@@ -51,6 +51,8 @@ namespace Selene
 
         public static void Init(string dataFolder)
         {
+            // developer switch: %TEMP%\selene-dev-profiles keeps profiles in a scratch folder (to try the first launch)
+            if (File.Exists(Path.Combine(Path.GetTempPath(), "selene-dev-profiles"))) dataFolder = Path.Combine(Path.GetTempPath(), "selene-dev-profiles-data");
             Directory.CreateDirectory(dataFolder);
             file = Path.Combine(dataFolder, "profiles.json");
             if (!File.Exists(file)) return;
@@ -112,6 +114,38 @@ namespace Selene
             store.ActiveId = id;
             Save();
             ApplyLook();
+        }
+
+        // saves changes made to a profile's fields (the profile steps in edit mode)
+        public static void Update(Profile profile)
+        {
+            Save();
+            if (Active == profile) ApplyLook();
+        }
+
+        public static void Remove(Guid id)
+        {
+            store.Profiles.RemoveAll(p => p.Id == id);
+            if (store.ActiveId == id) store.ActiveId = Guid.Empty;
+            Save();
+        }
+
+        // built-in avatars are kept as "Avatars/<file>" (the theme folder can move); pictures people add are full paths
+        public static string AvatarFile(Profile profile)
+        {
+            if (profile == null || string.IsNullOrEmpty(profile.Avatar)) return null;
+            if (Path.IsPathRooted(profile.Avatar)) return profile.Avatar;
+            return SelenePaths.ThemeFile(profile.Avatar.Split('/'));
+        }
+
+        // a picture someone picked (or their Steam avatar): copied into Selene Core's data so it survives the original moving
+        public static string KeepPicture(string source)
+        {
+            var folder = Path.Combine(SelenePaths.DataFolder, "avatars");
+            Directory.CreateDirectory(folder);
+            var target = Path.Combine(folder, Guid.NewGuid().ToString("N") + Path.GetExtension(source));
+            File.Copy(source, target);
+            return target;
         }
 
         public static void SetTheme(string theme)
@@ -181,7 +215,7 @@ namespace Selene
         public static readonly string[] HomeBackgrounds = { "blend", "art", "wallpaper" };
 
         // blend uses theme\Constants.xaml's values; the other looks override them
-        private static void ApplyHomeBackground(string look)
+        public static void ApplyHomeBackground(string look)
         {
             var res = Application.Current.Resources;
             foreach (var key in new[] { "SeleneArtOpacity", "SeleneArtMask", "SeleneTintOpacity" }) res.Remove(key);

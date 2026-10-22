@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -67,6 +67,20 @@ namespace Selene
         {
             // store imports mark deleted games installed again: folder gone = not installed
             if (Active) LocalGames.MarkGoneFolders();
+        }
+
+        // Extensions menu: back to Who's playing?, the profile steps for the signed-in profile, or the setup check
+        public override IEnumerable<MainMenuItem> GetMainMenuItems(GetMainMenuItemsArgs args)
+        {
+            if (!Active) yield break;
+            yield return new MainMenuItem { MenuSection = "@Selene", Description = "Switch profile", Action = a => LoginScene.OpenWith(() => new WhoScreen(null)) };
+            if (Profiles.Active != null)
+                yield return new MainMenuItem
+                {
+                    MenuSection = "@Selene", Description = "Edit profile (name, avatar, theme, background)",
+                    Action = a => { var p = Profiles.Active; if (p != null) LoginScene.OpenWith(() => new ProfileSteps(p, null, q => LoginScene.Finish())); }
+                };
+            yield return new MainMenuItem { MenuSection = "@Selene", Description = "Setup check", Action = a => LoginScene.OpenWith(() => new SetupScreen(false)) };
         }
 
         public override ISettings GetSettings(bool firstRunSettings) { return settings; }
