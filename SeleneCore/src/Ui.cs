@@ -56,7 +56,7 @@ namespace Selene
             var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(18, 0, 0, 0) };
             var dot = new Grid { Width = 32, Height = 32 };
             dot.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor") });
-            dot.Children.Add(new TextBlock { Text = button, FontSize = button.Length > 1 ? 11 : 16, FontWeight = FontWeights.SemiBold, FontFamily = Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            dot.Children.Add(new TextBlock { Text = button, FontSize = button.Length > 1 ? 11 : 16, FontWeight = FontWeights.SemiBold, FontFamily = Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });   // capitals sit low in their box
             sp.Children.Add(dot);
             sp.Children.Add(new TextBlock { Text = label, FontSize = 21, FontFamily = Body, Foreground = Ink.Brush("SeleneInkColor", 0.9), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) });
             return sp;
@@ -186,7 +186,7 @@ namespace Selene
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             var dot = new Grid { Width = 26, Height = 26 };
             dot.Children.Add(new Ellipse { Fill = main ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.9) });
-            dot.Children.Add(new TextBlock { Text = button, FontSize = 13, FontWeight = FontWeights.Bold, FontFamily = Body, Foreground = main ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            dot.Children.Add(new TextBlock { Text = button, FontSize = 13, FontWeight = FontWeights.Bold, FontFamily = Body, Foreground = main ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });   // capitals sit low in their box
             row.Children.Add(dot);
             row.Children.Add(new TextBlock { Text = label, FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Body, Foreground = main ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 4, 1) });
             return new Border
@@ -296,7 +296,7 @@ namespace Selene
             });
             var badge = new Grid { Width = 28, Height = 28, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             badge.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor", 0.9) });
-            badge.Children.Add(new TextBlock { Text = button, FontSize = 14, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            badge.Children.Add(new TextBlock { Text = button, FontSize = 14, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });   // capitals sit low in their box
             Root.Children.Add(badge);
         }
 

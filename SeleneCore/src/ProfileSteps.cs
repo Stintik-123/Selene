@@ -348,7 +348,7 @@ namespace Selene
                 g.Children.Add(label);
                 var badge = new Grid { Width = 22, Height = 22, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 5, 6, 0) };
                 badge.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor", 0.9) });
-                badge.Children.Add(new TextBlock { Text = button, FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+                badge.Children.Add(new TextBlock { Text = button, FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });   // capitals sit low in their box
                 g.Children.Add(badge);
                 return g;
             }

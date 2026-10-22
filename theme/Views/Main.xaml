@@ -412,7 +412,7 @@
                                                 <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
                                                     <Grid Width="32" Height="32">
                                                         <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
-                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
                                                     </Grid>
                                                     <TextBlock Text="Open your library" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
                                                 </StackPanel>
@@ -451,7 +451,7 @@
                                                 <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
                                                     <Grid Width="32" Height="32">
                                                         <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
-                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
                                                     </Grid>
                                                     <TextBlock Text="Choose a store" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
                                                 </StackPanel>
