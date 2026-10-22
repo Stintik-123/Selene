@@ -2339,12 +2339,12 @@ namespace Selene
         {
             var text = new TextBlock
             {
-                Text = glyph, Foreground = Brushes.Black, FontWeight = FontWeights.Bold,
+                Text = glyph, Foreground = Ink.Brush("SeleneScrimColor"), FontWeight = FontWeights.Bold,
                 FontSize = round ? 16 : 12, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
             };
             return new Border
             {
-                Width = 28, Height = 28, Margin = new Thickness(0, 0, 6, 0), Background = Brushes.White,
+                Width = 28, Height = 28, Margin = new Thickness(0, 0, 6, 0), Background = Ink.Brush("SeleneInkColor"),
                 CornerRadius = new CornerRadius(round ? 14 : 7), Child = text
             };
         }
@@ -2571,12 +2571,12 @@ namespace Selene
                 {
                     Text = RowFilterLabels[i], FontSize = 19, FontFamily = new FontFamily("Segoe UI Variable Display"),
                     FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
-                    Foreground = on ? new SolidColorBrush(Color.FromRgb(0x10, 0x12, 0x18)) : new SolidColorBrush(Color.FromArgb(0xB4, 0xFF, 0xFF, 0xFF))
+                    Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.7)
                 };
                 var tab = new Border
                 {
                     Child = label, CornerRadius = new CornerRadius(18), Padding = new Thickness(16, 5, 16, 7), Margin = new Thickness(2, 0, 2, 0),
-                    Background = on ? (Brush)new SolidColorBrush(Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF)) : Brushes.Transparent,
+                    Background = on ? (Brush)Ink.Brush("SeleneFocusColor", 0.95) : Brushes.Transparent,
                     VerticalAlignment = VerticalAlignment.Center, RenderTransformOrigin = new Point(0.5, 0.5)
                 };
                 host.Children.Add(tab);
@@ -2597,9 +2597,9 @@ namespace Selene
         {
             return new Border
             {
-                Child = new TextBlock { Text = text, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
+                Child = new TextBlock { Text = text, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
                 Width = 34, Height = 22, CornerRadius = new CornerRadius(6), Margin = new Thickness(6, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center,
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0xC0, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1.5)
+                BorderBrush = Ink.Brush("SeleneInkColor", 0.75), BorderThickness = new Thickness(1.5)
             };
         }
 
@@ -2612,16 +2612,16 @@ namespace Selene
             if (filterPill == null || VisualTreeHelper.GetParent(filterPill) != host)
             {
                 if (filterPill != null) { var old = VisualTreeHelper.GetParent(filterPill) as Panel; if (old != null) old.Children.Remove(filterPill); }
-                filterPillText = new TextBlock { Foreground = Brushes.White, FontSize = 17, FontFamily = new FontFamily("Segoe UI Variable Display"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-                var hint = new TextBlock { Text = "LT \u25C2  \u25B8 RT", Foreground = new SolidColorBrush(Color.FromArgb(0xB0, 0xFF, 0xFF, 0xFF)), FontSize = 13, Margin = new Thickness(14, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                filterPillText = new TextBlock { Foreground = Ink.Brush("SeleneInkColor"), FontSize = 17, FontFamily = new FontFamily("Segoe UI Variable Display"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+                var hint = new TextBlock { Text = "LT \u25C2  \u25B8 RT", Foreground = Ink.Brush("SeleneInkColor", 0.7), FontSize = 13, Margin = new Thickness(14, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center };
                 var sp = new StackPanel { Orientation = Orientation.Horizontal };
                 sp.Children.Add(filterPillText);
                 sp.Children.Add(hint);
                 filterPill = new Border
                 {
                     Child = sp, CornerRadius = new CornerRadius(17), Padding = new Thickness(16, 5, 16, 6),
-                    Background = new SolidColorBrush(Color.FromArgb(0x66, 0x10, 0x14, 0x1C)),
-                    BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1),
+                    Background = Ink.Brush("SeleneGlassColor", 0.45),
+                    BorderBrush = Ink.Brush("SeleneInkColor", 0.25), BorderThickness = new Thickness(1),
                     HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
                     Margin = new Thickness(8, -40, 0, 0), IsHitTestVisible = false, Opacity = 0
                 };

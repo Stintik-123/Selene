@@ -13,7 +13,7 @@
                                RenderOptions.BitmapScalingMode="Fant" StretchDirection="Both"
                                VerticalAlignment="Center" HorizontalAlignment="Center"
                                Stretch="{Settings CoverArtStretch}" />
-                        <Border Background="#AA000000" x:Name="BorderDarken" Visibility="Collapsed" />
+                        <Border Background="{DynamicResource SeleneScrim65Brush}" x:Name="BorderDarken" Visibility="Collapsed" />
                         <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"
                                    Visibility="{Settings Fullscreen.ShowGameTitles}"
                                    Style="{DynamicResource TextBlockBaseStyle}"

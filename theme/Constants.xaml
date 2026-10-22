@@ -29,6 +29,38 @@
     <SolidColorBrush x:Key="OverlayBrush" Color="{DynamicResource OverlayColor}" />
     <SolidColorBrush x:Key="CheckBoxCheckMarkBkBrush" Color="{DynamicResource ControlBackgroundColorDark}" />
 
+    <!-- Selene's own keys (every color theme in Palettes\ overrides the colors; the brushes follow) -->
+    <Color x:Key="SeleneFocusColor">#FFFFFFFF</Color>      <!-- focused fill, rings, glows -->
+    <Color x:Key="SeleneOnFocusColor">#FF111111</Color>    <!-- text on a focused fill -->
+    <Color x:Key="SeleneInkColor">#FFFFFFFF</Color>        <!-- text and icons over game art -->
+    <Color x:Key="SeleneScrimColor">#FF000000</Color>      <!-- darkens art under text (lightens it in light themes) -->
+    <Color x:Key="SeleneGlassColor">#FF14181F</Color>      <!-- glass panels and cards -->
+    <Color x:Key="SeleneSuccessColor">#FF3DDC84</Color>
+
+    <SolidColorBrush x:Key="SeleneFocusBrush" Color="{DynamicResource SeleneFocusColor}" />
+    <SolidColorBrush x:Key="SeleneOnFocusBrush" Color="{DynamicResource SeleneOnFocusColor}" />
+    <SolidColorBrush x:Key="SeleneInkBrush" Color="{DynamicResource SeleneInkColor}" />
+    <SolidColorBrush x:Key="SeleneInk90Brush" Color="{DynamicResource SeleneInkColor}" Opacity="0.9" />
+    <SolidColorBrush x:Key="SeleneInk60Brush" Color="{DynamicResource SeleneInkColor}" Opacity="0.6" />
+    <SolidColorBrush x:Key="SeleneInk25Brush" Color="{DynamicResource SeleneInkColor}" Opacity="0.25" />
+    <SolidColorBrush x:Key="SeleneInk15Brush" Color="{DynamicResource SeleneInkColor}" Opacity="0.15" />
+    <SolidColorBrush x:Key="SeleneScrimBrush" Color="{DynamicResource SeleneScrimColor}" />
+    <SolidColorBrush x:Key="SeleneScrim65Brush" Color="{DynamicResource SeleneScrimColor}" Opacity="0.65" />
+    <SolidColorBrush x:Key="SeleneScrim45Brush" Color="{DynamicResource SeleneScrimColor}" Opacity="0.45" />
+    <SolidColorBrush x:Key="SeleneGlassBrush" Color="{DynamicResource SeleneGlassColor}" Opacity="0.75" />
+    <SolidColorBrush x:Key="SeleneGlassSolidBrush" Color="{DynamicResource SeleneGlassColor}" Opacity="0.88" />
+    <SolidColorBrush x:Key="SeleneGlassLightBrush" Color="{DynamicResource SeleneGlassColor}" Opacity="0.45" />
+    <SolidColorBrush x:Key="SeleneSuccessBrush" Color="{DynamicResource SeleneSuccessColor}" />
+    <!-- home background look (Selene Core switches these per profile; blend is the default) -->
+    <sys:Double x:Key="SeleneArtOpacity">0.85</sys:Double>
+    <sys:Double x:Key="SeleneTintOpacity">0.22</sys:Double>
+    <LinearGradientBrush x:Key="SeleneArtMask" StartPoint="0,0" EndPoint="1,0.35">
+        <GradientStop Color="#1A000000" Offset="0.05"/>
+        <GradientStop Color="#80000000" Offset="0.4"/>
+        <GradientStop Color="#FF000000" Offset="0.8"/>
+    </LinearGradientBrush>
+    <DropShadowEffect x:Key="SeleneFocusGlow" ShadowDepth="0" BlurRadius="18" Color="{DynamicResource SeleneFocusColor}" Opacity="0.35" />
+    <DropShadowEffect x:Key="SeleneFocusGlowStrong" ShadowDepth="0" BlurRadius="18" Color="{DynamicResource SeleneFocusColor}" Opacity="0.55" />
     <sys:Double x:Key="FontSizeSmall">18</sys:Double>
     <sys:Double x:Key="FontSize">22</sys:Double>
 
@@ -65,7 +97,7 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="SelectionBrush" StartPoint="0.5,-0.5" EndPoint="1,1.5" >
-        <GradientStop Color="#FFFFFFFF" Offset="0"/>
+        <GradientStop Color="{DynamicResource SeleneFocusColor}" Offset="0"/>
         <GradientStop Color="{DynamicResource GlyphColor}" Offset="1.0"/>
     </LinearGradientBrush>
 

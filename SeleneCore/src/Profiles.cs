@@ -16,6 +16,8 @@ namespace Selene
         public string Theme { get; set; }
         // null = the theme's default wallpaper, so switching themes changes it until the user picks one themselves
         public string Wallpaper { get; set; }
+        // what's behind the home: "blend" (game art fading into the wallpaper, the default), "art" or "wallpaper"
+        public string HomeBackground { get; set; }
         public DateTime Created { get; set; }
         public List<Guid> Favorites { get; set; }
         public Dictionary<Guid, ulong> Playtime { get; set; }
@@ -131,6 +133,15 @@ namespace Selene
             ApplyLook();
         }
 
+        public static void SetHomeBackground(string look)
+        {
+            var p = Active;
+            if (p == null) return;
+            p.HomeBackground = look;
+            Save();
+            ApplyLook();
+        }
+
         public static bool ToggleFavorite(Guid gameId)
         {
             var p = Active;
@@ -157,9 +168,30 @@ namespace Selene
         {
             var p = Active;
             var theme = p != null && !string.IsNullOrEmpty(p.Theme) ? p.Theme : ThemePalettes.DefaultId;
+            // developer switch: %TEMP%\selene-dev-theme holding a theme id overrides it (to check every screen in each theme)
+            var dev = Path.Combine(Path.GetTempPath(), "selene-dev-theme");
+            if (File.Exists(dev) && File.ReadAllText(dev).Trim().Length > 0) theme = File.ReadAllText(dev).Trim();
             ThemePalettes.Apply(theme);
             var wallpaper = p != null && !string.IsNullOrEmpty(p.Wallpaper) ? p.Wallpaper : ThemePalettes.DefaultWallpaper(theme);
-            Application.Current.Resources["SeleneWallpaper"] = wallpaper;
+            Application.Current.Resources["SeleneWallpaperPath"] = wallpaper;
+            Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(wallpaper);
+            ApplyHomeBackground(p != null ? p.HomeBackground : null);
+        }
+
+        public static readonly string[] HomeBackgrounds = { "blend", "art", "wallpaper" };
+
+        // blend uses theme\Constants.xaml's values; the other looks override them
+        private static void ApplyHomeBackground(string look)
+        {
+            var res = Application.Current.Resources;
+            foreach (var key in new[] { "SeleneArtOpacity", "SeleneArtMask", "SeleneTintOpacity" }) res.Remove(key);
+            if (look == "art")
+            {
+                res["SeleneArtOpacity"] = 1.0;
+                res["SeleneArtMask"] = null;
+                res["SeleneTintOpacity"] = 0.0;
+            }
+            else if (look == "wallpaper") res["SeleneArtOpacity"] = 0.0;
         }
 
         private static void Save()

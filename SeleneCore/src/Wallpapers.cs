@@ -19,6 +19,28 @@ namespace Selene
         private static readonly Playnite.SDK.ILogger logger = Playnite.SDK.LogManager.GetLogger();
         private static readonly string[] Pictures = { ".jpg", ".jpeg", ".png", ".bmp" };
 
+        // a wallpaper as a picture for the screens (null when there's none or it can't be read)
+        public static System.Windows.Media.ImageSource Load(string file, int width = 1920)
+        {
+            if (string.IsNullOrEmpty(file) || !File.Exists(file)) return null;
+            try
+            {
+                var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                bmp.DecodePixelWidth = width;
+                bmp.UriSource = new Uri(file);
+                bmp.EndInit();
+                bmp.Freeze();
+                return bmp;
+            }
+            catch (Exception ex)
+            {
+                logger.Warn("Selene Core: can't load wallpaper " + file + ": " + ex.Message);
+                return null;
+            }
+        }
+
         public static List<WallpaperChoice> All()
         {
             var list = new List<WallpaperChoice>();

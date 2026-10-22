@@ -28,15 +28,13 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Fill" Property="Background" Value="#26FFFFFF" />
+                            <Setter TargetName="Fill" Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="Fill" Property="Background" Value="White" />
-                            <Setter TargetName="Fill" Property="BorderBrush" Value="White" />
-                            <Setter TargetName="Text" Property="Foreground" Value="#111111" />
-                            <Setter TargetName="Fill" Property="Effect">
-                                <Setter.Value><DropShadowEffect ShadowDepth="0" BlurRadius="18" Color="White" Opacity="0.35"/></Setter.Value>
-                            </Setter>
+                            <Setter TargetName="Fill" Property="Background" Value="{DynamicResource SeleneFocusBrush}" />
+                            <Setter TargetName="Fill" Property="BorderBrush" Value="{DynamicResource SeleneFocusBrush}" />
+                            <Setter TargetName="Text" Property="Foreground" Value="{DynamicResource SeleneOnFocusBrush}" />
+                            <Setter TargetName="Fill" Property="Effect" Value="{DynamicResource SeleneFocusGlow}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5" />

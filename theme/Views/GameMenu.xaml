@@ -16,7 +16,7 @@
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Padding" Value="15,15,15,15" />
-        <Setter Property="Background" Value="#AA000000" />
+        <Setter Property="Background" Value="{DynamicResource SeleneScrim65Brush}" />
     </Style>
 
     <DataTemplate x:Key="GameMenuHeaderTemplate">

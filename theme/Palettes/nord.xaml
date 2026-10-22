@@ -15,6 +15,42 @@
     <Color x:Key="ControlBackgroundColorDark">#FF222730</Color>
     <Color x:Key="TextColor">#FFD8DEE9</Color>
     <Color x:Key="TextColorDark">#FF667080</Color>
+    <Color x:Key="SeleneFocusColor">#FF81A1C1</Color>
+    <Color x:Key="SeleneOnFocusColor">#FF2E3440</Color>
+    <Color x:Key="SeleneInkColor">#FFD8DEE9</Color>
+    <Color x:Key="SeleneScrimColor">#FF191C23</Color>
+    <Color x:Key="SeleneGlassColor">#FF222730</Color>
+    <Color x:Key="SeleneSuccessColor">#FFA3BE8C</Color>
+
+    <SolidColorBrush x:Key="TextBrush" Color="#FFD8DEE9" />
+    <SolidColorBrush x:Key="TextBrushDark" Color="#FF667080" />
+    <SolidColorBrush x:Key="GlyphBrush" Color="#FF81A1C1" />
+    <SolidColorBrush x:Key="GlyphLightBrush" Color="#FFD8DEE9" />
+    <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#FF3B4252" />
+    <SolidColorBrush x:Key="ControlBackgroundDarkBrush" Color="#FF222730" />
+    <SolidColorBrush x:Key="SelectionLightBrush" Color="#FFADB5C4" />
+    <SolidColorBrush x:Key="OverlayBrush" Color="#CC191C23" />
+    <SolidColorBrush x:Key="CheckBoxCheckMarkBkBrush" Color="#FF222730" />
+    <SolidColorBrush x:Key="SeleneFocusBrush" Color="#FF81A1C1" />
+    <SolidColorBrush x:Key="SeleneOnFocusBrush" Color="#FF2E3440" />
+    <SolidColorBrush x:Key="SeleneInkBrush" Color="#FFD8DEE9" />
+    <SolidColorBrush x:Key="SeleneInk90Brush" Color="#FFD8DEE9" Opacity="0.9" />
+    <SolidColorBrush x:Key="SeleneInk60Brush" Color="#FFD8DEE9" Opacity="0.6" />
+    <SolidColorBrush x:Key="SeleneInk25Brush" Color="#FFD8DEE9" Opacity="0.25" />
+    <SolidColorBrush x:Key="SeleneInk15Brush" Color="#FFD8DEE9" Opacity="0.15" />
+    <SolidColorBrush x:Key="SeleneScrimBrush" Color="#FF191C23" />
+    <SolidColorBrush x:Key="SeleneScrim65Brush" Color="#FF191C23" Opacity="0.65" />
+    <SolidColorBrush x:Key="SeleneScrim45Brush" Color="#FF191C23" Opacity="0.45" />
+    <SolidColorBrush x:Key="SeleneGlassBrush" Color="#FF222730" Opacity="0.75" />
+    <SolidColorBrush x:Key="SeleneGlassSolidBrush" Color="#FF222730" Opacity="0.88" />
+    <SolidColorBrush x:Key="SeleneGlassLightBrush" Color="#FF222730" Opacity="0.45" />
+    <SolidColorBrush x:Key="SeleneSuccessBrush" Color="#FFA3BE8C" />
+    <DropShadowEffect x:Key="SeleneFocusGlow" ShadowDepth="0" BlurRadius="18" Color="#FF81A1C1" Opacity="0.35" />
+    <DropShadowEffect x:Key="SeleneFocusGlowStrong" ShadowDepth="0" BlurRadius="18" Color="#FF81A1C1" Opacity="0.55" />
+    <LinearGradientBrush x:Key="SelectionBrush" StartPoint="0.5,-0.5" EndPoint="1,1.5">
+        <GradientStop Color="#FF81A1C1" Offset="0" />
+        <GradientStop Color="#FF81A1C1" Offset="1.0" />
+    </LinearGradientBrush>
 
     <RadialGradientBrush x:Key="MainBackgourndBrush" GradientOrigin="0.5,0.1" Center="0.5,0.2" RadiusX="0.5" RadiusY="0.7">
         <GradientStop Color="#FF3B4252" Offset="0" />

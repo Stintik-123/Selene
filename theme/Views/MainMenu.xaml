@@ -6,7 +6,7 @@
     <Style x:Key="MainMenuBorder" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource OverlayMenuBackgroundBrush}" />
         <Setter Property="CornerRadius" Value="24,0,0,24" />
-        <Setter Property="BorderBrush" Value="#26FFFFFF" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SeleneInk15Brush}" />
         <Setter Property="BorderThickness" Value="1,0,0,0" />
         <Setter Property="Padding" Value="14,0,14,0" />
     </Style>
@@ -20,7 +20,7 @@
 
     <DataTemplate x:Key="MainMenuHeaderTemplate">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="20,30,40,30">
-            <TextBlock Text="&#xE708;" FontFamily="Segoe MDL2 Assets" FontSize="30" Foreground="#9CCBFF" VerticalAlignment="Center"/>
+            <TextBlock Text="&#xE708;" FontFamily="Segoe MDL2 Assets" FontSize="30" Foreground="{DynamicResource GlyphBrush}" VerticalAlignment="Center"/>
             <TextBlock Text="Selene" FontSize="34" Style="{DynamicResource TextBlockBaseStyle}" VerticalAlignment="Center"
                        Margin="16,0,0,0"/>
         </StackPanel>

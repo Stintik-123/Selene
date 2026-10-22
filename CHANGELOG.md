@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Every screen follows the color theme: text, focus rings, buttons, glass panels and the shading over game art.
+- The home blends the selected game's art into your wallpaper with a glow in the theme's color (or pick art only / wallpaper only).
 - New crescent crown logo with a glowing full moon; new icons, default cover and README banner.
 - Placeholders instead of blank screens when nothing is set up yet (login picture, home background).
 - Groundwork for profiles, 23 color themes with their own wallpapers, 415 avatars and the first-launch setup check.

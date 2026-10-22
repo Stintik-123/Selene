@@ -444,10 +444,10 @@ namespace Selene
             RenderOptions.SetBitmapScalingMode(viewerImage, BitmapScalingMode.HighQuality);
             viewerCount = new TextBlock
             {
-                Foreground = new SolidColorBrush(Color.FromArgb(0xB0, 0xFF, 0xFF, 0xFF)), FontSize = 20, FontFamily = new FontFamily("Segoe UI"),
+                Foreground = Ink.Brush("SeleneInkColor", 0.7), FontSize = 20, FontFamily = new FontFamily("Segoe UI"),
                 HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 40),
             };
-            viewer = new Grid { Background = new SolidColorBrush(Color.FromArgb(0xF2, 0, 0, 0)), Focusable = false };
+            viewer = new Grid { Background = Ink.Brush("SeleneScrimColor", 0.95), Focusable = false };
             if (host is Grid) { Grid.SetRowSpan(viewer, 99); Grid.SetColumnSpan(viewer, 99); }
             Panel.SetZIndex(viewer, 99999);
             viewer.Children.Add(viewerImage);

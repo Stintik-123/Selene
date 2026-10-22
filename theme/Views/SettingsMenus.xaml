@@ -61,7 +61,7 @@
                                     BorderThickness="2" BorderBrush="{DynamicResource ControlBackgroundBrush}"
                                     Grid.Column="1" Width="26" Height="26">
                                 <Viewbox x:Name="CheckIcon" Visibility="Collapsed">
-                                    <TextBlock Text="b" FontFamily="Marlett" Foreground="White"
+                                    <TextBlock Text="b" FontFamily="Marlett" Foreground="{DynamicResource TextBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Viewbox>
                             </Border>

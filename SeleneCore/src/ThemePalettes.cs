@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Markup;
+using System.Windows.Media;
 using Playnite.SDK;
 using Playnite.SDK.Data;
 
@@ -65,6 +66,7 @@ namespace Selene
             {
                 if (applied != null) merged.Remove(applied);
                 applied = null;
+                Ink.Refresh();
                 HomeNav.Log("theme: " + id);
                 return;
             }
@@ -82,7 +84,62 @@ namespace Selene
             if (applied != null) merged.Remove(applied);
             merged.Add(colors);
             applied = colors;
+            Ink.Refresh();
             HomeNav.Log("theme: " + id);
+        }
+    }
+
+    // Theme colors for screens built in code: brushes and stops made here follow theme changes live
+    // (XAML gets the same through DynamicResource). Keys are the Color keys of theme\Constants.xaml.
+    public static class Ink
+    {
+        private class Live
+        {
+            public WeakReference<DependencyObject> Target;
+            public DependencyProperty Property;
+            public string Key;
+            public double Alpha;
+        }
+
+        private static readonly List<Live> live = new List<Live>();
+
+        public static Color Of(string key, double alpha = 1)
+        {
+            var found = Application.Current != null ? Application.Current.TryFindResource(key) : null;
+            var c = found is Color ? (Color)found : Colors.White;
+            c.A = (byte)Math.Round(c.A * alpha);
+            return c;
+        }
+
+        public static SolidColorBrush Brush(string key, double alpha = 1)
+        {
+            return Track(new SolidColorBrush(Of(key, alpha)), SolidColorBrush.ColorProperty, key, alpha);
+        }
+
+        public static GradientStop Stop(string key, double alpha, double offset)
+        {
+            return Track(new GradientStop(Of(key, alpha), offset), GradientStop.ColorProperty, key, alpha);
+        }
+
+        // keeps a Color property (a brush, gradient stop, shadow...) on a theme color
+        public static T Track<T>(T target, DependencyProperty property, string key, double alpha = 1) where T : DependencyObject
+        {
+            target.SetValue(property, Of(key, alpha));
+            live.Add(new Live { Target = new WeakReference<DependencyObject>(target), Property = property, Key = key, Alpha = alpha });
+            return target;
+        }
+
+        public static void Refresh()
+        {
+            live.RemoveAll(l =>
+            {
+                DependencyObject target;
+                if (!l.Target.TryGetTarget(out target)) return true;
+                var freezable = target as Freezable;
+                if (freezable != null && freezable.IsFrozen) return true;
+                target.SetValue(l.Property, Of(l.Key, l.Alpha));
+                return false;
+            });
         }
     }
 }

@@ -27,11 +27,45 @@ SELENE = {
     "darker_background": "#03081A", "lighter_background": "#1A2A4A", "foreground": "#EBEBEB",
     "dark_foreground": "#757575", "light_foreground": "#B8C7DD", "bright_foreground": "#EAF3FF", "red": "#FF6B6B",
     "top_background": "#102A5C",
+    # Selene keeps its white focus, black scrims and neutral glass; the other themes derive these from their palette
+    "focus": "#FFFFFF", "on_focus": "#111111", "ink": "#FFFFFF", "scrim": "#000000", "glass": "#14181F",
+    "green": "#3DDC84",
 }
 
 
 def argb(color, alpha="FF"):
     return "#" + alpha + color.lstrip("#").upper()
+
+
+# brushes of theme/Constants.xaml, written out with literal colors: a brush in a resource dictionary keeps the color it
+# had when it loaded, so a theme has to replace the brushes themselves for DynamicResource users to change
+BRUSHES = [
+    ("TextBrush", "TextColor", 1), ("TextBrushDark", "TextColorDark", 1), ("GlyphBrush", "GlyphColor", 1),
+    ("GlyphLightBrush", "GlyphLightColor", 1), ("ControlBackgroundBrush", "ControlBackgroundColor", 1),
+    ("ControlBackgroundDarkBrush", "ControlBackgroundColorDark", 1), ("SelectionLightBrush", "SelectionLightColor", 1),
+    ("OverlayBrush", "OverlayColor", 1), ("CheckBoxCheckMarkBkBrush", "ControlBackgroundColorDark", 1),
+    ("SeleneFocusBrush", "SeleneFocusColor", 1), ("SeleneOnFocusBrush", "SeleneOnFocusColor", 1),
+    ("SeleneInkBrush", "SeleneInkColor", 1), ("SeleneInk90Brush", "SeleneInkColor", 0.9),
+    ("SeleneInk60Brush", "SeleneInkColor", 0.6), ("SeleneInk25Brush", "SeleneInkColor", 0.25),
+    ("SeleneInk15Brush", "SeleneInkColor", 0.15), ("SeleneScrimBrush", "SeleneScrimColor", 1),
+    ("SeleneScrim65Brush", "SeleneScrimColor", 0.65), ("SeleneScrim45Brush", "SeleneScrimColor", 0.45),
+    ("SeleneGlassBrush", "SeleneGlassColor", 0.75), ("SeleneGlassSolidBrush", "SeleneGlassColor", 0.88),
+    ("SeleneGlassLightBrush", "SeleneGlassColor", 0.45), ("SeleneSuccessBrush", "SeleneSuccessColor", 1),
+]
+
+
+def luminance(color):
+    def channel(v):
+        v /= 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    h = color.lstrip("#")
+    r, g, b = (channel(int(h[i:i + 2], 16)) for i in (0, 2, 4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(a, b):
+    hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
 
 
 def xaml(theme_id, name, c, wallpaper):
@@ -51,6 +85,19 @@ def xaml(theme_id, name, c, wallpaper):
         "TextColor": argb(fg),
         "TextColorDark": argb(c.get("dark_foreground", c.get("muted", fg))),
     }
+    # Selene's own keys: focus fill/ring (the accent), text on it (whichever of background/foreground reads better),
+    # text over game art, the scrim that darkens (or, in light themes, lightens) art, glass panels, success green
+    focus = c.get("focus", c["accent"])
+    bright = c.get("bright_foreground", fg)
+    on_focus = c.get("on_focus", max((bg, bright), key=lambda x: contrast(x, focus)))
+    colors.update({
+        "SeleneFocusColor": argb(focus),
+        "SeleneOnFocusColor": argb(on_focus),
+        "SeleneInkColor": argb(c.get("ink", bright)),
+        "SeleneScrimColor": argb(c.get("scrim", darker)),
+        "SeleneGlassColor": argb(c.get("glass", dark)),
+        "SeleneSuccessColor": argb(c.get("green", "#3DDC84")),
+    })
     lines = [
         '<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"',
         '                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"',
@@ -63,6 +110,18 @@ def xaml(theme_id, name, c, wallpaper):
         "",
     ]
     lines += [f'    <Color x:Key="{k}">{v}</Color>' for k, v in colors.items()]
+    lines.append("")
+    lines += [f'    <SolidColorBrush x:Key="{k}" Color="{colors[ck]}"' + (f' Opacity="{o}"' if o != 1 else "") + " />"
+              for k, ck, o in BRUSHES]
+    focus_c = colors["SeleneFocusColor"]
+    lines += [
+        f'    <DropShadowEffect x:Key="SeleneFocusGlow" ShadowDepth="0" BlurRadius="18" Color="{focus_c}" Opacity="0.35" />',
+        f'    <DropShadowEffect x:Key="SeleneFocusGlowStrong" ShadowDepth="0" BlurRadius="18" Color="{focus_c}" Opacity="0.55" />',
+        '    <LinearGradientBrush x:Key="SelectionBrush" StartPoint="0.5,-0.5" EndPoint="1,1.5">',
+        f'        <GradientStop Color="{focus_c}" Offset="0" />',
+        f'        <GradientStop Color="{colors["GlyphColor"]}" Offset="1.0" />',
+        "    </LinearGradientBrush>",
+    ]
     lines += [
         "",
         '    <RadialGradientBrush x:Key="MainBackgourndBrush" GradientOrigin="0.5,0.1" Center="0.5,0.2" RadiusX="0.5" RadiusY="0.7">',

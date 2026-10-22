@@ -25,7 +25,7 @@
                         <Grid.Resources>
                             <FontFamily x:Key="FontMain">Segoe UI Variable Display</FontFamily>
                         </Grid.Resources>
-                        <Grid x:Name="PART_ViewHost" Background="Black">
+                        <Grid x:Name="PART_ViewHost" Background="{DynamicResource SeleneScrimBrush}">
 
                             <!-- ================= LIBRARY (Playnite's grid) ================= -->
                             <Grid x:Name="SeleneLibrary" Visibility="Collapsed">
@@ -34,6 +34,8 @@
                                     <RowDefinition Height="*" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
+                                <Border Grid.RowSpan="3" Background="{DynamicResource MainBackgourndBrush}"/>
+                                <Image Grid.RowSpan="3" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
                                 <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="3" HorizontalAlignment="Center" VerticalAlignment="Top" Opacity="0.35"/>
                                 <DockPanel Grid.Row="1">
                                     <Filters x:Name="PART_ElemFilters" DockPanel.Dock="Left" Focusable="False" />
@@ -73,7 +75,7 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" x:Name="PART_ElemSearchActive" VerticalAlignment="Top" HorizontalAlignment="Stretch" Margin="0,15,0,0">
                                         <TextBlock FontSize="18" TextAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}" Text="{DynamicResource LOCGameListSearchResults}"/>
-                                        <TextBlock Foreground="White" TextAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}" Text="{Binding AppSettings.Fullscreen.FilterSettings.Name}"/>
+                                        <TextBlock Foreground="{DynamicResource TextBrush}" TextAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}" Text="{Binding AppSettings.Fullscreen.FilterSettings.Name}"/>
                                     </StackPanel>
                                     <TextBlock Grid.Column="2" x:Name="PART_ElemExtraFilterActive" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Stretch"
                                                TextAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}" Text="{DynamicResource LOCGameListExtraFiltered}"/>
@@ -88,15 +90,11 @@
                             <Grid x:Name="WelcomeHubOverlay">
                                 <!-- selected game's art: Selene's hero art (media folder) over Playnite's background -->
                                 <Grid x:Name="SeleneHubGameBackground" IsHitTestVisible="False">
-                                    <!-- fallback for when no game is selected (empty library) so the screen isn't plain black -->
-                                    <Border>
-                                        <Border.Background>
-                                            <RadialGradientBrush Center="0.3,0.1" GradientOrigin="0.3,0.1" RadiusX="1.1" RadiusY="1.1">
-                                                <GradientStop Color="#FF1A2A4A" Offset="0.0"/>
-                                                <GradientStop Color="#FF03081A" Offset="1.0"/>
-                                            </RadialGradientBrush>
-                                        </Border.Background>
-                                    </Border>
+                                    <!-- fallback for when no game is selected (empty library): the theme's gradient and the profile's wallpaper -->
+                                    <Border Background="{DynamicResource MainBackgourndBrush}"/>
+                                    <Image Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant"/>
+                                    <!-- the game's art blends into the wallpaper (Selene Core sets the look per profile: blend, art or wallpaper) -->
+                                    <Grid x:Name="SeleneHubArt" Opacity="{DynamicResource SeleneArtOpacity}" OpacityMask="{DynamicResource SeleneArtMask}">
                                     <FadeImage Source="{Binding SelectedGame.DisplayBackgroundImage}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
                                     <TextBlock x:Name="SeleneHeroPath" Tag="{DynamicResource SeleneMediaRoot}" Visibility="Collapsed">
                                         <TextBlock.Text>
@@ -107,22 +105,32 @@
                                         </TextBlock.Text>
                                     </TextBlock>
                                     <FadeImage Source="{Binding Text, ElementName=SeleneHeroPath}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
-                                    <Border>
+                                    </Grid>
+                                    <!-- the theme's accent glowing in from the top left -->
+                                    <Border Opacity="{DynamicResource SeleneTintOpacity}">
                                         <Border.Background>
+                                            <RadialGradientBrush Center="0.12,-0.1" GradientOrigin="0.12,-0.1" RadiusX="0.75" RadiusY="1.1">
+                                                <GradientStop Color="{DynamicResource GlyphColor}" Offset="0"/>
+                                                <GradientStop Color="Transparent" Offset="1"/>
+                                            </RadialGradientBrush>
+                                        </Border.Background>
+                                    </Border>
+                                    <Border Background="{DynamicResource SeleneScrimBrush}">
+                                        <Border.OpacityMask>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                                 <GradientStop Color="#E0000000" Offset="0"/>
                                                 <GradientStop Color="#80000000" Offset="0.5"/>
                                                 <GradientStop Color="#26000000" Offset="1"/>
                                             </LinearGradientBrush>
-                                        </Border.Background>
+                                        </Border.OpacityMask>
                                     </Border>
-                                    <Border>
-                                        <Border.Background>
+                                    <Border Background="{DynamicResource SeleneScrimBrush}">
+                                        <Border.OpacityMask>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                 <GradientStop Color="#00000000" Offset="0.4"/>
                                                 <GradientStop Color="#E6000000" Offset="1"/>
                                             </LinearGradientBrush>
-                                        </Border.Background>
+                                        </Border.OpacityMask>
                                     </Border>
                                 </Grid>
 
@@ -159,7 +167,7 @@
                                                             <StackPanel>
                                                                 <Grid x:Name="TileHost">
                                                                     <Grid.LayoutTransform><ScaleTransform x:Name="TileScale" ScaleX="1" ScaleY="1"/></Grid.LayoutTransform>
-                                                                    <Border x:Name="Tile" Margin="7" Width="160" Height="160" CornerRadius="14" BorderThickness="0" BorderBrush="White" ClipToBounds="False" Background="#22FFFFFF">
+                                                                    <Border x:Name="Tile" Margin="7" Width="160" Height="160" CornerRadius="14" BorderThickness="0" BorderBrush="{DynamicResource SeleneFocusBrush}" ClipToBounds="False" Background="{DynamicResource SeleneInk15Brush}">
                                                                         <Border.Effect>
                                                                             <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.55" Color="Black"/>
                                                                         </Border.Effect>
@@ -185,8 +193,8 @@
                                                                             </Border>
                                                                             <!-- Selene Core plays the selected tile's trailer here -->
                                                                             <Grid x:Name="TileVideoHost" IsHitTestVisible="False"/>
-                                                                            <Border x:Name="Shine" CornerRadius="12" Opacity="0" IsHitTestVisible="False">
-                                                                                <Border.Background>
+                                                                            <Border x:Name="Shine" CornerRadius="12" Opacity="0" IsHitTestVisible="False" Background="{DynamicResource SeleneFocusBrush}">
+                                                                                <Border.OpacityMask>
                                                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0.6">
                                                                                         <LinearGradientBrush.RelativeTransform><TranslateTransform x:Name="ShineShift" X="-1.5"/></LinearGradientBrush.RelativeTransform>
                                                                                         <GradientStop Color="#00FFFFFF" Offset="0.2"/>
@@ -195,34 +203,34 @@
                                                                                         <GradientStop Color="#0AFFFFFF" Offset="0.62"/>
                                                                                         <GradientStop Color="#00FFFFFF" Offset="0.8"/>
                                                                                     </LinearGradientBrush>
-                                                                                </Border.Background>
+                                                                                </Border.OpacityMask>
                                                                             </Border>
-                                                                            <Border x:Name="CardFace" CornerRadius="12" Background="#B3181C24" BorderBrush="#26FFFFFF" BorderThickness="1" Visibility="Collapsed">
-                                                                                <TextBlock x:Name="CardGlyph" FontFamily="Segoe MDL2 Assets" FontSize="56" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                            <Border x:Name="CardFace" CornerRadius="12" Background="{DynamicResource SeleneGlassBrush}" BorderBrush="{DynamicResource SeleneInk15Brush}" BorderThickness="1" Visibility="Collapsed">
+                                                                                <TextBlock x:Name="CardGlyph" FontFamily="Segoe MDL2 Assets" FontSize="56" Foreground="{DynamicResource SeleneInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                             </Border>
                                                                         </Grid>
                                                                     </Border>
                                                                     <!-- selection ring with a highlight travelling around it -->
-                                                                    <Border x:Name="Ring" Margin="0" CornerRadius="19" BorderThickness="3" Opacity="0" IsHitTestVisible="False">
-                                                                        <Border.Effect><DropShadowEffect x:Name="RingGlow" Color="White" BlurRadius="16" ShadowDepth="0" Opacity="0.25"/></Border.Effect>
-                                                                        <Border.BorderBrush>
+                                                                    <Border x:Name="Ring" Margin="0" CornerRadius="19" BorderThickness="3" Opacity="0" IsHitTestVisible="False" BorderBrush="{DynamicResource SeleneFocusBrush}">
+                                                                        <Border.Effect><DropShadowEffect x:Name="RingGlow" Color="{DynamicResource SeleneFocusColor}" BlurRadius="16" ShadowDepth="0" Opacity="0.25"/></Border.Effect>
+                                                                        <Border.OpacityMask>
                                                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                                                                 <LinearGradientBrush.RelativeTransform><RotateTransform x:Name="RingSpin" CenterX="0.5" CenterY="0.5" Angle="0"/></LinearGradientBrush.RelativeTransform>
                                                                                 <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                                                                                <GradientStop Color="#FFDDE7FF" Offset="0.25"/>
+                                                                                <GradientStop Color="#E6FFFFFF" Offset="0.25"/>
                                                                                 <GradientStop Color="#99FFFFFF" Offset="0.5"/>
-                                                                                <GradientStop Color="#FFDDEBFF" Offset="0.75"/>
+                                                                                <GradientStop Color="#E6FFFFFF" Offset="0.75"/>
                                                                                 <GradientStop Color="#FFFFFFFF" Offset="1"/>
                                                                             </LinearGradientBrush>
-                                                                        </Border.BorderBrush>
+                                                                        </Border.OpacityMask>
                                                                     </Border>
                                                                     <!-- trailer sound state (R3) -->
-                                                                    <Border x:Name="SoundBadge" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,15,15" Width="26" Height="26" CornerRadius="13" Background="#73000000" BorderBrush="#40FFFFFF" BorderThickness="1" IsHitTestVisible="False">
-                                                                        <TextBlock x:Name="SoundGlyph" Text="&#xE74F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="#E6FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    <Border x:Name="SoundBadge" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,15,15" Width="26" Height="26" CornerRadius="13" Background="{DynamicResource SeleneScrim45Brush}" BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1" IsHitTestVisible="False">
+                                                                        <TextBlock x:Name="SoundGlyph" Text="&#xE74F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource SeleneInk90Brush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     </Border>
                                                                 </Grid>
                                                                 <Canvas Height="44" ClipToBounds="False">
-                                                                    <TextBlock x:Name="TileName" Text="{Binding DisplayName}" Visibility="Collapsed" Foreground="White" FontSize="22"
+                                                                    <TextBlock x:Name="TileName" Text="{Binding DisplayName}" Visibility="Collapsed" Foreground="{DynamicResource SeleneInkBrush}" FontSize="22"
                                                                                FontFamily="{DynamicResource FontMain}" Canvas.Top="14" Canvas.Left="2" Width="420" TextTrimming="CharacterEllipsis"/>
                                                                 </Canvas>
                                                             </StackPanel>
@@ -280,16 +288,16 @@
                                             <ControlTemplate x:Key="SelenePill" TargetType="Button">
                                                 <Grid RenderTransformOrigin="0.5,0.5" VerticalAlignment="Center">
                                                     <Grid.RenderTransform><ScaleTransform x:Name="PillScale" ScaleX="1" ScaleY="1"/></Grid.RenderTransform>
-                                                    <Border x:Name="Glow" CornerRadius="26" Background="White" Opacity="0"><Border.Effect><DropShadowEffect ShadowDepth="0" BlurRadius="22" Color="White" Opacity="0.4"/></Border.Effect></Border>
-                                                    <Border x:Name="Pill" CornerRadius="26" Height="52" MinWidth="{TemplateBinding MinWidth}" Padding="{TemplateBinding Padding}" Background="#2EFFFFFF" BorderBrush="#40FFFFFF" BorderThickness="1">
-                                                        <ContentPresenter x:Name="Label" HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="White"/>
+                                                    <Border x:Name="Glow" CornerRadius="26" Background="{DynamicResource SeleneFocusBrush}" Opacity="0"><Border.Effect><DropShadowEffect ShadowDepth="0" BlurRadius="22" Color="{DynamicResource SeleneFocusColor}" Opacity="0.4"/></Border.Effect></Border>
+                                                    <Border x:Name="Pill" CornerRadius="26" Height="52" MinWidth="{TemplateBinding MinWidth}" Padding="{TemplateBinding Padding}" Background="{DynamicResource SeleneInk15Brush}" BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1">
+                                                        <ContentPresenter x:Name="Label" HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{DynamicResource SeleneInkBrush}"/>
                                                     </Border>
                                                 </Grid>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsKeyboardFocused" Value="True">
-                                                        <Setter TargetName="Pill" Property="Background" Value="White"/>
-                                                        <Setter TargetName="Pill" Property="BorderBrush" Value="White"/>
-                                                        <Setter TargetName="Label" Property="TextElement.Foreground" Value="#111111"/>
+                                                        <Setter TargetName="Pill" Property="Background" Value="{DynamicResource SeleneFocusBrush}"/>
+                                                        <Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource SeleneFocusBrush}"/>
+                                                        <Setter TargetName="Label" Property="TextElement.Foreground" Value="{DynamicResource SeleneOnFocusBrush}"/>
                                                         <Setter TargetName="Glow" Property="Opacity" Value="1"/>
                                                         <Trigger.EnterActions><BeginStoryboard><Storyboard>
                                                             <DoubleAnimation Storyboard.TargetName="PillScale" Storyboard.TargetProperty="ScaleX" To="1.06" Duration="0:0:0.15"/>
@@ -337,7 +345,7 @@
                                             </ListBoxEx>
                                             <!-- selected game's name; placed under the selected tile by Selene Core -->
                                             <Canvas IsHitTestVisible="False" ClipToBounds="False">
-                                                <TextBlock x:Name="SeleneTileTitle" Foreground="White" FontSize="22" FontFamily="{DynamicResource FontMain}" Opacity="0">
+                                                <TextBlock x:Name="SeleneTileTitle" Foreground="{DynamicResource SeleneInkBrush}" FontSize="22" FontFamily="{DynamicResource FontMain}" Opacity="0">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Text" Value="{Binding SelectedItem.DisplayName, ElementName=SeleneGameRow}"/>
@@ -395,7 +403,7 @@
                                                         </Image.Triggers>
                                                     </Image>
                                                     <!-- no logo: the name as text -->
-                                                    <TextBlock Text="{Binding SelectedGame.DisplayName}" Foreground="White" FontSize="56" FontFamily="{DynamicResource FontMain}"
+                                                    <TextBlock Text="{Binding SelectedGame.DisplayName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="56" FontFamily="{DynamicResource FontMain}"
                                                                VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
@@ -411,7 +419,7 @@
                                                 </Grid>
 
                                                 <!-- running: "now playing" chip -->
-                                                <Border HorizontalAlignment="Left" Margin="2,24,0,0" CornerRadius="19" Padding="12,6,18,7" Background="#66101418" BorderBrush="#38FFFFFF" BorderThickness="1">
+                                                <Border HorizontalAlignment="Left" Margin="2,24,0,0" CornerRadius="19" Padding="12,6,18,7" Background="{DynamicResource SeleneGlassLightBrush}" BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -422,7 +430,7 @@
                                                     </Border.Style>
                                                     <StackPanel Orientation="Horizontal">
                                                         <Grid Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,9,0">
-                                                            <Ellipse Fill="#3DDC84" Opacity="0.35" RenderTransformOrigin="0.5,0.5">
+                                                            <Ellipse Fill="{DynamicResource SeleneSuccessBrush}" Opacity="0.35" RenderTransformOrigin="0.5,0.5">
                                                                 <Ellipse.RenderTransform><ScaleTransform ScaleX="0.5" ScaleY="0.5"/></Ellipse.RenderTransform>
                                                                 <Ellipse.Triggers>
                                                                     <EventTrigger RoutedEvent="Loaded">
@@ -436,11 +444,11 @@
                                                                     </EventTrigger>
                                                                 </Ellipse.Triggers>
                                                             </Ellipse>
-                                                            <Ellipse Width="9" Height="9" Fill="#3DDC84" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            <Ellipse Width="9" Height="9" Fill="{DynamicResource SeleneSuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Grid>
-                                                        <TextBlock Text="NOW PLAYING" Foreground="#3DDC84" FontSize="14" FontWeight="Bold" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center"/>
-                                                        <Border Width="1" Height="18" Background="#40FFFFFF" Margin="14,0,14,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="Continue where you left off" Foreground="#F2FFFFFF" FontSize="17" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="NOW PLAYING" Foreground="{DynamicResource SeleneSuccessBrush}" FontSize="14" FontWeight="Bold" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center"/>
+                                                        <Border Width="1" Height="18" Background="{DynamicResource SeleneInk25Brush}" Margin="14,0,14,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="Continue where you left off" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="17" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Border>
 
@@ -488,18 +496,18 @@
 
                                                 <StackPanel Orientation="Horizontal" Margin="4,26,0,0">
                                                     <StackPanel Margin="0,0,26,0">
-                                                        <TextBlock Text="PLAYTIME" Foreground="#99FFFFFF" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
-                                                        <TextBlock Text="{Binding SelectedGame.Playtime, Mode=OneWay, Converter={StaticResource PlayTimeToStringConverter}}" Foreground="White" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                        <TextBlock Text="PLAYTIME" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{Binding SelectedGame.Playtime, Mode=OneWay, Converter={StaticResource PlayTimeToStringConverter}}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
-                                                    <Rectangle Width="1" Fill="#33FFFFFF" Margin="0,4,26,4"/>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
                                                     <StackPanel Margin="0,0,26,0">
-                                                        <TextBlock Text="LAST PLAYED" Foreground="#99FFFFFF" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
-                                                        <TextBlock Text="{Binding SelectedGame.LastActivity, Mode=OneWay, StringFormat='{}{0:MMM d, yyyy}', TargetNullValue=Never}" Foreground="White" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                        <TextBlock Text="LAST PLAYED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{Binding SelectedGame.LastActivity, Mode=OneWay, StringFormat='{}{0:MMM d, yyyy}', TargetNullValue=Never}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
-                                                    <Rectangle Width="1" Fill="#33FFFFFF" Margin="0,4,26,4"/>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
                                                     <StackPanel>
-                                                        <TextBlock Text="PLATFORM" Foreground="#99FFFFFF" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
-                                                        <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="White" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                        <TextBlock Text="PLATFORM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
                                                 </StackPanel>
                                             </StackPanel>
@@ -519,10 +527,10 @@
                                                         <ControlTemplate TargetType="ButtonEx">
                                                             <Grid RenderTransformOrigin="0.5,0.5">
                                                                 <Grid.RenderTransform><ScaleTransform x:Name="TileScale" ScaleX="1" ScaleY="1"/></Grid.RenderTransform>
-                                                                <Border Width="448" Height="252" CornerRadius="14" Background="#D91C1C1F" ClipToBounds="True">
+                                                                <Border Width="448" Height="252" CornerRadius="14" Background="{DynamicResource SeleneGlassSolidBrush}" ClipToBounds="True">
                                                                     <ContentPresenter/>
                                                                 </Border>
-                                                                <Border x:Name="TileRing" CornerRadius="17" Margin="-4" BorderBrush="White" BorderThickness="3" Opacity="0" IsHitTestVisible="False"/>
+                                                                <Border x:Name="TileRing" CornerRadius="17" Margin="-4" BorderBrush="{DynamicResource SeleneFocusBrush}" BorderThickness="3" Opacity="0" IsHitTestVisible="False"/>
                                                             </Grid>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsKeyboardFocused" Value="True">
@@ -543,7 +551,7 @@
                                             </Style>
                                         </Grid.Resources>
                                         <StackPanel>
-                                            <TextBlock Text="No screenshots for this game" FontSize="18" FontFamily="Segoe UI" Foreground="#99FFFFFF" Visibility="{DynamicResource SeleneShotsNone}"/>
+                                            <TextBlock Text="No screenshots for this game" FontSize="18" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk60Brush}" Visibility="{DynamicResource SeleneShotsNone}"/>
                                             <ScrollViewer x:Name="SeleneShotStrip" Width="1780" Margin="-10,-10,0,0" Padding="10" Focusable="False" CanContentScroll="False"
                                                           HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
                                                 <StackPanel x:Name="SeleneShotTiles" Orientation="Horizontal">
@@ -584,8 +592,8 @@
                                     <ButtonEx x:Name="PART_ButtonNotifications" VerticalAlignment="Center" Margin="10,0,10,0" Height="48" MinWidth="48">
                                         <Button.Content>
                                             <Grid>
-                                                <TextBlock Text="&#xEA8F;" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" FontSize="26" />
-                                                <Ellipse Width="9" Height="9" Fill="#6FB4FF" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,2,0"/>
+                                                <TextBlock Text="&#xEA8F;" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource SeleneInkBrush}" FontSize="26" />
+                                                <Ellipse Width="9" Height="9" Fill="{DynamicResource GlyphBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,2,0"/>
                                             </Grid>
                                         </Button.Content>
                                         <Button.Style>
@@ -599,14 +607,14 @@
                                         </Button.Style>
                                     </ButtonEx>
                                     <ButtonEx x:Name="PART_ButtonMainMenu" VerticalAlignment="Center" Style="{DynamicResource ButtonTopMenu}" Margin="10,0,16,0" Height="48" MinWidth="48">
-                                        <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource SeleneInkBrush}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </ButtonEx>
-                                    <TextBlock x:Name="PART_TextClock" Foreground="White" FontSize="30" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                    <TextBlock x:Name="PART_TextClock" Foreground="{DynamicResource SeleneInkBrush}" FontSize="30" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                 </StackPanel>
                             </Grid>
 
                             <!-- ================= LOGIN ================= -->
-                            <Grid x:Name="AcceuilSettings" Background="Black">
+                            <Grid x:Name="AcceuilSettings" Background="{DynamicResource SeleneScrimBrush}">
                                 <Grid x:Name="LoginCenterShell"/>
                             </Grid>
                         </Grid>
