@@ -289,6 +289,7 @@ namespace Selene
         public static void ApplyHomeBackground(string look)
         {
             var res = Application.Current.Resources;
+            HomeNav.FadeArt(look == "wallpaper" ? 0 : 1);   // a smooth change instead of a jump
             res.Remove("SeleneArtOpacity");
             if (look == "wallpaper") res["SeleneArtOpacity"] = 0.0;
         }

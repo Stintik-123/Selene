@@ -276,6 +276,9 @@ namespace Selene
         public readonly StackPanel Root = new StackPanel { Orientation = Orientation.Horizontal };
         private readonly List<Border> segments = new List<Border>();
         private readonly List<TextBlock> labels = new List<TextBlock>();
+        private readonly Border highlight;
+        private readonly TranslateTransform slide = new TranslateTransform();
+        private int selected = -1;
 
         public Segmented(string title, string[] options, string button)
         {
@@ -289,14 +292,19 @@ namespace Selene
                 segments.Add(seg);
                 labels.Add(label);
             }
+            // the filled highlight sits under the options and slides to the chosen one
+            highlight = new Border { CornerRadius = new CornerRadius(19), Background = Ink.Brush("SeleneFocusColor"), HorizontalAlignment = HorizontalAlignment.Left, RenderTransform = slide, Opacity = 0 };
+            var track = new Grid();
+            track.Children.Add(highlight);
+            track.Children.Add(row);
             Root.Children.Add(new Border
             {
-                Child = row, CornerRadius = new CornerRadius(23), Padding = new Thickness(4),
+                Child = track, CornerRadius = new CornerRadius(23), Padding = new Thickness(4),
                 Background = Ink.Brush("SeleneInkColor", 0.1), BorderBrush = Ink.Brush("SeleneInkColor", 0.18), BorderThickness = new Thickness(1)
             });
             var badge = new Grid { Width = 28, Height = 28, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             badge.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor", 0.9) });
-            badge.Children.Add(new TextBlock { Text = button, FontSize = 14, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });   // capitals sit low in their box
+            badge.Children.Add(new TextBlock { Text = button, FontSize = 14, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });
             Root.Children.Add(badge);
         }
 
@@ -304,12 +312,30 @@ namespace Selene
         {
             for (int i = 0; i < segments.Count; i++)
             {
-                bool on = i == index;
-                segments[i].Background = on ? (Brush)Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
-                labels[i].Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.8);
-                labels[i].FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
+                labels[i].Foreground = i == index ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.8);
+                labels[i].FontWeight = i == index ? FontWeights.SemiBold : FontWeights.Normal;
             }
-            if (animate) Ui.Pop(segments[index]);
+            selected = index;
+            var seg = segments[index];
+            if (seg.ActualWidth == 0)
+            {
+                // not laid out yet: place it once it is
+                seg.Dispatcher.BeginInvoke(new Action(() => { if (selected == index) Place(index, false); }), System.Windows.Threading.DispatcherPriority.Loaded);
+                return;
+            }
+            Place(index, animate);
+        }
+
+        private void Place(int index, bool animate)
+        {
+            var seg = segments[index];
+            double x = 0;
+            for (int i = 0; i < index; i++) x += segments[i].ActualWidth;
+            var ms = TimeSpan.FromMilliseconds(animate ? 260 : 0);
+            slide.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(x, ms) { EasingFunction = Ui.Out() });
+            highlight.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(seg.ActualWidth, ms) { EasingFunction = Ui.Out() });
+            highlight.Height = seg.ActualHeight;
+            highlight.Opacity = 1;
         }
     }
 

@@ -72,6 +72,7 @@ namespace Selene
 
         public override void Hidden()
         {
+            HomeNav.ShowGameForPreview(false);
             // left without saving (B out of the first step, or the layer closed): the signed-in profile's look comes back
             if (!saved) Profiles.ApplyLook();
         }
@@ -675,7 +676,8 @@ namespace Selene
                 catch (FormatException) { return fallback; }
             }
 
-            public override void Shown() { ShowFocus(false); }
+            public override void Shown() { HomeNav.ShowGameForPreview(true); ShowFocus(false); }
+            public override void Left() { HomeNav.ShowGameForPreview(false); }
 
             private void ShowFocus(bool live)
             {
@@ -787,8 +789,11 @@ namespace Selene
                 index = Owner.Wallpaper == null ? 0 : Math.Max(0, files.FindIndex(f => f != null && string.Equals(f, Owner.Wallpaper, StringComparison.OrdinalIgnoreCase)));
             }
 
+            public override void Left() { HomeNav.ShowGameForPreview(false); }
+
             public override void Shown()
             {
+                HomeNav.ShowGameForPreview(true);
                 Fill();
                 ShowFocus(false);
                 ShowLook(false);
