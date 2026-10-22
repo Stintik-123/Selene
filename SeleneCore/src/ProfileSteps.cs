@@ -567,6 +567,7 @@ namespace Selene
             private readonly List<Tile> tiles = new List<Tile>();
             private readonly TextBlock nameLabel;
             private readonly Later apply = new Later(110);
+            private CenteredRows grid;
             private int index;
 
             public ThemeStep(ProfileSteps owner) : base(owner)
@@ -574,9 +575,9 @@ namespace Selene
                 Header("Choose your theme", "Colors for all of Selene. Move through them to see each one live.");
                 themes = ThemePalettes.All();
                 var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 290, 0, 0) };
-                var grid = new UniformGrid { Columns = Columns, VerticalAlignment = VerticalAlignment.Top };
-                foreach (var t in themes) grid.Children.Add(Swatch(t));
-                row.Children.Add(grid);
+                grid = new CenteredRows(themes.Select(Swatch).ToList(), Columns, 150);
+                grid.Panel.VerticalAlignment = VerticalAlignment.Top;
+                row.Children.Add(grid.Panel);
                 var right = new StackPanel { Margin = new Thickness(60, 0, 0, 0) };
                 right.Children.Add(Preview(780));
                 nameLabel = new TextBlock { FontSize = 26, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(4, 18, 0, 0) };
@@ -631,7 +632,7 @@ namespace Selene
 
             public override void Move(string dir)
             {
-                int next = Ui.GridMove(index, dir, tiles.Count, Columns);
+                int next = grid.Move(index, dir);
                 if (next < 0) return;
                 index = next;
                 Ui.Tick();

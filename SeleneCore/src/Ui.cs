@@ -237,6 +237,46 @@ namespace Selene
         }
     }
 
+    // Items in rows as even as possible (23 in rows of 5: 5 5 5 4 4), each row centred, so a short row sits in the
+    // middle; up/down goes to the item closest above or below
+    public class CenteredRows
+    {
+        public readonly StackPanel Panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        private readonly List<int> rowOf = new List<int>();
+        private readonly List<double> xOf = new List<double>();
+
+        public CenteredRows(IList<FrameworkElement> items, int columns, double cellWidth)
+        {
+            int rows = Math.Max(1, (items.Count + columns - 1) / columns), at = 0;
+            for (int r = 0; r < rows; r++)
+            {
+                int inRow = items.Count / rows + (r < items.Count % rows ? 1 : 0);
+                var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+                for (int i = 0; i < inRow; i++, at++)
+                {
+                    row.Children.Add(items[at]);
+                    rowOf.Add(r);
+                    xOf.Add((i - (inRow - 1) / 2.0) * cellWidth);
+                }
+                Panel.Children.Add(row);
+            }
+        }
+
+        // the index after moving, or -1 at the edge
+        public int Move(int from, string dir)
+        {
+            int count = rowOf.Count;
+            if (dir == "DPadLeft") return from > 0 && rowOf[from - 1] == rowOf[from] ? from - 1 : -1;
+            if (dir == "DPadRight") return from + 1 < count && rowOf[from + 1] == rowOf[from] ? from + 1 : -1;
+            int row = rowOf[from] + (dir == "DPadUp" ? -1 : dir == "DPadDown" ? 1 : 0);
+            if (row == rowOf[from] || row < 0 || row > rowOf[count - 1]) return -1;
+            int best = -1;
+            for (int i = 0; i < count; i++)
+                if (rowOf[i] == row && (best < 0 || Math.Abs(xOf[i] - xOf[from]) < Math.Abs(xOf[best] - xOf[from]))) best = i;
+            return best;
+        }
+    }
+
     // A focusable tile: grows and shows a glowing ring in the theme's focus color when focused
     public class Tile
     {
