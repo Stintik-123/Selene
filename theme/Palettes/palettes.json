@@ -1,0 +1,209 @@
+[
+  {
+    "Id": "selene",
+    "Name": "Selene",
+    "Mode": "dark",
+    "Accent": "#9CCBFF",
+    "Background": "#0A142C",
+    "Foreground": "#EBEBEB",
+    "Wallpaper": ""
+  },
+  {
+    "Id": "catppuccin-latte",
+    "Name": "Catppuccin Latte",
+    "Mode": "light",
+    "Accent": "#1e66f5",
+    "Background": "#eff1f5",
+    "Foreground": "#4c4f69",
+    "Wallpaper": "Wallpapers/catppuccin-latte/1-color-fade.png"
+  },
+  {
+    "Id": "catppuccin",
+    "Name": "Catppuccin",
+    "Mode": "dark",
+    "Accent": "#89b4fa",
+    "Background": "#1e1e2e",
+    "Foreground": "#cdd6f4",
+    "Wallpaper": "Wallpapers/catppuccin/1-totoro.png"
+  },
+  {
+    "Id": "ethereal",
+    "Name": "Ethereal",
+    "Mode": "dark",
+    "Accent": "#7d82d9",
+    "Background": "#060B1E",
+    "Foreground": "#ffcead",
+    "Wallpaper": "Wallpapers/ethereal/1-cosmic.jpg"
+  },
+  {
+    "Id": "everforest",
+    "Name": "Everforest",
+    "Mode": "dark",
+    "Accent": "#7fbbb3",
+    "Background": "#2d353b",
+    "Foreground": "#d3c6aa",
+    "Wallpaper": "Wallpapers/everforest/1-tree-tops.jpg"
+  },
+  {
+    "Id": "flexoki-light",
+    "Name": "Flexoki Light",
+    "Mode": "light",
+    "Accent": "#205EA6",
+    "Background": "#FFFCF0",
+    "Foreground": "#100F0F",
+    "Wallpaper": "Wallpapers/flexoki-light/1-orb.png"
+  },
+  {
+    "Id": "gruvbox",
+    "Name": "Gruvbox",
+    "Mode": "dark",
+    "Accent": "#7daea3",
+    "Background": "#282828",
+    "Foreground": "#d4be98",
+    "Wallpaper": "Wallpapers/gruvbox/1-the-backwater.jpg"
+  },
+  {
+    "Id": "hackerman",
+    "Name": "Hackerman",
+    "Mode": "dark",
+    "Accent": "#82FB9C",
+    "Background": "#0B0C16",
+    "Foreground": "#ddf7ff",
+    "Wallpaper": "Wallpapers/hackerman/1-synth-scape.jpg"
+  },
+  {
+    "Id": "kanagawa",
+    "Name": "Kanagawa",
+    "Mode": "dark",
+    "Accent": "#dcd7ba",
+    "Background": "#1f1f28",
+    "Foreground": "#dcd7ba",
+    "Wallpaper": "Wallpapers/kanagawa/1-kanagawa.jpg"
+  },
+  {
+    "Id": "last-horizon",
+    "Name": "Last Horizon",
+    "Mode": "dark",
+    "Accent": "#b59790",
+    "Background": "#0c0b0c",
+    "Foreground": "#FAFCFB",
+    "Wallpaper": "Wallpapers/last-horizon/1-eyes-wide.jpg"
+  },
+  {
+    "Id": "lumon",
+    "Name": "Frost",
+    "Mode": "dark",
+    "Accent": "#8bc9eb",
+    "Background": "#16242d",
+    "Foreground": "#d6e2ee",
+    "Wallpaper": "Wallpapers/lumon/01-united-in-severance.jpg"
+  },
+  {
+    "Id": "lupine",
+    "Name": "Lupine",
+    "Mode": "light",
+    "Accent": "#3264eb",
+    "Background": "#fafafa",
+    "Foreground": "#212121",
+    "Wallpaper": "Wallpapers/lupine/01-cherry-blossom-bokeh.jpg"
+  },
+  {
+    "Id": "matte-black",
+    "Name": "Matte Black",
+    "Mode": "dark",
+    "Accent": "#e68e0d",
+    "Background": "#121212",
+    "Foreground": "#bebebe",
+    "Wallpaper": "Wallpapers/matte-black/0-ship-at-sea.jpg"
+  },
+  {
+    "Id": "miasma",
+    "Name": "Miasma",
+    "Mode": "dark",
+    "Accent": "#78824b",
+    "Background": "#222222",
+    "Foreground": "#c2c2b0",
+    "Wallpaper": "Wallpapers/miasma/01-nature-of-fear.jpg"
+  },
+  {
+    "Id": "nord",
+    "Name": "Nord",
+    "Mode": "dark",
+    "Accent": "#81a1c1",
+    "Background": "#2e3440",
+    "Foreground": "#d8dee9",
+    "Wallpaper": "Wallpapers/nord/0-black-moon.jpg"
+  },
+  {
+    "Id": "osaka-jade",
+    "Name": "Osaka Jade",
+    "Mode": "dark",
+    "Accent": "#509475",
+    "Background": "#111c18",
+    "Foreground": "#C1C497",
+    "Wallpaper": "Wallpapers/osaka-jade/1-glowing-city.jpg"
+  },
+  {
+    "Id": "retro-82",
+    "Name": "Retro 82",
+    "Mode": "dark",
+    "Accent": "#faa968",
+    "Background": "#05182e",
+    "Foreground": "#f6dcac",
+    "Wallpaper": "Wallpapers/retro-82/1-in-the-groove.jpg"
+  },
+  {
+    "Id": "ristretto",
+    "Name": "Ristretto",
+    "Mode": "dark",
+    "Accent": "#f38d70",
+    "Background": "#2c2525",
+    "Foreground": "#e6d9db",
+    "Wallpaper": "Wallpapers/ristretto/0-launch.png"
+  },
+  {
+    "Id": "rose-pine",
+    "Name": "Rosé Pine",
+    "Mode": "light",
+    "Accent": "#56949f",
+    "Background": "#faf4ed",
+    "Foreground": "#575279",
+    "Wallpaper": "Wallpapers/rose-pine/1-funky-shapes.jpg"
+  },
+  {
+    "Id": "solitude",
+    "Name": "Solitude",
+    "Mode": "dark",
+    "Accent": "#798186",
+    "Background": "#101315",
+    "Foreground": "#cacccc",
+    "Wallpaper": "Wallpapers/solitude/1-on-pole.jpg"
+  },
+  {
+    "Id": "tokyo-night",
+    "Name": "Tokyo Night",
+    "Mode": "dark",
+    "Accent": "#7aa2f7",
+    "Background": "#1a1b26",
+    "Foreground": "#a9b1d6",
+    "Wallpaper": "Wallpapers/tokyo-night/0-winding-road.jpg"
+  },
+  {
+    "Id": "vantablack",
+    "Name": "Vantablack",
+    "Mode": "dark",
+    "Accent": "#8d8d8d",
+    "Background": "#000000",
+    "Foreground": "#ffffff",
+    "Wallpaper": "Wallpapers/vantablack/0-dot-hands.jpg"
+  },
+  {
+    "Id": "white",
+    "Name": "White",
+    "Mode": "light",
+    "Accent": "#6e6e6e",
+    "Background": "#ffffff",
+    "Foreground": "#000000",
+    "Wallpaper": "Wallpapers/white/1-white.jpg"
+  }
+]

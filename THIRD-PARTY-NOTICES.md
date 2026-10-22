@@ -14,6 +14,11 @@ The "SELENE" lettering in the logo and banner (`tools/art/selene-wordmark.svg`, 
 to outlines; the font itself is not included. Cinzel - https://github.com/NDISCOVER/Cinzel -
 SIL Open Font License 1.1, Copyright 2020 The Cinzel Project Authors.
 
+## Theme palettes
+The color themes in `theme/Palettes` are generated from the palettes of [Omarchy](https://github.com/basecamp/omarchy)'s
+themes (MIT License, Copyright (c) David Heinemeier Hansson), copied into `tools/palettes`. Many are based on open
+color schemes by their own authors: Catppuccin, Everforest, Flexoki, Gruvbox, Kanagawa, Nord, Rose Pine and Tokyo Night.
+
 ## Wallpapers
 The wallpapers in `theme/Wallpapers` come from the theme collection of [Omarchy](https://github.com/basecamp/omarchy),
 grouped by the theme they shipped with. Each image remains the property of its artist; they are not covered by

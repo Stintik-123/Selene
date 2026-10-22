@@ -21,6 +21,7 @@ namespace Selene
         {
             settings = new SeleneSettingsViewModel(this);
             SelenePaths.Init(this, settings.Settings);
+            Profiles.Init(GetPluginUserDataPath());
             Properties = new GenericPluginProperties { HasSettings = true };
         }
 
@@ -34,6 +35,7 @@ namespace Selene
             if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use, staying off"); return; }
             HomeNav.Api = PlayniteApi;
             HomeNav.Install();
+            Profiles.ApplyLook();
             SeleneShell.Start();
             HomeNav.Log("Selene Core started");
         }
@@ -51,7 +53,9 @@ namespace Selene
 
         public override void OnGameStopped(OnGameStoppedEventArgs args)
         {
-            if (Active && args.Game != null) LocalGames.AfterGameStopped(args.Game);
+            if (!Active || args.Game == null) return;
+            LocalGames.AfterGameStopped(args.Game);
+            Profiles.RecordSession(args.Game.Id, args.ElapsedSeconds);
         }
 
         public override void OnLibraryUpdated(OnLibraryUpdatedEventArgs args)
