@@ -88,6 +88,15 @@
                             <Grid x:Name="WelcomeHubOverlay">
                                 <!-- selected game's art: Selene's hero art (media folder) over Playnite's background -->
                                 <Grid x:Name="SeleneHubGameBackground" IsHitTestVisible="False">
+                                    <!-- fallback for when no game is selected (empty library) so the screen isn't plain black -->
+                                    <Border>
+                                        <Border.Background>
+                                            <RadialGradientBrush Center="0.3,0.1" GradientOrigin="0.3,0.1" RadiusX="1.1" RadiusY="1.1">
+                                                <GradientStop Color="#FF1A2A4A" Offset="0.0"/>
+                                                <GradientStop Color="#FF03081A" Offset="1.0"/>
+                                            </RadialGradientBrush>
+                                        </Border.Background>
+                                    </Border>
                                     <FadeImage Source="{Binding SelectedGame.DisplayBackgroundImage}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
                                     <TextBlock x:Name="SeleneHeroPath" Tag="{DynamicResource SeleneMediaRoot}" Visibility="Collapsed">
                                         <TextBlock.Text>

@@ -266,6 +266,18 @@ namespace Selene
                 }
             }
             catch (Exception ex) { HomeNav.Log("login avatar: " + ex.Message); }
+            if (avatarTile.Child == null)
+            {
+                var silhouette = new Canvas { Width = 96, Height = 96 };
+                var fill = new SolidColorBrush(Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF));
+                silhouette.Children.Add(new Ellipse { Width = 40, Height = 40, Fill = fill, Margin = new Thickness(28, 6, 0, 0) });
+                silhouette.Children.Add(new System.Windows.Shapes.Path
+                {
+                    Fill = fill,
+                    Data = Geometry.Parse("M 8,96 A 40,36 0 0 1 88,96 Z")
+                });
+                avatarTile.Child = silhouette;
+            }
             avatarRing = new Ellipse { Stroke = Brushes.White, StrokeThickness = 5, Margin = new Thickness(-10), Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 22, Color = Color.FromRgb(0x6F, 0xB4, 0xFF), Opacity = 0.8 } };
             avGrid.Children.Add(avatarTile); avGrid.Children.Add(avatarRing);
             avCol.Children.Add(avGrid);
