@@ -146,7 +146,7 @@ namespace Selene
         public static void Tick() { Play("navigation.wav", 0.7); }
         public static void Confirm() { Play("activation.wav", 0.85); }
         public static void Back() { Play("CloseAdditionalView.wav", 0.8); }
-        public static void Chime() { Play("GameReady.wav", 0.85); }
+        public static void Chime() { Play("Success.wav", 0.85); }   // something finished: a profile made, a setup step done
         public static void Boot() { Play("Boot.wav", 0.9); }
 
         // decodes pictures one after another off the UI thread and hands each over on it (avatar and wallpaper grids)

@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime_long"}
+CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_magic", "Success.wav": "success_glass"}
 
 
 def note(name):
@@ -290,7 +290,66 @@ def boot_chime_long():
     return normalize(fade_tail(s, 0.6), 0.17)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long)}
+def pad(freqs, start, attack, release_tau, amp, total, detune=0.004):
+    """a soft warm chord: each note three slightly detuned sines, slow swell, long fade"""
+    out = [0.0] * int(RATE * total)
+    voices = [(f * m, amp / len(freqs) / 3) for f in freqs for m in (1 - detune, 1.0, 1 + detune)]
+    phases = [0.0] * len(voices)
+    for i in range(int(start * RATE), len(out)):
+        t = i / RATE - start
+        env = (0.5 - 0.5 * math.cos(math.pi * min(1.0, t / attack))) * math.exp(-max(0.0, t - attack) / release_tau)
+        v = 0.0
+        for k, (f, a) in enumerate(voices):
+            phases[k] += 2 * math.pi * f / RATE
+            v += a * math.sin(phases[k])
+        out[i] = v * env
+    return lowpass(out, 0.3)
+
+
+def sparkles(count, start, spread, lo, hi, amp, total, seed=11):
+    """tiny high glints scattered after a moment"""
+    rnd = random.Random(seed)
+    out = [0.0] * int(RATE * total)
+    for _ in range(count):
+        at = start + rnd.random() ** 1.6 * spread
+        f = rnd.uniform(lo, hi)
+        a = rnd.uniform(0.4, 1.0) * (1 - (at - start) / (spread * 1.2))
+        mix(out, [v * a for v in bell(f, 0.35, 0.06, partials=((1, 1.0), (2.0, 0.15)))], at)
+    return normalize_peak(out, amp)
+
+
+def normalize_peak(sound, peak):
+    top = max(abs(v) for v in sound) or 1
+    return [v / top * peak for v in sound]
+
+
+def boot_magic():
+    # the long chime, dressed up: a warm pad swelling in under it, a soft answer a fifth up, glints in the tail
+    total = 4.2
+    core = boot_chime_long()
+    answer = two_tone(3060, 4080, 2.4, 0.6, 0.5)
+    s = add(core,
+            [v * 0.05 for v in ([0.0] * int(0.5 * RATE) + answer)],
+            pad([510, 694, 1020, 1387], 0.0, 0.7, 1.4, 0.10, total),
+            sparkles(14, 0.35, 1.8, 5200, 9800, 0.035, total))
+    s = reverb(s, 0.25, 0.6)
+    return normalize(fade_tail(s, 0.6), 0.18)
+
+
+def success_glass():
+    # profile made: a quick rising sparkle of three glassy notes landing on the intro's two tones, a warm bloom under it
+    total = 1.6
+    s = add(ping(2040, 2040, 0, 0.0, 0.004, 0.01, 0.12, 0.6, total),
+            ping(2775, 2775, 0, 0.07, 0.004, 0.01, 0.14, 0.6, total),
+            ping(4080, 4080, 0, 0.14, 0.004, 0.02, 0.35, 0.75, total),
+            ping(5550, 5550, 0, 0.14, 0.004, 0.02, 0.25, 0.18, total),
+            pad([1020, 1387, 2040], 0.12, 0.15, 0.5, 0.18, total),
+            sparkles(8, 0.18, 0.6, 6000, 10500, 0.06, total, seed=5))
+    s = reverb(s, 0.25, 0.5)
+    return normalize(fade_tail(s, 0.3), 0.2)
+
+
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass)}
 
 
 def write(path, samples):
