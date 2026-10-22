@@ -487,8 +487,10 @@ namespace Selene
             {
                 Header("Choose your avatar", "Pick one, or use your own picture.");
                 files.Add(null);
-                files.AddRange(Profiles.KeptPictures());   // pictures added before
                 var steam = AnimatedAvatar.Steam ?? SelenePaths.AvatarImage;   // the animated one when the account has it
+                // pictures added before, except a saved copy of the Steam avatar (it has its own tile)
+                var steamPrint = !string.IsNullOrEmpty(steam) && System.IO.File.Exists(steam) ? Profiles.Fingerprint(steam) : null;
+                files.AddRange(Profiles.KeptPictures().Where(f => steamPrint == null || Profiles.Fingerprint(f) != steamPrint));
                 if (!string.IsNullOrEmpty(steam) && System.IO.File.Exists(steam)) files.Add(steam);
                 files.AddRange(Profiles.BuiltInAvatars());
                 grid = new ScrollingGrid(Columns, 118, 560);

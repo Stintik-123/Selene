@@ -166,7 +166,7 @@ namespace Selene
                 .Select(f => f.FullName).ToList();
         }
 
-        private static string Fingerprint(string path)
+        public static string Fingerprint(string path)
         {
             try
             {
