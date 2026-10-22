@@ -22,6 +22,7 @@ namespace Selene
         private readonly Grid body = new Grid();
         private readonly StackPanel dots = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 58) };
         private readonly TextBlock nextLabel;
+        private readonly List<UIElement> chrome = new List<UIElement>();   // prompts and dots, hidden while a picture is framed
         private readonly Step[] steps;
         private int step;
         private bool saved;
@@ -42,10 +43,20 @@ namespace Selene
             for (int i = 0; i < steps.Length; i++)
                 dots.Children.Add(new Border { Height = 8, Width = 8, CornerRadius = new CornerRadius(4), Margin = new Thickness(5, 0, 5, 0), Background = Ink.Brush("SeleneInkColor", 0.3) });
             Root.Children.Add(dots);
-            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
+            chrome.Add(dots);
+            var backHint = Ui.Prompts(false, Ui.Prompt("B", "Back"));
+            chrome.Add(backHint);
+            Root.Children.Add(backHint);
             var next = Ui.Prompt("A", "Next");
             nextLabel = (TextBlock)next.Children[1];
-            Root.Children.Add(Ui.Prompts(true, next));
+            var nextHint = Ui.Prompts(true, next);
+            chrome.Add(nextHint);
+            Root.Children.Add(nextHint);
+        }
+
+        internal void ShowChrome(bool on)
+        {
+            foreach (var c in chrome) Ui.Fade(c, on ? 1 : 0, 160);
         }
 
         public override bool WantsText { get { return steps[step].WantsText; } }
@@ -537,6 +548,7 @@ namespace Selene
             {
                 var closing = crop.Root;
                 crop = null;
+                Owner.ShowChrome(true);
                 Ui.Fade(closing, 0, 180, 0, () => Root.Children.Remove(closing));
             }
 
@@ -564,6 +576,7 @@ namespace Selene
                 }, CloseCrop);
                 if (crop == null) { Ui.Shake(tiles[0].Root); return true; }
                 Root.Children.Add(crop.Root);
+                Owner.ShowChrome(false);
                 return true;
             }
         }
@@ -576,7 +589,6 @@ namespace Selene
             private readonly List<Tile> tiles = new List<Tile>();
             private readonly TextBlock nameLabel;
             private readonly Later apply = new Later(110);
-            private CenteredRows grid;
             private int index;
 
             public ThemeStep(ProfileSteps owner) : base(owner)
@@ -584,9 +596,9 @@ namespace Selene
                 Header("Choose your theme", "Colors for all of Selene. Move through them to see each one live.");
                 themes = ThemePalettes.All();
                 var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 290, 0, 0) };
-                grid = new CenteredRows(themes.Select(Swatch).ToList(), Columns, 150);
-                grid.Panel.VerticalAlignment = VerticalAlignment.Top;
-                row.Children.Add(grid.Panel);
+                var grid = new UniformGrid { Columns = Columns, VerticalAlignment = VerticalAlignment.Top };
+                foreach (var t in themes) grid.Children.Add(Swatch(t));
+                row.Children.Add(grid);
                 var right = new StackPanel { Margin = new Thickness(60, 0, 0, 0) };
                 right.Children.Add(Preview(780));
                 nameLabel = new TextBlock { FontSize = 26, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(4, 18, 0, 0) };
@@ -641,7 +653,7 @@ namespace Selene
 
             public override void Move(string dir)
             {
-                int next = grid.Move(index, dir);
+                int next = Ui.GridMove(index, dir, tiles.Count, Columns);
                 if (next < 0) return;
                 index = next;
                 Ui.Tick();

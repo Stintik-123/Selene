@@ -20,7 +20,10 @@ namespace Selene
         private readonly BitmapSource picture;
         private readonly Action<string> done;
         private readonly Action cancelled;
-        private double scale, minScale, x, y;      // picture size factor and top-left inside the square
+        private double scale, minScale, x, y;      // where the picture is going: size factor and top-left inside the square
+        private double shownScale, shownX, shownY; // where it is drawn right now: eases toward the target every frame
+        private DateTime lastFrame;
+        private bool gliding;
 
         public static AvatarCrop Open(string file, Action<string> done, Action cancelled)
         {
@@ -73,17 +76,55 @@ namespace Selene
             x = (Size - bmp.PixelWidth * scale) / 2;
             y = (Size - bmp.PixelHeight * scale) / 2;
             Place();
+            shownScale = scale; shownX = x; shownY = y;
+            Draw();
             Ui.Rise(col, 0, 14, 260);
         }
 
+        // keeps the target inside the bounds (the picture always covers the square, so the circle is never empty)
+        // and lets the drawn picture glide there
         private void Place()
         {
-            // the picture always covers the whole square, so the circle is never empty
             double w = picture.PixelWidth * scale, h = picture.PixelHeight * scale;
             x = Math.Min(0, Math.Max(Size - w, x));
             y = Math.Min(0, Math.Max(Size - h, y));
-            image.Width = w; image.Height = h;
-            Canvas.SetLeft(image, x); Canvas.SetTop(image, y);
+            if (gliding) return;
+            gliding = true;
+            lastFrame = DateTime.Now;
+            CompositionTarget.Rendering += Glide;
+        }
+
+        // every frame: a smooth ease toward the target (held stick or trigger = one continuous move)
+        private void Glide(object sender, EventArgs e)
+        {
+            var now = DateTime.Now;
+            double dt = Math.Min(0.05, (now - lastFrame).TotalSeconds);
+            lastFrame = now;
+            double k = 1 - Math.Exp(-dt * 14);
+            shownScale += (scale - shownScale) * k;
+            shownX += (x - shownX) * k;
+            shownY += (y - shownY) * k;
+            if (Math.Abs(scale - shownScale) < 0.0005 && Math.Abs(x - shownX) < 0.3 && Math.Abs(y - shownY) < 0.3)
+            {
+                shownScale = scale; shownX = x; shownY = y;
+                Stop();
+            }
+            Draw();
+        }
+
+        private void Stop()
+        {
+            if (!gliding) return;
+            gliding = false;
+            CompositionTarget.Rendering -= Glide;
+        }
+
+        private void Draw()
+        {
+            image.Width = picture.PixelWidth * shownScale;
+            image.Height = picture.PixelHeight * shownScale;
+            Canvas.SetLeft(image, shownX);
+            Canvas.SetTop(image, shownY);
         }
 
         private void Zoom(double factor)
@@ -95,22 +136,21 @@ namespace Selene
             x = Size / 2 - cx * scale;
             y = Size / 2 - cy * scale;
             Place();
-            Ui.Tick();
         }
 
         // true = handled
         public void Handle(string b)
         {
-            const double step = 28;
+            const double step = 46;
             switch (b)
             {
                 case "DPadLeft": x += step; Place(); return;
                 case "DPadRight": x -= step; Place(); return;
                 case "DPadUp": y += step; Place(); return;
                 case "DPadDown": y -= step; Place(); return;
-                case "TriggerLeft": case "LeftShoulder": case "X": Zoom(1 / 1.12); return;
-                case "TriggerRight": case "RightShoulder": case "Y": Zoom(1.12); return;
-                case "B": Ui.Back(); cancelled(); return;
+                case "TriggerLeft": case "LeftShoulder": case "X": Zoom(1 / 1.15); return;
+                case "TriggerRight": case "RightShoulder": case "Y": Zoom(1.15); return;
+                case "B": Stop(); Ui.Back(); cancelled(); return;
                 case "A": case "Start": Save(); return;
             }
         }
@@ -129,6 +169,7 @@ namespace Selene
                 var encoder = new PngBitmapEncoder();
                 encoder.Frames.Add(BitmapFrame.Create(target));
                 using (var stream = File.Create(path)) encoder.Save(stream);
+                Stop();
                 Ui.Confirm();
                 done(path);
             }
