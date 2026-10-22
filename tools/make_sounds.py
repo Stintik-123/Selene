@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_magic", "Success.wav": "success_glass", "LoginSelect.wav": "signin_chime"}
+CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime_sparkle", "Success.wav": "success_glass", "LoginSelect.wav": "signin_chime"}
 
 
 def note(name):
@@ -349,6 +349,29 @@ def success_glass():
     return normalize(fade_tail(s, 0.3), 0.2)
 
 
+def boot_chime_sparkle():
+    # the long chime, a little shorter, with a few soft glints in its tail (no pad, no answer)
+    total = 2.6
+    out, pa, pb = [], 0.0, 0.0
+    for i in range(int(RATE * total)):
+        t = i / RATE
+        env = min(1.0, t / 0.03) * (0.84 * math.exp(-t / 0.065) + 0.16 * math.exp(-t / 0.6))
+        tilt = 0.5 + 0.5 * math.sin(2 * math.pi * t / 0.42)
+        pa += 2 * math.pi * 2040 / RATE
+        pb += 2 * math.pi * 2775 / RATE
+        out.append(env * ((0.55 + 0.45 * tilt) * math.sin(pa) + (0.35 + 0.55 * (1 - tilt)) * math.sin(pb)))
+    echo = [0.0] * len(out)
+    for d, g in ((0.12, 0.18), (0.25, 0.12), (0.42, 0.07)):
+        k = int(d * RATE)
+        for i in range(k, len(out)):
+            echo[i] += out[i - k] * g
+    s = add([a + b for a, b in zip(out, echo)],
+            ping(10950, 10950, 0, 0.0, 0.02, 0.1, 0.2, 0.05, total),
+            sparkles(7, 0.25, 1.0, 5600, 9400, 0.022, total, seed=17))
+    s = reverb(s, 0.2, 0.6)
+    return normalize(fade_tail(s, 0.5), 0.17)
+
+
 def signin_chime():
     # picking a profile: the boot chime's two tones struck together, its answer a fifth up a beat later, a soft bloom
     total = 1.9
@@ -360,7 +383,7 @@ def signin_chime():
     return normalize(fade_tail(s, 0.4), 0.18)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime)}
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime, boot_chime_sparkle)}
 
 
 def write(path, samples):

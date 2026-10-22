@@ -4625,7 +4625,9 @@ namespace Selene
             var ease = new QuadraticEase { EasingMode = EasingMode.EaseInOut };
             if (img == null)
             {
+                // nothing to show (a card is selected): both layers go, the one still fading out included
                 front.BeginAnimation(OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(FadeMs)) { EasingFunction = ease });
+                back.BeginAnimation(OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(FadeMs)) { EasingFunction = ease });
                 return;
             }
             // the old picture goes behind, the new one fades in on top; the old one is released after the fade
