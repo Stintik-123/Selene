@@ -358,11 +358,106 @@
                                                     </TextBlock.Style>
                                                 </TextBlock>
                                             </Canvas>
+                                            <!-- the tab has no games: what it is and how it fills up (Selene Core sets the text and shows it) -->
+                                            <StackPanel x:Name="SeleneRowEmpty" Margin="440,46,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" IsHitTestVisible="False">
+                                                <TextBlock x:Name="SeleneRowEmptyTitle" Foreground="{DynamicResource SeleneInkBrush}" FontSize="30" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="SeleneRowEmptyHint" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="19" FontFamily="{DynamicResource FontMain}" Margin="0,8,0,0" MaxWidth="760" TextWrapping="Wrap"/>
+                                            </StackPanel>
                                         </Grid>
 
                                         <!-- selected game: logo, actions, info -->
                                         <Grid x:Name="SeleneInfoIntro" Grid.Row="1" HorizontalAlignment="Left">
                                             <Grid.RenderTransform><TranslateTransform x:Name="SeleneInfoIntroShift" Y="0"/></Grid.RenderTransform>
+                                            <!-- the library card selected: what it is, a few numbers, what A does -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="900" Opacity="0">
+                                                <StackPanel.RenderTransform><TranslateTransform X="0"/></StackPanel.RenderTransform>
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:library">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="-30" To="0" BeginTime="0:0:0.12" Duration="0:0:0.35"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/></Storyboard></BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <TextBlock Text="Library" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
+                                                <TextBlock Text="Every game you have in one place: filter, search and sort the whole collection." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
+                                                <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="GAMES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatGames}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="INSTALLED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatInstalled}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="PLAYED THIS MONTH" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatRecent}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
+                                                    <Grid Width="32" Height="32">
+                                                        <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
+                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                    <TextBlock Text="Open your library" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <!-- the store card selected: what it is, a few numbers, what A does -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="900" Opacity="0">
+                                                <StackPanel.RenderTransform><TranslateTransform X="0"/></StackPanel.RenderTransform>
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:store">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="-30" To="0" BeginTime="0:0:0.12" Duration="0:0:0.35"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/></Storyboard></BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <TextBlock Text="Store" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
+                                                <TextBlock Text="Find something new in the store apps on this PC. Selene is here when you come back." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
+                                                <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="STORES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatStores}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
+                                                    <Grid Width="32" Height="32">
+                                                        <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
+                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                    <TextBlock Text="Choose a store" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
+                                                </StackPanel>
+                                            </StackPanel>
                                             <StackPanel Margin="0,30,0,0" HorizontalAlignment="Left" Width="900">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">

@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "Boot.wav": "boot_a"}
+CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime"}
 
 
 def note(name):
@@ -208,10 +208,79 @@ def confirm_glass():
     return normalize(s, 0.22)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, boot_a, boot_b, boot_c)}
+def shimmer(freqs, start, attack, hold, decay, flutter, total):
+    """steady high tones that ease in, shimmer (a fast flutter), and fade: an airy closing 'shing'"""
+    out = [0.0] * int(RATE * total)
+    phases = [0.0] * len(freqs)
+    for i in range(int(start * RATE), len(out)):
+        t = i / RATE - start
+        if t < attack:
+            env = 0.5 - 0.5 * math.cos(math.pi * t / attack)
+        elif t < attack + hold:
+            env = 1.0
+        else:
+            env = math.exp(-(t - attack - hold) / decay)
+        env *= 1 - 0.18 * (0.5 + 0.5 * math.sin(2 * math.pi * flutter * t))
+        v = 0.0
+        for k, (f0, f1, amp) in enumerate(freqs):
+            f = f0 + (f1 - f0) * min(1.0, t / (attack + hold))
+            phases[k] += 2 * math.pi * f / RATE
+            v += amp * math.sin(phases[k])
+        out[i] = v * env
+    return out
+
+
+def back_glass():
+    # soft high 'shing' that eases in and settles away, with a faint ring after
+    total = 0.62
+    s = add(shimmer([(11950, 11550, 1.0), (10850, 10600, 0.5), (10250, 10200, 0.42)], 0.06, 0.06, 0.1, 0.032, 24, total),
+            shimmer([(11700, 11700, 0.03), (10250, 10250, 0.03)], 0.24, 0.02, 0.0, 0.2, 0, total))
+    return normalize(fade_tail(s, 0.05), 0.11)
+
+
+def two_tone(f_a, f_b, total, decay, swap):
+    """two pure tones whose balance keeps swapping while they fade (an echoing two-note chime)"""
+    out = []
+    pa = pb = 0.0
+    for i in range(int(RATE * total)):
+        t = i / RATE
+        env = min(1.0, t / 0.03) * (0.93 * math.exp(-t / 0.065) + 0.07 * math.exp(-t / decay))
+        tilt = 0.5 + 0.5 * math.sin(2 * math.pi * t / swap)
+        pa += 2 * math.pi * f_a / RATE
+        pb += 2 * math.pi * f_b / RATE
+        out.append(env * ((0.55 + 0.45 * tilt) * math.sin(pa) + (0.35 + 0.55 * (1 - tilt)) * math.sin(pb)))
+    return out
+
+
+def boot_chime():
+    # two soft tones a fourth apart, echoing into each other over a second, a whisper of shimmer on top
+    total = 1.2
+    s = two_tone(2040, 2775, total, 0.45, 0.42)
+    echo = [0.0] * len(s)
+    for d, g in ((0.12, 0.18), (0.25, 0.1)):
+        k = int(d * RATE)
+        for i in range(k, len(s)):
+            echo[i] += s[i - k] * g
+    s = add([a + b for a, b in zip(s, echo)],
+            ping(10950, 10950, 0, 0.0, 0.02, 0.1, 0.12, 0.05, total),
+            ping(6100, 6100, 0, 0.0, 0.02, 0.05, 0.15, 0.03, total))
+    return normalize(fade_tail(s, 0.12), 0.17)
+
+
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime)}
 
 
 def write(path, samples):
+    # Playnite keeps the theme's sounds open; a file in use can still be renamed, so move it aside first
+    path = Path(path)
+    if path.exists():
+        aside = path.with_name(path.name + ".old")
+        try:
+            if aside.exists():
+                aside.unlink()
+            path.rename(aside)
+        except OSError:
+            pass
     with wave.open(str(path), "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
@@ -230,3 +299,8 @@ if __name__ == "__main__":
         for target, name in CHOSEN.items():
             write(ROOT / "theme" / "Audio" / target, SOUNDS[name]())
             print(f"wrote theme/Audio/{target} ({name})")
+        for old in (ROOT / "theme" / "Audio").glob("*.old"):
+            try:
+                old.unlink()
+            except OSError:
+                pass   # still open in Playnite: removed next time

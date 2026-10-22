@@ -54,6 +54,13 @@ namespace Selene
             if (stores.Count > 0) Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Open")));
         }
 
+        // the store apps on this PC, for the Store card ("Steam · Epic Games · Xbox")
+        public static string InstalledNames()
+        {
+            var names = Known.Where(s => Registered(s.Protocol)).Select(s => s.Name).ToList();
+            return names.Count > 0 ? string.Join(" · ", names) : "None found";
+        }
+
         private static bool Registered(string protocol)
         {
             try { using (var key = Microsoft.Win32.Registry.ClassesRoot.OpenSubKey(protocol)) return key != null; }

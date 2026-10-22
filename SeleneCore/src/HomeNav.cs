@@ -2690,6 +2690,49 @@ namespace Selene
         }
 
 
+        // a tab with no games says so (and how it fills up) next to the cards
+        private static void ShowRowEmpty(ListBox row, bool empty)
+        {
+            var w = Window.GetWindow(row);
+            var box = w != null ? FindByName(w, "SeleneRowEmpty") : null;
+            if (box == null) return;
+            if (!empty) { box.Visibility = Visibility.Collapsed; return; }
+            string title, hint;
+            switch (RowFilters[RowFilter])
+            {
+                case "installed": title = "Nothing installed"; hint = "Install a game from the Library or a store and it shows up here."; break;
+                case "recent": title = "Nothing played lately"; hint = "Games you play show up here for a month."; break;
+                case "favorites": title = "No favorites yet"; hint = "Press X on a game to add it to your favorites."; break;
+                case "unplayed": title = "You've started everything"; hint = "Every game in your library has been played at least once."; break;
+                default: title = "No games yet"; hint = "Connect a store in Playnite's settings, or run the setup check: Menu, Extensions, Selene."; break;
+            }
+            ((TextBlock)FindByName(box, "SeleneRowEmptyTitle")).Text = title;
+            ((TextBlock)FindByName(box, "SeleneRowEmptyHint")).Text = hint;
+            box.Visibility = Visibility.Visible;
+            box.RenderTransform = new TranslateTransform(-24, 0);
+            box.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(300)) { BeginTime = TimeSpan.FromMilliseconds(120), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            box.RenderTransform.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-24, 0, TimeSpan.FromMilliseconds(320)) { BeginTime = TimeSpan.FromMilliseconds(120), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
+
+        // the numbers on the Library and Store cards
+        private static void UpdateCardStats()
+        {
+            int all = 0, installed = 0, recent = 0;
+            foreach (var g in gameSource)
+            {
+                if (!IsShownBase(g)) continue;
+                all++;
+                if (Equals(Prop(g, "IsInstalled"), true)) installed++;
+                var la = LastPlayedOf(g);
+                if (la.HasValue && la.Value > DateTime.Now.AddDays(-30)) recent++;
+            }
+            var res = Application.Current.Resources;
+            res["SeleneStatGames"] = all.ToString();
+            res["SeleneStatInstalled"] = installed.ToString();
+            res["SeleneStatRecent"] = recent.ToString();
+            if (!res.Contains("SeleneStatStoresSet")) { res["SeleneStatStores"] = StoreScreen.InstalledNames(); res["SeleneStatStoresSet"] = true; }
+        }
+
         private static void RebuildGames(ListBox row)
         {
             if (games == null || gameSource == null) return;
@@ -2709,6 +2752,8 @@ namespace Selene
                 int byDate = Nullable.Compare(lb, la);
                 return byDate != 0 ? byDate : string.Compare(Convert.ToString(Prop(a, "Name")), Convert.ToString(Prop(b, "Name")), StringComparison.OrdinalIgnoreCase);
             });
+            ShowRowEmpty(row, list.Count == 0);
+            UpdateCardStats();
             // console: the selection keeps its slot to the very end, empty space opens on the right. Without padding the row hit
             // its scroll limit, the selection walked to the edge and the limit shifted with the zoomed card (jiggle).
             list.AddRange(RowPads);
