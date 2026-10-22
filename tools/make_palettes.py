@@ -63,6 +63,12 @@ def luminance(color):
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
+def shade(color, keep):
+    """the color darkened toward black, keeping `keep` of its brightness"""
+    h = color.lstrip("#")
+    return "#" + "".join("%02X" % round(int(h[i:i + 2], 16) * keep) for i in (0, 2, 4))
+
+
 def contrast(a, b):
     hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
     return (hi + 0.05) / (lo + 0.05)
@@ -90,12 +96,19 @@ def xaml(theme_id, name, c, wallpaper):
     focus = c.get("focus", c["accent"])
     bright = c.get("bright_foreground", fg)
     on_focus = c.get("on_focus", max((bg, bright), key=lambda x: contrast(x, focus)))
+    # over game art a light scrim washes the picture out, so light themes keep a dark scrim and glass (a deep shade of
+    # their own text color) with their light background color as the text on it; their light side stays in the
+    # gradient, wallpaper, accent and Playnite's own panels
+    light = c.get("mode", "dark") == "light"
+    ink = c.get("ink", bg if light else bright)
+    scrim = c.get("scrim", shade(fg, 0.42) if light else darker)
+    glass = c.get("glass", shade(fg, 0.55) if light else dark)
     colors.update({
         "SeleneFocusColor": argb(focus),
         "SeleneOnFocusColor": argb(on_focus),
-        "SeleneInkColor": argb(c.get("ink", bright)),
-        "SeleneScrimColor": argb(c.get("scrim", darker)),
-        "SeleneGlassColor": argb(c.get("glass", dark)),
+        "SeleneInkColor": argb(ink),
+        "SeleneScrimColor": argb(scrim),
+        "SeleneGlassColor": argb(glass),
         "SeleneSuccessColor": argb(c.get("green", "#3DDC84")),
     })
     lines = [

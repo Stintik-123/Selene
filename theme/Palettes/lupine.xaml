@@ -17,9 +17,9 @@
     <Color x:Key="TextColorDark">#FF757575</Color>
     <Color x:Key="SeleneFocusColor">#FF3264EB</Color>
     <Color x:Key="SeleneOnFocusColor">#FFFAFAFA</Color>
-    <Color x:Key="SeleneInkColor">#FF000000</Color>
-    <Color x:Key="SeleneScrimColor">#FFDEDEDE</Color>
-    <Color x:Key="SeleneGlassColor">#FFECECEC</Color>
+    <Color x:Key="SeleneInkColor">#FFFAFAFA</Color>
+    <Color x:Key="SeleneScrimColor">#FF0E0E0E</Color>
+    <Color x:Key="SeleneGlassColor">#FF121212</Color>
     <Color x:Key="SeleneSuccessColor">#FF4A2FD0</Color>
 
     <SolidColorBrush x:Key="TextBrush" Color="#FF212121" />
@@ -33,17 +33,17 @@
     <SolidColorBrush x:Key="CheckBoxCheckMarkBkBrush" Color="#FFECECEC" />
     <SolidColorBrush x:Key="SeleneFocusBrush" Color="#FF3264EB" />
     <SolidColorBrush x:Key="SeleneOnFocusBrush" Color="#FFFAFAFA" />
-    <SolidColorBrush x:Key="SeleneInkBrush" Color="#FF000000" />
-    <SolidColorBrush x:Key="SeleneInk90Brush" Color="#FF000000" Opacity="0.9" />
-    <SolidColorBrush x:Key="SeleneInk60Brush" Color="#FF000000" Opacity="0.6" />
-    <SolidColorBrush x:Key="SeleneInk25Brush" Color="#FF000000" Opacity="0.25" />
-    <SolidColorBrush x:Key="SeleneInk15Brush" Color="#FF000000" Opacity="0.15" />
-    <SolidColorBrush x:Key="SeleneScrimBrush" Color="#FFDEDEDE" />
-    <SolidColorBrush x:Key="SeleneScrim65Brush" Color="#FFDEDEDE" Opacity="0.65" />
-    <SolidColorBrush x:Key="SeleneScrim45Brush" Color="#FFDEDEDE" Opacity="0.45" />
-    <SolidColorBrush x:Key="SeleneGlassBrush" Color="#FFECECEC" Opacity="0.75" />
-    <SolidColorBrush x:Key="SeleneGlassSolidBrush" Color="#FFECECEC" Opacity="0.88" />
-    <SolidColorBrush x:Key="SeleneGlassLightBrush" Color="#FFECECEC" Opacity="0.45" />
+    <SolidColorBrush x:Key="SeleneInkBrush" Color="#FFFAFAFA" />
+    <SolidColorBrush x:Key="SeleneInk90Brush" Color="#FFFAFAFA" Opacity="0.9" />
+    <SolidColorBrush x:Key="SeleneInk60Brush" Color="#FFFAFAFA" Opacity="0.6" />
+    <SolidColorBrush x:Key="SeleneInk25Brush" Color="#FFFAFAFA" Opacity="0.25" />
+    <SolidColorBrush x:Key="SeleneInk15Brush" Color="#FFFAFAFA" Opacity="0.15" />
+    <SolidColorBrush x:Key="SeleneScrimBrush" Color="#FF0E0E0E" />
+    <SolidColorBrush x:Key="SeleneScrim65Brush" Color="#FF0E0E0E" Opacity="0.65" />
+    <SolidColorBrush x:Key="SeleneScrim45Brush" Color="#FF0E0E0E" Opacity="0.45" />
+    <SolidColorBrush x:Key="SeleneGlassBrush" Color="#FF121212" Opacity="0.75" />
+    <SolidColorBrush x:Key="SeleneGlassSolidBrush" Color="#FF121212" Opacity="0.88" />
+    <SolidColorBrush x:Key="SeleneGlassLightBrush" Color="#FF121212" Opacity="0.45" />
     <SolidColorBrush x:Key="SeleneSuccessBrush" Color="#FF4A2FD0" />
     <DropShadowEffect x:Key="SeleneFocusGlow" ShadowDepth="0" BlurRadius="18" Color="#FF3264EB" Opacity="0.35" />
     <DropShadowEffect x:Key="SeleneFocusGlowStrong" ShadowDepth="0" BlurRadius="18" Color="#FF3264EB" Opacity="0.55" />
