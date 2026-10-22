@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_a", "Boot.wav": "boot_a"}
+CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "Boot.wav": "boot_a"}
 
 
 def note(name):
@@ -202,7 +202,7 @@ def confirm_glass():
     total = 0.32
     s = add(ping(3950, 3950, 0, 0.0, 0.002, 0.004, 0.005, 0.13, total),
             ping(4170, 4170, 0, 0.0, 0.002, 0.004, 0.005, 0.1, total),
-            ping(10420, 10420, 0, 0.008, 0.004, 0.012, 0.0055, 1.0, total),
+            ping(10420, 10420, 0, 0.008, 0.004, 0.012, 0.0048, 1.0, total),
             ping(9200, 9200, 0, 0.008, 0.004, 0.010, 0.0055, 0.2, total),
             ping(10380, 10380, 0, 0.03, 0.01, 0.0, 0.05, 0.04, total))
     return normalize(s, 0.22)
