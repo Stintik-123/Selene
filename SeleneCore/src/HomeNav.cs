@@ -2706,7 +2706,10 @@ namespace Selene
                 case "unplayed": title = "You've started everything"; hint = "Every game in your library has been played at least once."; break;
                 default: title = "No games yet"; hint = "Connect a store in Playnite's settings, or run the setup check: Menu, Extensions, Selene."; break;
             }
-            ((TextBlock)FindByName(box, "SeleneRowEmptyTitle")).Text = title;
+            var titleBlock = (TextBlock)FindByName(box, "SeleneRowEmptyTitle");
+            // the row is rebuilt more than once on a tab switch: the same message already showing stays put (no second slide-in)
+            if (box.Visibility == Visibility.Visible && titleBlock.Text == title) return;
+            titleBlock.Text = title;
             ((TextBlock)FindByName(box, "SeleneRowEmptyHint")).Text = hint;
             box.Visibility = Visibility.Visible;
             box.RenderTransform = new TranslateTransform(-24, 0);
