@@ -286,7 +286,8 @@ namespace Selene
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             foreach (var o in options)
             {
-                var label = new TextBlock { Text = o, FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.8) };
+                // one weight for every option: a bolder chosen one was wider and pushed the badge around
+                var label = new TextBlock { Text = o, FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.8) };
                 var seg = new Border { CornerRadius = new CornerRadius(19), Padding = new Thickness(18, 7, 18, 8), Child = label };
                 row.Children.Add(seg);
                 segments.Add(seg);
@@ -313,7 +314,6 @@ namespace Selene
             for (int i = 0; i < segments.Count; i++)
             {
                 labels[i].Foreground = i == index ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.8);
-                labels[i].FontWeight = i == index ? FontWeights.SemiBold : FontWeights.Normal;
             }
             selected = index;
             var seg = segments[index];
