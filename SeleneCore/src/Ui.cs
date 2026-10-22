@@ -360,7 +360,7 @@ namespace Selene
             var head = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
             var badge = new Grid { Width = 52, Height = 52, Margin = new Thickness(0, 0, 16, 0), VerticalAlignment = VerticalAlignment.Center };
             circle = new Ellipse();
-            glyph = new TextBlock { FontFamily = Ui.Glyphs, FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            glyph = new TextBlock { FontFamily = Ui.Glyphs, FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 3) };
             badge.Children.Add(circle);
             badge.Children.Add(glyph);
             head.Children.Add(badge);
@@ -428,7 +428,8 @@ namespace Selene
             var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
             var badge = new Grid { Width = 84, Height = 84, HorizontalAlignment = HorizontalAlignment.Center };
             badge.Children.Add(new Ellipse { Fill = new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0x6B, 0x6B)) });
-            var glyph = new TextBlock { Text = icon, FontFamily = Ui.Glyphs, FontSize = 36, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            // icon glyphs sit a little low in their box: nudged to the circle's middle
+            var glyph = new TextBlock { Text = icon, FontFamily = Ui.Glyphs, FontSize = 36, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 5) };
             glyph.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
             badge.Children.Add(glyph);
             col.Children.Add(badge);
