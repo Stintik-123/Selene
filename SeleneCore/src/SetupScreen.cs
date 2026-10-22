@@ -150,7 +150,7 @@ namespace Selene
             for (int i = 0; i < cards.Count; i++) Ui.Rise(cards[i].Root, 140 + i * 45);
             ShowFocus();
             // things change behind the screen (an add-on installed, a controller plugged in): check again every few seconds
-            recheck = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            recheck = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
             recheck.Tick += (s, e) => Recheck();
             recheck.Start();
             var w = Application.Current.MainWindow;
@@ -164,11 +164,27 @@ namespace Selene
             if (w != null) w.Activated -= OnActivated;
         }
 
+        private bool checking;
+
+        // the check reads the whole library: it runs in the background (on the UI thread it made the screen hitch every
+        // few seconds) and only the result comes back here
         private void Recheck()
         {
-            List<SetupItem> fresh;
-            try { fresh = SetupCheck.Run(HomeNav.Api); }
-            catch (Exception ex) { HomeNav.Log("setup check failed: " + ex.Message); return; }
+            if (checking) return;
+            checking = true;
+            var api = HomeNav.Api;
+            var dispatcher = Application.Current.Dispatcher;
+            System.Threading.Tasks.Task.Factory.StartNew(() =>
+            {
+                List<SetupItem> result = null;
+                try { result = SetupCheck.Run(api); }
+                catch (Exception ex) { HomeNav.Log("setup check failed: " + ex.Message); }
+                dispatcher.BeginInvoke(new Action(() => { checking = false; if (result != null) Apply(result); }), System.Windows.Threading.DispatcherPriority.Background);
+            });
+        }
+
+        private void Apply(List<SetupItem> fresh)
+        {
             if (fresh.Count != items.Count) return;   // the list itself changed (an add-on that clashes appeared): next time the screen opens
             for (int i = 0; i < fresh.Count; i++)
             {
