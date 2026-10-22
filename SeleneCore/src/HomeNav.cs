@@ -933,6 +933,7 @@ namespace Selene
         // while the login screens cover the home nothing is selected for Playnite (its music add-ons would play)
         public static void ClearSelectedGame()
         {
+            PauseMusic(true);
             var w = Application.Current.MainWindow;
             var vm = w != null ? w.DataContext : null;
             var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
@@ -944,6 +945,8 @@ namespace Selene
             if (LoginScene.CoversHome) { ClearSelectedGame(); return; }
             var game = row.SelectedItem;
             if (game == null) return;
+            // no game music on the Library / Store cards (Playnite may fall back to its first game when none is selected)
+            PauseMusic(game is string);
             var vm = row.DataContext;
             var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
             if (prop == null || !prop.CanWrite) return;
@@ -1175,6 +1178,16 @@ namespace Selene
         }
 
         // UniPlaySong pauses on its own "video is playing" flag (PauseOnTrailer) and resumes when it is cleared.
+        private static bool? musicPaused;
+
+        // the music add-on (UniPlaySong) stays quiet on cards and behind the login screens
+        private static void PauseMusic(bool pause)
+        {
+            if (musicPaused == pause) return;
+            musicPaused = pause;
+            SetUpsVideoPlaying(pause || (previewShowing && previewSound));
+        }
+
         private static void SetUpsVideoPlaying(bool playing)
         {
             try

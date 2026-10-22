@@ -411,13 +411,8 @@ namespace Selene
                 return true;
             }
 
-            // controller B erases while there's text; with nothing left it goes back
-            public override bool OnB()
-            {
-                if (Owner.Name.Length == 0) return false;
-                Erase();
-                return true;
-            }
+            // B goes back (X erases)
+            public override bool OnB() { return false; }
 
             public override void Extra(string button)
             {
