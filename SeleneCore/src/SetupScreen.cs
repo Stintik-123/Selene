@@ -213,7 +213,8 @@ namespace Selene
             if (index < items.Count)
             {
                 next = CardMove(index, b);
-                if (next < 0 && b == "DPadDown") next = ButtonsStart + 1;
+                // onto the buttons only with a fresh press: a held stick repeats and skipped the bottom row
+                if (next < 0 && b == "DPadDown" && !Ui.Repeated(b)) next = ButtonsStart + 1;
             }
             else
             {

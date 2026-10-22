@@ -174,6 +174,20 @@ namespace Selene
             return button;
         }
 
+        // true when the same direction came again within a moment (a held stick or d-pad repeating), so a move that
+        // leaves one group for another (cards -> buttons) can wait for a fresh press
+        private static string lastDirection;
+        private static DateTime lastDirectionAt;
+        public static bool Repeated(string button)
+        {
+            return button == lastDirection && (DateTime.Now - lastDirectionAt).TotalMilliseconds < 300;
+        }
+
+        public static void Pressed(string button)
+        {
+            if (button.StartsWith("DPad")) { lastDirection = button; lastDirectionAt = DateTime.Now; }
+        }
+
         // moves an index around a grid of `count` items, `cols` wide; returns -1 when it would leave the grid on that side
         public static int GridMove(int index, string dir, int count, int cols)
         {

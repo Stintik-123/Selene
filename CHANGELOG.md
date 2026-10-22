@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Your own picture as an avatar: frame it in a circle first (move with the stick, zoom with the triggers).
+- Fixed moves skipping an item when the same press arrived twice.
 - Favorites and Recently played belong to whoever is signed in (the heart, the Favorites tab and the order of the row).
 - New cursor and boot sounds, made for Selene: a crystal tick when moving, a harp arpeggio on the logo intro.
 - First launch: the crescent crown intro, a setup check (install the add-ons Selene works with, set up save backups), then making your profile: name (on-screen keyboard), avatar, theme and background, each theme and background shown live on your real home.

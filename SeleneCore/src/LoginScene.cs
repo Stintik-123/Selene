@@ -75,8 +75,11 @@ namespace Selene
         public static bool HandleButton(string pressed)
         {
             if (!IsActive) return false;
-            try { current.Handle(Ui.Normalize(pressed)); }
+            var b = Ui.Normalize(pressed);
+            HomeNav.Log("login button " + pressed);
+            try { current.Handle(b); }
             catch (Exception ex) { HomeNav.Log("login: " + pressed + " failed: " + ex); }
+            finally { Ui.Pressed(b); }
             return true;
         }
 
@@ -94,7 +97,8 @@ namespace Selene
                      : key == Key.Escape || key == Key.Back ? "B"
                      : key == Key.Left ? "DPadLeft" : key == Key.Right ? "DPadRight"
                      : key == Key.Up ? "DPadUp" : key == Key.Down ? "DPadDown"
-                     : key == Key.Delete ? "X" : key == Key.F2 ? "Y" : key == Key.Tab ? "Start" : null;
+                     : key == Key.Delete ? "X" : key == Key.F2 ? "Y" : key == Key.Tab ? "Start"
+                     : key == Key.OemMinus || key == Key.Subtract ? "TriggerLeft" : key == Key.OemPlus || key == Key.Add ? "TriggerRight" : null;
             if (b != null) { HandleButton(b); e.Handled = true; }
         }
 

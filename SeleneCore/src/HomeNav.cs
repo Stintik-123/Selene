@@ -1667,6 +1667,9 @@ namespace Selene
             };
         }
 
+        private static string lastPadButton, lastPadRaw;
+        private static DateTime lastPadAt;
+
         private static void OnPreProcessInput(object sender, PreProcessInputEventArgs e)
         {
             try
@@ -1690,6 +1693,17 @@ namespace Selene
                 var button = ke.GetType().GetProperty("Button");
                 if (button == null) return;
                 var pressed = button.GetValue(ke, null).ToString();
+                // the same press arriving twice (one pad seen as two devices, or stick and d-pad together) moved two
+                // items at a time: a second identical direction within a moment is dropped
+                var same = Ui.Normalize(pressed);
+                var now = DateTime.Now;
+                if (same == lastPadButton && (now - lastPadAt).TotalMilliseconds < 60)
+                {
+                    Log("pad: dropped double " + pressed + " (" + (int)(now - lastPadAt).TotalMilliseconds + " ms after " + lastPadRaw + ")");
+                    e.Cancel();
+                    return;
+                }
+                lastPadButton = same; lastPadRaw = pressed; lastPadAt = now;
                 HideCursorForController();
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
                 if (GameMedia.HandleButton(pressed, Keyboard.FocusedElement)) { e.Cancel(); return; }

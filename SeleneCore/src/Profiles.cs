@@ -141,11 +141,17 @@ namespace Selene
         // a picture someone picked (or their Steam avatar): copied into Selene Core's data so it survives the original moving
         public static string KeepPicture(string source)
         {
-            var folder = Path.Combine(Path.GetDirectoryName(file), "avatars");   // next to profiles.json
-            Directory.CreateDirectory(folder);
-            var target = Path.Combine(folder, Guid.NewGuid().ToString("N") + Path.GetExtension(source));
+            var target = NewPicturePath(Path.GetExtension(source));
             File.Copy(source, target);
             return target;
+        }
+
+        // a new file for a profile picture, next to profiles.json
+        public static string NewPicturePath(string extension)
+        {
+            var folder = Path.Combine(Path.GetDirectoryName(file), "avatars");
+            Directory.CreateDirectory(folder);
+            return Path.Combine(folder, Guid.NewGuid().ToString("N") + extension);
         }
 
         public static void SetTheme(string theme)

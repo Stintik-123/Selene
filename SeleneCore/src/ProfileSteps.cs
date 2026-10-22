@@ -22,6 +22,7 @@ namespace Selene
         private readonly Grid body = new Grid();
         private readonly StackPanel dots = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 58) };
         private readonly TextBlock nextLabel;
+        private readonly FrameworkElement donePrompt;
         private readonly Step[] steps;
         private int step;
         private bool saved;
@@ -45,7 +46,9 @@ namespace Selene
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             var next = Ui.Prompt("A", "Next");
             nextLabel = (TextBlock)next.Children[1];
-            Root.Children.Add(Ui.Prompts(true, next));
+            var doneHint = Ui.Prompt("Y", "Done");
+            donePrompt = doneHint;
+            Root.Children.Add(Ui.Prompts(true, doneHint, next));
         }
 
         public override bool WantsText { get { return steps[step].WantsText; } }
@@ -73,7 +76,8 @@ namespace Selene
                 d.Background = Ink.Brush("SeleneInkColor", i == step ? 1 : 0.3);
                 d.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(i == step ? 24 : 8, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
             }
-            nextLabel.Text = step < steps.Length - 1 ? "Next" : editing != null ? "Save" : "Create profile";
+            nextLabel.Text = steps[step].WantsText ? "Select" : step < steps.Length - 1 ? "Next" : editing != null ? "Save" : "Create profile";
+            donePrompt.Visibility = steps[step].WantsText ? Visibility.Visible : Visibility.Collapsed;
         }
 
         public override void Handle(string b)
@@ -170,6 +174,7 @@ namespace Selene
             public readonly Grid Viewport;
             public readonly UniformGrid Panel;
             private readonly TranslateTransform shift = new TranslateTransform();
+            private readonly GradientStop topClear, topSolid;
             private readonly int columns;
             private readonly double rowHeight, height;
 
@@ -184,8 +189,10 @@ namespace Selene
                 Viewport.Children.Add(canvas);
                 // rows melt away at the edges instead of being cut off (pixel positions: the panel inside is far taller)
                 var mask = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, height) };
-                mask.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0));
-                mask.GradientStops.Add(new GradientStop(Colors.Black, 24 / height));
+                topClear = new GradientStop(Color.FromArgb(0, 0, 0, 0), 0);
+                topSolid = new GradientStop(Colors.Black, 0);   // moved down (a long fade, like the bottom) once rows scroll up
+                mask.GradientStops.Add(topClear);
+                mask.GradientStops.Add(topSolid);
                 mask.GradientStops.Add(new GradientStop(Colors.Black, 1 - 150 / height));
                 mask.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
                 Viewport.OpacityMask = mask;
@@ -199,6 +206,8 @@ namespace Selene
                 double rowTop = (index / columns) * rowHeight;
                 double y = -Math.Max(0, Math.Min(rowTop - rowHeight, total + 20 - height + 110));   // the last row can rise above the fade
                 if (total <= height) y = 0;
+                // at the top nothing fades; scrolled, the row above melts away under the title like the bottom does
+                topSolid.BeginAnimation(GradientStop.OffsetProperty, new DoubleAnimation(y < 0 ? 140 / height : 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
                 shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(y, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
             }
         }
@@ -394,7 +403,7 @@ namespace Selene
             public override void Extra(string button)
             {
                 if (button == "X") Erase();
-                else if (button == "Y") Type(" ");
+                else if (button == "Y") Owner.Next();   // done with the name
             }
 
             private bool UpperNext { get { return (Owner.Name.Length == 0 || Owner.Name.EndsWith(" ")) != shift; } }
@@ -455,6 +464,7 @@ namespace Selene
             private readonly List<Tile> tiles = new List<Tile>();
             private readonly ScrollingGrid grid;
             private int index;
+            private AvatarCrop crop;   // framing your own picture, on top of the grid
 
             public AvatarStep(ProfileSteps owner) : base(owner)
             {
@@ -497,6 +507,7 @@ namespace Selene
 
             public override void Move(string dir)
             {
+                if (crop != null) { crop.Handle(dir); return; }
                 int next = Ui.GridMove(index, dir, tiles.Count, Columns);
                 if (next < 0) return;
                 index = next;
@@ -504,8 +515,25 @@ namespace Selene
                 ShowFocus();
             }
 
+            public override bool OnB()
+            {
+                if (crop == null) return false;
+                crop.Handle("B");
+                return true;
+            }
+
+            public override void Extra(string button) { if (crop != null) crop.Handle(button); }
+
+            private void CloseCrop()
+            {
+                var closing = crop.Root;
+                crop = null;
+                Ui.Fade(closing, 0, 180, 0, () => Root.Children.Remove(closing));
+            }
+
             public override bool OnA()
             {
+                if (crop != null) { crop.Handle("A"); return true; }
                 var f = files[index];
                 if (f != null)
                 {
@@ -516,14 +544,17 @@ namespace Selene
                 }
                 var picked = HomeNav.Api != null ? HomeNav.Api.Dialogs.SelectImagefile() : null;
                 if (string.IsNullOrEmpty(picked)) return true;
-                try
+                // frame it first: the circle shows exactly what the avatar will be
+                crop = AvatarCrop.Open(picked, saved =>
                 {
-                    Owner.Avatar = Profiles.KeepPicture(picked);
-                    tiles[0].Face.Background = new ImageBrush(Wallpapers.Load(Owner.Avatar, 192)) { Stretch = Stretch.UniformToFill };
+                    CloseCrop();
+                    Owner.Avatar = saved;
+                    tiles[0].Face.Background = new ImageBrush(Wallpapers.Load(saved, 192)) { Stretch = Stretch.UniformToFill };
                     tiles[0].Face.Child = null;
-                }
-                catch (Exception ex) { HomeNav.Log("profiles: picture failed: " + ex.Message); Ui.Shake(tiles[0].Root); return true; }
-                Owner.Next();
+                    Owner.Next();
+                }, CloseCrop);
+                if (crop == null) { Ui.Shake(tiles[0].Root); return true; }
+                Root.Children.Add(crop.Root);
                 return true;
             }
         }
