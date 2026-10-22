@@ -1230,6 +1230,14 @@ namespace Selene
             SetUpsSetting("ForceDefaultMusicOverride", onCard);
         }
 
+        // UniPlaySong's live settings: its settings view model holds them in .Settings
+        private static object UpsSettings(Playnite.SDK.Plugins.Plugin plugin)
+        {
+            var vm = plugin.GetSettings(false);
+            var inner = vm != null ? vm.GetType().GetProperty("Settings") : null;
+            return inner != null ? inner.GetValue(vm, null) : vm;
+        }
+
         private static void SetUpsSetting(string name, bool value)
         {
             try
@@ -1238,7 +1246,7 @@ namespace Selene
                 foreach (var plugin in Api.Addons.Plugins)
                 {
                     if (plugin.Id != new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")) continue;
-                    var settings = plugin.GetSettings(false);
+                    var settings = UpsSettings(plugin);
                     var prop = settings != null ? settings.GetType().GetProperty(name) : null;
                     if (prop != null && prop.CanWrite) prop.SetValue(settings, value, null);
                     Log("UPS " + name + "=" + value + (prop == null ? " (not found)" : ""));
@@ -1255,7 +1263,7 @@ namespace Selene
                 foreach (var plugin in Api.Addons.Plugins)
                 {
                     if (plugin.Id != new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")) continue;
-                    var settings = plugin.GetSettings(false);
+                    var settings = UpsSettings(plugin);
                     var prop = settings != null ? settings.GetType().GetProperty("VideoIsPlaying") : null;
         
                     if (prop != null && prop.CanWrite) prop.SetValue(settings, playing, null);
