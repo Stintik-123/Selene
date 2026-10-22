@@ -22,7 +22,7 @@ namespace Selene
         private const double CardCell = 258;
         private readonly List<Tile> cards = new List<Tile>();
         private readonly List<TextBlock> statuses = new List<TextBlock>();
-        private readonly TextBlock about, note;
+        private readonly DetailPanel info;
         private readonly Pill installAll, carryOn;
         private List<SetupItem> items;
         private int index;
@@ -53,14 +53,10 @@ namespace Selene
                 grid.Children.Add(row);
             }
             col.Children.Add(grid);
-            about = Ui.Text("", 20, 0.85);
-            about.Margin = new Thickness(0, 30, 0, 0);
-            about.MaxWidth = 1100;
-            col.Children.Add(about);
-            note = Ui.Text("", 17, 0.6);
-            note.Margin = new Thickness(0, 8, 0, 0);
-            note.MaxWidth = 1100;
-            col.Children.Add(note);
+            info = new DetailPanel(960);
+            info.Root.Margin = new Thickness(0, 34, 0, 0);
+            info.Root.MinHeight = 120;
+            col.Children.Add(info.Root);
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 30, 0, 0) };
             installAll = new Pill("Install all", 240);
             carryOn = new Pill(firstRun ? "Continue" : "Done", 200);
@@ -171,31 +167,39 @@ namespace Selene
             if (index < items.Count)
             {
                 var item = items[index];
-                about.Text = item.About;
-                note.Text = ActionHint(item);
+                Describe(item);
             }
             else if (index == ButtonsStart)
             {
-                about.Text = "Installs every add-on that comes with Selene, one after another.";
-                note.Text = "Playnite asks you to confirm each one. New add-ons start working after Playnite restarts.";
+                int missing = SetupCheck.MissingIncluded(HomeNav.Api).Count;
+                if (missing > 0) info.Show("\uE74C", Tone.Accent, "Install all", missing + " to go", "Every add-on that comes with Selene, one after another.", "Playnite asks for each one. They work after a restart.", "A", "Install all");
+                else info.Show("\uE74C", Tone.Success, "Install all", "Done", "Every add-on that comes with Selene is installed.", "");
             }
             else
             {
-                about.Text = firstRun ? "Next: your profile." : "Back to the home.";
-                note.Text = "";
+                info.Show("\uE72A", Tone.Accent, firstRun ? "Continue" : "Done", "", firstRun ? "Next: make your profile." : "Back to the home.", "", "A", firstRun ? "Continue" : "Done");
             }
         }
 
-        private static string ActionHint(SetupItem item)
+        // the focused card in the panel below: what it is, its state, and what A does
+        private void Describe(SetupItem item)
         {
-            if (item.State == SetupState.Ready) return "";
-            if (item.AddonId != null) return "A: install it (Playnite asks you to confirm; it starts working after Playnite restarts)";
-            if (item.Key == "ludusavi-program") return "A: download the Ludusavi program and connect it";
-            if (item.Key == "library") return "Connect a store in Playnite's settings: Menu, Settings, Libraries";
-            if (item.Key == "folders") return "Add game folders in Selene Core's settings (desktop mode: Add-ons, Generic, Selene Core)";
-            if (item.Key == "controller") return "Plug in or pair a controller; Selene picks it up by itself";
-            if (item.State == SetupState.Warning) return item.Detail;
-            return "Turn it on in Playnite's Add-ons";
+            var icon = Icon(item.Key);
+            switch (item.State)
+            {
+                case SetupState.Ready:
+                    info.Show(icon, Tone.Success, item.Title, "Ready", item.About, item.Detail);
+                    return;
+                case SetupState.Warning:
+                    info.Show(icon, Tone.Warning, item.Title, "Clashes", item.About, "Turn it off in Playnite's Add-ons so the two don't fight.");
+                    return;
+            }
+            if (item.AddonId != null) { info.Show(icon, Tone.Accent, item.Title, "Not installed", item.About, "Playnite asks you to confirm. It works after a restart.", "A", "Install"); return; }
+            if (item.Key == "ludusavi-program") { info.Show(icon, Tone.Accent, item.Title, "Not set up", item.About, "Downloads the free Ludusavi program and connects it.", "A", "Set up"); return; }
+            if (item.Key == "library") { info.Show(icon, Tone.Warning, item.Title, "No games", item.About, "Connect a store in Playnite's settings, under Libraries."); return; }
+            if (item.Key == "folders") { info.Show(icon, Tone.Muted, item.Title, "Optional", item.About, "Add folders in Selene Core's settings (desktop mode)."); return; }
+            if (item.Key == "controller") { info.Show(icon, Tone.Muted, item.Title, "Not connected", item.About, "Plug in or pair a controller; Selene picks it up by itself."); return; }
+            info.Show(icon, Tone.Warning, item.Title, "Turned off", item.About, "Turn it on in Playnite's Add-ons.");
         }
 
         public override void Handle(string b)

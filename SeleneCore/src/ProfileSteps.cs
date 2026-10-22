@@ -674,7 +674,8 @@ namespace Selene
             private readonly List<string> files = new List<string>();    // null = the theme's own
             private readonly List<Tile> tiles = new List<Tile>();
             private readonly ScrollingGrid grid;
-            private readonly TextBlock groupLabel, lookLabel;
+            private readonly TextBlock groupLabel;
+            private readonly Segmented look = new Segmented("Home background", new[] { "Game art", "Background only" }, "X");
             private readonly List<string> groups = new List<string>();
             private readonly Later apply = new Later(130);
             private int index, generation;
@@ -693,8 +694,8 @@ namespace Selene
                 row.Children.Add(left);
                 var right = new StackPanel { Margin = new Thickness(50, 0, 0, 0) };
                 right.Children.Add(Preview(820));
-                lookLabel = new TextBlock { FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), Margin = new Thickness(4, 18, 0, 0) };
-                right.Children.Add(lookLabel);
+                look.Root.Margin = new Thickness(4, 20, 0, 0);
+                right.Children.Add(look.Root);
                 row.Children.Add(right);
                 Root.Children.Add(row);
             }
@@ -757,11 +758,8 @@ namespace Selene
 
             private void ShowLook(bool changed)
             {
-                var names = new Dictionary<string, string> { { "art", "the game's art (background where there is none)" }, { "wallpaper", "background only" } };
-                string text;
-                lookLabel.Text = "Home: " + (names.TryGetValue(Owner.Look, out text) ? text : Owner.Look) + "   (X to change)";
+                look.Select(Owner.Look == "wallpaper" ? 1 : 0, changed);
                 Profiles.ApplyHomeBackground(Owner.Look);
-                if (changed) Ui.Pop(lookLabel);
             }
 
             public override void Move(string dir)

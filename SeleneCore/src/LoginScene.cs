@@ -361,7 +361,7 @@ namespace Selene
         private int menuIndex;
         private Guid removeArmed = Guid.Empty;
         private readonly Border confirmCard;
-        private readonly TextBlock confirmTitle;
+        private readonly DetailPanel confirm;
         private DispatcherTimer confirmTimer;
 
         // glyph (Segoe MDL2 Assets), label, helper command, built-in fallback
@@ -385,26 +385,14 @@ namespace Selene
             hint = Ui.Text("", 18, 0.6);
             hint.Margin = new Thickness(0, 34, 0, 0);
             col.Children.Add(hint);
-            // "Remove <name>?" card under the profiles: X again removes, B keeps (goes away by itself after a while)
-            confirmTitle = new TextBlock { FontSize = 24, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor") };
-            var warn = new TextBlock { Text = "", FontFamily = Ui.Glyphs, FontSize = 30, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 18, 0) };
-            warn.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
-            var texts = new StackPanel();
-            texts.Children.Add(confirmTitle);
-            texts.Children.Add(new TextBlock { Text = "Their favorites and playtime go with them. Your games stay.", FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.7), Margin = new Thickness(0, 6, 0, 0) });
-            var keys = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(-18, 18, 0, 0) };
-            keys.Children.Add(Ui.Prompt("X", "Remove"));
-            keys.Children.Add(Ui.Prompt("B", "Keep"));
-            texts.Children.Add(keys);
-            var line = new StackPanel { Orientation = Orientation.Horizontal };
-            line.Children.Add(warn);
-            line.Children.Add(texts);
+            // "Remove <name>?" under the profiles: X again removes, B keeps (goes away by itself after a while)
+            confirm = new DetailPanel(760);
             confirmCard = new Border
             {
-                Child = line, CornerRadius = new CornerRadius(18), Padding = new Thickness(26, 20, 30, 20), Margin = new Thickness(0, 30, 0, 0),
-                Background = Ink.Brush("SeleneGlassColor", 0.92), BorderBrush = Ink.Brush("SeleneInkColor", 0.18), BorderThickness = new Thickness(1),
+                Child = confirm.Root, CornerRadius = new CornerRadius(22), Padding = new Thickness(28, 22, 28, 22), Margin = new Thickness(0, 34, 0, 0),
+                Background = Ink.Brush("SeleneGlassColor", 0.9), BorderBrush = Ink.Brush("SeleneInkColor", 0.16), BorderThickness = new Thickness(1),
                 HorizontalAlignment = HorizontalAlignment.Center, Visibility = Visibility.Collapsed,
-                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black }
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black }
             };
             col.Children.Add(confirmCard);
             Root.Children.Add(col);
@@ -550,7 +538,7 @@ namespace Selene
             if (removeArmed != p.Id)
             {
                 removeArmed = p.Id;
-                confirmTitle.Text = "Remove " + p.Name + "?";
+                confirm.Show("\uE7BA", Tone.Warning, "Remove " + p.Name + "?", "", "Their favorites and playtime go with them. Your games stay.", "", "X", "Remove", "B", "Keep");
                 confirmCard.Visibility = Visibility.Visible;
                 Ui.Rise(confirmCard, 0, 14, 260);
                 Ui.Shake(items[index]);

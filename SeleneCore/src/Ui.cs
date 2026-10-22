@@ -165,6 +165,23 @@ namespace Selene
             });
         }
 
+        // a button-like pill: the controller badge inside, then what it does (the main one filled with the focus color)
+        public static Border ActionPill(string button, string label, bool main)
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            var dot = new Grid { Width = 26, Height = 26 };
+            dot.Children.Add(new Ellipse { Fill = main ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.9) });
+            dot.Children.Add(new TextBlock { Text = button, FontSize = 13, FontWeight = FontWeights.Bold, FontFamily = Body, Foreground = main ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            row.Children.Add(dot);
+            row.Children.Add(new TextBlock { Text = label, FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Body, Foreground = main ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 4, 1) });
+            return new Border
+            {
+                Child = row, CornerRadius = new CornerRadius(20), Padding = new Thickness(6, 6, 16, 6), Margin = new Thickness(0, 0, 10, 0),
+                Background = main ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneInkColor", 0.12),
+                BorderBrush = main ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneInkColor", 0.2), BorderThickness = new Thickness(1)
+            };
+        }
+
         // ---------------- navigation ----------------
         // controller and keyboard both arrive as button names; the left stick moves like the d-pad
         public static string Normalize(string button)
@@ -234,6 +251,125 @@ namespace Selene
             g.Children.Add(view);
             glow = halo;
             return g;
+        }
+    }
+
+    // A choice between a few options, changed with one button: a label, the options in a glass pill (the chosen one
+    // filled with the focus color), and the button badge
+    public class Segmented
+    {
+        public readonly StackPanel Root = new StackPanel { Orientation = Orientation.Horizontal };
+        private readonly List<Border> segments = new List<Border>();
+        private readonly List<TextBlock> labels = new List<TextBlock>();
+
+        public Segmented(string title, string[] options, string button)
+        {
+            Root.Children.Add(new TextBlock { Text = title.ToUpperInvariant(), FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) });
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            foreach (var o in options)
+            {
+                var label = new TextBlock { Text = o, FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.8) };
+                var seg = new Border { CornerRadius = new CornerRadius(19), Padding = new Thickness(18, 7, 18, 8), Child = label };
+                row.Children.Add(seg);
+                segments.Add(seg);
+                labels.Add(label);
+            }
+            Root.Children.Add(new Border
+            {
+                Child = row, CornerRadius = new CornerRadius(23), Padding = new Thickness(4),
+                Background = Ink.Brush("SeleneInkColor", 0.1), BorderBrush = Ink.Brush("SeleneInkColor", 0.18), BorderThickness = new Thickness(1)
+            });
+            var badge = new Grid { Width = 28, Height = 28, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            badge.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor", 0.9) });
+            badge.Children.Add(new TextBlock { Text = button, FontSize = 14, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            Root.Children.Add(badge);
+        }
+
+        public void Select(int index, bool animate)
+        {
+            for (int i = 0; i < segments.Count; i++)
+            {
+                bool on = i == index;
+                segments[i].Background = on ? (Brush)Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
+                labels[i].Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.8);
+                labels[i].FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
+            }
+            if (animate) Ui.Pop(segments[index]);
+        }
+    }
+
+    public enum Tone { Accent, Success, Warning, Muted }
+
+    // The panel that explains whatever is focused: its icon in a soft tinted circle, its name with a status chip,
+    // one line about it, and what the buttons do as pills (badge inside) with a small note beside them
+    public class DetailPanel
+    {
+        public readonly Grid Root = new Grid();
+        private readonly Ellipse circle;
+        private readonly TextBlock glyph, title, chipText, about, note;
+        private readonly Border chip;
+        private readonly StackPanel actions;
+
+        public DetailPanel(double width)
+        {
+            Root.Width = width;
+            Root.HorizontalAlignment = HorizontalAlignment.Center;
+            Root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Root.ColumnDefinitions.Add(new ColumnDefinition());
+            var badge = new Grid { Width = 76, Height = 76, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 0, 26, 0) };
+            circle = new Ellipse();
+            glyph = new TextBlock { FontFamily = Ui.Glyphs, FontSize = 32, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            badge.Children.Add(circle);
+            badge.Children.Add(glyph);
+            Root.Children.Add(badge);
+
+            var col = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(col, 1);
+            var head = new StackPanel { Orientation = Orientation.Horizontal };
+            title = new TextBlock { FontSize = 28, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center };
+            chipText = new TextBlock { FontSize = 13, FontWeight = FontWeights.Bold, FontFamily = Ui.Body };
+            chip = new Border { Child = chipText, CornerRadius = new CornerRadius(12), Padding = new Thickness(11, 3, 11, 4), Margin = new Thickness(14, 2, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            head.Children.Add(title);
+            head.Children.Add(chip);
+            col.Children.Add(head);
+            about = new TextBlock { FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.82), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
+            col.Children.Add(about);
+            var foot = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0) };
+            actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            note = new TextBlock { FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = width - 380 };
+            foot.Children.Add(actions);
+            foot.Children.Add(note);
+            col.Children.Add(foot);
+            Root.Children.Add(col);
+        }
+
+        // actions: pairs of button + label, e.g. "A", "Install"; the first is drawn as the main one
+        public void Show(string icon, Tone tone, string name, string status, string text, string noteText, params string[] buttons)
+        {
+            var key = tone == Tone.Success ? "SeleneSuccessColor" : tone == Tone.Muted ? "SeleneInkColor" : "GlyphColor";
+            if (tone == Tone.Warning)
+            {
+                circle.Fill = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0x6B, 0x6B));
+                glyph.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
+                chipText.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
+                chip.Background = new SolidColorBrush(Color.FromArgb(0x2E, 0xFF, 0x6B, 0x6B));
+            }
+            else
+            {
+                circle.Fill = Ink.Brush(key, 0.16);
+                glyph.Foreground = Ink.Brush(key);
+                chipText.Foreground = Ink.Brush(key);
+                chip.Background = Ink.Brush(key, 0.16);
+            }
+            glyph.Text = icon;
+            title.Text = name;
+            chipText.Text = (status ?? "").ToUpperInvariant();
+            chip.Visibility = string.IsNullOrEmpty(status) ? Visibility.Collapsed : Visibility.Visible;
+            about.Text = text;
+            note.Text = noteText ?? "";
+            note.Margin = new Thickness(buttons.Length > 0 ? 18 : 0, 0, 0, 0);
+            actions.Children.Clear();
+            for (int i = 0; i + 1 < buttons.Length; i += 2) actions.Children.Add(Ui.ActionPill(buttons[i], buttons[i + 1], i == 0));
         }
     }
 
