@@ -45,6 +45,8 @@ namespace Selene
             if (library == null || hub == null) return false;
             library.Command = new Relay(ShowLibrary);
             hub.Command = new Relay(ShowHome);
+            var store = HomeNav.FindByName(main, "SeleneNav_store") as ButtonBase;
+            if (store != null) store.Command = new Relay(() => LoginScene.OpenWith(() => new StoreScreen()));
             HomeNav.Log("shell: home/library wired");
             DevView();
             return true;

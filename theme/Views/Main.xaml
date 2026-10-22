@@ -137,6 +137,7 @@
                                 <!-- actions Selene Core wires up (home <-> library) -->
                                 <ButtonEx x:Name="SeleneNav_library" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
                                 <ButtonEx x:Name="SeleneNav_hub" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
+                                <ButtonEx x:Name="SeleneNav_store" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
 
                                 <Grid Margin="0,120,0,0">
                                     <Grid.RowDefinitions>
@@ -274,6 +275,10 @@
                                                                     <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
                                                                     <Setter TargetName="CardGlyph" Property="Text" Value="&#xE8F1;"/>
                                                                 </DataTrigger>
+                                                                <DataTrigger Binding="{Binding}" Value="nav:store">
+                                                                    <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
+                                                                    <Setter TargetName="CardGlyph" Property="Text" Value="&#xE719;"/>
+                                                                </DataTrigger>
                                                             </ControlTemplate.Triggers>
                                                         </ControlTemplate>
                                                     </Setter.Value>
@@ -331,6 +336,7 @@
                                                 <ListBoxEx.ItemsSource>
                                                     <CompositeCollection>
                                                         <sys:String>nav:library</sys:String>
+                                                        <sys:String>nav:store</sys:String>
                                                         <CollectionContainer Collection="{Binding Source={StaticResource SeleneGames}}"/>
                                                     </CompositeCollection>
                                                 </ListBoxEx.ItemsSource>
@@ -353,6 +359,9 @@
                                                                 <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:library">
                                                                     <Setter Property="Text" Value="{DynamicResource LOCLibrary}"/>
                                                                 </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:store">
+                                                                    <Setter Property="Text" Value="Store"/>
+                                                                </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </TextBlock.Style>
@@ -368,6 +377,9 @@
                                                     <Style TargetType="StackPanel">
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:library">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:store">
                                                                 <Setter Property="Visibility" Value="Hidden"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>

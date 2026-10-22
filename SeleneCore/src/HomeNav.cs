@@ -1400,7 +1400,7 @@ namespace Selene
                 try
                 {
                     RebuildGames(row);
-                    int first0 = FirstGameIndex(row);
+                    int first0 = startOnCards ? 0 : FirstGameIndex(row);
                     if (first0 >= 0) { row.SelectedIndex = first0; PushSelected(row); }
                 }
                 catch { }
@@ -1420,6 +1420,8 @@ namespace Selene
 
         private static DateTime lastIntro;
         private static bool introDone;
+        // right after Playnite starts or someone signs in, the row starts on the first card (Library), not a game
+        private static bool startOnCards = true;
 
         private static void PlayIntro(ListBox row)
         {
@@ -1433,7 +1435,8 @@ namespace Selene
                 // would keep its old selection (music, background) while the row shows its first game.
                 ApplyCardOrder(row);
                 RebuildGames(row);
-                int first = FirstGameIndex(row);
+                int first = startOnCards && row.Items.Count > 0 ? 0 : FirstGameIndex(row);
+                startOnCards = false;
                 movingCard = null;
                 movingGame = null;
                 {
@@ -1447,7 +1450,7 @@ namespace Selene
                         again.Stop();
                         if (row.IsVisible && !row.IsKeyboardFocusWithin)
                         {
-                            var fc2 = row.ItemContainerGenerator.ContainerFromIndex(FirstGameIndex(row)) as UIElement;
+                            var fc2 = row.ItemContainerGenerator.ContainerFromIndex(first) as UIElement;
                             if (fc2 != null) { fc2.Focus(); Log("refocused first game"); }
                         }
                     };
@@ -2119,6 +2122,7 @@ namespace Selene
         // another profile signed in: its favorites, recently played and order
         public static void ProfileChanged()
         {
+            startOnCards = true;
             var row = LiveRow();
             if (row != null) { ApplyRowFilter(row); ShowHeart(row.SelectedItem); }
         }

@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- A Store card next to Library: opens the store apps on your PC (Steam, Epic, Xbox, GOG, Ubisoft, EA, Microsoft Store).
+- After Playnite starts or someone signs in, the home starts on the Library card.
 - Your own picture as an avatar: frame it in a circle first (move with the stick, zoom with the triggers).
 - Fixed moves skipping an item when the same press arrived twice.
 - Favorites and Recently played belong to whoever is signed in (the heart, the Favorites tab and the order of the row).
