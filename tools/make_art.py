@@ -110,7 +110,7 @@ def lockup(background, ink, shine):
     body = (f'<rect width="{w}" height="{h}" fill="{background}"/>'
             + (mark(w / 2, 300, 380, ink, shine=True) if shine
                else mark(w / 2, 300, 380, ink, glow_color="#4A78C8", glow_opacity=0.22))
-            + lettering(WORDMARK, w / 2, 560, 640, ink))
+            + lettering(WORDMARK, w / 2, 545, 465, ink))
     return doc(w, h, body)
 
 
@@ -128,8 +128,8 @@ def banner():
                     f'fill="{MOONLIGHT}" opacity="{rng.uniform(0.15, 0.6):.2f}"/>' for _ in range(110))
     body = (f'<rect width="{w}" height="{h}" fill="url(#sky)"/><rect width="{w}" height="{h}" fill="url(#spot)"/>'
             f'<rect width="{w}" height="{h}" fill="url(#haze)"/>{stars}'
-            + mark(w / 2, 250, 280, MOONLIGHT, shine=True)
-            + lettering(WORDMARK, w / 2, 424, 500, MOONLIGHT))
+            + mark(w / 2, 276, 280, MOONLIGHT, shine=True)
+            + lettering(WORDMARK, w / 2, 428, 345, MOONLIGHT))
     return doc(w, h, body, defs)
 
 
