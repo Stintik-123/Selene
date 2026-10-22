@@ -8,7 +8,7 @@ Playnite - https://github.com/JosefNemec/Playnite - MIT License, Copyright (c) J
 The sounds in `theme/Audio` (except where noted) are from *Interface Sounds* by Kenney (www.kenney.nl),
 released under Creative Commons Zero (CC0): http://creativecommons.org/publicdomain/zero/1.0/
 The original license file is included as `theme/Audio/LICENSE-Kenney-Interface-Sounds.txt`.
-Not from Kenney: `navigation.wav`, `activation.wav`, `CloseAdditionalView.wav`, `Boot.wav` and `Success.wav` are Selene's own, synthesized by `tools/make_sounds.py` (no samples).
+Not from Kenney: `navigation.wav`, `activation.wav`, `CloseAdditionalView.wav`, `Boot.wav`, `Success.wav` and `LoginSelect.wav` are Selene's own, synthesized by `tools/make_sounds.py` (no samples).
 
 ## Cinzel
 The "SELENE" lettering in the logo and banner (`tools/art/selene-wordmark.svg`, `docs/logo`) is set in Cinzel and converted

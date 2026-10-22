@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_magic", "Success.wav": "success_glass"}
+CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_magic", "Success.wav": "success_glass", "LoginSelect.wav": "signin_chime"}
 
 
 def note(name):
@@ -349,7 +349,18 @@ def success_glass():
     return normalize(fade_tail(s, 0.3), 0.2)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass)}
+def signin_chime():
+    # picking a profile: the boot chime's two tones struck together, its answer a fifth up a beat later, a soft bloom
+    total = 1.9
+    s = add(two_tone(2040, 2775, total, 0.55, 0.42),
+            [v * 0.55 for v in ([0.0] * int(0.13 * RATE) + two_tone(3060, 4080, total - 0.13, 0.5, 0.5))],
+            pad([1020, 1387, 2040], 0.05, 0.25, 0.6, 0.14, total),
+            sparkles(9, 0.15, 0.9, 5200, 9800, 0.04, total, seed=21))
+    s = reverb(s, 0.25, 0.6)
+    return normalize(fade_tail(s, 0.4), 0.18)
+
+
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime)}
 
 
 def write(path, samples):
