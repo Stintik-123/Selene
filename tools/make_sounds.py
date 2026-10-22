@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime"}
+CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime_long"}
 
 
 def note(name):
@@ -267,7 +267,30 @@ def boot_chime():
     return normalize(fade_tail(s, 0.12), 0.17)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime)}
+def boot_chime_long():
+    # the same chime, lingering: the tones fade over about three seconds with more soft echoes and a room tail
+    total = 3.2
+    out, pa, pb = [], 0.0, 0.0
+    for i in range(int(RATE * total)):
+        t = i / RATE
+        env = min(1.0, t / 0.03) * (0.82 * math.exp(-t / 0.065) + 0.18 * math.exp(-t / 0.9))
+        tilt = 0.5 + 0.5 * math.sin(2 * math.pi * t / 0.42)
+        pa += 2 * math.pi * 2040 / RATE
+        pb += 2 * math.pi * 2775 / RATE
+        out.append(env * ((0.55 + 0.45 * tilt) * math.sin(pa) + (0.35 + 0.55 * (1 - tilt)) * math.sin(pb)))
+    echo = [0.0] * len(out)
+    for d, g in ((0.12, 0.18), (0.25, 0.12), (0.42, 0.08), (0.63, 0.05)):
+        k = int(d * RATE)
+        for i in range(k, len(out)):
+            echo[i] += out[i - k] * g
+    s = add([a + b for a, b in zip(out, echo)],
+            ping(10950, 10950, 0, 0.0, 0.02, 0.1, 0.25, 0.05, total),
+            ping(6100, 6100, 0, 0.0, 0.02, 0.05, 0.3, 0.03, total))
+    s = reverb(s, 0.22, 0.8)
+    return normalize(fade_tail(s, 0.6), 0.17)
+
+
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long)}
 
 
 def write(path, samples):
