@@ -1056,7 +1056,7 @@ namespace Selene
         {
             try
             {
-                if (previewShowing || !row.IsVisible || !row.IsKeyboardFocusWithin || movingCard != null || movingGame != null) return;
+                if (previewShowing || !row.IsVisible || !row.IsKeyboardFocusWithin || movingCard != null || movingGame != null || LoginScene.IsActive) return;
                 var game = row.SelectedItem;
                 var path = game is string ? null : (previewSound ? FullTrailerPath(game) ?? TrailerPath(game) : TrailerPath(game));
                 var item = row.ItemContainerGenerator.ContainerFromItem(game) as ListBoxItem;
@@ -1227,6 +1227,13 @@ namespace Selene
         // Closing because the user moved: the tile's layout snaps back at once (so navigation measures real sizes),
         // but it is drawn shrinking from the 16:9 card to the square tile around its own centre, and the row glides
         // from where it was instead of jumping.
+        // a menu opened over the home: the trailer closes and doesn't start underneath it
+        public static void PauseForOverlay()
+        {
+            if (previewArm != null) previewArm.Stop();
+            if (previewShowing) SmoothClosePreview();
+        }
+
         private static void SmoothClosePreview()
         {
             var row = previewRow != null ? previewRow.Target as ListBox : null;

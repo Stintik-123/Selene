@@ -237,6 +237,7 @@ namespace Selene
         // menus show over the dimmed home; the login screens have the full backdrop
         private static void ApplyOverlay(bool on)
         {
+            if (on) HomeNav.PauseForOverlay();
             foreach (var el in backdrop) el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(on ? 0 : 1, TimeSpan.FromMilliseconds(220)));
             if (!on) RefreshBackdrop();
             scene.Background = on ? Ink.Brush("SeleneScrimColor", 0.88) : null;

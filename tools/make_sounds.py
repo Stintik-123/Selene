@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime_sparkle", "Success.wav": "success_glass", "LoginSelect.wav": "signin_boot", "OpenPanel.wav": "panel_open", "Alert.wav": "alert_soft"}
+CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime_sparkle", "Success.wav": "success_soft", "LoginSelect.wav": "signin_boot", "OpenPanel.wav": "panel_open", "Alert.wav": "alert_soft"}
 
 
 def note(name):
@@ -413,6 +413,22 @@ def signin_boot():
     return normalize(fade_tail(s, 0.3), 0.17)
 
 
+def success_soft():
+    # done (profile made or saved): the confirm ping, then the boot chime's two tones struck softly, short
+    total = 1.1
+    s = add(confirm_glass(),
+            [v * 0.7 for v in ([0.0] * int(0.09 * RATE) + signin_boot())][:int(total * RATE)])
+    return normalize(fade_tail(s[:int(total * RATE)], 0.3), 0.17)
+
+
+def success_bloom():
+    # option: only the boot tones, struck twice quickly (a small "ta-da"), soft
+    total = 1.2
+    first = signin_boot()
+    s = add([v * 0.6 for v in first], [v * 0.8 for v in ([0.0] * int(0.11 * RATE) + first)])
+    return normalize(fade_tail(s[:int(total * RATE)], 0.3), 0.17)
+
+
 def signin_chime():
     # picking a profile: the boot chime's two tones struck together, its answer a fifth up a beat later, a soft bloom
     total = 1.9
@@ -424,7 +440,7 @@ def signin_chime():
     return normalize(fade_tail(s, 0.4), 0.18)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime, boot_chime_sparkle, alert_soft, panel_open, signin_boot)}
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime, boot_chime_sparkle, alert_soft, panel_open, signin_boot, success_soft, success_bloom)}
 
 
 def write(path, samples):
