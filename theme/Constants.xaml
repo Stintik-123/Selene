@@ -51,6 +51,7 @@
     <SolidColorBrush x:Key="SeleneGlassSolidBrush" Color="{DynamicResource SeleneGlassColor}" Opacity="0.88" />
     <SolidColorBrush x:Key="SeleneGlassLightBrush" Color="{DynamicResource SeleneGlassColor}" Opacity="0.45" />
     <SolidColorBrush x:Key="SeleneSuccessBrush" Color="{DynamicResource SeleneSuccessColor}" />
+    <sys:String x:Key="SeleneHeartGlyph">&#xE006;</sys:String>
     <!-- home background look (Selene Core switches these per profile; blend is the default) -->
     <sys:Double x:Key="SeleneArtOpacity">0.85</sys:Double>
     <sys:Double x:Key="SeleneTintOpacity">0.22</sys:Double>

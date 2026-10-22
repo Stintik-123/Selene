@@ -5,7 +5,7 @@
     <sys:String x:Key="SeleneThemeId">selene</sys:String>
     <sys:String x:Key="SeleneThemeName">Selene</sys:String>
     <sys:String x:Key="SeleneThemeMode">dark</sys:String>
-    <sys:String x:Key="SeleneDefaultWallpaper"></sys:String>
+    <sys:String x:Key="SeleneDefaultWallpaper">Wallpapers/selene/0-moonlight.jpg</sys:String>
 
     <Color x:Key="GlyphColor">#FF9CCBFF</Color>
     <Color x:Key="GlyphLightColor">#FFEAF3FF</Color>

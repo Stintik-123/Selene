@@ -477,6 +477,7 @@ namespace Selene
             for (int k = 0; k < items.Count; k++) if (k != i) Ui.Fade(items[k], 0, 220);
             Ui.ScaleTo(tiles[i].Root, 1.22, 380);
             Profiles.SignIn(profiles[i].Id);
+            HomeNav.ProfileChanged();
             var later = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
             later.Tick += (s, e) => { later.Stop(); LoginScene.Finish(); };
             later.Start();

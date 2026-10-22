@@ -186,6 +186,21 @@ namespace Selene
             return now;
         }
 
+        // the signed-in profile's favorite / last played; Playnite's own value when nobody is signed in
+        public static bool IsFavorite(Guid gameId, bool playniteFavorite)
+        {
+            var p = Active;
+            return p != null ? p.Favorites.Contains(gameId) : playniteFavorite;
+        }
+
+        public static DateTime? LastPlayed(Guid gameId, DateTime? playniteLastActivity)
+        {
+            var p = Active;
+            if (p == null) return playniteLastActivity;
+            DateTime at;
+            return p.LastPlayed.TryGetValue(gameId, out at) ? at : (DateTime?)null;
+        }
+
         public static void RecordSession(Guid gameId, ulong seconds)
         {
             var p = Active;

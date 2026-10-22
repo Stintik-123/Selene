@@ -878,6 +878,7 @@ namespace Selene
                 QueuePush(row);
                 ArmPreview(row);
                 PreloadCoverArt(row.SelectedItem);
+                ShowHeart(row.SelectedItem);
                 GameMedia.OnSelected(row.SelectedItem, RowNeighbours(row));
             };
             // the game already selected when the row appears never raises SelectionChanged
@@ -2081,19 +2082,53 @@ namespace Selene
             c.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
-        // Favourite pill: flips the game's Favorite flag in the Playnite database (the heart fills via SelectedGame.Favorite).
+        // favorites and last played belong to the signed-in Selene profile (Playnite's own flags when nobody is signed in)
+        private static bool IsFavoriteOf(object game)
+        {
+            var id = Prop(game, "Id");
+            return id is Guid && Profiles.IsFavorite((Guid)id, Equals(Prop(game, "Favorite"), true));
+        }
+
+        private static DateTime? LastPlayedOf(object game)
+        {
+            var id = Prop(game, "Id");
+            var playnite = Prop(game, "LastActivity") as DateTime?;
+            return id is Guid ? Profiles.LastPlayed((Guid)id, playnite) : playnite;
+        }
+
+        // the heart on the home's Favourite pill (Main.xaml binds it to SeleneHeartGlyph)
+        private static void ShowHeart(object game)
+        {
+            Application.Current.Resources["SeleneHeartGlyph"] = game != null && !(game is string) && IsFavoriteOf(game) ? "\uE00B" : "\uE006";
+        }
+
+        // another profile signed in: its favorites, recently played and order
+        public static void ProfileChanged()
+        {
+            var row = LiveRow();
+            if (row != null) { ApplyRowFilter(row); ShowHeart(row.SelectedItem); }
+        }
+
+        // Favourite pill: the signed-in profile's favorite (Playnite's Favorite flag when nobody is signed in)
         private static void ToggleFavorite(object game)
         {
             try
             {
                 var id = Prop(game, "Id");
                 if (!(id is Guid) || Api == null) return;
-                var g = Api.Database.Games.Get((Guid)id);
-                if (g == null) return;
-                g.Favorite = !g.Favorite;
-                Api.Database.Games.Update(g);
-                Log("favorite " + (g.Favorite ? "on" : "off") + " -> " + g.Name);
-                if (!g.Favorite && RowFilters[RowFilter] == "favorites") RemoveFromRowAnimated(game);
+                bool now;
+                if (Profiles.Active != null) now = Profiles.ToggleFavorite((Guid)id);
+                else
+                {
+                    var g = Api.Database.Games.Get((Guid)id);
+                    if (g == null) return;
+                    g.Favorite = !g.Favorite;
+                    Api.Database.Games.Update(g);
+                    now = g.Favorite;
+                }
+                Log("favorite " + (now ? "on" : "off") + " -> " + Prop(game, "Name"));
+                ShowHeart(game);
+                if (!now && RowFilters[RowFilter] == "favorites") RemoveFromRowAnimated(game);
             }
             catch (Exception ex) { Log("favorite: " + ex.Message); }
         }
@@ -2428,8 +2463,8 @@ namespace Selene
             switch (RowFilters[RowFilter])
             {
                 case "installed": return Equals(Prop(game, "IsInstalled"), true);
-                case "recent": { var la = Prop(game, "LastActivity") as DateTime?; return la.HasValue && la.Value > DateTime.Now.AddDays(-30); }
-                case "favorites": return Equals(Prop(game, "Favorite"), true);
+                case "recent": { var la = LastPlayedOf(game); return la.HasValue && la.Value > DateTime.Now.AddDays(-30); }
+                case "favorites": return IsFavoriteOf(game);
                 case "unplayed": { var pt = Prop(game, "Playtime"); return pt == null || Convert.ToUInt64(pt) == 0; }
                 default: return true;
             }
@@ -2652,7 +2687,7 @@ namespace Selene
                 if (pa < 0) pa = int.MaxValue;
                 if (pb < 0) pb = int.MaxValue;
                 if (pa != pb) return pa.CompareTo(pb);
-                var la = Prop(a, "LastActivity") as DateTime?; var lb = Prop(b, "LastActivity") as DateTime?;
+                var la = LastPlayedOf(a); var lb = LastPlayedOf(b);
                 int byDate = Nullable.Compare(lb, la);
                 return byDate != 0 ? byDate : string.Compare(Convert.ToString(Prop(a, "Name")), Convert.ToString(Prop(b, "Name")), StringComparison.OrdinalIgnoreCase);
             });

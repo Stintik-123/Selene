@@ -481,16 +481,8 @@
                                                     </Button>
                                                     <Button x:Name="SeleneFavBtn" ToolTip="Favorite" Template="{StaticResource SelenePill}" MinWidth="52" Width="52" Padding="0" Height="60" Margin="14,0,0,0"
                                                             VerticalAlignment="Center" Focusable="True" FocusVisualStyle="{x:Null}" Cursor="Hand">
-                                                        <TextBlock FontSize="20" FontFamily="Segoe MDL2 Assets">
-                                                            <TextBlock.Style>
-                                                                <Style TargetType="TextBlock">
-                                                                    <Setter Property="Text" Value="&#xE006;"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding SelectedGame.Favorite}" Value="True"><Setter Property="Text" Value="&#xE00B;"/></DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </TextBlock.Style>
-                                                        </TextBlock>
+                                                        <!-- the signed-in profile's favorite (Selene Core sets the glyph) -->
+                                                        <TextBlock FontSize="20" FontFamily="Segoe MDL2 Assets" Text="{DynamicResource SeleneHeartGlyph}"/>
                                                     </Button>
                                                 </StackPanel>
 
