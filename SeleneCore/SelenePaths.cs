@@ -35,6 +35,9 @@ namespace Selene
             get { return settings != null && settings.GameFolders != null ? settings.GameFolders.Where(f => !string.IsNullOrWhiteSpace(f)).ToArray() : new string[0]; }
         }
 
+        // the user's own wallpapers (searched with subfolders); empty = only the ones Selene ships
+        public static string WallpapersFolder { get { return settings != null ? settings.WallpapersFolder ?? "" : ""; } }
+
         // optional companion program (TV/controller helper with admin rights); empty = those features are off
         public static string Helper { get { return settings != null ? settings.HelperPath ?? "" : ""; } }
 

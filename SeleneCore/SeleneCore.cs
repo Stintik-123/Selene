@@ -80,11 +80,12 @@ namespace Selene
         public string StreamClientMatch { get; set; }
         public string StreamCredentialsFile { get; set; }
         public string HelperTask { get; set; }
+        public string WallpapersFolder { get; set; }
 
         public SeleneSettings()
         {
             MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; AvatarPath = ""; DisplayName = "";
-            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = "";
+            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = ""; WallpapersFolder = "";
         }
     }
 
@@ -109,6 +110,7 @@ namespace Selene
             Settings.HelperPath = editing.HelperPath; Settings.StreamLogsFolder = editing.StreamLogsFolder;
             Settings.AvatarPath = editing.AvatarPath; Settings.DisplayName = editing.DisplayName;
             Settings.StreamClientMatch = editing.StreamClientMatch; Settings.StreamCredentialsFile = editing.StreamCredentialsFile; Settings.HelperTask = editing.HelperTask;
+            Settings.WallpapersFolder = editing.WallpapersFolder;
         }
 
         public void EndEdit()
@@ -139,6 +141,7 @@ namespace Selene
             var games = field("Folders with games no store knows about (one per line):", string.Join(Environment.NewLine, s.GameFolders ?? new List<string>()),
                 v => s.GameFolders = new List<string>(v.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)));
             games.AcceptsReturn = true; games.MinHeight = 60;
+            field("Your wallpapers folder (images in it and its subfolders show up in the background picker). Empty = only Selene's wallpapers:", s.WallpapersFolder, v => s.WallpapersFolder = v);
             field("Login name. Empty = your Steam name:", s.DisplayName, v => s.DisplayName = v);
             field("Login picture (image file). Empty = your Steam avatar:", s.AvatarPath, v => s.AvatarPath = v);
             field("Optional companion helper (.exe) with admin rights. Empty = off:", s.HelperPath, v => s.HelperPath = v);
