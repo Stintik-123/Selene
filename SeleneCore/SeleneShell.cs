@@ -20,6 +20,7 @@ namespace Selene
         }
 
         private static Window main;
+        private static ICommand seleneMenu;
         private static System.Windows.Threading.DispatcherTimer attachTimer;
 
         public static void Start()
@@ -51,12 +52,19 @@ namespace Selene
             // from it under More
             var vm = main.DataContext;
             var openMenu = vm != null ? vm.GetType().GetProperty("OpenMainMenuCommand") : null;
-            if (openMenu != null && openMenu.CanWrite && !(openMenu.GetValue(vm, null) is Relay))
+            try
             {
-                PlayniteMenu.Original = openMenu.GetValue(vm, null) as ICommand;
-                openMenu.SetValue(vm, new Relay(OpenMenu), null);
-                HomeNav.Log("shell: main menu is Selene's");
+                var current = openMenu != null ? openMenu.GetValue(vm, null) as ICommand : null;
+                if (openMenu != null && openMenu.CanWrite && current != null && current != seleneMenu)
+                {
+                    PlayniteMenu.Original = current;
+                    // Playnite's own command type (the property only takes that)
+                    seleneMenu = new Playnite.SDK.RelayCommand<object>(o => OpenMenu());
+                    openMenu.SetValue(vm, seleneMenu, null);
+                    HomeNav.Log("shell: main menu is Selene's");
+                }
             }
+            catch (Exception ex) { HomeNav.Log("shell: couldn't take over the main menu: " + ex.Message); }
             var store = HomeNav.FindByName(main, "SeleneNav_store") as ButtonBase;
             if (store != null) store.Command = new Relay(() => LoginScene.OpenWith(() => new StoreScreen()));
             HomeNav.Log("shell: home/library wired");
