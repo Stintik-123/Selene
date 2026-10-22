@@ -16,6 +16,7 @@ namespace Selene
     public static class Wallpapers
     {
         public const string YourGroup = "Your wallpapers";
+        private static readonly Playnite.SDK.ILogger logger = Playnite.SDK.LogManager.GetLogger();
         private static readonly string[] Pictures = { ".jpg", ".jpeg", ".png", ".bmp" };
 
         public static List<WallpaperChoice> All()
@@ -43,9 +44,23 @@ namespace Selene
 
         private static IEnumerable<string> PicturesIn(string folder, SearchOption depth)
         {
-            return Directory.GetFiles(folder, "*", depth)
-                .Where(f => Pictures.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+            var found = new List<string>();
+            var pending = new Stack<string>();
+            pending.Push(folder);
+            while (pending.Count > 0)
+            {
+                var current = pending.Pop();
+                try
+                {
+                    found.AddRange(Directory.GetFiles(current).Where(f => Pictures.Contains(Path.GetExtension(f).ToLowerInvariant())));
+                    if (depth == SearchOption.AllDirectories)
+                        foreach (var sub in Directory.GetDirectories(current)) pending.Push(sub);
+                }
+                catch (UnauthorizedAccessException) { logger.Warn("Selene Core: no access to " + current + ", skipping it for wallpapers"); }
+                catch (PathTooLongException) { logger.Warn("Selene Core: path too long, skipping " + current + " for wallpapers"); }
+                catch (IOException ex) { logger.Warn("Selene Core: can't read " + current + " for wallpapers: " + ex.Message); }
+            }
+            return found.OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
         }
     }
 }

@@ -42,7 +42,7 @@ namespace Selene
             new AddonInfo { Id = "playnite-howlongtobeat-plugin", Name = "HowLongToBeat",
                 About = "Shows how long a game takes to beat, next to how long you've played." },
             new AddonInfo { Id = "PlayniteAchievements", Name = "Playnite Achievements",
-                About = "Your achievements from Steam, Xbox, PlayStation, Epic, GOG and RetroAchievements." },
+                About = "Your achievements from Steam, Xbox, Epic, GOG, RetroAchievements and more." },
             new AddonInfo { Id = "felixkmh_DuplicateHider_Plugin", Name = "DuplicateHider",
                 About = "Shows each game once, even if you own it on several stores." },
             new AddonInfo { Id = "playnite-gameactivity-plugin", Name = "GameActivity",
@@ -65,7 +65,7 @@ namespace Selene
         {
             var items = new List<SetupItem> { Library(api), GameFolders() };
             items.AddRange(Included.Select(a => IncludedAddon(api, a)));
-            if (Enabled(api, "mtkennerly.ludusavi")) items.Add(LudusaviProgram());
+            if (Enabled(api, "mtkennerly.ludusavi")) items.Add(LudusaviProgram(api));
             items.Add(Controller());
             items.AddRange(Clashes.Where(c => Enabled(api, c.Id)).Select(c => new SetupItem
             {
@@ -78,10 +78,10 @@ namespace Selene
             return items;
         }
 
-        // add-ons that come with Selene and aren't installed (or are turned off) yet
+        // add-ons that come with Selene and aren't installed yet (turned-off ones need turning on in Add-ons instead)
         public static List<AddonInfo> MissingIncluded(IPlayniteAPI api)
         {
-            return Included.Where(a => !Enabled(api, a.Id)).ToList();
+            return Included.Where(a => !api.Addons.Addons.Contains(a.Id)).ToList();
         }
 
         private static bool Enabled(IPlayniteAPI api, string addonId)
@@ -98,15 +98,15 @@ namespace Selene
                 Key = "addon:" + addon.Id,
                 Title = addon.Name,
                 About = addon.About,
-                AddonId = on ? null : addon.Id,
+                AddonId = installed ? null : addon.Id,
                 State = on ? SetupState.Ready : SetupState.Missing,
-                Detail = on ? "Installed" : installed ? "Installed but turned off" : "Comes with Selene · not installed yet"
+                Detail = on ? "Installed" : installed ? "Turned off · turn it on in Add-ons" : "Comes with Selene · not installed yet"
             };
         }
 
-        private static SetupItem LudusaviProgram()
+        private static SetupItem LudusaviProgram(IPlayniteAPI api)
         {
-            bool found = LudusaviApp.Installed;
+            bool found = LudusaviApp.Ready(api);
             return new SetupItem
             {
                 Key = "ludusavi-program",
@@ -126,8 +126,10 @@ namespace Selene
                                 .OrderByDescending(g => g.Count())
                                 .Select(g => g.Key + " · " + g.Count() + " games")
                                 .ToList();
-            var outside = games.Count(g => !stores.ContainsKey(g.PluginId));
-            if (outside > 0) perStore.Add("Your folders · " + outside + " games");
+            var own = games.Count(g => g.PluginId == Guid.Empty);
+            var orphaned = games.Count(g => g.PluginId != Guid.Empty && !stores.ContainsKey(g.PluginId));
+            if (own > 0) perStore.Add("Your folders · " + own + " games");
+            if (orphaned > 0) perStore.Add("From store add-ons that are off · " + orphaned + " games");
             return new SetupItem
             {
                 Key = "library",
@@ -175,16 +177,26 @@ namespace Selene
             [DllImport("xinput1_4.dll", EntryPoint = "XInputGetState")] private static extern int GetState14(int user, byte[] state);
             [DllImport("xinput9_1_0.dll", EntryPoint = "XInputGetState")] private static extern int GetState910(int user, byte[] state);
 
+            private static Func<int, byte[], int> getState;
+
+            private static Func<int, byte[], int> Find()
+            {
+                var candidates = new Func<int, byte[], int>[] { GetState14, GetState910 };
+                foreach (var candidate in candidates)
+                {
+                    try { candidate(0, new byte[16]); return candidate; }
+                    catch (DllNotFoundException) { }
+                    catch (EntryPointNotFoundException) { }
+                }
+                LogManager.GetLogger().Warn("Selene Core: no XInput on this PC, can't detect controllers");
+                return (user, state) => 1167;  // ERROR_DEVICE_NOT_CONNECTED
+            }
+
             public static bool AnyConnected()
             {
+                if (getState == null) getState = Find();
                 for (int user = 0; user < 4; user++)
-                {
-                    var state = new byte[16];
-                    int result;
-                    try { result = GetState14(user, state); }
-                    catch (DllNotFoundException) { result = GetState910(user, state); }
-                    if (result == 0) return true;
-                }
+                    if (getState(user, new byte[16]) == 0) return true;
                 return false;
             }
         }

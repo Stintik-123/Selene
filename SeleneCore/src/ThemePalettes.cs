@@ -26,16 +26,20 @@ namespace Selene
         public const string DefaultId = "selene";
         private static readonly ILogger logger = LogManager.GetLogger();
         private static ResourceDictionary applied;
+        private static List<ThemeInfo> themes;
 
+        // the theme list ships with the theme and doesn't change while Playnite runs, so it's read once
         public static List<ThemeInfo> All()
         {
+            if (themes != null) return themes;
             var index = SelenePaths.ThemeFile("Palettes", "palettes.json");
             if (!File.Exists(index))
             {
                 logger.Error("Selene Core: theme list missing at " + index);
                 return new List<ThemeInfo>();
             }
-            return Serialization.FromJsonFile<List<ThemeInfo>>(index);
+            themes = Serialization.FromJsonFile<List<ThemeInfo>>(index) ?? new List<ThemeInfo>();
+            return themes;
         }
 
         public static ThemeInfo Find(string id)
@@ -57,13 +61,15 @@ namespace Selene
         {
             if (string.IsNullOrEmpty(id)) id = DefaultId;
             var merged = Application.Current.Resources.MergedDictionaries;
-            if (id == DefaultId)
+            if (string.Equals(id, DefaultId, StringComparison.OrdinalIgnoreCase))
             {
                 if (applied != null) merged.Remove(applied);
                 applied = null;
                 HomeNav.Log("theme: " + id);
                 return;
             }
+            var known = Find(id);
+            if (known != null) id = known.Id;
             var file = SelenePaths.ThemeFile("Palettes", id + ".xaml");
             if (!File.Exists(file))
             {

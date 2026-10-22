@@ -54,7 +54,6 @@ body:
       label: What are you using to control Playnite?
       options:
         - Xbox controller
-        - PlayStation controller
         - Other controller
         - Keyboard and mouse
   - type: textarea

@@ -44,26 +44,43 @@ namespace Selene
         private static readonly ILogger logger = LogManager.GetLogger();
         private static string file;
         private static ProfileStore store = new ProfileStore();
+        // set when profiles.json exists but couldn't be loaded: nothing is saved, so the file on disk is never overwritten
+        private static string loadError;
 
         public static void Init(string dataFolder)
         {
             Directory.CreateDirectory(dataFolder);
             file = Path.Combine(dataFolder, "profiles.json");
             if (!File.Exists(file)) return;
+            string json;
+            try { json = File.ReadAllText(file); }
+            catch (IOException ex) { Fail(ex, "profiles.json is locked or unreadable right now"); return; }
+            catch (UnauthorizedAccessException ex) { Fail(ex, "no permission to read profiles.json"); return; }
             try
             {
-                store = Serialization.FromJsonFile<ProfileStore>(file) ?? new ProfileStore();
+                store = Serialization.FromJson<ProfileStore>(json) ?? new ProfileStore();
                 if (store.Profiles == null) store.Profiles = new List<Profile>();
             }
             catch (Exception ex)
             {
-                // keep the unreadable file for recovery instead of overwriting it on the next save
+                // damaged file: set it aside for recovery and start fresh
                 var kept = file + ".unreadable-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
-                File.Move(file, kept);
-                logger.Error(ex, "Selene Core: profiles.json could not be read, moved to " + kept + " and starting fresh");
+                try { File.Move(file, kept); }
+                catch (Exception moveEx) { Fail(moveEx, "profiles.json is damaged and couldn't be set aside"); return; }
+                logger.Error(ex, "Selene Core: profiles.json was damaged, moved to " + kept + " and starting fresh");
                 store = new ProfileStore();
             }
         }
+
+        private static void Fail(Exception ex, string why)
+        {
+            loadError = why;
+            store = new ProfileStore();
+            logger.Error(ex, "Selene Core: " + why + "; profiles are off until the next start and nothing will be saved");
+        }
+
+        // why profiles couldn't be loaded this session (null when they loaded fine), for the screens to show
+        public static string LoadError { get { return loadError; } }
 
         public static IReadOnlyList<Profile> All { get { return store.Profiles; } }
 
@@ -147,6 +164,11 @@ namespace Selene
 
         private static void Save()
         {
+            if (loadError != null)
+            {
+                logger.Error("Selene Core: not saving profiles, they weren't loaded this session (" + loadError + ")");
+                return;
+            }
             var tmp = file + ".tmp";
             File.WriteAllText(tmp, Serialization.ToJson(store, true));
             if (File.Exists(file)) File.Replace(tmp, file, null);

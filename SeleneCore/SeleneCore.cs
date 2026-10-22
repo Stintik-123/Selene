@@ -35,7 +35,12 @@ namespace Selene
             if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use, staying off"); return; }
             HomeNav.Api = PlayniteApi;
             HomeNav.Install();
-            Profiles.ApplyLook();
+            try { Profiles.ApplyLook(); }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Selene Core: couldn't apply the profile's theme");
+                PlayniteApi.Notifications.Add(new NotificationMessage("selene-theme", "Selene couldn't apply your theme, using the default look: " + ex.Message, NotificationType.Error));
+            }
             SeleneShell.Start();
             HomeNav.Log("Selene Core started");
         }

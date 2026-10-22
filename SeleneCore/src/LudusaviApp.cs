@@ -31,23 +31,64 @@ namespace Selene
 
         public static string Exe { get { return Path.Combine(SelenePaths.DataFolder, "Ludusavi", "ludusavi.exe"); } }
 
-        public static bool Installed { get { return File.Exists(Exe) || OnPath(); } }
-
-        private static bool OnPath()
+        // the program the add-on will actually run, or null when that setting points at nothing usable
+        private static string OnPath()
         {
             var path = Environment.GetEnvironmentVariable("PATH") ?? "";
-            return path.Split(Path.PathSeparator).Any(dir =>
+            foreach (var dir in path.Split(Path.PathSeparator))
             {
-                try { return File.Exists(Path.Combine(dir.Trim(), "ludusavi.exe")); }
-                catch (ArgumentException) { return false; }
-            });
+                try
+                {
+                    var candidate = Path.Combine(dir.Trim(), "ludusavi.exe");
+                    if (File.Exists(candidate)) return candidate;
+                }
+                catch (ArgumentException) { }
+            }
+            return null;
         }
 
-        // downloads the latest Windows build if needed, then tells the add-on where it is; throws when either step fails
+        // the add-on's ExecutablePath setting: live when it's running, else its settings file, else its default
+        private static string ConfiguredPath(IPlayniteAPI api)
+        {
+            var addon = api.Addons.Plugins.FirstOrDefault(p => p.Id == PluginId);
+            if (addon != null)
+            {
+                var settings = addon.GetSettings(false);
+                var property = settings != null ? settings.GetType().GetProperty("ExecutablePath") : null;
+                if (property != null) return property.GetValue(settings, null) as string;
+            }
+            var file = Path.Combine(api.Paths.ExtensionsDataPath, PluginId.ToString(), "config.json");
+            if (File.Exists(file))
+            {
+                var config = Serialization.FromJsonFile<Dictionary<string, object>>(file);
+                object value;
+                if (config != null && config.TryGetValue("ExecutablePath", out value) && value is string) return (string)value;
+            }
+            return "ludusavi";
+        }
+
+        // true when the add-on's setting leads to a ludusavi.exe that exists (a bare name is looked up on PATH)
+        public static bool Ready(IPlayniteAPI api)
+        {
+            var configured = ConfiguredPath(api);
+            if (string.IsNullOrWhiteSpace(configured)) return false;
+            if (configured.IndexOf('\\') < 0 && configured.IndexOf('/') < 0) return OnPath() != null;
+            return File.Exists(configured);
+        }
+
+        // makes the add-on's setting lead to a working program: an existing copy on PATH, else Selene's own download.
+        // Throws when downloading or pointing the add-on fails.
         public static void Setup(IPlayniteAPI api)
         {
-            if (!File.Exists(Exe)) Download();
-            PointAddon(api);
+            if (Ready(api)) return;
+            var program = OnPath();
+            if (program == null)
+            {
+                if (!File.Exists(Exe)) Download();
+                program = Exe;
+            }
+            PointAddon(api, program);
+            if (!Ready(api)) throw new InvalidOperationException("the Ludusavi add-on still doesn't point at " + program);
         }
 
         private static void Download()
@@ -73,7 +114,7 @@ namespace Selene
             }
         }
 
-        private static void PointAddon(IPlayniteAPI api)
+        private static void PointAddon(IPlayniteAPI api, string program)
         {
             var addon = api.Addons.Plugins.FirstOrDefault(p => p.Id == PluginId);
             if (addon != null)
@@ -83,7 +124,7 @@ namespace Selene
                 var property = settings != null ? settings.GetType().GetProperty("ExecutablePath") : null;
                 if (property == null) throw new InvalidOperationException("the Ludusavi add-on no longer has an ExecutablePath setting");
                 settings.BeginEdit();
-                property.SetValue(settings, Exe, null);
+                property.SetValue(settings, program, null);
                 settings.EndEdit();
                 return;
             }
@@ -92,7 +133,7 @@ namespace Selene
             var file = Path.Combine(folder, "config.json");
             Directory.CreateDirectory(folder);
             var config = File.Exists(file) ? Serialization.FromJsonFile<Dictionary<string, object>>(file) : new Dictionary<string, object>();
-            config["ExecutablePath"] = Exe;
+            config["ExecutablePath"] = program;
             File.WriteAllText(file, Serialization.ToJson(config, true));
         }
     }
