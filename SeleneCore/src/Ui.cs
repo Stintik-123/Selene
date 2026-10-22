@@ -295,7 +295,8 @@ namespace Selene
                 labels.Add(label);
             }
             // the filled highlight sits under the options and slides to the chosen one
-            highlight = new Border { CornerRadius = new CornerRadius(19), Background = Ink.Brush("SeleneFocusColor"), HorizontalAlignment = HorizontalAlignment.Left, RenderTransform = slide, Opacity = 0 };
+            // a real starting width: an automatic (NaN) width can't be animated and crashed Playnite
+            highlight = new Border { CornerRadius = new CornerRadius(19), Background = Ink.Brush("SeleneFocusColor"), HorizontalAlignment = HorizontalAlignment.Left, RenderTransform = slide, Opacity = 0, Width = 0 };
             var track = new Grid();
             track.Children.Add(highlight);
             track.Children.Add(row);
@@ -334,7 +335,8 @@ namespace Selene
             for (int i = 0; i < index; i++) x += segments[i].ActualWidth;
             var ms = TimeSpan.FromMilliseconds(animate ? 260 : 0);
             slide.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(x, ms) { EasingFunction = Ui.Out() });
-            highlight.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(seg.ActualWidth, ms) { EasingFunction = Ui.Out() });
+            if (!animate || double.IsNaN(highlight.Width) || highlight.Width == 0) { highlight.BeginAnimation(FrameworkElement.WidthProperty, null); highlight.Width = seg.ActualWidth; }
+            else highlight.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(highlight.Width, seg.ActualWidth, ms) { EasingFunction = Ui.Out() });
             highlight.Height = seg.ActualHeight;
             highlight.Opacity = 1;
         }
