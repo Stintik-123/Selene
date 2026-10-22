@@ -93,6 +93,7 @@ into `%APPDATA%\Playnite\Themes\Fullscreen\Selene_a98e0027-fa6a-4f5e-a087-bad8d6
 
 - Built on [Playnite](https://github.com/JosefNemec/Playnite)'s fullscreen theme template (MIT).
 - Interface sounds: [Kenney](https://kenney.nl) - *Interface Sounds* (CC0).
+- Avatars: Xbox gamer pictures, property of Microsoft and the respective game publishers.
 - Wallpapers: from the theme collection of [Omarchy](https://github.com/basecamp/omarchy) by DHH and its theme
   contributors, with art by Katsushika Hokusai, Charles William Wyllie, Jan Brueghel the Younger, DVAULTZ, Maxteabag
   and other artists. Each wallpaper stays its artist's property; see
