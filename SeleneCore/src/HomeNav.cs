@@ -2743,10 +2743,11 @@ namespace Selene
             if (box.Visibility == Visibility.Visible && titleBlock.Text == title) return;
             titleBlock.Text = title;
             ((TextBlock)FindByName(box, "SeleneRowEmptyHint")).Text = hint;
+            // it sits in the row, so it moves with the row's own filter-switch animation (a second one of its own doubled it)
+            box.BeginAnimation(UIElement.OpacityProperty, null);
+            box.Opacity = 1;
+            box.RenderTransform = null;
             box.Visibility = Visibility.Visible;
-            box.RenderTransform = new TranslateTransform(-24, 0);
-            box.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(300)) { BeginTime = TimeSpan.FromMilliseconds(120), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-            box.RenderTransform.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-24, 0, TimeSpan.FromMilliseconds(320)) { BeginTime = TimeSpan.FromMilliseconds(120), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         }
 
         // the numbers on the Library and Store cards
