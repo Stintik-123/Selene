@@ -943,8 +943,9 @@ namespace Selene
             var row = LiveRow();
             if (row == null || previewGame == on) return;
             previewGame = on;
-            // the preview's game must not start its song: the music add-on pauses while it's shown (default music after)
-            SetUpsVideoPlaying(on || (previewShowing && previewSound));
+            // the preview's game must not start its song: UniPlaySong pauses while a theme overlay is up (its own pause
+            // source for themes), the default music comes back after
+            SetUpsSetting("ThemeOverlayActive", on);
             if (!on) { previewGameObj = null; ClearSelectedGame(); return; }
             int idx = FirstGameIndex(row);
             if (idx < 0 || idx >= row.Items.Count || row.Items[idx] is string || row.Items[idx] is RowPad) { previewGame = false; return; }
