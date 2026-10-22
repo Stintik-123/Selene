@@ -21,7 +21,7 @@ namespace Selene
     {
         private static Window window;
         private static FrameworkElement loginRoot;
-        private static Grid scene, stage;
+        private static Grid scene, stage, glow;
         private static Screen current;
         private static bool keysHooked, introPlayed;
         // what to show the next time the layer opens (set by the menu), instead of Who's playing?
@@ -158,9 +158,18 @@ namespace Selene
         }
 
         // ---------------- flow ----------------
+        // spotlight and particles only on the plain gradient (no wallpaper behind)
+        public static void RefreshBackdrop()
+        {
+            if (glow == null) return;
+            bool wallpaper = Application.Current.Resources["SeleneWallpaper"] != null;
+            glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(wallpaper ? 0 : 1, TimeSpan.FromMilliseconds(300)));
+        }
+
         private static void Open()
         {
             if (scene == null) return;
+            RefreshBackdrop();
             var next = pending;
             pending = null;
             if (next != null) Show(next(), 0);
@@ -219,7 +228,10 @@ namespace Selene
             wallpaper.SetResourceReference(Image.SourceProperty, "SeleneWallpaper");
             RenderOptions.SetBitmapScalingMode(wallpaper, BitmapScalingMode.HighQuality);
             g.Children.Add(wallpaper);
-            g.Children.Add(new Border { Background = Ink.Brush("SeleneScrimColor", 0.5) });
+            g.Children.Add(new Border { Background = Ink.Brush("SeleneScrimColor", 0.45) });
+            // the spotlight, floor glow and particles dress up the theme's plain gradient; over a wallpaper they stay off
+            glow = new Grid { IsHitTestVisible = false };
+            g.Children.Add(glow);
 
             // soft spotlight in the theme's accent from the top left, slowly breathing
             var spot = new RadialGradientBrush { Center = new Point(0.16, -0.12), GradientOrigin = new Point(0.16, -0.12), RadiusX = 0.62, RadiusY = 1.15 };
@@ -228,16 +240,16 @@ namespace Selene
             spot.GradientStops.Add(Ink.Stop("GlyphColor", 0, 1));
             var spotLayer = new Border { Background = spot };
             spotLayer.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.75, 1, TimeSpan.FromSeconds(9)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase() });
-            g.Children.Add(spotLayer);
+            glow.Children.Add(spotLayer);
 
             // hazy floor glow
             var haze = new RadialGradientBrush { Center = new Point(0.5, 1.02), GradientOrigin = new Point(0.5, 1.02), RadiusX = 0.95, RadiusY = 0.34 };
             haze.GradientStops.Add(Ink.Stop("GlyphColor", 0.22, 0));
             haze.GradientStops.Add(Ink.Stop("GlyphColor", 0, 1));
-            g.Children.Add(new Border { Background = haze });
+            glow.Children.Add(new Border { Background = haze });
 
             var canvas = new Canvas { IsHitTestVisible = false };
-            g.Children.Add(canvas);
+            glow.Children.Add(canvas);
             g.SizeChanged += (s, e) => { if (canvas.Children.Count == 0 && e.NewSize.Width > 0) FillParticles(canvas, e.NewSize); };
 
             stage = new Grid();
@@ -348,7 +360,9 @@ namespace Selene
         private bool onPower, menuOpen, leaving;
         private int menuIndex;
         private Guid removeArmed = Guid.Empty;
-        private DateTime removeArmedAt;
+        private readonly Border confirmCard;
+        private readonly TextBlock confirmTitle;
+        private DispatcherTimer confirmTimer;
 
         // glyph (Segoe MDL2 Assets), label, helper command, built-in fallback
         private static readonly string[][] PowerItems = {
@@ -371,6 +385,28 @@ namespace Selene
             hint = Ui.Text("", 18, 0.6);
             hint.Margin = new Thickness(0, 34, 0, 0);
             col.Children.Add(hint);
+            // "Remove <name>?" card under the profiles: X again removes, B keeps (goes away by itself after a while)
+            confirmTitle = new TextBlock { FontSize = 24, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor") };
+            var warn = new TextBlock { Text = "", FontFamily = Ui.Glyphs, FontSize = 30, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 18, 0) };
+            warn.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
+            var texts = new StackPanel();
+            texts.Children.Add(confirmTitle);
+            texts.Children.Add(new TextBlock { Text = "Their favorites and playtime go with them. Your games stay.", FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.7), Margin = new Thickness(0, 6, 0, 0) });
+            var keys = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(-18, 18, 0, 0) };
+            keys.Children.Add(Ui.Prompt("X", "Remove"));
+            keys.Children.Add(Ui.Prompt("B", "Keep"));
+            texts.Children.Add(keys);
+            var line = new StackPanel { Orientation = Orientation.Horizontal };
+            line.Children.Add(warn);
+            line.Children.Add(texts);
+            confirmCard = new Border
+            {
+                Child = line, CornerRadius = new CornerRadius(18), Padding = new Thickness(26, 20, 30, 20), Margin = new Thickness(0, 30, 0, 0),
+                Background = Ink.Brush("SeleneGlassColor", 0.92), BorderBrush = Ink.Brush("SeleneInkColor", 0.18), BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Center, Visibility = Visibility.Collapsed,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black }
+            };
+            col.Children.Add(confirmCard);
             Root.Children.Add(col);
 
             // power button, bottom centre (Down from the profiles): Sleep / Restart / Shut down
@@ -465,6 +501,11 @@ namespace Selene
         {
             if (leaving) return;
             if (menuOpen) { HandleMenu(b); return; }
+            if (removeArmed != Guid.Empty && b != "X")
+            {
+                HideConfirm();
+                if (b == "B") { Ui.Back(); return; }   // keep
+            }
             if (b == "DPadDown" && !onPower) { onPower = true; Ui.Tick(); ShowFocus(); return; }
             if (b == "DPadUp" && onPower) { onPower = false; Ui.Tick(); ShowFocus(); return; }
             if (!onPower && (b == "DPadLeft" || b == "DPadRight"))
@@ -472,7 +513,6 @@ namespace Selene
                 int next = index + (b == "DPadLeft" ? -1 : 1);
                 if (next < 0 || next >= tiles.Count) return;
                 index = next;
-                removeArmed = Guid.Empty;
                 Ui.Tick();
                 ShowFocus();
                 return;
@@ -507,18 +547,31 @@ namespace Selene
         // X twice: removes the profile (its favorites and playtime go with it; the games stay)
         private void Remove(Profile p)
         {
-            if (removeArmed != p.Id || (DateTime.Now - removeArmedAt).TotalSeconds > 4)
+            if (removeArmed != p.Id)
             {
                 removeArmed = p.Id;
-                removeArmedAt = DateTime.Now;
-                hint.Text = "Press X again to remove " + p.Name + " (favorites and playtime go with it; games stay)";
+                confirmTitle.Text = "Remove " + p.Name + "?";
+                confirmCard.Visibility = Visibility.Visible;
+                Ui.Rise(confirmCard, 0, 14, 260);
                 Ui.Shake(items[index]);
-                Ui.Back();
+                Ui.Play("OpenPanel.wav", 0.8);
+                if (confirmTimer != null) confirmTimer.Stop();
+                confirmTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+                confirmTimer.Tick += (s, e) => HideConfirm();
+                confirmTimer.Start();
                 return;
             }
+            HideConfirm();
             Profiles.Remove(p.Id);
             Ui.Back();
             LoginScene.Show(Profiles.FirstRun ? (Screen)new ProfileSteps(null, () => new WhoScreen(null)) : new WhoScreen(null), 0);
+        }
+
+        private void HideConfirm()
+        {
+            removeArmed = Guid.Empty;
+            if (confirmTimer != null) confirmTimer.Stop();
+            Ui.Fade(confirmCard, 0, 160, 0, () => { if (removeArmed == Guid.Empty) confirmCard.Visibility = Visibility.Collapsed; });
         }
 
         private void OpenMenu()

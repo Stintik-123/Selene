@@ -323,9 +323,8 @@ namespace Selene
                         var t = new Tile(w, key - 6, 16, 4) { FocusScale = 1.1 };
                         var label = new TextBlock { Text = Label(v), FontSize = v.Length == 1 ? 24 : 19, FontFamily = v == "shift" || v == "erase" ? Ui.Glyphs : Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
                         if (v.Length == 1 && char.IsLetter(v[0])) letterLabels.Add(label);
-                        t.Face.Child = label;
-                        // the controller shortcut for the key, as a small badge on its top-right corner
-                        if (v == "done" || v == "erase") t.Face.Child = WithBadge(label, v == "done" ? "Y" : "X");
+                        // the controller shortcut for Done / erase, as a small badge on the key's top-right corner
+                        t.Face.Child = v == "done" || v == "erase" ? (UIElement)WithBadge(label, v == "done" ? "Y" : "X") : label;
                         t.Root.Margin = new Thickness(gap / 2, 0, gap / 2, 0);
                         rowPanel.Children.Add(t.Root);
                         rowKeys.Add(t);
@@ -648,6 +647,7 @@ namespace Selene
                 ThemePalettes.Apply(id);
                 var wallpaper = Owner.Wallpaper ?? ThemePalettes.DefaultWallpaper(id);
                 Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(wallpaper);
+                LoginScene.RefreshBackdrop();
                 Profiles.ApplyHomeBackground(Owner.Look);
             }
 
@@ -751,7 +751,7 @@ namespace Selene
                 grid.Reveal(index);
                 groupLabel.Text = (index == 0 ? "THEME" : groups[index].ToUpperInvariant());
                 var file = files[index] ?? ThemePalettes.DefaultWallpaper(Owner.Theme);
-                Action show = () => Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(file);
+                Action show = () => { Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(file); LoginScene.RefreshBackdrop(); };
                 if (live) apply.Run(show); else show();
             }
 

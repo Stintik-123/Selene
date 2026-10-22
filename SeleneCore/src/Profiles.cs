@@ -230,6 +230,7 @@ namespace Selene
             var wallpaper = p != null && !string.IsNullOrEmpty(p.Wallpaper) ? p.Wallpaper : ThemePalettes.DefaultWallpaper(theme);
             Application.Current.Resources["SeleneWallpaperPath"] = wallpaper;
             Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(wallpaper);
+            LoginScene.RefreshBackdrop();
             ApplyHomeBackground(p != null ? p.HomeBackground : null);
         }
 
