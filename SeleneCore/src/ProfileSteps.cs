@@ -508,6 +508,7 @@ namespace Selene
                 // the current avatar (editing), else the first built-in one
                 var current = Profiles.AvatarFile(new Profile { Avatar = owner.Avatar });
                 index = current != null ? files.FindIndex(f => f != null && string.Equals(f, current, StringComparison.OrdinalIgnoreCase)) : -1;
+                if (index < 0 && current != null && steamPrint != null && System.IO.File.Exists(current) && Profiles.Fingerprint(current) == steamPrint) index = files.IndexOf(steam);
                 if (index < 0) index = Math.Min(1, files.Count - 1);   // the Steam avatar when there is one, else the first of ours
                 Ui.LoadInOrder(files.Select(f => f ?? "").ToList(), 192, (i, pic) =>
                 {
