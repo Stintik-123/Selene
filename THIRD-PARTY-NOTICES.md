@@ -14,5 +14,19 @@ The "SELENE" lettering in the logo and banner (`tools/art/selene-wordmark.svg`, 
 to outlines; the font itself is not included. Cinzel - https://github.com/NDISCOVER/Cinzel -
 SIL Open Font License 1.1, Copyright 2020 The Cinzel Project Authors.
 
+## Wallpapers
+The wallpapers in `theme/Wallpapers` come from the theme collection of [Omarchy](https://github.com/basecamp/omarchy),
+grouped by the theme they shipped with. Each image remains the property of its artist; they are not covered by
+Selene's MIT license. Known sources:
+- "The Great Wave off Kanagawa" by Katsushika Hokusai (public domain) - `kanagawa/1-kanagawa.jpg`
+- "The Backwater" by Charles William Wyllie (public domain) - `gruvbox/1-the-backwater.jpg`
+- "A Basket of Flowers" by Jan Brueghel the Younger, The Metropolitan Museum of Art (public domain) - `gruvbox/2-flower-basket.jpg`
+- 17th-century Dutch and Flemish landscapes (public domain) - `gruvbox/3-village-square.jpg`, `gruvbox/4-idyllic-procession.jpg`
+- "Inner Levels" by DVAULTZ - `last-horizon/4-new-horizons.jpg`
+- "Yoru Swirl Buck" by Maxteabag - `tokyo-night/2-swirl-buck.jpg`
+
+If you made one of these images and would like it credited differently or removed, please open an issue and it
+will be done right away.
+
 ## Fonts
 Fonts bundled with the Playnite theme template keep their own licenses (see `theme/Fonts`).
