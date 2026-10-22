@@ -16,7 +16,10 @@ namespace Selene
     {
         private const int Columns = 6;
         private readonly bool firstRun;
-        private readonly UniformGrid grid;
+        // where each card sits: its row and its x from the centre (rows are centred, so a short last row sits in the middle)
+        private readonly List<int> cardRow = new List<int>();
+        private readonly List<double> cardX = new List<double>();
+        private const double CardCell = 258;
         private readonly List<Tile> cards = new List<Tile>();
         private readonly List<TextBlock> statuses = new List<TextBlock>();
         private readonly TextBlock about, note;
@@ -34,8 +37,21 @@ namespace Selene
             var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -20, 0, 0) };
             col.Children.Add(Ui.Title("Let's get Selene ready"));
             col.Children.Add(Ui.Sub("Selene checks what it needs. You can come back to this anytime from the menu: Extensions, Selene."));
-            grid = new UniformGrid { Columns = Columns, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 46, 0, 0) };
-            foreach (var item in items) grid.Children.Add(Card(item));
+            // rows as even as possible (11 cards: 6 + 5), each centred
+            var grid = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 46, 0, 0) };
+            int rows = (items.Count + Columns - 1) / Columns, at = 0;
+            for (int r = 0; r < rows; r++)
+            {
+                int inRow = items.Count / rows + (r < items.Count % rows ? 1 : 0);
+                var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+                for (int i = 0; i < inRow; i++, at++)
+                {
+                    row.Children.Add(Card(items[at]));
+                    cardRow.Add(r);
+                    cardX.Add((i - (inRow - 1) / 2.0) * CardCell);
+                }
+                grid.Children.Add(row);
+            }
             col.Children.Add(grid);
             about = Ui.Text("", 20, 0.85);
             about.Margin = new Thickness(0, 30, 0, 0);
@@ -65,10 +81,11 @@ namespace Selene
         private FrameworkElement Card(SetupItem item)
         {
             var tile = new Tile(240, 140, 18, 6) { FocusScale = 1.06 };
-            var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 16, 0) };
-            sp.Children.Add(new TextBlock { Text = Icon(item.Key), FontFamily = Ui.Glyphs, FontSize = 26, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center });
+            // the same layout in every card: icon, title and status always at the same height (status keeps room for 2 lines)
+            var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(16, 20, 16, 0) };
+            sp.Children.Add(new TextBlock { Text = Icon(item.Key), FontFamily = Ui.Glyphs, FontSize = 26, Height = 30, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center });
             sp.Children.Add(new TextBlock { Text = item.Title, FontSize = 18, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis });
-            var status = new TextBlock { FontSize = 14, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxHeight = 40, Margin = new Thickness(0, 5, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
+            var status = new TextBlock { FontSize = 14, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Height = 38, Margin = new Thickness(0, 5, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
             SetStatus(status, item);
             sp.Children.Add(status);
             tile.Face.Child = sp;
@@ -195,7 +212,7 @@ namespace Selene
             int next;
             if (index < items.Count)
             {
-                next = Ui.GridMove(index, b, items.Count, Columns);
+                next = CardMove(index, b);
                 if (next < 0 && b == "DPadDown") next = ButtonsStart + 1;
             }
             else
@@ -203,12 +220,29 @@ namespace Selene
                 next = -1;
                 if (b == "DPadLeft" && index == ButtonsStart + 1) next = ButtonsStart;
                 else if (b == "DPadRight" && index == ButtonsStart) next = ButtonsStart + 1;
-                else if (b == "DPadUp") next = Math.Min(items.Count - 1, ((items.Count - 1) / Columns) * Columns + Columns / 2);
+                else if (b == "DPadUp") next = Nearest(cardRow[items.Count - 1], index == ButtonsStart ? -CardCell / 2 : CardCell / 2);
             }
             if (next < 0) return;
             index = next;
             Ui.Tick();
             ShowFocus();
+        }
+
+        // left/right along the row; up/down to the card in the next row that sits closest above or below
+        private int CardMove(int from, string dir)
+        {
+            if (dir == "DPadLeft") return from > 0 && cardRow[from - 1] == cardRow[from] ? from - 1 : -1;
+            if (dir == "DPadRight") return from + 1 < items.Count && cardRow[from + 1] == cardRow[from] ? from + 1 : -1;
+            int row = cardRow[from] + (dir == "DPadUp" ? -1 : 1);
+            return row < 0 || row > cardRow[items.Count - 1] ? -1 : Nearest(row, cardX[from]);
+        }
+
+        private int Nearest(int row, double x)
+        {
+            int best = -1;
+            for (int i = 0; i < items.Count; i++)
+                if (cardRow[i] == row && (best < 0 || Math.Abs(cardX[i] - x) < Math.Abs(cardX[best] - x))) best = i;
+            return best;
         }
 
         private void Activate()
