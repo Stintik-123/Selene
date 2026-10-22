@@ -18,25 +18,35 @@
 
 | | |
 |---|---|
-| ![Login](docs/screenshots/login.png) | ![Game details](docs/screenshots/details.png) |
+| ![Who's playing?](docs/screenshots/who.png) | ![Game details](docs/screenshots/details.png) |
 | ![Library](docs/screenshots/library.png) | ![Menu](docs/screenshots/menu.png) |
 
-## Coming in the next update
+## Themes
+
+**23 color themes**, each with its own wallpaper: Selene's moonlight blue plus Catppuccin, Nord, Gruvbox, Kanagawa,
+Rosé Pine, Tokyo Night and more, dark and light. Every screen follows the theme, and the home blends the selected
+game's art into your wallpaper (or shows art only, or the wallpaper only). Here: Tokyo Night, Catppuccin Latte,
+Gruvbox and Rosé Pine.
+
+![Themes on the home](docs/readme/themes-live.jpg)
+
+![All themes](docs/readme/themes.jpg)
+
+## Profiles and first launch
 
 **A first-launch setup** that gets everything ready from the couch: it checks your game library, installs the add-ons
 Selene works with (logos and trailers, save backups, HowLongToBeat, achievements and more, each explained), and sets
-up your profile.
+up save backups with Ludusavi.
 
-**Profiles for everyone in the house.** Each person gets their own name, avatar, theme, wallpaper, favorites, recently
-played and playtime. Pick from 415 avatars or use your own picture.
+**Profiles for everyone in the house.** Each person gets their own name, avatar, theme, wallpaper, favorites and
+recently played. Pick from 415 avatars or use your own picture; themes and backgrounds are previewed live on your
+real home while you choose.
+
+| | |
+|---|---|
+| ![Setup check](docs/screenshots/setup.png) | ![Choosing a theme](docs/screenshots/theme-step.png) |
 
 ![Avatars](docs/readme/avatars.jpg)
-
-**23 color themes**, each with its own wallpaper: Selene's moonlight blue plus Catppuccin, Nord, Gruvbox, Kanagawa,
-Rosé Pine, Tokyo Night and more, dark and light. Change the wallpaper on its own too, or use your own folder of
-wallpapers.
-
-![Themes](docs/readme/themes.jpg)
 
 ## Features
 
@@ -47,9 +57,11 @@ wallpapers.
 - LT / RT switch filters: All games, Installed, Recently played, Favorites, Not played yet.
 - A **Library** tile opens the full grid of Playnite's library; B goes back home.
 
-**Login**
-- A moonlit scene with drifting particles and *Press A*; your Steam avatar and name (or your own picture and name).
-- A power button: Sleep, Restart, Shut Down. Keyboard works too (Enter, Esc, arrows).
+**Who's playing?**
+- Starts every launch, after the crescent crown intro: your profiles, each glowing in its own theme's color.
+- Add a profile, edit it (Y) or remove it (X twice); a power button for Sleep, Restart, Shut Down.
+- From the home: Menu, Extensions, Selene - switch profile, edit your profile, or run the setup check again.
+- Keyboard works too (Enter, Esc, arrows, and typing your name).
 
 **Playing**
 - Press Play and a loading screen fades in at once with the game's art and logo; it stays until the game is really
@@ -88,7 +100,8 @@ Playnite -> Add-ons -> Generic -> **Selene Core** (desktop mode):
 |---|---|
 | Media folder | Where Selene keeps art, preview clips and screenshots (default: Selene Core's own data folder) |
 | Game folders | Folders with games no store knows about; they're added to the library automatically |
-| Login name / picture | Override the Steam name and avatar shown on the login |
+| Your wallpapers folder | Images in it show up in the background picker, next to Selene's own |
+| Login picture | A picture offered in the avatar picker (default: your Steam avatar) |
 | Optional extras | A companion helper with admin rights, and game-streaming host integration - leave empty if unsure |
 
 **Your own art:** put images named after the game's Playnite ID into the media folder:
@@ -118,8 +131,8 @@ into `%APPDATA%\Playnite\Themes\Fullscreen\Selene_a98e0027-fa6a-4f5e-a087-bad8d6
   and other artists. Each wallpaper stays its artist's property; see
   [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md#wallpapers). Artists can ask for a different credit or removal by
   opening an issue.
-- Artwork (crescent crown logo, icons, default cover) is Selene's own, drawn in `tools/art` and exported by
-  `tools/make_art.py`. The logo lettering is [Cinzel](https://github.com/NDISCOVER/Cinzel) (SIL Open Font License).
+- Artwork (crescent crown logo, icons, default cover, Selene's moonlit wallpaper) is Selene's own, drawn in `tools/art`
+  and exported by `tools/make_art.py`, and by `tools/make_wallpaper.py`. The logo lettering is [Cinzel](https://github.com/NDISCOVER/Cinzel) (SIL Open Font License).
 
 See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Selene is not affiliated with any console maker.
 
