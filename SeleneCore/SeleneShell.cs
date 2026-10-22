@@ -45,6 +45,18 @@ namespace Selene
             if (library == null || hub == null) return false;
             library.Command = new Relay(ShowLibrary);
             hub.Command = new Relay(ShowHome);
+            var menuButton = HomeNav.FindByName(main, "PART_ButtonMainMenu") as ButtonBase;
+            if (menuButton != null) menuButton.Command = new Relay(OpenMenu);
+            // every way Playnite opens its main menu (Start, keys, the button) opens Selene's; Playnite's own stays reachable
+            // from it under More
+            var vm = main.DataContext;
+            var openMenu = vm != null ? vm.GetType().GetProperty("OpenMainMenuCommand") : null;
+            if (openMenu != null && openMenu.CanWrite && !(openMenu.GetValue(vm, null) is Relay))
+            {
+                PlayniteMenu.Original = openMenu.GetValue(vm, null) as ICommand;
+                openMenu.SetValue(vm, new Relay(OpenMenu), null);
+                HomeNav.Log("shell: main menu is Selene's");
+            }
             var store = HomeNav.FindByName(main, "SeleneNav_store") as ButtonBase;
             if (store != null) store.Command = new Relay(() => LoginScene.OpenWith(() => new StoreScreen()));
             HomeNav.Log("shell: home/library wired");
@@ -105,6 +117,12 @@ namespace Selene
             home.Visibility = Visibility.Visible;
             home.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
             HomeNav.Log("shell: home");
+        }
+
+        public static void OpenMenu()
+        {
+            if (LoginScene.IsActive) return;
+            LoginScene.OpenWith(() => new MenuScreen());
         }
 
         // brings the login layer back (switch profile, setup check, edit profile from the menu)

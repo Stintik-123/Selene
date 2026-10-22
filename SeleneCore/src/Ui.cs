@@ -148,6 +148,7 @@ namespace Selene
         public static void Back() { Play("CloseAdditionalView.wav", 0.8); }
         public static void Chime() { Play("Success.wav", 0.85); }   // something finished: a profile made, a setup step done
         public static void Boot() { Play("Boot.wav", 0.9); }
+        public static void Alert() { Play("Alert.wav", 0.85); }   // asking before something can't be undone
 
         // decodes pictures one after another off the UI thread and hands each over on it (avatar and wallpaper grids)
         public static void LoadInOrder(IList<string> files, int width, Action<int, ImageSource> loaded)
@@ -373,6 +374,85 @@ namespace Selene
         }
     }
 
+    // A centred question over a dimmed screen: icon, title, line, and two buttons (the safe one chosen first).
+    // Left/right picks, A answers, B is the safe answer; the caller sends it buttons while it's open.
+    public class Dialog
+    {
+        public readonly Grid Root;
+        private readonly Pill yes, no;
+        private readonly Action onYes, onNo;
+        private bool onYesButton, done;
+        private readonly FrameworkElement panel;
+
+        public Dialog(string icon, string title, string text, string yesLabel, string noLabel, Action onYes, Action onNo)
+        {
+            this.onYes = onYes;
+            this.onNo = onNo;
+            Root = new Grid { Background = Ink.Brush("SeleneScrimColor", 0.62) };
+            var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+            var badge = new Grid { Width = 84, Height = 84, HorizontalAlignment = HorizontalAlignment.Center };
+            badge.Children.Add(new Ellipse { Fill = new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0x6B, 0x6B)) });
+            var glyph = new TextBlock { Text = icon, FontFamily = Ui.Glyphs, FontSize = 36, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            glyph.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
+            badge.Children.Add(glyph);
+            col.Children.Add(badge);
+            col.Children.Add(new TextBlock { Text = title, FontSize = 34, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 0) });
+            col.Children.Add(new TextBlock { Text = text, FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.75), HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 520, Margin = new Thickness(0, 10, 0, 0) });
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 34, 0, 0) };
+            no = new Pill(noLabel, 190);
+            yes = new Pill(yesLabel, 190);
+            buttons.Children.Add(no.Root);
+            buttons.Children.Add(yes.Root);
+            col.Children.Add(buttons);
+            panel = new Border
+            {
+                Child = col, Width = 640, CornerRadius = new CornerRadius(28), Padding = new Thickness(40, 40, 40, 36),
+                Background = Ink.Brush("SeleneGlassColor", 0.96), BorderBrush = Ink.Brush("SeleneInkColor", 0.16), BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 60, Opacity = 0.55, Color = Colors.Black }
+            };
+            Root.Children.Add(panel);
+            ShowFocus();
+        }
+
+        public void Open(Panel host)
+        {
+            host.Children.Add(Root);
+            Root.Opacity = 0;
+            Ui.Fade(Root, 1, 200);
+            panel.RenderTransformOrigin = new Point(0.5, 0.5);
+            var s = Ui.Scaler(panel);
+            s.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.94, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = Ui.Out() });
+            s.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.94, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = Ui.Out() });
+            Ui.Alert();
+        }
+
+        private void ShowFocus()
+        {
+            no.Focus(!onYesButton);
+            yes.Focus(onYesButton);
+            // the destructive answer turns red when chosen
+            if (onYesButton) { yes.Root.SetResourceReference(Border.BackgroundProperty, "WarningBrush"); yes.Root.SetResourceReference(Border.BorderBrushProperty, "WarningBrush"); }
+        }
+
+        public void Handle(string b)
+        {
+            if (done) return;
+            if ((b == "DPadLeft" && onYesButton) || (b == "DPadRight" && !onYesButton)) { onYesButton = !onYesButton; Ui.Tick(); ShowFocus(); return; }
+            if (b == "A") Answer(onYesButton);
+            else if (b == "B") Answer(false);
+        }
+
+        public void Answer(bool sure)
+        {
+            if (done) return;
+            done = true;
+            var host = Root.Parent as Panel;
+            Ui.Fade(Root, 0, 160, 0, () => { if (host != null) host.Children.Remove(Root); });
+            if (sure) onYes(); else { Ui.Back(); onNo(); }
+        }
+    }
+
     // A focusable tile: grows and shows a glowing ring in the theme's focus color when focused
     public class Tile
     {
@@ -460,5 +540,7 @@ namespace Selene
         public virtual void Erase() { }
         public virtual void Shown() { }
         public virtual void Hidden() { }
+        // true = shown over the dimmed home (menus) instead of on the login backdrop
+        public virtual bool Overlay { get { return false; } }
     }
 }

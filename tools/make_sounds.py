@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime_sparkle", "Success.wav": "success_glass", "LoginSelect.wav": "signin_chime"}
+CHOSEN = {"navigation.wav": "cursor_glass", "activation.wav": "confirm_glass", "CloseAdditionalView.wav": "back_glass", "Boot.wav": "boot_chime_sparkle", "Success.wav": "success_glass", "LoginSelect.wav": "signin_boot", "OpenPanel.wav": "panel_open", "Alert.wav": "alert_soft"}
 
 
 def note(name):
@@ -372,6 +372,47 @@ def boot_chime_sparkle():
     return normalize(fade_tail(s, 0.5), 0.17)
 
 
+def alert_soft():
+    # asking before something can't be undone: two warm, low notes stepping down, quiet and short
+    total = 0.9
+    def warm(f, start, amp):
+        return ping(f, f, 0, start, 0.012, 0.03, 0.16, amp, total)
+    s = add(warm(880, 0.0, 0.7), warm(1760, 0.0, 0.12), warm(659, 0.12, 0.8), warm(1318, 0.12, 0.14))
+    s = reverb(lowpass(s, 0.55), 0.18, 0.4)
+    return normalize(fade_tail(s, 0.2), 0.16)
+
+
+def panel_open():
+    # a menu or panel opening: a soft glassy lift, two quick quiet pings rising onto the boot chime's tones
+    total = 0.7
+    s = add(ping(2040, 2040, 0, 0.0, 0.006, 0.01, 0.07, 0.5, total),
+            ping(2775, 2775, 0, 0.055, 0.006, 0.01, 0.12, 0.6, total),
+            ping(5550, 5550, 0, 0.055, 0.004, 0.0, 0.05, 0.08, total))
+    s = reverb(lowpass(s, 0.6), 0.2, 0.35)
+    return normalize(fade_tail(s, 0.15), 0.14)
+
+
+def signin_boot():
+    # picking a profile: the boot chime's opening itself, the same two tones, with a short tail
+    total = 1.2
+    out, pa, pb = [], 0.0, 0.0
+    for i in range(int(RATE * total)):
+        t = i / RATE
+        env = min(1.0, t / 0.03) * (0.88 * math.exp(-t / 0.065) + 0.12 * math.exp(-t / 0.3))
+        tilt = 0.5 + 0.5 * math.sin(2 * math.pi * t / 0.42)
+        pa += 2 * math.pi * 2040 / RATE
+        pb += 2 * math.pi * 2775 / RATE
+        out.append(env * ((0.55 + 0.45 * tilt) * math.sin(pa) + (0.35 + 0.55 * (1 - tilt)) * math.sin(pb)))
+    echo = [0.0] * len(out)
+    for d, g in ((0.12, 0.18), (0.25, 0.1)):
+        k = int(d * RATE)
+        for i in range(k, len(out)):
+            echo[i] += out[i - k] * g
+    s = add([a + b for a, b in zip(out, echo)], ping(10950, 10950, 0, 0.0, 0.02, 0.06, 0.12, 0.05, total))
+    s = reverb(s, 0.18, 0.4)
+    return normalize(fade_tail(s, 0.3), 0.17)
+
+
 def signin_chime():
     # picking a profile: the boot chime's two tones struck together, its answer a fifth up a beat later, a soft bloom
     total = 1.9
@@ -383,7 +424,7 @@ def signin_chime():
     return normalize(fade_tail(s, 0.4), 0.18)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime, boot_chime_sparkle)}
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime, boot_chime_sparkle, alert_soft, panel_open, signin_boot)}
 
 
 def write(path, samples):

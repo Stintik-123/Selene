@@ -22,6 +22,15 @@ namespace Selene
         private static Window window;
         private static FrameworkElement loginRoot;
         private static Grid scene, stage, glow;
+        private static readonly List<UIElement> backdrop = new List<UIElement>();
+        // opened from the home (menu, store...): closing goes back to the home exactly as it was (no intro, same focus)
+        private static bool keepHome;
+        private static IInputElement returnFocus;
+
+        public static bool KeepHome { get { return keepHome; } }
+
+        // the login screens cover the home (not a menu over it): nothing behind them should play (music, trailers)
+        public static bool CoversHome { get { return IsActive && !current.Overlay; } }
         private static Screen current;
         private static bool keysHooked, introPlayed;
         // what to show the next time the layer opens (set by the menu), instead of Who's playing?
@@ -150,7 +159,8 @@ namespace Selene
                 timer.Stop();
                 var step = queue.Dequeue();
                 HomeNav.Log("dev key " + step[1]);
-                if (step[1].StartsWith("type:") && current != null) current.Type(step[1].Substring(5));
+                if (step[1] == "menu") SeleneShell.OpenMenu();
+                else if (step[1].StartsWith("type:") && current != null) current.Type(step[1].Substring(5));
                 else HandleButton(step[1]);
                 next();
             };
@@ -190,6 +200,8 @@ namespace Selene
         {
             var old = current;
             current = next;
+            ApplyOverlay(next.Overlay);
+            if (!next.Overlay) HomeNav.ClearSelectedGame();
             stage.Children.Add(next.Root);
             if (old != null)
             {
@@ -206,6 +218,32 @@ namespace Selene
         public static void Finish()
         {
             SeleneShell.HideLogin();
+            if (!keepHome) return;
+            // back to where the home was
+            var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(460) };
+            t.Tick += (s, e) =>
+            {
+                t.Stop();
+                var el = returnFocus as UIElement;
+                if (el != null && el.IsVisible) el.Focus();
+                keepHome = false;
+            };
+            t.Start();
+        }
+
+        // signing in changes the home (new profile, its favorites): it starts fresh instead of as it was
+        public static void HomeChanged() { keepHome = false; }
+
+        // menus show over the dimmed home; the login screens have the full backdrop
+        private static void ApplyOverlay(bool on)
+        {
+            foreach (var el in backdrop) el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(on ? 0 : 1, TimeSpan.FromMilliseconds(220)));
+            if (!on) RefreshBackdrop();
+            scene.Background = on ? Ink.Brush("SeleneScrimColor", 0.88) : null;
+            var layer = loginRoot as Panel;
+            if (layer == null) return;
+            if (on) layer.Background = Brushes.Transparent;
+            else layer.SetResourceReference(Panel.BackgroundProperty, "SeleneScrimBrush");
         }
 
         // menu actions: open the layer on a given screen
@@ -213,6 +251,8 @@ namespace Selene
         {
             if (scene == null) return;
             if (loginRoot.IsVisible) { Show(screen(), 1); return; }
+            keepHome = true;
+            returnFocus = Keyboard.FocusedElement;
             pending = screen;
             SeleneShell.ShowLogin();
         }
@@ -224,14 +264,19 @@ namespace Selene
             var gradient = new Border();
             gradient.SetResourceReference(Border.BackgroundProperty, "MainBackgourndBrush");
             g.Children.Add(gradient);
+            backdrop.Add(gradient);
             var wallpaper = new Image { Stretch = Stretch.UniformToFill };
             wallpaper.SetResourceReference(Image.SourceProperty, "SeleneWallpaper");
             RenderOptions.SetBitmapScalingMode(wallpaper, BitmapScalingMode.HighQuality);
             g.Children.Add(wallpaper);
-            g.Children.Add(new Border { Background = Ink.Brush("SeleneScrimColor", 0.45) });
+            backdrop.Add(wallpaper);
+            var veil = new Border { Background = Ink.Brush("SeleneScrimColor", 0.45) };
+            g.Children.Add(veil);
+            backdrop.Add(veil);
             // the spotlight, floor glow and particles dress up the theme's plain gradient; over a wallpaper they stay off
             glow = new Grid { IsHitTestVisible = false };
             g.Children.Add(glow);
+            backdrop.Add(glow);
 
             // soft spotlight in the theme's accent from the top left, slowly breathing
             var spot = new RadialGradientBrush { Center = new Point(0.16, -0.12), GradientOrigin = new Point(0.16, -0.12), RadiusX = 0.62, RadiusY = 1.15 };
@@ -359,10 +404,7 @@ namespace Selene
         private int index;            // profiles, then Add (or Continue when profiles couldn't load)
         private bool onPower, menuOpen, leaving;
         private int menuIndex;
-        private Guid removeArmed = Guid.Empty;
-        private readonly Border confirmCard;
-        private readonly DetailPanel confirm;
-        private DispatcherTimer confirmTimer;
+        private Dialog confirm;
 
         // glyph (Segoe MDL2 Assets), label, helper command, built-in fallback
         private static readonly string[][] PowerItems = {
@@ -385,16 +427,7 @@ namespace Selene
             hint = Ui.Text("", 18, 0.6);
             hint.Margin = new Thickness(0, 34, 0, 0);
             col.Children.Add(hint);
-            // "Remove <name>?" under the profiles: X again removes, B keeps (goes away by itself after a while)
-            confirm = new DetailPanel(760);
-            confirmCard = new Border
-            {
-                Child = confirm.Root, CornerRadius = new CornerRadius(22), Padding = new Thickness(28, 22, 28, 22), Margin = new Thickness(0, 34, 0, 0),
-                Background = Ink.Brush("SeleneGlassColor", 0.9), BorderBrush = Ink.Brush("SeleneInkColor", 0.16), BorderThickness = new Thickness(1),
-                HorizontalAlignment = HorizontalAlignment.Center, Visibility = Visibility.Collapsed,
-                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black }
-            };
-            col.Children.Add(confirmCard);
+
             Root.Children.Add(col);
 
             // power button, bottom centre (Down from the profiles): Sleep / Restart / Shut down
@@ -489,10 +522,11 @@ namespace Selene
         {
             if (leaving) return;
             if (menuOpen) { HandleMenu(b); return; }
-            if (removeArmed != Guid.Empty && b != "X")
+            if (confirm != null)
             {
-                HideConfirm();
-                if (b == "B") { Ui.Back(); return; }   // keep
+                if (b == "X") confirm.Answer(true);   // X again: remove
+                else confirm.Handle(b);
+                return;
             }
             if (b == "DPadDown" && !onPower) { onPower = true; Ui.Tick(); ShowFocus(); return; }
             if (b == "DPadUp" && onPower) { onPower = false; Ui.Tick(); ShowFocus(); return; }
@@ -526,6 +560,7 @@ namespace Selene
             for (int k = 0; k < items.Count; k++) if (k != i) Ui.Fade(items[k], 0, 220);
             Ui.ScaleTo(tiles[i].Root, 1.22, 380);
             Profiles.SignIn(profiles[i].Id);
+            LoginScene.HomeChanged();
             HomeNav.ProfileChanged();
             var later = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
             later.Tick += (s, e) => { later.Stop(); LoginScene.Finish(); };
@@ -533,33 +568,19 @@ namespace Selene
         }
 
         // X twice: removes the profile (its favorites and playtime go with it; the games stay)
+        // asks first (Keep is chosen to start with); removing takes the profile's favorites and playtime, not the games
         private void Remove(Profile p)
         {
-            if (removeArmed != p.Id)
-            {
-                removeArmed = p.Id;
-                confirm.Show("\uE7BA", Tone.Warning, "Remove " + p.Name + "?", "", "Their favorites and playtime go with them. Your games stay.", "", "X", "Remove", "B", "Keep");
-                confirmCard.Visibility = Visibility.Visible;
-                Ui.Rise(confirmCard, 0, 14, 260);
-                Ui.Shake(items[index]);
-                Ui.Play("OpenPanel.wav", 0.8);
-                if (confirmTimer != null) confirmTimer.Stop();
-                confirmTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-                confirmTimer.Tick += (s, e) => HideConfirm();
-                confirmTimer.Start();
-                return;
-            }
-            HideConfirm();
-            Profiles.Remove(p.Id);
-            Ui.Back();
-            LoginScene.Show(Profiles.FirstRun ? (Screen)new ProfileSteps(null, () => new WhoScreen(null)) : new WhoScreen(null), 0);
-        }
-
-        private void HideConfirm()
-        {
-            removeArmed = Guid.Empty;
-            if (confirmTimer != null) confirmTimer.Stop();
-            Ui.Fade(confirmCard, 0, 160, 0, () => { if (removeArmed == Guid.Empty) confirmCard.Visibility = Visibility.Collapsed; });
+            Ui.Shake(items[index]);
+            confirm = new Dialog("\uE7BA", "Remove " + p.Name + "?", "Their favorites and playtime go with them. Your games stay.", "Remove", "Keep",
+                () =>
+                {
+                    confirm = null;
+                    Profiles.Remove(p.Id);
+                    LoginScene.Show(Profiles.FirstRun ? (Screen)new ProfileSteps(null, () => new WhoScreen(null)) : new WhoScreen(null), 0);
+                },
+                () => confirm = null);
+            confirm.Open(Root);
         }
 
         private void OpenMenu()
@@ -598,23 +619,10 @@ namespace Selene
 
         private void RunPower(int i)
         {
-            var item = PowerItems[i];
-            HomeNav.Log("login: power menu -> " + item[1]);
             Ui.Confirm();
             menuOpen = false;
             menu.Visibility = Visibility.Collapsed;
-            try
-            {
-                // the optional companion helper does it its own way (e.g. turns the TV off first); else Windows' own commands
-                var helper = SelenePaths.Helper;
-                var parts = item[3].Split('|');
-                var start = !string.IsNullOrEmpty(helper) && System.IO.File.Exists(helper)
-                    ? new System.Diagnostics.ProcessStartInfo(helper, item[2])
-                    : new System.Diagnostics.ProcessStartInfo(parts[0], parts[1]);
-                start.UseShellExecute = false;
-                start.CreateNoWindow = true;
-                System.Diagnostics.Process.Start(start);
-            }
+            try { Power.Run(i); }
             catch (Exception ex) { HomeNav.Log("login power failed: " + ex.Message); }
         }
     }

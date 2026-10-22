@@ -27,6 +27,8 @@ namespace Selene
         };
 
         private readonly List<Store> stores;
+
+        public override bool Overlay { get { return true; } }
         private readonly List<Tile> tiles = new List<Tile>();
         private int index;
 

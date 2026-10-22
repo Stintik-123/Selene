@@ -430,7 +430,7 @@ namespace Selene
                 Log("watch: login=" + (login != null) + " hub=" + (hub != null) + " row=" + (row != null));
                 var win = w;
                 WatchDetails(w);
-                if (login != null) login.IsVisibleChanged += (s, a) => { if (!(bool)a.NewValue) FindAndPlay(win); };
+                if (login != null) login.IsVisibleChanged += (s, a) => { if (!(bool)a.NewValue && !LoginScene.KeepHome) FindAndPlay(win); };
                 HookHub(win);
             }
         }
@@ -898,7 +898,7 @@ namespace Selene
             var window = Window.GetWindow(row);
             var login = window != null ? FindByName(window, "AcceuilSettings") : null;
             Log("login screen found=" + (login != null) + (login != null ? " visible=" + login.IsVisible : ""));
-            if (login != null) login.IsVisibleChanged += (s, a) => { if (!(bool)a.NewValue && row.IsVisible) QueueIntro(row); };
+            if (login != null) login.IsVisibleChanged += (s, a) => { if (!(bool)a.NewValue && row.IsVisible && !LoginScene.KeepHome) QueueIntro(row); };
             if (login != null) LoginScene.Attach(window, login);
             // A visible new row after the first intro = the old theme rebuilt page 1 on an LB/RB switch: keep the user's spot
             // (resetting changed SelectedGame -> background flash and music restart).
@@ -930,8 +930,18 @@ namespace Selene
             pushTimer.Start();
         }
 
+        // while the login screens cover the home nothing is selected for Playnite (its music add-ons would play)
+        public static void ClearSelectedGame()
+        {
+            var w = Application.Current.MainWindow;
+            var vm = w != null ? w.DataContext : null;
+            var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
+            if (prop != null && prop.CanWrite && prop.GetValue(vm, null) != null) prop.SetValue(vm, null, null);
+        }
+
         private static void PushSelected(ListBox row)
         {
+            if (LoginScene.CoversHome) { ClearSelectedGame(); return; }
             var game = row.SelectedItem;
             if (game == null) return;
             var vm = row.DataContext;
@@ -1709,6 +1719,8 @@ namespace Selene
                 lastPadButton = same; lastPadRaw = pressed; lastPadAt = now;
                 HideCursorForController();
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
+                // Start opens Selene's menu (Playnite's own is under More in it)
+                if (pressed == "Start" && mainW != null && FocusOnHome()) { SeleneShell.OpenMenu(); e.Cancel(); return; }
                 if (GameMedia.HandleButton(pressed, Keyboard.FocusedElement)) { e.Cancel(); return; }
                 if (pressed == "RightStick" && previewShowing) { TogglePreviewSound(); e.Cancel(); return; }
                 // A still launches the game below; Up/Down leave the card playing (only sideways moves shrink it)
