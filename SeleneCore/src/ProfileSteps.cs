@@ -489,6 +489,7 @@ namespace Selene
             {
                 Header("Choose your avatar", "Pick one, or use your own picture.");
                 files.Add(null);
+                files.AddRange(Profiles.KeptPictures());   // pictures added before
                 var steam = SelenePaths.AvatarImage;
                 if (!string.IsNullOrEmpty(steam) && System.IO.File.Exists(steam)) files.Add(steam);
                 files.AddRange(Profiles.BuiltInAvatars());
@@ -497,17 +498,7 @@ namespace Selene
                 grid.Viewport.HorizontalAlignment = HorizontalAlignment.Center;
                 grid.Viewport.VerticalAlignment = VerticalAlignment.Top;
                 grid.Viewport.Margin = new Thickness(0, 290, 0, 0);
-                foreach (var f in files)
-                {
-                    var t = new Tile(96, 96, 48, 5) { FocusScale = 1.12 };
-                    if (f == null) t.Face.Child = new TextBlock { Text = "\uE710", FontFamily = Ui.Glyphs, FontSize = 30, Foreground = Ink.Brush("SeleneInkColor", 0.85), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-                    var cell = new Grid { Width = 118, Height = 118 };
-                    t.Root.HorizontalAlignment = HorizontalAlignment.Center;
-                    t.Root.VerticalAlignment = VerticalAlignment.Center;
-                    cell.Children.Add(t.Root);
-                    grid.Panel.Children.Add(cell);
-                    tiles.Add(t);
-                }
+                foreach (var f in files) AddTile(f, grid.Panel.Children.Count);
                 Root.Children.Add(grid.Viewport);
                 // the current avatar (editing), else the first built-in one
                 var current = Profiles.AvatarFile(new Profile { Avatar = owner.Avatar });
@@ -517,6 +508,20 @@ namespace Selene
             }
 
             public override void Shown() { ShowFocus(); }
+
+            // one avatar tile at position `at` (null = the "add your own picture" tile)
+            private Tile AddTile(string f, int at)
+            {
+                var t = new Tile(96, 96, 48, 5) { FocusScale = 1.12 };
+                if (f == null) t.Face.Child = new TextBlock { Text = "\uE710", FontFamily = Ui.Glyphs, FontSize = 30, Foreground = Ink.Brush("SeleneInkColor", 0.85), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+                var cell = new Grid { Width = 118, Height = 118 };
+                t.Root.HorizontalAlignment = HorizontalAlignment.Center;
+                t.Root.VerticalAlignment = VerticalAlignment.Center;
+                cell.Children.Add(t.Root);
+                grid.Panel.Children.Insert(at, cell);
+                tiles.Insert(at, t);
+                return t;
+            }
 
             private void ShowFocus()
             {
@@ -559,19 +564,23 @@ namespace Selene
                 {
                     // shipped avatars are kept relative to the theme; a Steam avatar is copied so it stays the same
                     var shipped = SelenePaths.ThemeFile("Avatars");
-                    Owner.Avatar = f.StartsWith(shipped, StringComparison.OrdinalIgnoreCase) ? "Avatars/" + System.IO.Path.GetFileName(f) : Profiles.KeepPicture(f);
+                    Owner.Avatar = f.StartsWith(shipped, StringComparison.OrdinalIgnoreCase) ? "Avatars/" + System.IO.Path.GetFileName(f)
+                                 : Profiles.IsKeptPicture(f) ? f : Profiles.KeepPicture(f);
                     return false;
                 }
                 var picked = HomeNav.Api != null ? HomeNav.Api.Dialogs.SelectImagefile() : null;
                 if (string.IsNullOrEmpty(picked)) return true;
                 // frame it first: the circle shows exactly what the avatar will be
+                // framed: back to the grid with the new picture right after "+", chosen; A on it uses it
                 crop = AvatarCrop.Open(picked, saved =>
                 {
                     CloseCrop();
-                    Owner.Avatar = saved;
-                    tiles[0].Face.Background = new ImageBrush(Wallpapers.Load(saved, 192)) { Stretch = Stretch.UniformToFill };
-                    tiles[0].Face.Child = null;
-                    Owner.Next();
+                    files.Insert(1, saved);
+                    var t = AddTile(saved, 1);
+                    t.Face.Background = new ImageBrush(Wallpapers.Load(saved, 192)) { Stretch = Stretch.UniformToFill };
+                    index = 1;
+                    ShowFocus();
+                    Ui.Pop(t.Root);
                 }, CloseCrop);
                 if (crop == null) { Ui.Shake(tiles[0].Root); return true; }
                 Root.Children.Add(crop.Root);

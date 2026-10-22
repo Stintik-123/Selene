@@ -146,6 +146,21 @@ namespace Selene
             return target;
         }
 
+        // pictures people added before (framed or copied), newest first, offered again in the avatar picker
+        public static List<string> KeptPictures()
+        {
+            var folder = Path.Combine(Path.GetDirectoryName(file), "avatars");
+            if (!Directory.Exists(folder)) return new List<string>();
+            return new DirectoryInfo(folder).GetFiles().Where(f => f.Extension == ".png" || f.Extension == ".jpg" || f.Extension == ".jpeg")
+                .OrderByDescending(f => f.LastWriteTimeUtc).Select(f => f.FullName).ToList();
+        }
+
+        public static bool IsKeptPicture(string path)
+        {
+            var folder = Path.Combine(Path.GetDirectoryName(file), "avatars");
+            return path != null && path.StartsWith(folder, StringComparison.OrdinalIgnoreCase);
+        }
+
         // a new file for a profile picture, next to profiles.json
         public static string NewPicturePath(string extension)
         {
