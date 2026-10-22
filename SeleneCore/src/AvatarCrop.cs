@@ -22,8 +22,8 @@ namespace Selene
         private readonly Action cancelled;
         private double scale, minScale, x, y;      // where the picture is going: size factor and top-left inside the square
         private double shownScale, shownX, shownY; // where it is drawn right now: eases toward the target every frame
-        private DateTime lastFrame;
-        private bool gliding;
+        private DateTime lastFrame, lastAnalog;
+        private bool gliding, closed;
 
         public static AvatarCrop Open(string file, Action<string> done, Action cancelled)
         {
@@ -52,7 +52,7 @@ namespace Selene
             col.Children.Add(Ui.Title("Frame your picture"));
             col.Children.Add(Ui.Sub("Move it with the stick, zoom with the triggers."));
 
-            frame = new Grid { Width = Size, Height = Size, Margin = new Thickness(0, 36, 0, 0), ClipToBounds = true };
+            frame = new Grid { Width = Size, Height = Size, ClipToBounds = true };
             image = new Image { Source = bmp, Stretch = Stretch.Fill };
             RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
             var canvas = new Canvas();
@@ -64,7 +64,7 @@ namespace Selene
             outside.Children.Add(new EllipseGeometry(new Rect(0, 0, Size, Size)));
             frame.Children.Add(new System.Windows.Shapes.Path { Data = outside, Fill = Ink.Brush("SeleneScrimColor", 0.7) });
             frame.Children.Add(new Ellipse { Stroke = Ink.Brush("SeleneFocusColor"), StrokeThickness = 3 });
-            var border = new Border { Child = frame, CornerRadius = new CornerRadius(18), BorderBrush = Ink.Brush("SeleneInkColor", 0.2), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Center };
+            var border = new Border { Child = frame, Margin = new Thickness(0, 36, 0, 0), BorderBrush = Ink.Brush("SeleneInkColor", 0.2), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Center };
             col.Children.Add(border);
             Root.Children.Add(col);
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Cancel")));
@@ -78,6 +78,9 @@ namespace Selene
             Place();
             shownScale = scale; shownX = x; shownY = y;
             Draw();
+            // the stick and triggers are followed continuously while this is open
+            lastAnalog = DateTime.Now;
+            CompositionTarget.Rendering += Analog;
             Ui.Rise(col, 0, 14, 260);
         }
 
@@ -112,6 +115,38 @@ namespace Selene
             Draw();
         }
 
+        // every frame: the left stick pans (further = faster), the triggers zoom, smoothly for as long as they're held
+        private void Analog(object sender, EventArgs e)
+        {
+            var now = DateTime.Now;
+            double dt = Math.Min(0.05, (now - lastAnalog).TotalSeconds);
+            lastAnalog = now;
+            var pad = Pad.Read();
+            if (!pad.Connected) return;
+            double zoom = pad.RightTrigger - pad.LeftTrigger;
+            if (pad.LeftX == 0 && pad.LeftY == 0 && zoom == 0) return;
+            const double speed = 700;   // pixels a second at full tilt
+            x -= pad.LeftX * speed * dt;
+            y += pad.LeftY * speed * dt;
+            if (zoom != 0)
+            {
+                double next = Math.Max(minScale, Math.Min(minScale * 5, scale * Math.Exp(zoom * 1.4 * dt)));
+                double cx = (Size / 2 - x) / scale, cy = (Size / 2 - y) / scale;
+                scale = next;
+                x = Size / 2 - cx * scale;
+                y = Size / 2 - cy * scale;
+            }
+            Place();
+        }
+
+        private void Close()
+        {
+            if (closed) return;
+            closed = true;
+            CompositionTarget.Rendering -= Analog;
+            Stop();
+        }
+
         private void Stop()
         {
             if (!gliding) return;
@@ -141,6 +176,10 @@ namespace Selene
         // true = handled
         public void Handle(string b)
         {
+            // the stick and triggers are already followed continuously; their button presses would add steps
+            var pad = Pad.Read();
+            if (pad.Connected && (b == "TriggerLeft" || b == "TriggerRight")) return;
+            if (pad.Connected && b.StartsWith("DPad") && (pad.LeftX != 0 || pad.LeftY != 0)) return;
             const double step = 46;
             switch (b)
             {
@@ -150,7 +189,7 @@ namespace Selene
                 case "DPadDown": y -= step; Place(); return;
                 case "TriggerLeft": case "LeftShoulder": case "X": Zoom(1 / 1.15); return;
                 case "TriggerRight": case "RightShoulder": case "Y": Zoom(1.15); return;
-                case "B": Stop(); Ui.Back(); cancelled(); return;
+                case "B": Close(); Ui.Back(); cancelled(); return;
                 case "A": case "Start": Save(); return;
             }
         }
@@ -169,7 +208,7 @@ namespace Selene
                 var encoder = new PngBitmapEncoder();
                 encoder.Frames.Add(BitmapFrame.Create(target));
                 using (var stream = File.Create(path)) encoder.Save(stream);
-                Stop();
+                Close();
                 Ui.Confirm();
                 done(path);
             }
