@@ -21,6 +21,23 @@
 | ![Login](docs/screenshots/login.png) | ![Game details](docs/screenshots/details.png) |
 | ![Library](docs/screenshots/library.png) | ![Menu](docs/screenshots/menu.png) |
 
+## Coming in the next update
+
+**A first-launch setup** that gets everything ready from the couch: it checks your game library, installs the add-ons
+Selene works with (logos and trailers, save backups, HowLongToBeat, achievements and more, each explained), and sets
+up your profile.
+
+**Profiles for everyone in the house.** Each person gets their own name, avatar, theme, wallpaper, favorites, recently
+played and playtime. Pick from 415 avatars or use your own picture.
+
+![Avatars](docs/readme/avatars.jpg)
+
+**23 color themes**, each with its own wallpaper: Selene's moonlight blue plus Catppuccin, Nord, Gruvbox, Kanagawa,
+Rosé Pine, Tokyo Night and more, dark and light. Change the wallpaper on its own too, or use your own folder of
+wallpapers.
+
+![Themes](docs/readme/themes.jpg)
+
 ## Features
 
 **Home**
