@@ -81,9 +81,11 @@ namespace Selene
             var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(16, 20, 16, 0) };
             sp.Children.Add(new TextBlock { Text = Icon(item.Key), FontFamily = Ui.Glyphs, FontSize = 26, Height = 30, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center });
             sp.Children.Add(new TextBlock { Text = item.Title, FontSize = 18, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis });
-            var status = new TextBlock { FontSize = 14, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Height = 38, Margin = new Thickness(0, 5, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
+            // the state as a short chip; the full detail is in the panel below when the card is focused
+            var status = new TextBlock { FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, TextTrimming = TextTrimming.CharacterEllipsis };
+            var chip = new Border { Child = status, CornerRadius = new CornerRadius(10), Padding = new Thickness(10, 3, 10, 4), Margin = new Thickness(0, 10, 0, 0), HorizontalAlignment = HorizontalAlignment.Center, MaxWidth = 200 };
             SetStatus(status, item);
-            sp.Children.Add(status);
+            sp.Children.Add(chip);
             tile.Face.Child = sp;
             tile.Root.Margin = new Thickness(9);
             cards.Add(tile);
@@ -105,13 +107,42 @@ namespace Selene
 
         private static void SetStatus(TextBlock t, SetupItem item)
         {
+            var chip = t.Parent as Border;
+            string key;
             switch (item.State)
             {
-                case SetupState.Ready: t.Text = "✓ " + item.Detail; t.Foreground = Ink.Brush("SeleneSuccessColor"); break;
-                case SetupState.Missing: t.Text = item.Detail; t.Foreground = Ink.Brush("GlyphColor"); break;
-                case SetupState.Optional: t.Text = item.Detail; t.Foreground = Ink.Brush("SeleneInkColor", 0.6); break;
-                default: t.Text = item.Detail; t.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush"); break;
+                case SetupState.Ready: key = "SeleneSuccessColor"; break;
+                case SetupState.Missing: key = "GlyphColor"; break;
+                case SetupState.Optional: key = "SeleneInkColor"; break;
+                default: key = null; break;
             }
+            t.Text = (item.State == SetupState.Ready ? "\u2713 " : "") + Short(item).ToUpperInvariant();
+            if (key != null)
+            {
+                t.Foreground = Ink.Brush(key, key == "SeleneInkColor" ? 0.7 : 1);
+                if (chip != null) chip.Background = Ink.Brush(key, 0.14);
+            }
+            else
+            {
+                t.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
+                if (chip != null) chip.Background = new SolidColorBrush(Color.FromArgb(0x2E, 0xFF, 0x6B, 0x6B));
+            }
+        }
+
+        // a card's state in a word or two ("392 games", "Installed", "Not installed"...)
+        private static string Short(SetupItem item)
+        {
+            if (item.Key == "library")
+            {
+                int games = System.Text.RegularExpressions.Regex.Matches(item.Detail ?? "", @"(\d+) games").Cast<System.Text.RegularExpressions.Match>().Sum(m => int.Parse(m.Groups[1].Value));
+                return item.State == SetupState.Ready ? games + " games" : "No games";
+            }
+            if (item.Key == "folders") return item.State == SetupState.Ready ? item.Detail : "Optional";
+            if (item.Key == "controller") return item.State == SetupState.Ready ? "Connected" : "Not connected";
+            if (item.Key == "ludusavi-program") return item.State == SetupState.Ready ? "Ready" : "Not set up";
+            if (item.Key.StartsWith("clash:")) return "Clashes";
+            if (item.State == SetupState.Ready) return "Installed";
+            return item.AddonId != null ? "Not installed" : "Turned off";
         }
 
         public override void Shown()
@@ -171,13 +202,18 @@ namespace Selene
             }
             else if (index == ButtonsStart)
             {
-                int missing = SetupCheck.MissingIncluded(HomeNav.Api).Count;
-                if (missing > 0) info.Show("\uE74C", Tone.Accent, "Install all", missing + " to go", "Every add-on that comes with Selene, one after another.", "Playnite asks for each one. They work after a restart.", "A", "Install all");
+                // which add-ons the button installs, by name (the button itself is right below)
+                var missing = SetupCheck.MissingIncluded(HomeNav.Api);
+                if (missing.Count > 0) info.Show("\uE74C", Tone.Accent, "Install all", missing.Count + " to go", string.Join(" \u00B7 ", missing.Select(m => m.Name)), "Playnite asks for each one. They work after a restart.");
                 else info.Show("\uE74C", Tone.Success, "Install all", "Done", "Every add-on that comes with Selene is installed.", "");
             }
             else
             {
-                info.Show("\uE72A", Tone.Accent, firstRun ? "Continue" : "Done", "", firstRun ? "Next: make your profile." : "Back to the home.", "", "A", firstRun ? "Continue" : "Done");
+                // how far setup is, and what's left
+                int ready = items.Count(i => i.State == SetupState.Ready || i.State == SetupState.Optional);
+                var left = items.Where(i => i.State == SetupState.Missing || i.State == SetupState.Warning).Select(i => i.Title).ToList();
+                if (left.Count == 0) info.Show("\uE73E", Tone.Success, "All set", "Ready", firstRun ? "Everything Selene needs is here. Next: your profile." : "Everything Selene needs is here.", "");
+                else info.Show("\uE72A", Tone.Accent, ready + " of " + items.Count + " ready", left.Count + " left", "Still to do: " + string.Join(", ", left) + ".", "You can finish this later from the menu: Setup check.");
             }
         }
 
@@ -300,7 +336,7 @@ namespace Selene
             if (settingUpLudusavi) return;
             settingUpLudusavi = true;
             Ui.Confirm();
-            statuses[at].Text = "Downloading…";
+            statuses[at].Text = "DOWNLOADING\u2026";
             statuses[at].Foreground = Ink.Brush("SeleneInkColor", 0.7);
             var api = HomeNav.Api;
             var dispatcher = Application.Current.Dispatcher;
@@ -320,7 +356,7 @@ namespace Selene
                     catch (Exception ex)
                     {
                         HomeNav.Log("setup: Ludusavi failed: " + ex);
-                        statuses[at].Text = "Couldn't set it up: " + ex.Message;
+                        statuses[at].Text = "SETUP FAILED";
                         statuses[at].SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
                         return;
                     }
