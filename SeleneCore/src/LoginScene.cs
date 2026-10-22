@@ -212,6 +212,7 @@ namespace Selene
             }
             Ui.Slide(next.Root, dir * 90, 0, 0, 1, 320);
             next.Shown();
+            if (!scene.IsKeyboardFocusWithin) scene.Dispatcher.BeginInvoke(new Action(() => { if (IsActive) Keyboard.Focus(scene); }), System.Windows.Threading.DispatcherPriority.Input);
         }
 
         // signed in (or carrying on without profiles): the layer fades away to the home
@@ -300,6 +301,9 @@ namespace Selene
 
             stage = new Grid();
             g.Children.Add(stage);
+            // keyboard focus moves in here while the layer is up, so the home behind doesn't react to input
+            g.Focusable = true;
+            g.FocusVisualStyle = null;
             return g;
         }
 

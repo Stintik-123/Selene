@@ -935,16 +935,28 @@ namespace Selene
         private static bool previewGame;
 
         // the theme and background steps show the home in a preview: a game is selected behind it then (music stays off)
+        private static object previewGameObj;
+
+        // the row itself is left alone (it moved behind the preview): only Playnite's selected game is set
         public static void ShowGameForPreview(bool on)
         {
             var row = LiveRow();
             if (row == null || previewGame == on) return;
             previewGame = on;
-            if (!on) { ClearSelectedGame(); return; }
+            if (!on) { previewGameObj = null; ClearSelectedGame(); return; }
             int idx = FirstGameIndex(row);
-            if (idx < 0 || idx >= row.Items.Count || row.Items[idx] is string || row.Items[idx] is RowPad) return;
-            row.SelectedIndex = idx;
-            PushSelected(row);
+            if (idx < 0 || idx >= row.Items.Count || row.Items[idx] is string || row.Items[idx] is RowPad) { previewGame = false; return; }
+            previewGameObj = row.Items[idx];
+            SetSelectedGame(previewGameObj);
+        }
+
+        private static void SetSelectedGame(object game)
+        {
+            PauseMusic(true);
+            var w = Application.Current.MainWindow;
+            var vm = w != null ? w.DataContext : null;
+            var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
+            if (prop != null && prop.CanWrite && !ReferenceEquals(prop.GetValue(vm, null), game)) prop.SetValue(vm, game, null);
         }
 
         // the home's game art fades in or out when a profile's home background changes
@@ -973,7 +985,7 @@ namespace Selene
             if (LoginScene.CoversHome && !previewGame) { ClearSelectedGame(); return; }
             var game = row.SelectedItem;
             if (game == null) return;
-            if (previewGame) { PauseMusic(true); var pvm = row.DataContext; var pp = pvm != null ? pvm.GetType().GetProperty("SelectedGame") : null; if (pp != null && pp.CanWrite) pp.SetValue(pvm, game is string ? null : game, null); return; }
+            if (previewGame) { SetSelectedGame(previewGameObj); return; }
             // no game music on the Library / Store cards (Playnite may fall back to its first game when none is selected)
             PauseMusic(game is string);
             var vm = row.DataContext;
