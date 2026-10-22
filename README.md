@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo/selene-logo-dark.png">
+    <img src="docs/logo/selene-logo-light.png" alt="Selene" width="420">
+  </picture>
+</p>
+
 # Selene
 
 A calm, console-style fullscreen theme for [Playnite](https://playnite.link), named after the Greek goddess of the moon.
@@ -83,7 +90,8 @@ into `%APPDATA%\Playnite\Themes\Fullscreen\Selene_a98e0027-fa6a-4f5e-a087-bad8d6
 
 - Built on [Playnite](https://github.com/JosefNemec/Playnite)'s fullscreen theme template (MIT).
 - Interface sounds: [Kenney](https://kenney.nl) - *Interface Sounds* (CC0).
-- Artwork (moon logo, default cover) is Selene's own, drawn by `tools\make_art.ps1`.
+- Artwork (crescent crown logo, icons, default cover) is Selene's own, drawn in `tools/art` and exported by
+  `tools/make_art.py`. The logo lettering is [Cinzel](https://github.com/NDISCOVER/Cinzel) (SIL Open Font License).
 
 See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Selene is not affiliated with any console maker.
 

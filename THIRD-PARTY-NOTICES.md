@@ -9,5 +9,10 @@ The sounds in `theme/Audio` (except where noted) are from *Interface Sounds* by 
 released under Creative Commons Zero (CC0): http://creativecommons.org/publicdomain/zero/1.0/
 The original license file is included as `theme/Audio/LICENSE-Kenney-Interface-Sounds.txt`.
 
+## Cinzel
+The "SELENE" lettering in the logo (`tools/art/selene-wordmark.svg`, `docs/logo`) is set in Cinzel and converted
+to outlines; the font itself is not included. Cinzel - https://github.com/NDISCOVER/Cinzel -
+SIL Open Font License 1.1, Copyright 2020 The Cinzel Project Authors.
+
 ## Fonts
 Fonts bundled with the Playnite theme template keep their own licenses (see `theme/Fonts`).
