@@ -72,7 +72,24 @@ namespace Selene
         public static bool IsActive { get { return loginRoot != null && loginRoot.IsVisible && scene != null && current != null; } }
 
         // controller buttons (from HomeNav's input hook): everything goes to the screen while the login layer is up
+        // Playnite turns each controller press into a fake arrow-key press as well; those copies arrive right after the
+        // controller's own event and moved everything two steps, so keys within a moment of a pad press are ignored
+        private static DateTime lastPad;
+
         public static bool HandleButton(string pressed)
+        {
+            if (!IsActive) return false;
+            lastPad = DateTime.Now;
+            return Press(pressed);
+        }
+
+        private static bool FromKeyboard(string pressed)
+        {
+            if ((DateTime.Now - lastPad).TotalMilliseconds < 120) return true;   // the copy of a pad press: already handled
+            return Press(pressed);
+        }
+
+        private static bool Press(string pressed)
         {
             if (!IsActive) return false;
             var b = Ui.Normalize(pressed);
@@ -91,7 +108,7 @@ namespace Selene
             {
                 if (key == Key.Back) { current.Erase(); e.Handled = true; return; }
                 if (key == Key.Space) return;   // typed as text
-                if (key == Key.Enter) { HandleButton("Start"); e.Handled = true; return; }   // Enter = done
+                if (key == Key.Enter) { FromKeyboard("Start"); e.Handled = true; return; }   // Enter = done
             }
             string b = key == Key.Enter || key == Key.Space ? "A"
                      : key == Key.Escape || key == Key.Back ? "B"
@@ -99,7 +116,7 @@ namespace Selene
                      : key == Key.Up ? "DPadUp" : key == Key.Down ? "DPadDown"
                      : key == Key.Delete ? "X" : key == Key.F2 ? "Y" : key == Key.Tab ? "Start"
                      : key == Key.OemMinus || key == Key.Subtract ? "TriggerLeft" : key == Key.OemPlus || key == Key.Add ? "TriggerRight" : null;
-            if (b != null) { HandleButton(b); e.Handled = true; }
+            if (b != null) { FromKeyboard(b); e.Handled = true; }
         }
 
         private static void OnText(object sender, TextCompositionEventArgs e)

@@ -22,7 +22,6 @@ namespace Selene
         private readonly Grid body = new Grid();
         private readonly StackPanel dots = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 58) };
         private readonly TextBlock nextLabel;
-        private readonly FrameworkElement donePrompt;
         private readonly Step[] steps;
         private int step;
         private bool saved;
@@ -46,9 +45,7 @@ namespace Selene
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             var next = Ui.Prompt("A", "Next");
             nextLabel = (TextBlock)next.Children[1];
-            var doneHint = Ui.Prompt("Y", "Done");
-            donePrompt = doneHint;
-            Root.Children.Add(Ui.Prompts(true, doneHint, next));
+            Root.Children.Add(Ui.Prompts(true, next));
         }
 
         public override bool WantsText { get { return steps[step].WantsText; } }
@@ -77,7 +74,6 @@ namespace Selene
                 d.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(i == step ? 24 : 8, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
             }
             nextLabel.Text = steps[step].WantsText ? "Select" : step < steps.Length - 1 ? "Next" : editing != null ? "Save" : "Create profile";
-            donePrompt.Visibility = steps[step].WantsText ? Visibility.Visible : Visibility.Collapsed;
         }
 
         public override void Handle(string b)
@@ -317,6 +313,8 @@ namespace Selene
                         var label = new TextBlock { Text = Label(v), FontSize = v.Length == 1 ? 24 : 19, FontFamily = v == "shift" || v == "erase" ? Ui.Glyphs : Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
                         if (v.Length == 1 && char.IsLetter(v[0])) letterLabels.Add(label);
                         t.Face.Child = label;
+                        // the controller shortcut for the key, as a small badge on its top-right corner
+                        if (v == "done" || v == "erase") t.Face.Child = WithBadge(label, v == "done" ? "Y" : "X");
                         t.Root.Margin = new Thickness(gap / 2, 0, gap / 2, 0);
                         rowPanel.Children.Add(t.Root);
                         rowKeys.Add(t);
@@ -332,6 +330,17 @@ namespace Selene
                 Root.Children.Add(layout);
                 foreach (var c in owner.Name) AddLetter(c.ToString(), false);
                 UpdateCase();
+            }
+
+            private static Grid WithBadge(UIElement label, string button)
+            {
+                var g = new Grid();
+                g.Children.Add(label);
+                var badge = new Grid { Width = 22, Height = 22, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 5, 6, 0) };
+                badge.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor", 0.9) });
+                badge.Children.Add(new TextBlock { Text = button, FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+                g.Children.Add(badge);
+                return g;
             }
 
             private static double Width(string v, double key)
