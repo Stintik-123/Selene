@@ -18,5 +18,13 @@ $refs = @('System.dll', 'System.Core.dll', 'System.Xaml.dll', 'System.Drawing.dl
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
 Copy-Item (Join-Path $core 'extension.yaml'), (Join-Path $core 'icon.png') $stage -Force
 Copy-Item (Join-Path $core 'Localization') $stage -Recurse -Force
-try { Copy-Item "$stage\*" $out -Recurse -Force -ErrorAction Stop; "built and installed $out\SeleneCore.dll" }
-catch { "built $stage\SeleneCore.dll (Playnite is running: dev.ps1 installs it on the next swap)" }
+# Playnite keeps the loaded DLL open, but a file in use can still be renamed: move it aside and put the new one in its
+# place, so the next Playnite start loads this build however Playnite is restarted
+$dll = Join-Path $out 'SeleneCore.dll'
+Get-ChildItem $out -Filter 'SeleneCore.dll.old-*' -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
+try { Copy-Item "$stage\*" $out -Recurse -Force -ErrorAction Stop; "built and installed $dll" }
+catch {
+    Rename-Item $dll ('SeleneCore.dll.old-' + (Get-Date -Format 'HHmmss')) -ErrorAction Stop
+    Copy-Item "$stage\*" $out -Recurse -Force
+    "built and installed $dll (Playnite is running: it loads this build the next time it starts)"
+}

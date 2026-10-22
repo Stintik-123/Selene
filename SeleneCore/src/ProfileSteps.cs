@@ -37,7 +37,7 @@ namespace Selene
             Avatar = editing != null ? editing.Avatar : null;
             Theme = editing != null && !string.IsNullOrEmpty(editing.Theme) ? editing.Theme : ThemePalettes.DefaultId;
             Wallpaper = editing != null ? editing.Wallpaper : null;
-            Look = editing != null && !string.IsNullOrEmpty(editing.HomeBackground) ? editing.HomeBackground : "blend";
+            Look = editing != null && editing.HomeBackground == "wallpaper" ? "wallpaper" : "art";
             steps = new Step[] { new NameStep(this), new AvatarStep(this), new ThemeStep(this), new BackgroundStep(this) };
             Root.Children.Add(body);
             for (int i = 0; i < steps.Length; i++)
@@ -659,7 +659,7 @@ namespace Selene
 
             public BackgroundStep(ProfileSteps owner) : base(owner)
             {
-                Header("Choose your background", "Behind the home and the login. X changes how game art mixes in.");
+                Header("Choose your background", "Behind the login, menus and the home when no game is selected.");
                 grid = new ScrollingGrid(Columns, 142, 560);
                 grid.Viewport.Width = Columns * 226;
                 grid.Viewport.VerticalAlignment = VerticalAlignment.Top;
@@ -735,7 +735,7 @@ namespace Selene
 
             private void ShowLook(bool changed)
             {
-                var names = new Dictionary<string, string> { { "blend", "Game art blends into the background" }, { "art", "Game art only" }, { "wallpaper", "Background only" } };
+                var names = new Dictionary<string, string> { { "art", "the game's art (background where there is none)" }, { "wallpaper", "background only" } };
                 string text;
                 lookLabel.Text = "Home: " + (names.TryGetValue(Owner.Look, out text) ? text : Owner.Look) + "   (X to change)";
                 Profiles.ApplyHomeBackground(Owner.Look);

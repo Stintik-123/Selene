@@ -14,7 +14,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - "Who's playing?" replaces the old login: profiles glow in their own theme's color; add, edit (Y) or remove (X twice); power menu below.
 - Extensions menu, Selene: switch profile, edit profile, setup check.
 - Every screen follows the color theme: text, focus rings, buttons, glass panels and the shading over game art.
-- The home blends the selected game's art into your wallpaper with a glow in the theme's color (or pick art only / wallpaper only).
+- Your theme's wallpaper shows behind the home when no game is selected, and behind the login and menus.
 - New crescent crown logo with a glowing full moon; new icons, default cover and README banner.
 - Placeholders instead of blank screens when nothing is set up yet (login picture, home background).
 - Groundwork for profiles, 23 color themes with their own wallpapers, 415 avatars and the first-launch setup check.

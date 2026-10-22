@@ -154,7 +154,61 @@ def boot_c():
     return normalize(fade_tail(reverb(s, 0.35, 1.6), 0.4), 0.65)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, boot_a, boot_b, boot_c)}
+def ping(f0, f1, glide, start, attack, hold, decay, amp, length):
+    """a sine that slides from f0 to f1 over `glide` s, raised-cosine attack, holds, then decays (time constant `decay`)"""
+    out = [0.0] * int(RATE * length)
+    phase = 0.0
+    for i in range(int(start * RATE), len(out)):
+        t = i / RATE - start
+        f = f0 + (f1 - f0) * min(1.0, t / glide) if glide > 0 else f0
+        phase += 2 * math.pi * f / RATE
+        if t < attack:
+            env = 0.5 - 0.5 * math.cos(math.pi * t / attack)
+        elif t < attack + hold:
+            env = 1.0
+        else:
+            env = math.exp(-(t - attack - hold) / decay)
+        out[i] = amp * env * math.sin(phase)
+    return out
+
+
+def click(start, length, amp, total, seed=3):
+    """a tiny soft noise tick (the attack of a tap)"""
+    rnd = random.Random(seed)
+    out = [0.0] * int(RATE * total)
+    n = int(length * RATE)
+    for k in range(n):
+        out[int(start * RATE) + k] = amp * rnd.uniform(-1, 1) * (1 - k / n)
+    return lowpass(out, 0.5)
+
+
+def add(*sounds):
+    n = max(len(x) for x in sounds)
+    return [sum(x[i] for x in sounds if i < len(x)) for i in range(n)]
+
+
+def cursor_glass():
+    # a very short glassy tik: a high ping sliding up a little, a softer one an octave below, a hint of a tap
+    total = 0.1
+    s = add(ping(10400, 11150, 0.014, 0.008, 0.005, 0.004, 0.0028, 1.0, total),
+            ping(5250, 6250, 0.014, 0.008, 0.005, 0.003, 0.0025, 0.42, total),
+            ping(7800, 7800, 0, 0.009, 0.004, 0.002, 0.0025, 0.09, total),
+            click(0.011, 0.0015, 0.35, total))
+    return normalize(s, 0.24)
+
+
+def confirm_glass():
+    # a brighter double: a 4 kHz tick, then a high bell that rings on very softly
+    total = 0.32
+    s = add(ping(3950, 3950, 0, 0.0, 0.002, 0.004, 0.005, 0.13, total),
+            ping(4170, 4170, 0, 0.0, 0.002, 0.004, 0.005, 0.1, total),
+            ping(10420, 10420, 0, 0.008, 0.004, 0.012, 0.0055, 1.0, total),
+            ping(9200, 9200, 0, 0.008, 0.004, 0.010, 0.0055, 0.2, total),
+            ping(10380, 10380, 0, 0.03, 0.01, 0.0, 0.05, 0.04, total))
+    return normalize(s, 0.22)
+
+
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, boot_a, boot_b, boot_c)}
 
 
 def write(path, samples):

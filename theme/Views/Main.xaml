@@ -93,8 +93,8 @@
                                     <!-- fallback for when no game is selected (empty library): the theme's gradient and the profile's wallpaper -->
                                     <Border Background="{DynamicResource MainBackgourndBrush}"/>
                                     <Image Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant"/>
-                                    <!-- the game's art blends into the wallpaper (Selene Core sets the look per profile: blend, art or wallpaper) -->
-                                    <Grid x:Name="SeleneHubArt" Opacity="{DynamicResource SeleneArtOpacity}" OpacityMask="{DynamicResource SeleneArtMask}">
+                                    <!-- the game's art; the wallpaper shows where there is none (or always, for a profile that wants that) -->
+                                    <Grid x:Name="SeleneHubArt" Opacity="{DynamicResource SeleneArtOpacity}">
                                     <FadeImage Source="{Binding SelectedGame.DisplayBackgroundImage}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
                                     <TextBlock x:Name="SeleneHeroPath" Tag="{DynamicResource SeleneMediaRoot}" Visibility="Collapsed">
                                         <TextBlock.Text>
@@ -106,15 +106,6 @@
                                     </TextBlock>
                                     <FadeImage Source="{Binding Text, ElementName=SeleneHeroPath}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
                                     </Grid>
-                                    <!-- the theme's accent glowing in from the top left -->
-                                    <Border Opacity="{DynamicResource SeleneTintOpacity}">
-                                        <Border.Background>
-                                            <RadialGradientBrush Center="0.12,-0.1" GradientOrigin="0.12,-0.1" RadiusX="0.75" RadiusY="1.1">
-                                                <GradientStop Color="{DynamicResource GlyphColor}" Offset="0"/>
-                                                <GradientStop Color="Transparent" Offset="1"/>
-                                            </RadialGradientBrush>
-                                        </Border.Background>
-                                    </Border>
                                     <Border Background="{DynamicResource SeleneScrimBrush}">
                                         <Border.OpacityMask>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">

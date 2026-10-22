@@ -24,8 +24,8 @@
 ## Themes
 
 **23 color themes**, each with its own wallpaper: Selene's moonlight blue plus Catppuccin, Nord, Gruvbox, Kanagawa,
-Rosé Pine, Tokyo Night and more, dark and light. Every screen follows the theme, and the home blends the selected
-game's art into your wallpaper (or shows art only, or the wallpaper only). Here: Tokyo Night, Catppuccin Latte,
+Rosé Pine, Tokyo Night and more, dark and light. Every screen follows the theme, and its wallpaper shows wherever there's no
+game art behind the screen. Here: Tokyo Night, Catppuccin Latte,
 Gruvbox and Rosé Pine.
 
 ![Themes on the home](docs/readme/themes-live.jpg)

@@ -16,7 +16,7 @@ namespace Selene
         public string Theme { get; set; }
         // null = the theme's default wallpaper, so switching themes changes it until the user picks one themselves
         public string Wallpaper { get; set; }
-        // what's behind the home: "blend" (game art fading into the wallpaper, the default), "art" or "wallpaper"
+        // what's behind the home: "art" (the game's art, the default) or "wallpaper" (the wallpaper only)
         public string HomeBackground { get; set; }
         public DateTime Created { get; set; }
         public List<Guid> Favorites { get; set; }
@@ -233,20 +233,14 @@ namespace Selene
             ApplyHomeBackground(p != null ? p.HomeBackground : null);
         }
 
-        public static readonly string[] HomeBackgrounds = { "blend", "art", "wallpaper" };
+        public static readonly string[] HomeBackgrounds = { "art", "wallpaper" };
 
-        // blend uses theme\Constants.xaml's values; the other looks override them
+        // anything but "wallpaper" (including the old "blend") is the game's art: theme\Constants.xaml's value
         public static void ApplyHomeBackground(string look)
         {
             var res = Application.Current.Resources;
-            foreach (var key in new[] { "SeleneArtOpacity", "SeleneArtMask", "SeleneTintOpacity" }) res.Remove(key);
-            if (look == "art")
-            {
-                res["SeleneArtOpacity"] = 1.0;
-                res["SeleneArtMask"] = null;
-                res["SeleneTintOpacity"] = 0.0;
-            }
-            else if (look == "wallpaper") res["SeleneArtOpacity"] = 0.0;
+            res.Remove("SeleneArtOpacity");
+            if (look == "wallpaper") res["SeleneArtOpacity"] = 0.0;
         }
 
         private static void Save()
