@@ -727,6 +727,7 @@ namespace Selene
             private readonly ScrollingGrid grid;
             private readonly TextBlock groupLabel;
             private readonly Segmented look = new Segmented("Home background", new[] { "Game art", "Background only" }, "X");
+            private readonly TextBlock lookNote = new TextBlock { FontSize = 15, FontFamily = Ui.Body, TextWrapping = TextWrapping.Wrap, MaxWidth = 820, Margin = new Thickness(4, 12, 0, 0) };
             private readonly List<string> groups = new List<string>();
             private readonly Later apply = new Later(130);
             private int index, generation;
@@ -747,6 +748,8 @@ namespace Selene
                 right.Children.Add(Preview(820));
                 look.Root.Margin = new Thickness(4, 20, 0, 0);
                 right.Children.Add(look.Root);
+                lookNote.Foreground = Ink.Brush("SeleneInkColor", 0.6);
+                right.Children.Add(lookNote);
                 row.Children.Add(right);
                 Root.Children.Add(row);
             }
@@ -792,14 +795,15 @@ namespace Selene
                 index = Owner.Wallpaper == null ? 0 : Math.Max(0, files.FindIndex(f => f != null && string.Equals(f, Owner.Wallpaper, StringComparison.OrdinalIgnoreCase)));
             }
 
-            public override void Left() { HomeNav.ShowGameForPreview(false); }
+            public override void Left() { HomeNav.ShowGameForPreview(false); Profiles.ApplyHomeBackground(Owner.Look); }
 
             public override void Shown()
             {
                 HomeNav.ShowGameForPreview(true);
                 Fill();
+                look.Select(Owner.Look == "wallpaper" ? 1 : 0, false);
+                ShowNote();
                 ShowFocus(false);
-                ShowLook(false);
             }
 
             private void ShowFocus(bool live)
@@ -808,14 +812,22 @@ namespace Selene
                 grid.Reveal(index);
                 groupLabel.Text = (index == 0 ? "THEME" : groups[index].ToUpperInvariant());
                 var file = files[index] ?? ThemePalettes.DefaultWallpaper(Owner.Theme);
-                Action show = () => { Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(file); LoginScene.RefreshBackdrop(); };
+                // the game's art steps aside while browsing so the wallpaper itself is seen; X shows the chosen look again
+                Action show = () => { Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(file); LoginScene.RefreshBackdrop(); Profiles.ApplyHomeBackground("wallpaper"); };
                 if (live) apply.Run(show); else show();
             }
 
             private void ShowLook(bool changed)
             {
                 look.Select(Owner.Look == "wallpaper" ? 1 : 0, changed);
+                ShowNote();
                 Profiles.ApplyHomeBackground(Owner.Look);
+            }
+
+            private void ShowNote()
+            {
+                lookNote.Text = Owner.Look == "wallpaper" ? "The home always shows this background."
+                              : "The home shows each game's art; this background is behind the login, the menus and an empty home.";
             }
 
             public override void Move(string dir)
