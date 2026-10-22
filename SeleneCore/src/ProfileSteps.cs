@@ -176,12 +176,19 @@ namespace Selene
             public ScrollingGrid(int columns, double rowHeight, double height)
             {
                 this.columns = columns; this.rowHeight = rowHeight; this.height = height;
-                Panel = new UniformGrid { Columns = columns, VerticalAlignment = VerticalAlignment.Top, RenderTransform = shift };
+                Panel = new UniformGrid { Columns = columns, VerticalAlignment = VerticalAlignment.Top, RenderTransform = shift, Margin = new Thickness(0, 20, 0, 0) };
                 // on a canvas: a panel taller than its slot would get clipped to the slot, and the clip would scroll with it
                 Viewport = new Grid { Height = height, ClipToBounds = true };
                 var canvas = new Canvas();
                 canvas.Children.Add(Panel);
                 Viewport.Children.Add(canvas);
+                // rows melt away at the edges instead of being cut off (pixel positions: the panel inside is far taller)
+                var mask = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, height) };
+                mask.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0));
+                mask.GradientStops.Add(new GradientStop(Colors.Black, 24 / height));
+                mask.GradientStops.Add(new GradientStop(Colors.Black, 1 - 150 / height));
+                mask.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
+                Viewport.OpacityMask = mask;
             }
 
             public void Reveal(int index)
@@ -190,7 +197,7 @@ namespace Selene
                 double total = rows * rowHeight;
                 Panel.Width = Viewport.Width;
                 double rowTop = (index / columns) * rowHeight;
-                double y = -Math.Max(0, Math.Min(rowTop - rowHeight, total - height + 10));
+                double y = -Math.Max(0, Math.Min(rowTop - rowHeight, total + 20 - height + 110));   // the last row can rise above the fade
                 if (total <= height) y = 0;
                 shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(y, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
             }
