@@ -1,38 +1,42 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 
 namespace Selene
 {
-    // Collection's LB / RB tabs are Playnite's filter presets marked for fullscreen. With none of their own, Selene adds
-    // the same five as Spotlight's tabs (a user who has made their own keeps those).
+    // Collection filters with the same five tabs as Spotlight (All games, Installed, Recently played, Favorites, Not played
+    // yet): each is a Playnite filter preset Selene keeps (made once, found again by name), applied when its tab is chosen.
     public static class CollectionPresets
     {
+        private static readonly Dictionary<string, Guid> ids = new Dictionary<string, Guid>();
+
         public static void Ensure(IPlayniteAPI api)
         {
             try
             {
-                var presets = api.Database.FilterPresets;
-                if (presets.Any(p => p.ShowInFullscreeQuickSelection)) return;
-                Add(api, "All games", new FilterPresetSettings(), SortOrder.Name, SortOrderDirection.Ascending);
-                Add(api, "Installed", new FilterPresetSettings { IsInstalled = true }, SortOrder.Name, SortOrderDirection.Ascending);
-                Add(api, "Recently played", new FilterPresetSettings(), SortOrder.LastActivity, SortOrderDirection.Descending);
-                Add(api, "Favorites", new FilterPresetSettings { Favorite = true }, SortOrder.Name, SortOrderDirection.Ascending);
-                Add(api, "Not played yet", new FilterPresetSettings { PlayTime = new EnumFilterItemProperties((int)PlaytimeCategory.NotPlayed) }, SortOrder.Name, SortOrderDirection.Ascending);
-                HomeNav.Log("collection presets: Selene's five added");
+                Keep(api, "all", "All games", new FilterPresetSettings(), SortOrder.Name, SortOrderDirection.Ascending);
+                Keep(api, "installed", "Installed", new FilterPresetSettings { IsInstalled = true }, SortOrder.Name, SortOrderDirection.Ascending);
+                Keep(api, "recent", "Recently played", new FilterPresetSettings(), SortOrder.LastActivity, SortOrderDirection.Descending);
+                Keep(api, "favorites", "Favorites", new FilterPresetSettings { Favorite = true }, SortOrder.Name, SortOrderDirection.Ascending);
+                Keep(api, "unplayed", "Not played yet", new FilterPresetSettings { PlayTime = new EnumFilterItemProperties((int)PlaytimeCategory.NotPlayed) }, SortOrder.Name, SortOrderDirection.Ascending);
             }
             catch (Exception ex) { HomeNav.Log("collection presets: " + ex.Message); }
         }
 
-        private static void Add(IPlayniteAPI api, string name, FilterPresetSettings settings, SortOrder order, SortOrderDirection direction)
+        public static Guid For(string key) { Guid id; return ids.TryGetValue(key, out id) ? id : Guid.Empty; }
+
+        private static void Keep(IPlayniteAPI api, string key, string name, FilterPresetSettings settings, SortOrder order, SortOrderDirection direction)
         {
             var existing = api.Database.FilterPresets.FirstOrDefault(p => p.Name == name);
-            if (existing != null) { existing.ShowInFullscreeQuickSelection = true; api.Database.FilterPresets.Update(existing); return; }
-            api.Database.FilterPresets.Add(new FilterPreset
+            if (existing == null)
             {
-                Name = name, Settings = settings, SortingOrder = order, SortingOrderDirection = direction, ShowInFullscreeQuickSelection = true
-            });
+                existing = new FilterPreset { Name = name, Settings = settings, SortingOrder = order, SortingOrderDirection = direction, ShowInFullscreeQuickSelection = false };
+                api.Database.FilterPresets.Add(existing);
+                HomeNav.Log("collection presets: added " + name);
+            }
+            ids[key] = existing.Id;
         }
     }
 }

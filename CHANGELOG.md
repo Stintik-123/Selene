@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Collection: the trailer exactly like the legacy theme (a 16:9 box on the right with its mask, the shades under it); Spotlight's tabs and filters on both screens (one choice, filled LB / RB badges); flat white store logos; Down on the Collection and Store cards stays put.
 - Collection scrolls by whole covers: no cover cut in half at the left edge.
 - Collection's background and trailer use the legacy theme's exact shades (bottom, left to the middle) and its trailer vignette; LB / RB tabs come with five presets like Spotlight's; last played reads Today / Yesterday / days ago; a crisp store icon instead of the blurry logos.
 - Spotlight: the last game's art no longer lingers faintly behind a card (Store, Collection).

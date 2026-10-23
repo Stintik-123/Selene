@@ -39,20 +39,20 @@
                                     <RowDefinition Height="104" />
                                     <RowDefinition Height="0" />
                                 </Grid.RowDefinitions>
-                                <Border Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}"/>
-                                <Image x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
-                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="120" Stretch="UniformToFill"/>
+                                <Border Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}" Panel.ZIndex="-3"/>
+                                <Image Panel.ZIndex="-3" x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
+                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" Panel.ZIndex="-3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="120" Stretch="UniformToFill"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->
-                                <!-- the trailer, like the legacy theme: full screen on black, with its vignette picture over it (black over
-                                     the left half and the bottom, clearing toward the top right) -->
-                                <Grid x:Name="SeleneLibraryTrailerHost" Grid.RowSpan="5" Background="Black" Opacity="0" IsHitTestVisible="False" ClipToBounds="True"/>
-                                <Border Grid.RowSpan="5" IsHitTestVisible="False" Opacity="{Binding Opacity, ElementName=SeleneLibraryTrailerHost}">
-                                    <Border.Background>
-                                        <ImageBrush ImageSource="{ThemeFile 'Images/ShadeTrail.png'}" Stretch="Fill"/>
-                                    </Border.Background>
-                                </Border>
+                                <!-- the trailer, like the legacy theme: a 16:9 box 800 high on the right, top edge, masked by its picture
+                                     (fades in from the left over the first half, fades out toward the bottom) -->
+                                <Grid x:Name="SeleneLibraryTrailerHost" Grid.RowSpan="5" Width="1422" Height="800" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                      Background="Black" Opacity="0" IsHitTestVisible="False" ClipToBounds="True" Panel.ZIndex="-1">
+                                    <Grid.OpacityMask>
+                                        <ImageBrush ImageSource="{ThemeFile 'Images/TrailerMask.png'}" Stretch="Fill"/>
+                                    </Grid.OpacityMask>
+                                </Grid>
                                 <!-- over the art, the legacy theme's two shades: from the bottom, and from the left out to the middle -->
-                                <Border Grid.RowSpan="5" IsHitTestVisible="False">
+                                <Border Grid.RowSpan="5" IsHitTestVisible="False" Panel.ZIndex="-2">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
                                             <GradientStop Color="#F0000000" Offset="0"/>
@@ -65,7 +65,7 @@
                                         </LinearGradientBrush>
                                     </Border.Background>
                                 </Border>
-                                <Border Grid.RowSpan="5" IsHitTestVisible="False">
+                                <Border Grid.RowSpan="5" IsHitTestVisible="False" Panel.ZIndex="-2">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                             <GradientStop Color="#F0000000" Offset="0"/>
@@ -75,7 +75,7 @@
                                 </Border>
 
                                 <!-- logo, chips and genres come in together each time the game changes (the logo's binding signals it) -->
-                                <StackPanel Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="150,0,0,0" Width="640">
+                                <StackPanel Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="100,0,0,0" Width="840">
                                     <StackPanel.RenderTransform><TranslateTransform x:Name="LibraryInfoShift" X="0"/></StackPanel.RenderTransform>
                                     <StackPanel.Triggers>
                                         <EventTrigger RoutedEvent="Binding.TargetUpdated">
@@ -134,7 +134,10 @@
                                     <StackPanel Margin="0,0,26,0">
                                         <TextBlock Text="PLATFORM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                            <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource GlyphBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <Grid Width="22" Height="22" Margin="0,0,9,0" VerticalAlignment="Center">
+                                                <Path Data="{DynamicResource SelenePlatformIcon}" Fill="{DynamicResource SeleneInkBrush}" Stretch="Uniform"/>
+                                                <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource SeleneInkBrush}" VerticalAlignment="Center" Visibility="{DynamicResource SelenePlatformFallback}"/>
+                                            </Grid>
                                             <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </StackPanel>
@@ -881,7 +884,10 @@
                                                     <StackPanel>
                                                         <TextBlock Text="PLATFORM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                            <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource GlyphBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                            <Grid Width="22" Height="22" Margin="0,0,9,0" VerticalAlignment="Center">
+                                                <Path Data="{DynamicResource SelenePlatformIcon}" Fill="{DynamicResource SeleneInkBrush}" Stretch="Uniform"/>
+                                                <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource SeleneInkBrush}" VerticalAlignment="Center" Visibility="{DynamicResource SelenePlatformFallback}"/>
+                                            </Grid>
                                                             <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </StackPanel>
@@ -959,11 +965,9 @@
                             <!-- ================= TOP BAR (home + library) ================= -->
                             <Grid x:Name="HubTopBarBackground" VerticalAlignment="Top" Height="110" Margin="64,0,64,0">
                                 <!-- home: LB/RB filter tabs (drawn by Selene Core) -->
-                                <StackPanel x:Name="SeleneFilterTabs" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Visibility="{Binding Visibility, ElementName=WelcomeHubOverlay}"/>
+                                <StackPanel x:Name="SeleneFilterTabs" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 <!-- library: Playnite's filter presets, styled like Spotlight's tabs (LB / RB) -->
-                                <FilterPresetSelector x:Name="PART_FilterPresetSelector" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                      Visibility="{Binding Visibility, ElementName=SeleneLibrary}"/>
+                                <FilterPresetSelector x:Name="PART_FilterPresetSelector" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <!-- Playnite's notifications: not part of Selene's top bar (the part stays, hidden) -->
                                     <ButtonEx x:Name="PART_ButtonNotifications" VerticalAlignment="Center" Margin="10,0,10,0" Height="48" MinWidth="48" Visibility="Collapsed">

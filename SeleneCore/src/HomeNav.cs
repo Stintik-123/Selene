@@ -87,7 +87,12 @@ namespace Selene
                 }
                 if (row == null) { HandleHubKeys(e, focused); return; }
                 if (e.Key == Key.Up) { if (FocusTopBar(row, item)) e.Handled = true; return; }
-                if (e.Key == Key.Down) { if (FocusNews(row)) e.Handled = true; return; }
+                if (e.Key == Key.Down)
+                {
+                    if (row.SelectedItem is string) { e.Handled = true; return; }   // a card (Collection, Store): nothing below it
+                    if (FocusNews(row)) e.Handled = true;
+                    return;
+                }
                 var navItem = item != null ? item.DataContext as string : null;
                 if (e.Key == Key.Enter)
                 {
@@ -740,7 +745,7 @@ namespace Selene
             {
                 if (Api == null || RowMode != "tv") return;
                 // only when nothing is chosen: a tab picked with LB / RB in Collection stays
-                if (Api.MainView.GetActiveFilterPreset() == Guid.Empty) { Api.MainView.ApplyFilterPreset(BigScreenPreset); Log("library filter -> Big Screen"); }
+                return;   // Collection follows Selene's tabs now (CollectionPresets); the old Big Screen preset isn't forced
             }
             catch (Exception ex) { Log("filter: " + ex.Message); }
         }
@@ -3062,9 +3067,10 @@ namespace Selene
         {
             return new Border
             {
-                Child = new TextBlock { Text = text, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
-                Width = 34, Height = 22, CornerRadius = new CornerRadius(6), Margin = new Thickness(6, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center,
-                BorderBrush = Ink.Brush("SeleneInkColor", 0.75), BorderThickness = new Thickness(1.5)
+                // filled, like the button hints (white with dark letters)
+                Child = new TextBlock { Text = text, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 1) },
+                Width = 36, Height = 24, CornerRadius = new CornerRadius(8), Margin = new Thickness(8, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center,
+                Background = Ink.Brush("SeleneInkColor")
             };
         }
 
@@ -4871,31 +4877,32 @@ namespace Selene
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
-        // Collection's filter presets (the tabs in its top bar): the next or previous one is chosen as if clicked, so
-        // Playnite applies it. False when Collection isn't showing.
+        // LB / RB in Collection: the same five tabs as Spotlight (one choice for both screens); Collection applies the
+        // matching filter preset. False when Collection isn't showing.
         private static bool CyclePreset(int dir)
         {
             var w = Application.Current.MainWindow;
             var library = w != null ? FindByName(w, "SeleneLibrary") : null;
             if (library == null || !library.IsVisible) return false;
-            var selector = FindByName(w, "PART_FilterPresetSelector");
-            var items = selector != null ? FindByName(selector, "PART_ItemsFilterPresets") as ItemsControl : null;
-            if (items == null || items.Items.Count == 0) return true;
-            var boxes = new List<System.Windows.Controls.Primitives.ToggleButton>();
-            for (int i = 0; i < items.Items.Count; i++)
-            {
-                var c = items.ItemContainerGenerator.ContainerFromIndex(i) as DependencyObject;
-                var box = c as System.Windows.Controls.Primitives.ToggleButton ?? (c != null ? FindChild<System.Windows.Controls.Primitives.ToggleButton>(c) : null);
-                if (box != null) boxes.Add(box);
-            }
-            if (boxes.Count == 0) return true;
-            int at = boxes.FindIndex(b => b.IsChecked == true);
-            int next = ((at < 0 ? 0 : at + dir) % boxes.Count + boxes.Count) % boxes.Count;
-            var click = typeof(System.Windows.Controls.Primitives.ButtonBase).GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (click != null) click.Invoke(boxes[next], null);
+            rowFilter = (RowFilter + dir + RowFilters.Length) % RowFilters.Length;
+            try { System.IO.File.WriteAllText(RowFilterFile, RowFilters[rowFilter]); } catch { }
+            RenderFilterTabs(w, dir);
+            ApplyCollectionFilter();
+            var row = LiveRow();
+            if (row != null) { filterDir = dir; ApplyRowFilter(row); }   // Spotlight shows the same when you go back
             Ui.Tick();
-            Log("collection preset -> " + next);
             return true;
+        }
+
+        public static void ApplyCollectionFilter()
+        {
+            try
+            {
+                var id = CollectionPresets.For(RowFilters[RowFilter]);
+                if (Api == null || id == Guid.Empty) return;
+                if (Api.MainView.GetActiveFilterPreset() != id) { Api.MainView.ApplyFilterPreset(id); Log("collection filter -> " + RowFilters[RowFilter]); }
+            }
+            catch (Exception ex) { Log("collection filter: " + ex.Message); }
         }
 
         // the View button on the home or the library: switches to the other one (false elsewhere: details, overlays)

@@ -36,8 +36,12 @@ The profile pictures in `theme/Avatars` are Xbox gamer pictures from Microsoft's
 (`<pack>-<number>.jpg` matches the original file names). They remain the property of Microsoft and the respective
 game publishers and are not covered by Selene's MIT license. Rights holders can ask for removal by opening an issue.
 
-## Collection trailer vignette
-`theme/Images/ShadeTrail.png` comes from the Aniki ReMake theme (its trailer shade), used as is.
+## Collection trailer mask
+`theme/Images/TrailerMask.png` comes from the Aniki ReMake theme (its trailer mask), used as is.
+
+## Store logos
+The flat store logos (Steam, Epic Games, GOG, EA, Ubisoft, Battle.net, itch.io) are shapes from Simple Icons
+(https://simpleicons.org), CC0. The brands belong to their owners.
 
 ## Wallpapers
 The wallpapers in `theme/Wallpapers` come from the theme collection of [Omarchy](https://github.com/basecamp/omarchy),

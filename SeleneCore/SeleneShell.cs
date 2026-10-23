@@ -125,6 +125,11 @@ namespace Selene
                     text = days <= 0 ? "Today" : days == 1 ? "Yesterday" : days < 7 ? days + " days ago" : when.Value.ToLocalTime().ToString("MMM d, yyyy");
                 }
                 Application.Current.Resources["SeleneLastPlayed"] = text;
+                // the store's flat logo by "platform"
+                var source = game != null ? game.GetType().GetProperty("Source") : null;
+                var src = source != null ? source.GetValue(game, null) : null;
+                var name = src != null ? src.GetType().GetProperty("Name").GetValue(src, null) as string : null;
+                PlatformIcons.Publish(name);
             }
             catch (Exception ex) { HomeNav.Log("last played: " + ex.Message); }
         }
@@ -144,6 +149,7 @@ namespace Selene
             library.BeginAnimation(UIElement.OpacityProperty, null);
             library.Visibility = Visibility.Visible;   // under Spotlight, loading its art meanwhile
             HomeNav.SetMusic("home");   // Collection like Spotlight: the default track, a game's song with its trailer
+            HomeNav.ApplyCollectionFilter();   // the same tab as Spotlight's
             var list = Part("PART_ListGameItems") as ListBox;
             if (list != null) main.Dispatcher.BeginInvoke(new Action(() =>
             {
