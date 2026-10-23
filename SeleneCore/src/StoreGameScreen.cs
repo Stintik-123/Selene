@@ -40,21 +40,23 @@ namespace Selene
         private const double Side = (1920 - (6 * 272 + 5 * 20)) / 2.0;
         private StackPanel moreSection;
 
-        // the "More from" row as a peek (blurred, fading out) or whole
-        private void Peek(bool on)
+        // the "More from" row as a peek (blurred, fading out) or whole; it melts between the two along with the page's
+        // glide (switched at once, the row vanished before the page had moved)
+        private readonly LinearGradientBrush peekFade = new LinearGradientBrush
+        {
+            MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, 220),
+            GradientStops = { new GradientStop(Colors.Black, 0), new GradientStop(Colors.Black, 0.4), new GradientStop(Color.FromArgb(0x60, 0, 0, 0), 0.55), new GradientStop(Color.FromArgb(0, 0, 0, 0), 0.72) }
+        };
+        private readonly System.Windows.Media.Effects.BlurEffect peekBlur = new System.Windows.Media.Effects.BlurEffect { Radius = 0, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance };
+
+        private void Peek(bool on, bool animate)
         {
             if (moreSection == null) return;
-            if (on)
-            {
-                var fade = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, 220) };
-                fade.GradientStops.Add(new GradientStop(Colors.Black, 0));
-                fade.GradientStops.Add(new GradientStop(Colors.Black, 0.4));
-                fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x60, 0, 0, 0), 0.55));
-                fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0.72));
-                moreSection.OpacityMask = fade;
-                moreRow.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 5, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance };
-            }
-            else { moreSection.OpacityMask = null; moreRow.Effect = null; }
+            if (moreSection.OpacityMask == null) { moreSection.OpacityMask = peekFade; moreRow.Effect = peekBlur; }
+            var ms = TimeSpan.FromMilliseconds(animate ? 320 : 0);
+            // whole: the fade's end is pushed far below the row (all of it opaque) instead of taking the mask off
+            peekFade.BeginAnimation(LinearGradientBrush.EndPointProperty, new PointAnimation(new Point(0, on ? 220 : 1400), ms) { EasingFunction = Ui.Out() });
+            peekBlur.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, new DoubleAnimation(on ? 5 : 0, ms));
         }
 
         private readonly Func<Screen> back;   // where B goes: the game page this one was opened from (its "More from" row), else the Store
@@ -159,7 +161,7 @@ namespace Selene
                 rowSheet.Children.Add(moreRow);
                 moreSection.Children.Add(rowSheet);
                 bottom.Children.Add(moreSection);
-                Peek(true);
+                Peek(true, false);
             }
             page.Children.Add(bottom);
 
@@ -177,7 +179,7 @@ namespace Selene
                 moreIndex = Math.Max(0, Math.Min(startMore, moreTiles.Count - 1));
                 pageShift.Y = -MoreLift;
                 moreShift.X = -Math.Max(0, moreIndex - 1) * MorePitch;
-                Peek(false);
+                Peek(false, false);
             }
         }
 
@@ -281,7 +283,7 @@ namespace Selene
             a.Opacity = 0;
             StorePage.Load(a, shots[i], 1920);
             b.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(700)) { BeginTime = TimeSpan.FromMilliseconds(300) });
-            if (picked) { slides.Stop(); slides.Start(); }   // a picked one stays a while
+            if (picked) { slides.Stop(); if (trailer == null) slides.Start(); }   // a picked one stays a while (and they don't take turns under the trailer)
             ShowFocus();
         }
 
@@ -294,7 +296,7 @@ namespace Selene
         private void SetZone(int z)
         {
             zone = z;
-            Peek(z == 0);
+            Peek(z == 0, true);
             // more from the store: the page glides up to show its row
             pageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(z == 1 ? -MoreLift : 0, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() });
             Ui.Tick();
@@ -329,8 +331,7 @@ namespace Selene
                         int next = shot + dir;
                         if (next < 0 || next >= shotTiles.Count) return;
                         Ui.Tick();
-                        if (trailer != null) { trailer.Stop(); trailer = null; }   // the picked screenshot shows instead
-                        ShowShot(next, true);
+                        ShowShot(next, true);   // behind the trailer, which keeps playing
                     }
                     else
                     {

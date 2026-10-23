@@ -1068,8 +1068,16 @@ namespace Selene
                 Log("find a game: " + (idx >= 0 ? "picked on Spotlight (tile " + idx + ")" : "not on Spotlight's row"));
                 if (idx < 0) return;
                 int cur = row.SelectedIndex >= 0 && row.SelectedIndex < row.Items.Count ? row.SelectedIndex : 0;
-                if (cur != idx) MoveTo(row, cur, idx);   // scrolls there and focuses the tile (the tile style selects what has the focus)
-                else { var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement; if (c != null) c.Focus(); }
+                // the focus comes from outside the row (the search layer): the row's guard would send it back to the old
+                // selection, so it's told which tile is wanted
+                wantedFocusIndex = idx;
+                try
+                {
+                    if (cur != idx) MoveTo(row, cur, idx);   // scrolls there and focuses the tile (the tile style selects what has the focus)
+                    else { var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement; if (c != null) c.Focus(); }
+                }
+                finally { wantedFocusIndex = -1; }
+                Log("find a game: row focused=" + row.IsKeyboardFocusWithin + " selected=" + row.SelectedIndex);
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
@@ -1204,7 +1212,9 @@ namespace Selene
             }
             if (scale != null)
             {
-                var to = new DoubleAnimation(dim ? 1 : 1.3, ms) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                // back from the pictures: the animation lets go when it's done (held, it kept the card big after the focus
+                // had moved on to a game: the tile's own shrink couldn't get through)
+                var to = new DoubleAnimation(dim ? 1 : 1.3, ms) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = dim ? FillBehavior.HoldEnd : FillBehavior.Stop };
                 scale.BeginAnimation(ScaleTransform.ScaleXProperty, to);
                 scale.BeginAnimation(ScaleTransform.ScaleYProperty, to);
             }
@@ -1796,13 +1806,15 @@ namespace Selene
                 System.Windows.Threading.DispatcherPriority.Input);
         }
 
+        private static int wantedFocusIndex = -1;   // a tile Selene itself is focusing from outside the row (Find a game's pick)
+
         private static void OnRowPreviewGotFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
             var row = (ListBox)sender;
             var oldFocus = e.OldFocus as DependencyObject;
             if (oldFocus != null && IsInRow(oldFocus)) return;  // normal movement inside the row
             int first = FirstGameIndex(row);
-            int target = row.SelectedIndex >= 0 ? row.SelectedIndex : first;
+            int target = wantedFocusIndex >= 0 ? wantedFocusIndex : row.SelectedIndex >= 0 ? row.SelectedIndex : first;
             var c = row.ItemContainerGenerator.ContainerFromIndex(target) as UIElement;
             if (c == null || ReferenceEquals(e.NewFocus, c)) return;
             e.Handled = true;  // cancel focus landing on a card / the list itself

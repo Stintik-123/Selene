@@ -30,7 +30,7 @@ namespace Selene
 
         private static readonly string[] Tabs = { "All", "Steam", "Epic Games", "GOG", "Xbox", "More stores" };
         private const double TileW = 420, TileH = 236, Pitch = TileW + 26, RowH = 318, Peek = 90;   // Peek: how much of the next row shows below
-        private GradientStop fadeTop, fadeMid;   // the rows' fade: where it starts (under the focused row) and its first step
+        private GradientStop fadeAbove, fadeTop, fadeMid;   // the rows' fade: the top edge, where it starts (under the focused row) and its first step
 
         // where you were, so coming back from a game's page puts you there again
         private static int savedTab, savedRow;
@@ -121,7 +121,9 @@ namespace Selene
             // edge); the fade starts just under the focused row's pictures and reaches nothing at the bottom
             double h = RowH + Peek;
             var fade = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, h) };
-            fade.GradientStops.Add(new GradientStop(Colors.Black, 0));
+            // the top edge clears when the last row sits low (the bottom of the row above ends softly instead of cut off)
+            fade.GradientStops.Add(fadeAbove = new GradientStop(Colors.Black, 0));
+            fade.GradientStops.Add(new GradientStop(Colors.Black, (Peek - 16) / h));
             fade.GradientStops.Add(fadeTop = new GradientStop(Colors.Black, RowH / h));   // the focused row stays whole
             fade.GradientStops.Add(fadeMid = new GradientStop(Color.FromArgb(0x70, 0, 0, 0), (RowH + 30) / h));
             fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
@@ -250,6 +252,7 @@ namespace Selene
             double h = RowH + Peek;
             var ms = TimeSpan.FromMilliseconds(animate ? 260 : 0);
             rowShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-rowIndex * RowH + (last ? Peek : 0), ms) { EasingFunction = Ui.Out() });
+            fadeAbove.BeginAnimation(GradientStop.ColorProperty, new ColorAnimation(last ? Color.FromArgb(0, 0, 0, 0) : Colors.Black, ms));
             fadeTop.BeginAnimation(GradientStop.OffsetProperty, new DoubleAnimation(last ? 1 : RowH / h, ms));
             fadeMid.BeginAnimation(GradientStop.OffsetProperty, new DoubleAnimation(last ? 1 : (RowH + 30) / h, ms));
         }
