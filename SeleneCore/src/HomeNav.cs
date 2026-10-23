@@ -85,8 +85,12 @@ namespace Selene
                     var lb = d as ListBox;
                     if (lb != null && lb.Name == "SeleneGameRow") { row = lb; break; }
                 }
+                // Collection's game list: nothing above or below it (Up / Down wandered off to hidden parts and the list
+                // lost its focus)
+                if (row == null && (e.Key == Key.Up || e.Key == Key.Down) && InLibraryList(focused)) { e.Handled = true; return; }
                 if (row == null) { HandleHubKeys(e, focused); return; }
-                if (e.Key == Key.Up) { if (FocusTopBar(row, item)) e.Handled = true; return; }
+                // Spotlight's row: nothing above it either (the top bar has nothing to pick; focus went to hidden parts)
+                if (e.Key == Key.Up) { e.Handled = true; return; }
                 if (e.Key == Key.Down)
                 {
                     if (row.SelectedItem is string) { e.Handled = true; return; }   // a card (Collection, Store): nothing below it
@@ -2145,6 +2149,8 @@ namespace Selene
                 bool sideways = dirPad && (pressed.EndsWith("Left") || pressed.EndsWith("Right"));
                 if (previewShowing && pressed != "A" && (!dirPad || (sideways && IsInRow(Keyboard.FocusedElement as DependencyObject)))) SmoothClosePreview();
                 if (HandleInfoButtons(pressed, dirPad)) { e.Cancel(); return; }
+                // Collection's list: nothing above or below it (Up / Down took the focus off to hidden parts)
+                if (dirPad && (pressed.EndsWith("Up") || pressed.EndsWith("Down")) && InLibraryList(Keyboard.FocusedElement as DependencyObject)) { e.Cancel(); return; }
                 var item = Keyboard.FocusedElement as ListBoxItem;
 // per-press file logging removed (disk write on the UI thread every move)
                 //                 Log("pad " + pressed + " focus=" + (Keyboard.FocusedElement == null ? "null" : Keyboard.FocusedElement.GetType().Name) + " item=" + (item != null ? item.DataContext : null));
@@ -2304,6 +2310,7 @@ namespace Selene
             // cheap exits first: this runs on every controller press, and left/right inside the row never concerns the pills
             if (!dirPad && pressed != "A") return false;
             bool inRow = focused != null && IsInRow(focused);
+            if (inRow && up) return true;   // nothing above the row (focus went to hidden parts and the row dropped away)
             if (inRow && !down) return false;
             // the Library and Store cards have nothing under them: Down stays put (it used to move focus somewhere unseen)
             if (inRow && down && movingCard == null && movingGame == null && row.SelectedItem is string) return true;
