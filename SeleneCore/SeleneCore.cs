@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Playnite.SDK;
@@ -107,11 +108,13 @@ namespace Selene
         public string WallpapersFolder { get; set; }
         // Selene features switched off (Features.All keys); everything else is on
         public List<string> TurnedOff { get; set; }
+        // features that start off (Features.All with DefaultOn = false) and were switched on
+        public List<string> TurnedOn { get; set; }
 
         public SeleneSettings()
         {
             MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; AvatarPath = ""; DisplayName = "";
-            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = ""; WallpapersFolder = ""; TurnedOff = new List<string>();
+            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = ""; WallpapersFolder = ""; TurnedOff = new List<string>(); TurnedOn = new List<string>();
         }
     }
 
@@ -136,7 +139,7 @@ namespace Selene
             Settings.HelperPath = editing.HelperPath; Settings.StreamLogsFolder = editing.StreamLogsFolder;
             Settings.AvatarPath = editing.AvatarPath; Settings.DisplayName = editing.DisplayName;
             Settings.StreamClientMatch = editing.StreamClientMatch; Settings.StreamCredentialsFile = editing.StreamCredentialsFile; Settings.HelperTask = editing.HelperTask;
-            Settings.WallpapersFolder = editing.WallpapersFolder; Settings.TurnedOff = editing.TurnedOff;
+            Settings.WallpapersFolder = editing.WallpapersFolder; Settings.TurnedOff = editing.TurnedOff; Settings.TurnedOn = editing.TurnedOn;
         }
 
         public void EndEdit()
@@ -160,9 +163,9 @@ namespace Selene
             foreach (var f in Features.All)
             {
                 var key = f.Key;
-                var box = new CheckBox { Content = f.Label + "  -  " + f.About, IsChecked = s.TurnedOff == null || !s.TurnedOff.Contains(key), Margin = new Thickness(0, 6, 0, 0) };
-                box.Checked += (o, e) => { if (s.TurnedOff != null) s.TurnedOff.Remove(key); };
-                box.Unchecked += (o, e) => { if (s.TurnedOff == null) s.TurnedOff = new List<string>(); if (!s.TurnedOff.Contains(key)) s.TurnedOff.Add(key); };
+                var box = new CheckBox { Content = f.Label + "  -  " + f.About, IsChecked = Features.On(key), Margin = new Thickness(0, 6, 0, 0) };
+                box.Checked += (o, e) => Features.Mark(s, key, true);
+                box.Unchecked += (o, e) => Features.Mark(s, key, false);
                 panel.Children.Add(box);
             }
             Func<string, string, Action<string>, TextBox> field = (label, value, set) =>
@@ -196,6 +199,7 @@ namespace Selene
         public class Option
         {
             public string Key, Label, About;
+            public bool DefaultOn = true;
         }
 
         public static readonly Option[] All =
@@ -204,7 +208,7 @@ namespace Selene
             new Option { Key = "login", Label = "Who's playing? at start", About = "Off: the last profile signs in by itself (the very first start still sets you up)." },
             new Option { Key = "sounds", Label = "Interface sounds", About = "Selene's ticks and chimes when you move, select and go back." },
             new Option { Key = "music", Label = "Music control", About = "Keeps game songs from the music add-on off the cards, login and menus, and quiet under trailers." },
-            new Option { Key = "hints", Label = "Button hints", About = "What each button does, at the bottom right of the home." },
+            new Option { Key = "hints", Label = "Button hints", About = "What each button does, at the bottom right of the home (off like a console's home).", DefaultOn = false },
             new Option { Key = "glow", Label = "Glow and particles", About = "The breathing glow and drifting specks behind the login when there's no wallpaper." },
             new Option { Key = "freeze", Label = "Freeze games on Guide", About = "Guide pauses offline games completely; off, games are only muted." },
             new Option { Key = "tray", Label = "Close to tray", About = "Exit hides Playnite in the tray so it comes back instantly (after a restart)." },
@@ -216,14 +220,29 @@ namespace Selene
 
         public static void Init(SeleneSettings s, Action saveAll) { settings = s; save = saveAll; }
 
-        public static bool On(string key) { return settings == null || settings.TurnedOff == null || !settings.TurnedOff.Contains(key); }
+        private static bool DefaultOn(string key) { var o = All.FirstOrDefault(f => f.Key == key); return o == null || o.DefaultOn; }
+
+        public static bool On(string key)
+        {
+            if (DefaultOn(key)) return settings == null || settings.TurnedOff == null || !settings.TurnedOff.Contains(key);
+            return settings != null && settings.TurnedOn != null && settings.TurnedOn.Contains(key);
+        }
+
+        // records a switch in the given settings (the add-on page edits a copy until it's saved)
+        public static void Mark(SeleneSettings s, string key, bool on)
+        {
+            if (s.TurnedOff == null) s.TurnedOff = new List<string>();
+            if (s.TurnedOn == null) s.TurnedOn = new List<string>();
+            s.TurnedOff.Remove(key);
+            s.TurnedOn.Remove(key);
+            if (on && !DefaultOn(key)) s.TurnedOn.Add(key);
+            if (!on && DefaultOn(key)) s.TurnedOff.Add(key);
+        }
 
         public static void Set(string key, bool on)
         {
             if (settings == null) return;
-            if (settings.TurnedOff == null) settings.TurnedOff = new List<string>();
-            settings.TurnedOff.Remove(key);
-            if (!on) settings.TurnedOff.Add(key);
+            Mark(settings, key, on);
             if (save != null) save();
         }
     }
