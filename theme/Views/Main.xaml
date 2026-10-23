@@ -970,8 +970,6 @@
                             <Grid x:Name="HubTopBarBackground" VerticalAlignment="Top" Height="110" Margin="64,0,64,0">
                                 <!-- home: LB/RB filter tabs (drawn by Selene Core) -->
                                 <StackPanel x:Name="SeleneFilterTabs" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <!-- Selene's mark at the far left (Selene Core draws it; the "Selene logo" switch) -->
-                                <Grid x:Name="SeleneTopMark" Width="40" Height="40" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0" Visibility="Collapsed" IsHitTestVisible="False"/>
                                 <!-- library: Playnite's filter presets, styled like Spotlight's tabs (LB / RB) -->
                                 <FilterPresetSelector x:Name="PART_FilterPresetSelector" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">

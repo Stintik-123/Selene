@@ -50,7 +50,7 @@ namespace Selene
             library.Command = new Relay(ShowLibrary);
             LoginScene.AttachHomeGlow(main);   // the login's glow behind the home's cards
             LibraryStage.Attach(main);         // Collection's background trailer
-            Brand.Attach(main);                // Selene's mark in the top bar and on empty screens
+            Brand.Attach(main);                // Selene's mark on empty screens
             // "last played" as people say it (Today, Yesterday, 3 days ago), for Spotlight and Collection
             var npc = main.DataContext as System.ComponentModel.INotifyPropertyChanged;
             if (npc != null) npc.PropertyChanged += (s, e) =>
@@ -299,7 +299,6 @@ namespace Selene
             HomeNav.QuietFocus(1200);   // focus goes back to the home
             if (!LoginScene.KeepHome && Features.On("startcollection")) { ShowLibrary(); HomeNav.Log("start on Collection"); }
             else if (!LoginScene.KeepHome) HomeNav.HoldHomeForIntro();
-            Brand.Pulse(500);   // the top bar's mark glows once as the home comes in
             var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
             fade.Completed += (s, e) => { login.Visibility = Visibility.Collapsed; login.BeginAnimation(UIElement.OpacityProperty, null); login.Opacity = 1; };
             login.BeginAnimation(UIElement.OpacityProperty, fade);

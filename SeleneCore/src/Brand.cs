@@ -8,13 +8,12 @@ using System.Windows.Media.Animation;
 
 namespace Selene
 {
-    // Selene's mark around the theme (the "Selene logo" switch): small at the far left of the top bar, slowly glowing on
-    // empty screens and in place of Playnite's busy spinner. The menu and settings put it in their headers (Brand.Mark).
+    // Selene's mark around the theme (the "Selene logo" switch): slowly glowing on empty screens and in place of
+    // Playnite's busy spinner. The menu and settings put it in their headers (Brand.Mark).
     public static class Brand
     {
-        private static readonly string[] Slots = { "SeleneTopMark", "SeleneEmptyMarkHome", "SeleneEmptyMarkLibrary", "SeleneBusyMark" };
+        private static readonly string[] Slots = { "SeleneEmptyMarkHome", "SeleneEmptyMarkLibrary", "SeleneBusyMark" };
         private static Window window;
-        private static UIElement topGlow;
 
         // the add-on's version (extension.yaml next to the add-on)
         private static string version;
@@ -64,8 +63,7 @@ namespace Selene
                 UIElement glow;
                 var mark = Ui.Mark(slot.Width, out glow);
                 mark.IsHitTestVisible = false;
-                if (name == "SeleneTopMark") { topGlow = glow; glow.Opacity = 0.55; }
-                else Breathe(glow);
+                Breathe(glow);
                 if (name.StartsWith("SeleneEmpty")) mark.Opacity = 0.7;   // quiet beside the message
                 slot.Children.Add(mark);
             }
@@ -84,16 +82,6 @@ namespace Selene
             }
             var spinner = HomeNav.FindByName(window, "SeleneBusySpinner") as UIElement;
             if (spinner != null) spinner.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
-        }
-
-        // the top bar's mark glows up once and settles (signing in)
-        public static void Pulse(int delayMs)
-        {
-            if (topGlow == null || !Features.On("brand")) return;
-            var keys = new DoubleAnimationUsingKeyFrames { BeginTime = TimeSpan.FromMilliseconds(delayMs) };
-            keys.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(600)), new SineEase { EasingMode = EasingMode.EaseInOut }));
-            keys.KeyFrames.Add(new EasingDoubleKeyFrame(0.55, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1600)), new SineEase { EasingMode = EasingMode.EaseInOut }));
-            topGlow.BeginAnimation(UIElement.OpacityProperty, keys);
         }
     }
 }
