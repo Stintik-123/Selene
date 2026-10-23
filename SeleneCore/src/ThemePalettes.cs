@@ -29,6 +29,7 @@ namespace Selene
         public const string DefaultId = "selene";
         private static readonly ILogger logger = LogManager.GetLogger();
         private static ResourceDictionary applied;
+        private static string current;
         private static List<ThemeInfo> themes;
 
         // the theme list ships with the theme and doesn't change while Playnite runs, so it's read once
@@ -63,6 +64,9 @@ namespace Selene
         public static void Apply(string id)
         {
             if (string.IsNullOrEmpty(id)) id = DefaultId;
+            // the same theme again does nothing (re-adding its colors redrew every screen: a flicker)
+            if (string.Equals(id, current, StringComparison.OrdinalIgnoreCase)) return;
+            current = id;
             var merged = Application.Current.Resources.MergedDictionaries;
             if (string.Equals(id, DefaultId, StringComparison.OrdinalIgnoreCase))
             {

@@ -41,6 +41,18 @@ namespace Selene
             }
         }
 
+        // puts a wallpaper behind Selene; the one already showing is left alone (a reloaded copy flickered)
+        private static string shown;
+
+        public static void Show(string file)
+        {
+            var res = System.Windows.Application.Current.Resources;
+            if (shown != null && string.Equals(shown, file ?? "", StringComparison.OrdinalIgnoreCase)) return;
+            shown = file ?? "";
+            res["SeleneWallpaperPath"] = file;
+            res["SeleneWallpaper"] = Load(file);
+        }
+
         public static List<WallpaperChoice> All()
         {
             var list = new List<WallpaperChoice>();

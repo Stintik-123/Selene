@@ -98,7 +98,7 @@ namespace Selene
             {
                 if (s.OnB()) return;
                 Ui.Back();
-                if (step <= firstStep) { if (back == null) LoginScene.Finish(); else LoginScene.Show(back(), -1); return; }
+                if (step <= firstStep) { HomeNav.ShowArtForPreview(false); if (back == null) LoginScene.Finish(); else LoginScene.Show(back(), -1); return; }
                 GoTo(step - 1, -1);
                 return;
             }
@@ -146,6 +146,7 @@ namespace Selene
                 p.HomeBackground = Look;
                 Profiles.Update(p);
             }
+            HomeNav.ShowArtForPreview(false);
             Profiles.ApplyLook();
             Ui.Chime();
             HomeNav.Log("profiles: " + (editing != null ? "saved " : "created ") + p.Name + " (theme " + p.Theme + ")");
@@ -739,7 +740,7 @@ namespace Selene
             {
                 ThemePalettes.Apply(id);
                 var wallpaper = Owner.Wallpaper ?? ThemePalettes.DefaultWallpaper(id);
-                Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(wallpaper);
+                Wallpapers.Show(wallpaper);
                 LoginScene.RefreshBackdrop();
                 Profiles.ApplyHomeBackground(Owner.Look);
             }
@@ -853,7 +854,7 @@ namespace Selene
                 grid.Reveal(index);
                 groupLabel.Text = (index == 0 ? "THEME" : groups[index].ToUpperInvariant());
                 var file = files[index] ?? ThemePalettes.DefaultWallpaper(Owner.Theme);
-                Action show = () => { Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(file); LoginScene.RefreshBackdrop(); };
+                Action show = () => { Wallpapers.Show(file); LoginScene.RefreshBackdrop(); };
                 if (live) apply.Run(show); else show();
             }
 
