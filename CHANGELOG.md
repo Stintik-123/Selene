@@ -5,7 +5,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Store page: the Store card opens Selene's store with free games, sales, top sellers, new releases, PC Game Pass and deals from other stores. LB/RB pick the store (All, Steam, Epic Games, GOG, Xbox, More stores); A opens a game's page (screenshots, description, price, "In your library" if you own it) and from there its store app to buy it. The Store card shows this week's free games and the biggest sales as pictures with their discount and price. The first time the Store opens it asks for your currency (X in the Store changes it). Works offline with the last prices. Switch: Selene settings, Games, Store page.
-- The start-up fade from black and the fade into the home after signing in run on their own thread, so they stay smooth while Playnite is busy loading.
+- The start-up fade from black runs on its own thread, so it stays smooth while Playnite is busy loading.
 - Spotlight: moving between the Store and Library cards no longer makes the row bounce.
 - Menu: the profile shows its name with "Switch profile" under it. The top bar's profile steps away while the menu is open.
 - The signed-in profile's avatar in the top bar beside the clock. Switch: Selene settings, Look, Profile in the top bar.
@@ -13,7 +13,6 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - The Selene logo around the theme: a header on Selene settings, and a softly glowing mark on empty screens and while Playnite is busy. Switch: Selene settings, Look, Selene logo.
 - Back from Collection to a game on Spotlight, its art is there right away, with no wait and no wallpaper showing for a moment (Spotlight keeps its own art while Collection shows).
 - The start-up backdrop fades in again instead of popping up, without the light flashing up and dimming during it.
-- Signing in keeps your wallpaper on screen: it no longer goes dark before the home comes in.
 - Switching between Spotlight and Collection is a real crossfade now, with no black gap in between.
 - Opening Theme no longer flickers (the current theme and wallpaper aren't reloaded), and saving a background no longer shows a game's art for a moment before it.
 - The logo intro runs on its own thread, so it stays smooth while Playnite starts up; screenshots come back when you return to a game on Spotlight; going back to Spotlight from a trailer shows the game's art again.
