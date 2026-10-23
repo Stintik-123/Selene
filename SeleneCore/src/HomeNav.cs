@@ -269,8 +269,12 @@ namespace Selene
             // re-enters Selector and throws. Focus the tile after scrolling instead.
             // Item-based scrolling: the selection walks to the third slot, then stays there and the row moves.
             // ScrollViewer clamps the offset at the end, so the selection walks out to the last tile.
+            double offsetBefore = sv != null ? sv.HorizontalOffset : 0;
             if (sv != null) sv.ScrollToHorizontalOffset(Math.Max(0, next - AnchorSlot));
             row.UpdateLayout();
+            // the row only glides when it really scrolled: moving between tiles that stay put (the cards at the start)
+            // changes the selected tile's size, and gliding that made the whole row bounce
+            bool scrolled = sv != null && Math.Abs(sv.HorizontalOffset - offsetBefore) > 0.01;
 
             target = row.ItemContainerGenerator.ContainerFromIndex(next) as FrameworkElement;
             if (target == null)
@@ -291,7 +295,7 @@ namespace Selene
             }
 
             // Slide the row from where the tile was to where it is now.
-            if (panel != null && !double.IsNaN(before))
+            if (panel != null && !double.IsNaN(before) && scrolled)
             {
                 double delta = before - target.TranslatePoint(new Point(0, 0), row).X;
                 if (Math.Abs(delta) > 1 && !Lite)  // streamed session: instant moves (no slide)
