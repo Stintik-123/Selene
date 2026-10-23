@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Logo intro: the name sits under the crescent, in the logo's own lettering and the theme's ink.
 ## 0.10.0 - 2026-10-23
 
 - Smooth big screens: tiles are drawn once into textures and their focus glow exists only while focused (every tile blurred an invisible ring on each repaint), and the game details page and the profile editor's grids glide as one texture.

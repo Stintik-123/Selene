@@ -114,6 +114,14 @@ def lockup(background, ink, shine):
     return doc(w, h, body)
 
 
+def wordmark(width=900):
+    """The lettering alone, white on nothing: the intro paints it in the theme's ink through it (an opacity mask)."""
+    box, body = WORDMARK
+    box_w, box_h = (float(v) for v in box.split()[2:])
+    height = round(width * box_h / box_w)
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="{box}" style="color:#FFFFFF">{body}</svg>')
+
+
 def banner():
     """1280x640 social preview: the login's moonlit sky with the logo."""
     w, h = 1280, 640
@@ -147,6 +155,7 @@ for name, background, ink, shine in (("dark", NAVY, MOONLIGHT, True), ("light", 
     render(svg, LOGO_DIR / f"selene-logo-{name}.png")
 
 render(banner(), LOGO_DIR / "selene-banner.png")
+render(wordmark(), IMAGES / "wordmark.png")
 
 with tempfile.TemporaryDirectory() as tmp:
     big = Path(tmp) / "icon.png"
