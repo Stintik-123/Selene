@@ -138,7 +138,8 @@
                         </Border>
 
                         <!-- the page: it glides up as Down goes into the bands below (Selene Core moves SeleneDetailsShift) -->
-                        <Grid x:Name="SeleneDetailsPage">
+                        <!-- (tall on purpose: a child placed below the window's height got a slot a few pixels high and was clipped to it) -->
+                        <Grid x:Name="SeleneDetailsPage" Height="1700" VerticalAlignment="Top">
                             <Grid.RenderTransform><TranslateTransform x:Name="SeleneDetailsShift" Y="0"/></Grid.RenderTransform>
 
                             <StackPanel Margin="110,96,0,0" Width="1060" HorizontalAlignment="Left" VerticalAlignment="Top">
@@ -249,7 +250,7 @@
                                 </ItemsControl>
 
                                 <!-- the description on glass, fading out at its foot (the right stick / page keys scroll it) -->
-                                <Border Margin="0,14,0,0" MaxHeight="170" CornerRadius="18" Background="{DynamicResource SeleneGlassBrush}" BorderThickness="0" Padding="26,20,26,30" HorizontalAlignment="Left" MinWidth="700">
+                                <Border Margin="2,18,0,0" MaxHeight="170" BorderThickness="0" Padding="0,0,26,30" HorizontalAlignment="Left" MinWidth="700">
                                     <Border.OpacityMask>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                             <GradientStop Color="#FF000000" Offset="0"/>
@@ -278,7 +279,7 @@
                                     <TextBlock x:Name="SeleneDetailsCapturesNote" Text="" FontSize="18" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk60Brush}" VerticalAlignment="Top" Margin="2,8,0,0" Visibility="Collapsed"/>
                                 </Grid>
                             </StackPanel>
-                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1300,1010,0,0" Width="510" CornerRadius="18" Padding="26,18,26,20" Background="{DynamicResource SeleneGlassBrush}" BorderBrush="{DynamicResource SeleneInk15Brush}" BorderThickness="1">
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1300,1010,0,0" Width="510" Padding="0" BorderThickness="0">
                                 <StackPanel>
                                     <TextBlock Text="Your activity" Style="{StaticResource SeleneBandLabel}" Margin="0,0,0,12"/>
                                     <Grid>
