@@ -568,5 +568,7 @@ namespace Selene
         public virtual void Hidden() { }
         // true = shown over the dimmed home (menus) instead of on the login backdrop
         public virtual bool Overlay { get { return false; } }
+        // the shade over the home for an overlay screen (null = the usual deep one)
+        public virtual Brush OverlayShade { get { return null; } }
     }
 }

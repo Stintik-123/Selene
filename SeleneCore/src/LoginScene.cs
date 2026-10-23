@@ -222,7 +222,7 @@ namespace Selene
         {
             var old = current;
             current = next;
-            ApplyOverlay(next.Overlay);
+            ApplyOverlay(next.Overlay, next.OverlayShade);
             if (!next.Overlay) HomeNav.ClearSelectedGame();
             stage.Children.Add(next.Root);
             if (old != null)
@@ -258,12 +258,12 @@ namespace Selene
         public static void HomeChanged() { keepHome = false; }
 
         // menus show over the dimmed home; the login screens have the full backdrop
-        private static void ApplyOverlay(bool on)
+        private static void ApplyOverlay(bool on, Brush shade = null)
         {
             if (on) HomeNav.PauseForOverlay();
             foreach (var el in backdrop) el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(on ? 0 : 1, TimeSpan.FromMilliseconds(220)));
             if (!on) RefreshBackdrop();
-            scene.Background = on ? Ink.Brush("SeleneScrimColor", 0.88) : null;
+            scene.Background = on ? shade ?? Ink.Brush("SeleneScrimColor", 0.88) : null;
             var layer = loginRoot as Panel;
             if (layer == null) return;
             if (on) layer.Background = Brushes.Transparent;

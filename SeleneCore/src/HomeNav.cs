@@ -2474,6 +2474,27 @@ namespace Selene
         // tray, at most every 10 minutes, so a game installed in Epic/Steam/Xbox appears without touching a menu.
         private static DateTime lastLibraryRefresh = DateTime.MinValue;
 
+        // the menu's Update library: starts Playnite's update now (no 10-minute limit); false with Playnite's status when one
+        // is already running (Playnite would only wait behind it)
+        public static bool UpdateLibraryNow(out string status)
+        {
+            status = "";
+            var w = Application.Current.MainWindow;
+            var vm = w != null ? w.DataContext : null;
+            if (vm == null) { status = "Playnite isn't ready"; return false; }
+            var active = Prop(vm, "ProgressActive");
+            if (active is bool && (bool)active)
+            {
+                status = Prop(vm, "ProgressStatus") as string;
+                if (string.IsNullOrEmpty(status)) status = "Playnite is busy";
+                Log("library update: already running (" + status + ")");
+                return false;
+            }
+            lastLibraryRefresh = DateTime.MinValue;
+            RefreshLibrary("menu");
+            return true;
+        }
+
         public static void RefreshLibrary(string why)
         {
             try
