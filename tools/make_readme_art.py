@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the README's showcase images from what Selene ships: docs/readme/themes.jpg and docs/readme/avatars.jpg.
+"""Draws the README's showcase images from what Selene ships: docs/readme/themes-strip.jpg and docs/readme/avatars.jpg.
 
 Needs Pillow and a TrueType font (Liberation Sans or DejaVu Sans on Linux, Segoe UI on Windows).
 Re-run after adding themes, wallpapers or avatars: python3 tools/make_readme_art.py
@@ -7,7 +7,7 @@ Re-run after adding themes, wallpapers or avatars: python3 tools/make_readme_art
 import json
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "readme"
@@ -106,5 +106,56 @@ def avatars_image():
     print(f"wrote docs/readme/avatars.jpg ({len(picks)} of {len(files)} avatars)")
 
 
-themes_image()
+def themes_strip():
+    """Every theme's wallpaper as a slanted slice of one picture (two rows), its name under it: the whole set at a glance."""
+    themes = [t for t in json.loads((ROOT / "theme" / "Palettes" / "palettes.json").read_text(encoding="utf-8")) if t["Wallpaper"]]
+    per_row = (len(themes) + 1) // 2
+    width, slice_h, skew, label_h, gap = 1890, 300, 42, 44, 18
+    slice_w = (width - skew) / per_row
+    rows = (len(themes) + per_row - 1) // per_row
+    height = rows * (slice_h + label_h) + (rows + 1) * gap
+    sheet = Image.new("RGBA", (width, height), BG)
+    draw = ImageDraw.Draw(sheet)
+    name_font, mode_font = font(19, True), font(14)
+    for i, t in enumerate(themes):
+        r, c = divmod(i, per_row)
+        x0 = int(c * slice_w)
+        x1 = int((c + 1) * slice_w)
+        y0 = gap + r * (slice_h + label_h + gap)
+        # the slice: a parallelogram leaning right, cut from the wallpaper's middle
+        wall = ImageOps.fit(Image.open(ROOT / "theme" / t["Wallpaper"]).convert("RGB"), (x1 - x0 + skew, slice_h), Image.LANCZOS).convert("RGBA")
+        bg, accent, fg = hex_rgb(t["Background"]), hex_rgb(t["Accent"]), hex_rgb(t["Foreground"])
+        # the theme's own color rising from the foot, with its accent as the focused pill and its ink as a bar: Selene's home in small
+        shade = Image.new("RGBA", wall.size, (0, 0, 0, 0))
+        sd = ImageDraw.Draw(shade)
+        for py in range(slice_h):
+            alpha = int(215 * max(0.0, (py - slice_h * 0.42) / (slice_h * 0.58)))
+            sd.line([(0, py), (wall.size[0], py)], fill=bg + (alpha,))
+        wall = Image.alpha_composite(wall, shade)
+        wd = ImageDraw.Draw(wall)
+        px = skew + 18
+        wd.rounded_rectangle((px, slice_h - 64, px + 54, slice_h - 40), 12, fill=accent)
+        wd.rounded_rectangle((px + 62, slice_h - 64, px + 116, slice_h - 40), 12, fill=fg + (120,))
+        wd.rounded_rectangle((px, slice_h - 30, px + 36, slice_h - 22), 4, fill=fg + (200,))
+        wd.rounded_rectangle((px + 44, slice_h - 30, px + 70, slice_h - 22), 4, fill=fg + (90,))
+        mask = Image.new("L", wall.size, 0)
+        poly = [(skew, 0), (wall.size[0], 0), (wall.size[0] - skew, slice_h), (0, slice_h)]
+        ImageDraw.Draw(mask).polygon(poly, fill=255)
+        # a dark seam between slices
+        seam = Image.new("L", wall.size, 0)
+        ImageDraw.Draw(seam).polygon([(skew + 3, 0), (wall.size[0], 0), (wall.size[0] - skew - 3, slice_h), (0, slice_h)], fill=255)
+        piece = Image.new("RGBA", wall.size, (0, 0, 0, 0))
+        piece.paste(wall, (0, 0), ImageChops.multiply(mask, seam))
+        sheet.alpha_composite(piece, (x0, y0))
+        label = t["Name"]
+        lx = x0 + 10 + skew // 2
+        draw.text((lx, y0 + slice_h + 10), label, font=name_font, fill=TEXT)
+        name_w = draw.textlength(label, font=name_font)
+        if lx + name_w + 44 < x1 + skew // 2:
+            draw.text((lx + 8 + name_w, y0 + slice_h + 15), t["Mode"], font=mode_font, fill=MUTED)
+    sheet.convert("RGB").save(OUT / "themes-strip.jpg", quality=90, optimize=True)
+    print(f"wrote docs/readme/themes-strip.jpg ({len(themes)} themes)")
+
+
+themes_strip()
 avatars_image()
