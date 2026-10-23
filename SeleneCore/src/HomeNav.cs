@@ -942,35 +942,46 @@ namespace Selene
             art.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
-        // the background step's preview: the row's first game's art goes straight into the home's art layer (its pictures,
-        // not Playnite's selected game, so no song starts). False when the library has no game to borrow it from.
+        // the background step's preview: the row's first game's art shown in the home's art layer (its own picture, not
+        // Playnite's selected game, so no song starts). False when the library has no game with art to borrow.
+        private static Image previewArt;
+
         public static bool ShowArtForPreview(bool on)
         {
             var w = Application.Current.MainWindow;
             var art = w != null ? FindByName(w, "SeleneHubArt") as Panel : null;
-            if (art == null) return false;
-            var pictures = new List<FrameworkElement>();
-            foreach (var c in art.Children) { var fe = c as FrameworkElement; if (fe != null && fe.GetType().Name == "FadeImage") pictures.Add(fe); }
-            object game = null;
-            if (on)
+            if (previewArt != null)
             {
-                var row = LiveRow();
-                int idx = row != null ? FirstGameIndex(row) : -1;
-                if (idx >= 0 && idx < row.Items.Count && !(row.Items[idx] is string) && !(row.Items[idx] is RowPad)) game = row.Items[idx];
+                var parent = VisualTreeHelper.GetParent(previewArt) as Panel;
+                if (parent != null) parent.Children.Remove(previewArt);
+                previewArt = null;
             }
-            var idProp = game != null ? game.GetType().GetProperty("Id") : null;
-            var bgProp = game != null ? game.GetType().GetProperty("DisplayBackgroundImage") : null;
-            var id = idProp != null ? idProp.GetValue(game, null) : null;
-            var hero = id != null ? System.IO.Path.Combine(SelenePaths.Media("Hero"), id + ".jpg") : null;
-            var sources = new[] { bgProp != null ? bgProp.GetValue(game, null) : null, hero != null && System.IO.File.Exists(hero) ? hero : null };
-            for (int i = 0; i < pictures.Count && i < sources.Length; i++)
-            {
-                var prop = System.ComponentModel.DependencyPropertyDescriptor.FromName("Source", pictures[i].GetType(), pictures[i].GetType());
-                if (prop == null) continue;
-                if (game != null) pictures[i].SetCurrentValue(prop.DependencyProperty, sources[i]);
-                else { var b = BindingOperations.GetBindingExpressionBase(pictures[i], prop.DependencyProperty); if (b != null) b.UpdateTarget(); }
-            }
-            return game != null;
+            if (!on) return false;
+            if (art == null) { Log("preview art: no art layer"); return false; }
+            var row = LiveRow();
+            string file = null, name = null;
+            if (row != null && Api != null)
+                foreach (var item in row.Items)
+                {
+                    if (item is string || item is RowPad) continue;
+                    var id = Prop(item, "Id");
+                    if (!(id is Guid)) continue;
+                    var game = Api.Database.Games.Get((Guid)id);
+                    if (game == null) continue;
+                    var hero = System.IO.Path.Combine(SelenePaths.Media("Hero"), game.Id + ".jpg");
+                    file = System.IO.File.Exists(hero) ? hero
+                         : !string.IsNullOrEmpty(game.BackgroundImage) ? Api.Database.GetFullFilePath(game.BackgroundImage) : null;
+                    if (file != null && !file.StartsWith("http", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(file)) { name = game.Name; break; }
+                    file = null;
+                }
+            var pic = file != null ? Wallpapers.Load(file) : null;
+            Log("preview art: " + (pic != null ? name + " (" + file + ")" : "no game with art"));
+            if (pic == null) return false;
+            previewArt = new Image { Source = pic, Stretch = Stretch.UniformToFill, Opacity = 0 };
+            RenderOptions.SetBitmapScalingMode(previewArt, BitmapScalingMode.HighQuality);
+            art.Children.Add(previewArt);
+            previewArt.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(250)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            return true;
         }
 
         // while the login screens cover the home nothing is selected for Playnite (its music add-ons would play)

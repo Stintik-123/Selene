@@ -9,7 +9,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Play, Details and the heart are readable in light themes (they took the theme's dark text color).
 - Light themes dim the home behind Playnite's menus with a dark shade instead of a bright one.
 - Power icons in the menu use the theme's color like the rest.
-- Theme and background steps: the preview shows your wallpaper and, on the background step, a game's art when "Game art" is on (borrowed without selecting the game, so no game song plays); with no games yet it says the wallpaper shows until you add some.
+- Background step: with "Game art" on, the preview shows a game's art (without selecting it, so no game song plays); with no games yet it says the wallpaper shows until you add some.
+- New sound when a profile is made: a soft harp roll.
 - A Store card next to Library: opens the store apps on your PC (Steam, Epic, Xbox, GOG, Ubisoft, EA, Microsoft Store).
 - After Playnite starts or someone signs in, the home starts on the Library card.
 - Your own picture as an avatar: frame it in a circle first (move with the stick, zoom with the triggers).
