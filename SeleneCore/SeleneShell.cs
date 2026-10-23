@@ -29,6 +29,7 @@ namespace Selene
             if (app == null) return;
             // the theme reads the media folder from here (tile squares, hero art)
             app.Resources["SeleneMediaRoot"] = System.IO.Path.GetDirectoryName(SelenePaths.Media("Hero"));
+            app.Resources["SeleneIconFont"] = Ui.Icons;   // solid icons for the theme (a font path in the theme's XAML didn't load)
             if (!app.Resources.Contains("SeleneRowMode")) app.Resources["SeleneRowMode"] = "tv";
             // the main screen's template is applied a moment after start: retry until its parts exist
             attachTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };

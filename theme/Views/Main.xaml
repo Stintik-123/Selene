@@ -40,7 +40,7 @@
                                     <RowDefinition Height="0" />
                                 </Grid.RowDefinitions>
                                 <Border Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}"/>
-                                <Image Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
+                                <Image x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
                                 <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="220"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->
                                 <Grid x:Name="SeleneLibraryTrailerHost" Grid.RowSpan="2" Margin="760,0,0,0" Opacity="0" IsHitTestVisible="False" ClipToBounds="True">
@@ -137,60 +137,33 @@
                                         </TextBlock.Style>
                                     </TextBlock>
                                 </Grid>
-                                <!-- the game at a glance, as soft glass chips: where it's from (the store's own logo), playtime, last
-                                     played, release year, then its genres -->
-                                <WrapPanel HorizontalAlignment="Center" Margin="0,30,0,0">
-                                    <WrapPanel.Resources>
-                                        <Style x:Key="InfoChip" TargetType="Border">
-                                            <Setter Property="CornerRadius" Value="19"/>
-                                            <Setter Property="Padding" Value="14,7,16,8"/>
-                                            <Setter Property="Margin" Value="5,0,5,10"/>
-                                            <Setter Property="Background" Value="{DynamicResource SeleneInk15Brush}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource SeleneInk25Brush}"/>
-                                            <Setter Property="BorderThickness" Value="1"/>
-                                        </Style>
-                                        <Style x:Key="InfoIcon" TargetType="TextBlock">
-                                            <Setter Property="FontFamily" Value="/Fonts/MaterialIcons-Regular.ttf#Material Icons"/>
-                                            <Setter Property="FontSize" Value="19"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource GlyphBrush}"/>
-                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                            <Setter Property="Margin" Value="0,0,8,0"/>
-                                        </Style>
-                                        <Style x:Key="InfoText" TargetType="TextBlock">
-                                            <Setter Property="FontSize" Value="18"/>
-                                            <Setter Property="FontFamily" Value="Segoe UI"/>
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource SeleneInkBrush}"/>
-                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                        </Style>
-                                    </WrapPanel.Resources>
-                                    <Border Style="{StaticResource InfoChip}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Image Source="{Binding SelectedGame.LibraryIcon}" Height="20" Width="20" Margin="0,0,9,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="Fant"/>
-                                            <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Style="{StaticResource InfoText}"/>
+                                <!-- the game at a glance: playtime, last played, where it's from (the store's own logo), its year -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,28,0,0">
+                                    <StackPanel Margin="0,0,26,0">
+                                        <TextBlock Text="PLAYTIME" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                        <TextBlock Text="{Binding SelectedGame.Playtime, Mode=OneWay, Converter={StaticResource PlayTimeToStringConverter}}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                    <StackPanel Margin="0,0,26,0">
+                                        <TextBlock Text="LAST PLAYED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                        <TextBlock Text="{Binding SelectedGame.LastActivity, Mode=OneWay, StringFormat='{}{0:MMM d, yyyy}', TargetNullValue=Never}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                    <StackPanel Margin="0,0,26,0">
+                                        <TextBlock Text="PLATFORM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                            <Image Source="{Binding SelectedGame.LibraryIcon}" Height="22" Width="22" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="Fant"/>
+                                            <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         </StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource InfoChip}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE8B5;" Style="{StaticResource InfoIcon}"/>
-                                            <TextBlock Text="{Binding SelectedGame.Playtime, Mode=OneWay, Converter={StaticResource PlayTimeToStringConverter}}" Style="{StaticResource InfoText}"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource InfoChip}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE889;" Style="{StaticResource InfoIcon}"/>
-                                            <TextBlock Text="{Binding SelectedGame.LastActivity, Mode=OneWay, StringFormat='{}{0:MMM d, yyyy}', TargetNullValue=Never played}" Style="{StaticResource InfoText}"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource InfoChip}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE935;" Style="{StaticResource InfoIcon}"/>
-                                            <TextBlock Text="{Binding SelectedGame.ReleaseYear, Mode=OneWay, TargetNullValue=-, FallbackValue=-}" Style="{StaticResource InfoText}"/>
-                                        </StackPanel>
-                                    </Border>
-                                </WrapPanel>
-                                <!-- genres, quieter, under the chips -->
-                                <ItemsControl ItemsSource="{Binding SelectedGame.Genres}" HorizontalAlignment="Center" Margin="0,4,0,0" Focusable="False">
+                                    </StackPanel>
+                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                    <StackPanel>
+                                        <TextBlock Text="RELEASED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                        <TextBlock Text="{Binding SelectedGame.ReleaseYear, Mode=OneWay, TargetNullValue=-, FallbackValue=-}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <!-- genres, quieter, under the stats -->
+                                <ItemsControl ItemsSource="{Binding SelectedGame.Genres}" HorizontalAlignment="Center" Margin="0,16,0,0" Focusable="False">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/></ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
@@ -231,7 +204,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <!-- signals each new game for the fade (Playnite's add-on bindings can't) -->
                                         <TextBlock Text="{Binding SelectedGame.Id, NotifyOnTargetUpdated=True}" Visibility="Collapsed"/>
-                                        <TextBlock Text="&#xEA23;" FontFamily="/Fonts/MaterialIcons-Regular.ttf#Material Icons" FontSize="30" VerticalAlignment="Center" Margin="0,0,14,0">
+                                        <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="30" VerticalAlignment="Center" Margin="0,0,14,0">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="{DynamicResource GlyphBrush}"/>
@@ -913,7 +886,10 @@
                                                     <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
                                                     <StackPanel>
                                                         <TextBlock Text="PLATFORM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
-                                                        <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <Image Source="{Binding SelectedGame.LibraryIcon}" Height="22" Width="22" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="Fant"/>
+                                                            <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        </StackPanel>
                                                     </StackPanel>
                                                 </StackPanel>
                                             </StackPanel>

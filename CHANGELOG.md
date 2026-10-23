@@ -8,7 +8,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Collection: the game's logo, chips and genres slide in together when you move to another game.
 - The two main screens are now Spotlight (the home row) and Collection (every game); Selene settings, Start on Collection, opens Collection after signing in.
 - Going from the library back to the home no longer flashes the library game's art.
-- Collection: under the logo, glass chips with the store's logo, playtime, last played and release year, genres beneath; trailers start after 3 seconds on a game and play on the right, fading into the dark on their left and bottom.
+- Collection: under the logo, playtime, last played, platform (with the store's logo, also on Spotlight) and release year, genres beneath; while a trailer plays the game's art fades away; trailers start after 3 seconds on a game and play on the right, fading into the dark on their left and bottom.
 - No menu button in the top bar (Start opens the menu).
 - Home filters switch with LB / RB instead of the triggers.
 - No notification bell in the top bar. Home hints along the bottom: Library and Menu (with their holds) on the left, what the focused thing does on the right.
