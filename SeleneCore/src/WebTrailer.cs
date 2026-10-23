@@ -101,7 +101,18 @@ namespace Selene
                             if (playing != null) playing();
                         }
                         else if (text.StartsWith("failed")) HomeNav.Log("clip: the browser couldn't play it (" + text + ")");
-                        else if (text.StartsWith("t=") && t2.reports++ < 3) HomeNav.Log("clip: " + text + " (" + (int)view.ActualWidth + "x" + (int)view.ActualHeight + ", visible=" + view.IsVisible + ")");
+                        else if (text.StartsWith("p="))
+                        {
+                            // "p=<position>|<length>|<paused>|<drawn frames>", twice a second
+                            var parts = text.Substring(2).Split('|');
+                            double at, length;
+                            if (parts.Length >= 3 && double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out at)
+                                && double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out length))
+                            {
+                                if (t2.reports++ < 2) HomeNav.Log("clip: " + text + " (" + (int)view.ActualWidth + "x" + (int)view.ActualHeight + ")");
+                                if (t2.Progress != null) t2.Progress(at, length, parts[2] == "1");
+                            }
+                        }
                     });
                 var src = new Uri(path).AbsoluteUri;
                 // the frames go through a canvas: a big clip is decoded by the GPU and composited apart, which the browser's
@@ -114,7 +125,8 @@ namespace Selene
                     + "function draw(){if(v.videoWidth>0){var s=Math.min(c.width/v.videoWidth,c.height/v.videoHeight),w=v.videoWidth*s,h=v.videoHeight*s;"
                     + "x.drawImage(v,(c.width-w)/2,(c.height-h)/2,w,h);n++;}requestAnimationFrame(draw);}requestAnimationFrame(draw);"
                     + "v.addEventListener('playing',function(){document.title=(v.muted?'playing muted ':'playing ')+v.videoWidth+'x'+v.videoHeight;});"
-                    + "setInterval(function(){if(!v.paused)document.title='t='+v.currentTime.toFixed(1)+' drawn='+n;},3000);"
+                    + "setInterval(function(){if(v.readyState>0)document.title='p='+v.currentTime.toFixed(1)+'|'+(isFinite(v.duration)?v.duration.toFixed(1):'0')+'|'+(v.paused?1:0)+'|'+n;},500);"
+                    + "window.selene={toggle:function(){if(v.paused)v.play();else v.pause();},seek:function(d){try{var m=isFinite(v.duration)?v.duration-0.3:1e9;v.currentTime=Math.max(0,Math.min(m,v.currentTime+d));}catch(e){}}};"
                     + "v.addEventListener('error',function(){document.title='failed: '+(v.error?v.error.code+' '+v.error.message:'');});"
                     + "v.muted=false;var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play();});"
                     + "document.title='loading';</script></body></html>";
@@ -130,6 +142,37 @@ namespace Selene
 
         private string pageFile;
         private int reports;
+
+        // where a clip is, how long it is, whether it's paused (twice a second, on the UI thread)
+        public Action<double, double, bool> Progress;
+
+        public void TogglePause() { Run("selene.toggle()"); }
+        public void Seek(double seconds) { Run("selene.seek(" + seconds.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")"); }
+
+        // a line of script in the page (CefSharp's ExecuteScriptAsync, reached by reflection like the browser itself)
+        private void Run(string js)
+        {
+            var b = browser;
+            if (b == null) return;
+            try
+            {
+                var ext = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("CefSharp.WebBrowserExtensions", false)).FirstOrDefault(t => t != null);
+                if (ext == null) { HomeNav.Log("clip: no script runner"); return; }
+                var run = ext.GetMethods(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(m =>
+                    m.Name == "ExecuteScriptAsync" && m.GetParameters().Length == 2 && m.GetParameters()[1].ParameterType == typeof(string) && m.GetParameters()[0].ParameterType.IsInstanceOfType(b));
+                if (run != null) { run.Invoke(null, new object[] { b, js }); return; }
+                var mainFrame = ext.GetMethods(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(m => m.Name == "GetMainFrame" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType.IsInstanceOfType(b));
+                var frame = mainFrame != null ? mainFrame.Invoke(null, new object[] { b }) : null;
+                var exec = frame != null ? frame.GetType().GetMethods().FirstOrDefault(m => m.Name == "ExecuteJavaScriptAsync") : null;
+                if (exec == null) { HomeNav.Log("clip: no script runner (frame)"); return; }
+                var ps = exec.GetParameters();
+                var args = new object[ps.Length];
+                args[0] = js;
+                for (int i = 1; i < ps.Length; i++) args[i] = ps[i].DefaultValue == DBNull.Value ? (ps[i].ParameterType.IsValueType ? Activator.CreateInstance(ps[i].ParameterType) : null) : ps[i].DefaultValue;
+                exec.Invoke(frame, args);
+            }
+            catch (Exception ex) { HomeNav.Log("clip script: " + ex.Message); }
+        }
 
         // fades away (a screenshot was picked); Stop ends it for good
         public void Hide()

@@ -36,11 +36,18 @@ namespace Selene
         private readonly TextBlock note, caption;
         private readonly Grid viewer = new Grid { Visibility = Visibility.Collapsed, Opacity = 0 };
         private readonly Image picture = new Image { Stretch = Stretch.Uniform };
-        private readonly TextBlock viewerCaption;
+        private readonly TextBlock viewerName, viewerDate, timeText;
+        private readonly Grid controls = new Grid { IsHitTestVisible = false };   // the words, the bar and the hints over a clip (hide after a while)
+        private readonly Border progress = new Border { Height = 6, CornerRadius = new CornerRadius(3), HorizontalAlignment = HorizontalAlignment.Left, Width = 0 };
+        private readonly Border progressTrack;
+        private readonly StackPanel clipHints, imageHints;
+        private readonly DispatcherTimer hideControls = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        private readonly DispatcherTimer playerClock = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
         private MediaElement video;
         private WebTrailer clip;   // the browser playing a clip Playnite's own player couldn't (AV1, VP9)
         private int index, firstRow;
-        private bool viewing, closed;
+        private bool viewing, closed, paused, controlsShown;
+        private double clipAt, clipLength;
         private readonly string openPath;   // opened from the card's pictures: straight to this one
 
         public CapturesScreen(string openPath = null)
@@ -75,15 +82,36 @@ namespace Selene
             note = new TextBlock { FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 240, 0, 0), MaxWidth = 1100, TextWrapping = TextWrapping.Wrap };
             Root.Children.Add(note);
 
-            // the viewer: one capture on the whole screen, its name and date along the bottom
+            // the viewer: one capture on the whole screen; over it, the game and date at the bottom left, a clip's bar with its
+            // time, and the hints, all fading away after a moment (any press brings them back)
             viewer.SetResourceReference(Panel.BackgroundProperty, "SeleneScrimBrush");
             RenderOptions.SetBitmapScalingMode(picture, BitmapScalingMode.HighQuality);
             viewer.Children.Add(picture);
-            viewerCaption = new TextBlock { FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 84) };
-            viewerCaption.Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 14, Opacity = 0.9, Color = Colors.Black };
-            viewer.Children.Add(viewerCaption);
+            var shade = new Border { IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Bottom, Height = 300, Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Color.FromArgb(0, 0, 0, 0), 0), new GradientStop(Color.FromArgb(0xB8, 0, 0, 0), 1) }, 90) };
+            controls.Children.Add(shade);
+            var words = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(Side, 0, 0, 132) };
+            viewerName = new TextBlock { FontSize = 30, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Brushes.White, MaxWidth = 1200, TextTrimming = TextTrimming.CharacterEllipsis };
+            viewerDate = new TextBlock { FontSize = 17, FontFamily = Ui.Body, Foreground = new SolidColorBrush(Color.FromArgb(0xB3, 0xFF, 0xFF, 0xFF)), Margin = new Thickness(1, 4, 0, 0) };
+            words.Children.Add(viewerName);
+            words.Children.Add(viewerDate);
+            controls.Children.Add(words);
+            // the bar: where the clip is, with the time at its right end
+            progressTrack = new Border { Height = 6, CornerRadius = new CornerRadius(3), Background = new SolidColorBrush(Color.FromArgb(0x59, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(Side, 0, 0, 104), Width = 1920 - 2 * Side - 150 };
+            progress.Background = Ink.Brush("SeleneFocusColor");
+            progressTrack.Child = progress;
+            controls.Children.Add(progressTrack);
+            timeText = new TextBlock { FontSize = 17, FontFamily = Ui.Body, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, Side, 96) };
+            controls.Children.Add(timeText);
+            clipHints = Ui.Prompts(true, Ui.Prompt("LB RB", "Previous / next"), Ui.Prompt("\u25C0 \u25B6", "10 seconds"), Ui.Prompt("A", "Pause"));
+            imageHints = Ui.Prompts(true, Ui.Prompt("\u25C0 \u25B6", "Previous / next"));
+            controls.Children.Add(clipHints);
+            controls.Children.Add(imageHints);
+            controls.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
+            viewer.Children.Add(controls);
             Panel.SetZIndex(viewer, 20);
             Root.Children.Add(viewer);
+            hideControls.Tick += (s, e) => { hideControls.Stop(); if (!paused) ShowControls(false); };
+            playerClock.Tick += (s, e) => PollPlayer();
 
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Open")));
@@ -99,7 +127,66 @@ namespace Selene
             });
         }
 
-        public override void Hidden() { closed = true; StopVideo(); }
+        public override void Hidden() { closed = true; StopVideo(); hideControls.Stop(); playerClock.Stop(); }
+
+        // ---- the words, bar and hints over the viewer ----
+        private void ShowControls(bool on)
+        {
+            controlsShown = on;
+            Ui.Fade(controls, on ? 1 : 0, on ? 160 : 400);
+            hideControls.Stop();
+            if (on) hideControls.Start();
+        }
+
+        private static string Clock(double seconds)
+        {
+            if (double.IsNaN(seconds) || seconds < 0) seconds = 0;
+            var t = TimeSpan.FromSeconds(seconds);
+            return t.TotalHours >= 1 ? string.Format("{0}:{1:00}:{2:00}", (int)t.TotalHours, t.Minutes, t.Seconds) : string.Format("{0}:{1:00}", t.Minutes, t.Seconds);
+        }
+
+        private void ShowProgress(double at, double length, bool isPaused)
+        {
+            clipAt = at; clipLength = length;
+            if (paused != isPaused) { paused = isPaused; ShowControls(true); }
+            double w = Math.Max(0, progressTrack.Width);
+            progress.Width = length > 0 ? Math.Max(0, Math.Min(w, w * at / length)) : 0;
+            timeText.Text = Clock(at) + (length > 0 ? " / " + Clock(length) : "");
+        }
+
+        // Playnite's own player has no events for where it is: asked a few times a second
+        private void PollPlayer()
+        {
+            var me = video;
+            if (me == null) return;
+            try { ShowProgress(me.Position.TotalSeconds, me.NaturalDuration.HasTimeSpan ? me.NaturalDuration.TimeSpan.TotalSeconds : 0, paused); } catch { }
+        }
+
+        private void TogglePause()
+        {
+            if (clip != null) { clip.TogglePause(); return; }
+            var me = video;
+            if (me == null) return;
+            try { if (paused) me.Play(); else me.Pause(); } catch { }
+            paused = !paused;
+            ShowControls(true);
+        }
+
+        private void Seek(double seconds)
+        {
+            if (clip != null) { clip.Seek(seconds); return; }
+            var me = video;
+            if (me == null) return;
+            try
+            {
+                double length = me.NaturalDuration.HasTimeSpan ? me.NaturalDuration.TimeSpan.TotalSeconds : 0;
+                double to = Math.Max(0, me.Position.TotalSeconds + seconds);
+                if (length > 0) to = Math.Min(length - 0.3, to);
+                me.Position = TimeSpan.FromSeconds(to);
+                ShowProgress(to, length, paused);
+            }
+            catch { }
+        }
 
         private void Fill(List<Capture> found)
         {
@@ -190,7 +277,15 @@ namespace Selene
             var c = items[i];
             StopVideo();
             picture.Source = null;
-            viewerCaption.Text = c.Game + "  ·  " + c.When.ToString("MMM d, yyyy  HH:mm");
+            viewerName.Text = c.Game;
+            viewerDate.Text = c.When.ToString("MMMM d, yyyy  ·  HH:mm");
+            paused = false;
+            clipAt = 0; clipLength = 0;
+            progress.Width = 0;
+            timeText.Text = "";
+            progressTrack.Visibility = timeText.Visibility = clipHints.Visibility = c.IsVideo ? Visibility.Visible : Visibility.Collapsed;
+            imageHints.Visibility = c.IsVideo ? Visibility.Collapsed : Visibility.Visible;
+            ShowControls(true);
             if (c.IsVideo)
             {
                 var ext = System.IO.Path.GetExtension(c.Path).ToLowerInvariant();
@@ -212,11 +307,13 @@ namespace Selene
                     StopVideo();
                     var path = c.Path;
                     clip = WebTrailer.CreateFile(path, null);
-                    if (clip == null) { viewerCaption.Text = "This clip can't be played here."; return; }
+                    if (clip == null) { viewerDate.Text = "This clip can't be played here."; return; }
+                    clip.Progress = (at, length, isPaused) => { if (viewing && clip != null) ShowProgress(at, length, isPaused); };
                     viewer.Children.Insert(1, clip.View);
                 };
                 viewer.Children.Insert(1, me);
                 me.Play();
+                playerClock.Start();
             }
             else
             {
@@ -241,6 +338,7 @@ namespace Selene
 
         private void StopVideo()
         {
+            playerClock.Stop();
             if (clip != null) { clip.Stop(); clip = null; }
             if (video == null) return;
             try { video.Stop(); video.Close(); } catch { }
@@ -253,9 +351,14 @@ namespace Selene
             if (viewing)
             {
                 if (b == "B") { Ui.Back(); CloseViewer(); return; }
-                if (b == "DPadLeft" || b == "DPadRight")
+                bool isClip = index < items.Count && items[index].IsVideo;
+                if (!controlsShown) ShowControls(true); else hideControls.Stop();
+                hideControls.Start();
+                if (b == "A" && isClip) { Ui.Tick(); TogglePause(); return; }
+                if ((b == "DPadLeft" || b == "DPadRight") && isClip) { Ui.Tick(); Seek(b == "DPadRight" ? 10 : -10); return; }
+                if (b == "DPadLeft" || b == "DPadRight" || b == "LeftShoulder" || b == "RightShoulder")
                 {
-                    int next = index + (b == "DPadRight" ? 1 : -1);
+                    int next = index + (b == "DPadRight" || b == "RightShoulder" ? 1 : -1);
                     if (next < 0 || next >= items.Count) return;
                     Ui.Tick();
                     Open(next);

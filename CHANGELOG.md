@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Captures viewer: A pauses and plays a clip, Left / Right go 10 seconds, LB / RB go to the previous or next capture; a bar with the time, the game and date at the bottom left, hints that fade away after a moment. Clips that start on a black frame get a still from further in.
+- Home: the Play / Details / Favorite pills are white, a little see-through, without an outline; the focused screenshot's ring is no longer cut off.
 - Captures: clips get stills (Windows' own thumbnail, or ffmpeg's when this PC has it), in the grid and under the card; clips the browser plays are drawn through a canvas (a big clip decoded by the graphics card stayed black).
 - Spotlight and Collection switch with a shorter hold on the crossfade.
 - Glass that reads: tiles (Setup check, keyboards, menus) and the home's Play / Details pills sit on a deeper glass over busy wallpapers.

@@ -104,10 +104,35 @@ namespace Selene
             if (path == null) return null;
             if (File.Exists(path)) return path;
             if (!File.Exists(file)) return null;
+            // Windows' still, unless it's black (clips often start on a black frame); then ffmpeg, further and further in
             var bmp = FromShell(file);
+            if (bmp != null && !Dark(bmp)) { Save(bmp, path); return path; }
+            foreach (var at in new[] { 3, 12, 30, 75 })
+            {
+                if (!FromFfmpeg(file, path, at)) break;
+                var made = Wallpapers.Load(path, Width) as BitmapSource;
+                if (made == null || !Dark(made)) return path;
+            }
+            if (File.Exists(path)) return path;
             if (bmp != null) { Save(bmp, path); return path; }
-            if (FromFfmpeg(file, path)) return path;
             return null;
+        }
+
+        // mostly black? (the average brightness of a sample of its pixels)
+        private static bool Dark(BitmapSource bmp)
+        {
+            try
+            {
+                var small = new TransformedBitmap(bmp, new ScaleTransform(32.0 / Math.Max(1, bmp.PixelWidth), 18.0 / Math.Max(1, bmp.PixelHeight)));
+                var conv = new FormatConvertedBitmap(small, PixelFormats.Bgr32, null, 0);
+                int w = conv.PixelWidth, h = conv.PixelHeight, stride = w * 4;
+                var px = new byte[stride * h];
+                conv.CopyPixels(px, stride, 0);
+                long sum = 0;
+                for (int i = 0; i < px.Length; i += 4) sum += (px[i] * 114 + px[i + 1] * 587 + px[i + 2] * 299) / 1000;
+                return sum / Math.Max(1, px.Length / 4) < 18;
+            }
+            catch { return false; }
         }
 
         private static void Save(BitmapSource bmp, string path)
@@ -183,13 +208,14 @@ namespace Selene
             return ffmpeg;
         }
 
-        private static bool FromFfmpeg(string file, string path)
+        private static bool FromFfmpeg(string file, string path, int seconds)
         {
             var exe = Ffmpeg();
             if (exe == null) return false;
             try
             {
-                var psi = new ProcessStartInfo(exe, "-v error -y -ss 1 -i \"" + file + "\" -frames:v 1 -vf \"scale=" + Width + ":-2\" \"" + path + "\"")
+                // from the given second on, the most telling of the next frames (not a fade or a cut)
+                var psi = new ProcessStartInfo(exe, "-v error -y -ss " + seconds + " -i \"" + file + "\" -frames:v 1 -vf \"thumbnail=24,scale=" + Width + ":-2\" \"" + path + "\"")
                 {
                     UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden
                 };

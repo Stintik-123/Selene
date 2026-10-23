@@ -595,14 +595,14 @@
                                                 <Grid RenderTransformOrigin="0.5,0.5" VerticalAlignment="Center">
                                                     <Grid.RenderTransform><ScaleTransform x:Name="PillScale" ScaleX="1" ScaleY="1"/></Grid.RenderTransform>
                                                     <Border x:Name="Glow" CornerRadius="26" Background="{DynamicResource SeleneFocusBrush}" Opacity="0"><Border.Effect><DropShadowEffect ShadowDepth="0" BlurRadius="22" Color="{DynamicResource SeleneFocusColor}" Opacity="0.4"/></Border.Effect></Border>
-                                                    <Border x:Name="Pill" CornerRadius="26" Height="52" MinWidth="{TemplateBinding MinWidth}" Padding="{TemplateBinding Padding}" Background="{DynamicResource SeleneGlassBrush}" BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1">
+                                                    <Border x:Name="Pill" CornerRadius="26" Height="52" MinWidth="{TemplateBinding MinWidth}" Padding="{TemplateBinding Padding}" Background="#DBFFFFFF" BorderThickness="0">
                                                         <!-- the label inherits the Button's own Foreground (logical tree), not the presenter's: set it there -->
                                                         <ContentPresenter x:Name="Label" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                 </Grid>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsKeyboardFocused" Value="False">
-                                                        <Setter Property="Foreground" Value="{DynamicResource SeleneInkBrush}"/>
+                                                        <Setter Property="Foreground" Value="#FF15181E"/>
                                                     </Trigger>
                                                     <Trigger Property="IsKeyboardFocused" Value="True">
                                                         <Setter TargetName="Pill" Property="Background" Value="{DynamicResource SeleneFocusBrush}"/>
@@ -1098,9 +1098,11 @@
                                         </Grid.Resources>
                                         <StackPanel>
                                             <TextBlock Text="No screenshots for this game" FontSize="18" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk60Brush}" Visibility="{DynamicResource SeleneShotsNone}"/>
-                                            <ScrollViewer x:Name="SeleneShotStrip" Width="1780" Margin="-10,-10,0,0" Padding="10" Focusable="False" CanContentScroll="False"
+                                            <!-- (the room for the focused tile's ring and growth is inside the strip's content: a padding on the scroller
+                                                 sat outside its clip, so the first tile's ring was cut) -->
+                                            <ScrollViewer x:Name="SeleneShotStrip" Width="1788" Margin="-14,-14,0,0" Padding="0" Focusable="False" CanContentScroll="False"
                                                           HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
-                                                <StackPanel x:Name="SeleneShotTiles" Orientation="Horizontal">
+                                                <StackPanel x:Name="SeleneShotTiles" Orientation="Horizontal" Margin="14">
                                                     <ButtonEx x:Name="SeleneShotTile0" Tag="0" Style="{StaticResource SeleneShotTileStyle}" Visibility="{DynamicResource SeleneShot0Vis}">
                                                         <Image Source="{DynamicResource SeleneShot0}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                     </ButtonEx>
