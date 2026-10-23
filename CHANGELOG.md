@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Selene settings: a long group scrolls to keep the focused row in view (Spotlight's rows ran off the screen and the focus went on into rows you couldn't see).
 - Button names in the hints: Xbox or PlayStation (cross, circle, square, triangle, L1 / R1 / L2 / R2), as Playnite's own Button prompts setting or chosen in Selene settings (Navigation, Button names).
 - Filter tabs (Spotlight, Filter tabs): LB / RB go through Selene's five tabs, your own Playnite filter presets, or both. Presets are applied through Playnite, so they behave exactly as in Playnite, on Spotlight and in Collection.
 - Game details: a game with no captures shows a quiet tile saying so (Down from the screenshots went nowhere and the activity beside it never showed), and More like this fills up with looser matches and your most played games when few are close.

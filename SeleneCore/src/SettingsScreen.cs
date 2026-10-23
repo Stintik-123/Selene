@@ -17,6 +17,7 @@ namespace Selene
 
         private readonly List<Border> groupRows = new List<Border>();
         private readonly StackPanel optionList = new StackPanel();
+        private ScrollViewer scroller;
         private readonly TextBlock groupTitle;
         private readonly List<Border> rows = new List<Border>();
         private readonly List<Border> knobs = new List<Border>();
@@ -76,7 +77,9 @@ namespace Selene
             var right = new StackPanel { Margin = new Thickness(24, 0, 0, 0) };
             groupTitle = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(8, 14, 0, 16) };
             right.Children.Add(groupTitle);
-            right.Children.Add(optionList);
+            // the rows scroll (a long group ran off the screen, and the focus went on into rows you couldn't see)
+            scroller = new ScrollViewer { Content = optionList, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, MaxHeight = 780, Focusable = false, CanContentScroll = false };
+            right.Children.Add(scroller);
             Grid.SetColumn(right, 1);
             layout.Children.Add(right);
 
@@ -156,6 +159,21 @@ namespace Selene
             }
             for (int i = 0; i < rows.Count; i++)
                 rows[i].BorderBrush = inOptions && i == index ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
+            // the focused row in view
+            if (inOptions && index < rows.Count && scroller != null)
+            {
+                try
+                {
+                    var row = rows[index];
+                    var top = row.TranslatePoint(new Point(0, 0), optionList).Y;
+                    double want = scroller.VerticalOffset;
+                    if (top < scroller.VerticalOffset) want = top;
+                    else if (top + row.ActualHeight > scroller.VerticalOffset + scroller.ViewportHeight) want = top + row.ActualHeight - scroller.ViewportHeight;
+                    if (Math.Abs(want - scroller.VerticalOffset) > 0.5) scroller.ScrollToVerticalOffset(want);
+                }
+                catch { }
+            }
+            else if (!inOptions && scroller != null) scroller.ScrollToVerticalOffset(0);
         }
 
         public override void Handle(string b)
