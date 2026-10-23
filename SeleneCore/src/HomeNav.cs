@@ -4428,25 +4428,45 @@ namespace Selene
             if (!fade || black == null) { if (after != null) after(); try { cw.Close(); } catch { } return; }
             Action fadeIntoGame = () =>
             {
-                // black now: the game comes forward under it, then the black fades away (0.7 s) so the game fades in
+                // black now: a black veil of its own goes over everything, the loading screen under it closes, the game comes
+                // forward under the veil, and the veil melts away (0.7 s) so the game fades in. The veil is a window made
+                // see-through from the start, which WPF fades reliably; turning the loading screen itself into one after the
+                // fact left it blank at once (a cut, with a flash of what was behind).
                 // (a game in exclusive fullscreen still cuts in: nothing can be drawn over it)
-                if (after != null) after();
-                var hwnd = new System.Windows.Interop.WindowInteropHelper(cw).Handle;
-                if (hwnd == IntPtr.Zero) { try { cw.Close(); } catch { } return; }
-                SetWindowLong(hwnd, -20 /* GWL_EXSTYLE */, GetWindowLong(hwnd, -20) | 0x80000 /* WS_EX_LAYERED */ | 0x20 /* WS_EX_TRANSPARENT */);
-                SetLayeredWindowAttributes(hwnd, 0, 255, 0x2 /* LWA_ALPHA */);
-                var clock = System.Diagnostics.Stopwatch.StartNew();
-                var fadeIn = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(15) };
-                fadeIn.Tick += (s2, e2) =>
+                Window veil = null;
+                try
                 {
-                    double ms = clock.ElapsedMilliseconds - 300;  // a beat of black while the game draws its first frames
-                    double k = Math.Max(0, Math.Min(1, ms / 700.0));
-                    double eased = k * k * (3 - 2 * k);
-                    SetWindowPos(hwnd, new IntPtr(-1) /* HWND_TOPMOST */, 0, 0, 0, 0, 0x0013 /* NOSIZE|NOMOVE|NOACTIVATE */);
-                    SetLayeredWindowAttributes(hwnd, 0, (byte)(255 * (1 - eased)), 0x2);
-                    if (k >= 1) { fadeIn.Stop(); try { cw.Close(); } catch { } }
+                    veil = new Window
+                    {
+                        WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, AllowsTransparency = true, Background = Brushes.Black,
+                        Topmost = true, ShowInTaskbar = false, ShowActivated = false, Left = cw.Left, Top = cw.Top, Width = cw.Width, Height = cw.Height,
+                        Title = "SeleneLaunchVeil", Opacity = 1
+                    };
+                    var v0 = veil;
+                    veil.SourceInitialized += (s3, e3) =>
+                    {
+                        var h = new System.Windows.Interop.WindowInteropHelper(v0).Handle;
+                        SetWindowLong(h, -20 /* GWL_EXSTYLE */, GetWindowLong(h, -20) | 0x20 /* WS_EX_TRANSPARENT */ | 0x08000000 /* WS_EX_NOACTIVATE */);
+                        DisableWindowTransitions(h);
+                    };
+                    veil.Show();
+                }
+                catch (Exception ex) { Log("launch veil: " + ex.Message); veil = null; }
+                try { cw.Close(); } catch { }
+                if (after != null) after();   // the game forward, under the veil
+                if (veil == null) return;
+                var v = veil;
+                var hold = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };   // a beat of black while the game draws its first frames
+                hold.Tick += (s4, e4) =>
+                {
+                    hold.Stop();
+                    var h = new System.Windows.Interop.WindowInteropHelper(v).Handle;
+                    if (h != IntPtr.Zero) SetWindowPos(h, new IntPtr(-1) /* HWND_TOPMOST */, 0, 0, 0, 0, 0x0013 /* NOSIZE|NOMOVE|NOACTIVATE */);
+                    var melt = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(700)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
+                    melt.Completed += (s5, e5) => { try { v.Close(); } catch { } };
+                    v.BeginAnimation(UIElement.OpacityProperty, melt);
                 };
-                fadeIn.Start();
+                hold.Start();
             };
             if (coverDark) { fadeIntoGame(); return; }
             var anim = new DoubleAnimation(1, TimeSpan.FromMilliseconds(800)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
