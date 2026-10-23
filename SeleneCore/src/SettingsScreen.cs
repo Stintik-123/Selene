@@ -30,8 +30,12 @@ namespace Selene
         // a deep, even shade: the settings read clearly over anything
         public override Brush OverlayShade { get { return Ink.Brush("SeleneScrimColor", 0.94); } }
 
-        public SettingsScreen()
+        // opened from the menu: B goes back to it (on this item); held Start from the home: B goes back to the home
+        private readonly bool fromMenu;
+
+        public SettingsScreen(bool fromMenu = false)
         {
+            this.fromMenu = fromMenu;
             var layout = new Grid { Margin = new Thickness(120, 110, 120, 110) };
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(400) });
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -139,7 +143,7 @@ namespace Selene
         {
             if (!inOptions)
             {
-                if (b == "B") { Ui.Back(); LoginScene.Show(new MenuScreen(), -1); return; }
+                if (b == "B") { Ui.Back(); if (fromMenu) LoginScene.Show(new MenuScreen(true), -1); else LoginScene.Finish(); return; }
                 if ((b == "A" || b == "DPadRight") && options.Count > 0) { inOptions = true; index = 0; Ui.Tick(); ShowFocus(); return; }
                 int next = group + (b == "DPadDown" ? 1 : b == "DPadUp" ? -1 : 0);
                 if (next == group || next < 0 || next >= groupRows.Count) return;

@@ -30,9 +30,12 @@ namespace Selene
         private readonly Queue<string> installQueue = new Queue<string>();
         private bool settingUpLudusavi;
 
-        public SetupScreen(bool firstRun)
+        private readonly bool fromMenu;   // B goes back to the menu (on Setup check) instead of the home
+
+        public SetupScreen(bool firstRun, bool fromMenu = false)
         {
             this.firstRun = firstRun;
+            this.fromMenu = fromMenu;
             items = SetupCheck.Run(HomeNav.Api);
             var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -20, 0, 0) };
             col.Children.Add(Ui.Title("Let's get Selene ready"));
@@ -260,7 +263,8 @@ namespace Selene
             {
                 if (firstRun) { Ui.Shake(Root.Children[0]); return; }
                 Ui.Back();
-                LoginScene.Finish();
+                if (fromMenu) LoginScene.Show(new MenuScreen(true), -1);
+                else LoginScene.Finish();
                 return;
             }
             if (b == "A") { Activate(); return; }

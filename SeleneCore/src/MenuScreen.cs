@@ -62,7 +62,10 @@ namespace Selene
             }
         }
 
-        public MenuScreen()
+        // the item last opened from the menu: coming back to the menu (B in that screen) puts the focus on it again
+        private static string lastOpened;
+
+        public MenuScreen(bool returning = false)
         {
             var profile = Profiles.Active;
             items.Add(new Item { Icon = Ui.Icon(0xe853), Label = profile != null ? profile.Name : "Switch profile", Sub = profile != null ? "Switch profile" : null, Picture = profile != null ? WhoScreen.Avatar(profile, 52) : null, Run = () => LoginScene.Show(new WhoScreen(null), 1) });
@@ -70,12 +73,13 @@ namespace Selene
             items.Add(new Item { Icon = Ui.Icon(0xe40a), Label = "Theme", Run = ChangeTheme });
             items.Add(new Item { Icon = Ui.Icon(0xe627), Label = "Update library", Run = UpdateLibrary });
             items.Add(new Item { Icon = Ui.Icon(0xeb40), Label = "Random game", Run = () => Later(() => PlayniteMenu.Main("SelectRandomGameCommand")) });
-            items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Run = () => LoginScene.Show(new SettingsScreen(), 1) });
-            items.Add(new Item { Icon = Ui.Icon(0xf0c5), Label = "Setup check", Run = () => LoginScene.Show(new SetupScreen(false), 1) });
+            items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Run = () => LoginScene.Show(new SettingsScreen(true), 1) });
+            items.Add(new Item { Icon = Ui.Icon(0xf0c5), Label = "Setup check", Run = () => LoginScene.Show(new SetupScreen(false, true), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe8b8), Label = "Playnite settings", Run = () => Later(PlayniteMenu.OpenSettings) });
             items.Add(new Item { Icon = Ui.Icon(0xe30c), Label = "Desktop mode", Run = () => Later(() => PlayniteMenu.Main("SwitchToDesktopCommand")) });
             items.Add(new Item { Icon = Ui.Icon(0xe8ac), Label = "Power", Run = OpenPower });
 
+            if (returning && lastOpened != null) index = Math.Max(0, items.FindIndex(i => i.Label == lastOpened));
             foreach (var item in items)
             {
                 var cell = new Grid { Width = Cell, Height = Ring + 74 };
@@ -141,6 +145,7 @@ namespace Selene
             {
                 var item = items[index];
                 Ui.Confirm();
+                lastOpened = item.Label;
                 try { item.Run(); }
                 catch (Exception ex) { HomeNav.Log("menu: " + item.Label + " failed: " + ex); Ui.Shake(cells[index]); }
                 return;
@@ -259,14 +264,14 @@ namespace Selene
         {
             var p = Profiles.Active;
             if (p == null) { LoginScene.Show(new WhoScreen(null), 1); return; }
-            LoginScene.Show(new ProfileSteps(p, null, q => LoginScene.Finish(), 2), 1);
+            LoginScene.Show(new ProfileSteps(p, () => new MenuScreen(true), q => LoginScene.Finish(), 2), 1);
         }
 
         private static void EditProfile()
         {
             var p = Profiles.Active;
             if (p == null) { LoginScene.Show(new WhoScreen(null), 1); return; }
-            LoginScene.Show(new ProfileSteps(p, null, q => LoginScene.Finish()), 1);
+            LoginScene.Show(new ProfileSteps(p, () => new MenuScreen(true), q => LoginScene.Finish()), 1);
         }
     }
 
