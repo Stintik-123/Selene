@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- New library: the whole library in one horizontal row under a stage with the game's logo and stats; rest on a game and its trailer plays in a card above the row with the game's song (Selene settings, Library trailers).
 - The View button switches between the home and the library (it opened Playnite's settings); hold View to search the library, hold Start for Selene settings.
 - Moving in the menu no longer moves the home row behind it.
 - Switching back to Playnite while a game runs (taskbar, Alt+Tab) opens the home on the running game, with Resume and Close Game, instead of Playnite's "is running" screen.

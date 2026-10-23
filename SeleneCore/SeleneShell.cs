@@ -46,6 +46,7 @@ namespace Selene
             if (library == null || hub == null) return false;
             library.Command = new Relay(ShowLibrary);
             LoginScene.AttachHomeGlow(main);   // the login's glow behind the home's cards
+            LibraryStage.Attach(main);         // the library's trailer card
             // Playnite's "game is running" screen (switching back to Playnite while a game runs): the home instead
             var status = HomeNav.FindByName(main, "PART_ElemGameStatus") as UIElement;
             if (status != null) status.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) HomeNav.GameStatusShown(); };
@@ -110,7 +111,7 @@ namespace Selene
             library.Visibility = Visibility.Visible;
             library.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
             home.Visibility = Visibility.Collapsed;
-            HomeNav.SetMusic("normal");   // the library: the music add-on as usual
+            HomeNav.SetMusic("home");   // the library like the home: the default track, a game's song with its trailer
             var list = Part("PART_ListGameItems") as ListBox;
             if (list != null) main.Dispatcher.BeginInvoke(new Action(() =>
             {

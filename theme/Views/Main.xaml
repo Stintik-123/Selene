@@ -27,24 +27,122 @@
                         </Grid.Resources>
                         <Grid x:Name="PART_ViewHost" Background="{DynamicResource SeleneScrimBrush}">
 
-                            <!-- ================= LIBRARY (Playnite's grid) ================= -->
+                            <!-- ================= LIBRARY ================= -->
+                            <!-- Selene's own: a stage on top (the game's logo and stats, its trailer in a card on the right, played by
+                                 Selene Core in SeleneLibraryTrailerHost once you rest on a game) and the whole library in one
+                                 horizontal row below, over the selected game's art. PART_* names are Playnite's. -->
                             <Grid x:Name="SeleneLibrary" Visibility="Collapsed">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="110" />
                                     <RowDefinition Height="*" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="96" />
                                 </Grid.RowDefinitions>
-                                <Border Grid.RowSpan="3" Background="{DynamicResource MainBackgourndBrush}"/>
-                                <Image Grid.RowSpan="3" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
-                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="3" HorizontalAlignment="Center" VerticalAlignment="Top" Opacity="0.35"/>
-                                <DockPanel Grid.Row="1">
-                                    <Filters x:Name="PART_ElemFilters" DockPanel.Dock="Left" Focusable="False" />
-                                    <FiltersAdditional x:Name="PART_ElemFiltersAdditional" DockPanel.Dock="Left" Focusable="False" />
-                                    <ContentControl x:Name="PART_ContentFilterItems" DockPanel.Dock="Left" Focusable="False" />
-                                    <ListBoxEx x:Name="PART_ListGameItems" Margin="25,0,25,0" Background="Transparent" BorderThickness="0"
-                                               DockPanel.Dock="Right" KeyboardNavigation.DirectionalNavigation="Once" />
-                                </DockPanel>
-                                <TextBlock Grid.Row="1" FontSize="40" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center"
+                                <Border Grid.RowSpan="4" Background="{DynamicResource MainBackgourndBrush}"/>
+                                <Image Grid.RowSpan="4" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
+                                <!-- the selected game's art fills the screen; shaded from the left (text) and the bottom (the row) -->
+                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                                <Border Grid.RowSpan="4" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}">
+                                    <Border.OpacityMask>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#E6000000" Offset="0"/>
+                                            <GradientStop Color="#80000000" Offset="0.45"/>
+                                            <GradientStop Color="#1A000000" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.OpacityMask>
+                                </Border>
+                                <Border Grid.RowSpan="4" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}">
+                                    <Border.OpacityMask>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#00000000" Offset="0.35"/>
+                                            <GradientStop Color="#B3000000" Offset="0.7"/>
+                                            <GradientStop Color="#F2000000" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.OpacityMask>
+                                </Border>
+
+                                <!-- stage: the game on the left, its trailer card on the right -->
+                                <Grid Grid.Row="1" Margin="100,10,100,24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Bottom" Margin="0,0,40,10">
+                                        <TextBlock x:Name="SeleneLibraryLogoPath" Tag="{Api Paths.ConfigurationPath}" Visibility="Collapsed">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}{0}\ExtraMetadata\games\{1}\logo.png">
+                                                    <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
+                                                    <Binding Path="SelectedGame.Id"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                        <Grid Height="160" HorizontalAlignment="Left">
+                                            <Image x:Name="SeleneLibraryLogo" Source="{Binding ElementName=SeleneLibraryLogoPath, Path=Text, Converter={StaticResource ImageStringToImageConverter}, NotifyOnTargetUpdated=True}"
+                                                   MaxWidth="560" MaxHeight="160" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Bottom" RenderOptions.BitmapScalingMode="Fant">
+                                                <Image.RenderTransform><TranslateTransform x:Name="LibraryLogoShift" X="0"/></Image.RenderTransform>
+                                                <Image.Triggers>
+                                                    <EventTrigger RoutedEvent="Binding.TargetUpdated">
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
+                                                                    <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
+                                                                    <LinearDoubleKeyFrame KeyTime="0:0:0.15" Value="0"/>
+                                                                    <LinearDoubleKeyFrame KeyTime="0:0:0.45" Value="1"/>
+                                                                </DoubleAnimationUsingKeyFrames>
+                                                                <DoubleAnimation Storyboard.TargetName="LibraryLogoShift" Storyboard.TargetProperty="X" From="-24" To="0" BeginTime="0:0:0.15" Duration="0:0:0.3">
+                                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger>
+                                                </Image.Triggers>
+                                            </Image>
+                                            <TextBlock Text="{Binding SelectedGame.DisplayName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="50" FontFamily="{DynamicResource FontMain}"
+                                                       VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxHeight="140">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ElementName=SeleneLibraryLogo, Path=Source}" Value="{x:Null}">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                        <StackPanel Orientation="Horizontal" Margin="4,26,0,0">
+                                            <StackPanel Margin="0,0,26,0">
+                                                <TextBlock Text="PLAYTIME" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                <TextBlock Text="{Binding SelectedGame.Playtime, Mode=OneWay, Converter={StaticResource PlayTimeToStringConverter}}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                            <StackPanel Margin="0,0,26,0">
+                                                <TextBlock Text="LAST PLAYED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                <TextBlock Text="{Binding SelectedGame.LastActivity, Mode=OneWay, StringFormat='{}{0:MMM d, yyyy}', TargetNullValue=Never}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                            <StackPanel>
+                                                <TextBlock Text="PLATFORM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <!-- the trailer card: Selene Core puts the player in here and fades the card in -->
+                                    <Border x:Name="SeleneLibraryTrailerCard" Grid.Column="1" Width="820" Height="461" VerticalAlignment="Bottom" CornerRadius="18" Opacity="0"
+                                            BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1" Background="Black" RenderTransformOrigin="0.5,0.5" IsHitTestVisible="False">
+                                        <Border.RenderTransform><ScaleTransform ScaleX="0.96" ScaleY="0.96"/></Border.RenderTransform>
+                                        <Border.Effect><DropShadowEffect ShadowDepth="0" BlurRadius="40" Opacity="0.5" Color="Black"/></Border.Effect>
+                                        <Grid x:Name="SeleneLibraryTrailerHost" ClipToBounds="True">
+                                            <Grid.Clip><RectangleGeometry Rect="0,0,818,459" RadiusX="17" RadiusY="17"/></Grid.Clip>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+
+                                <!-- the whole library, one horizontal row -->
+                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="300" Margin="70,0,70,0" Background="Transparent" BorderThickness="0"
+                                           KeyboardNavigation.DirectionalNavigation="Once" />
+                                <TextBlock Grid.Row="2" FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center"
                                            HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource TextBlockBaseStyle}">
@@ -57,15 +155,22 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <Grid Grid.Row="2" Height="100">
+
+                                <!-- Playnite's filter panels open over the left side -->
+                                <StackPanel Grid.Row="1" Grid.RowSpan="2" Orientation="Horizontal" HorizontalAlignment="Left" Panel.ZIndex="10">
+                                    <Filters x:Name="PART_ElemFilters" Focusable="False" />
+                                    <FiltersAdditional x:Name="PART_ElemFiltersAdditional" Focusable="False" />
+                                    <ContentControl x:Name="PART_ContentFilterItems" Focusable="False" />
+                                </StackPanel>
+
+                                <!-- bottom: Playnite's actions, search / filter state, progress -->
+                                <Grid Grid.Row="3" Margin="70,0,70,0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="100" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="100" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <ButtonEx x:Name="PART_ButtonInstall" Style="{DynamicResource ButtonBottomMenu}" Content="{DynamicResource LOCInstallGame}" />
                                         <ButtonEx x:Name="PART_ButtonPlay" Style="{DynamicResource ButtonBottomMenu}" Content="{DynamicResource LOCPlayGame}" />
                                         <ButtonEx x:Name="PART_ButtonDetails" Style="{DynamicResource ButtonBottomMenu}" Content="{DynamicResource LOCGameDetails}" />
@@ -73,15 +178,15 @@
                                         <ButtonEx x:Name="PART_ButtonSearch" Style="{DynamicResource ButtonBottomMenu}" Content="{DynamicResource LOCSearchLabel}" />
                                         <ButtonEx x:Name="PART_ButtonFilter" Style="{DynamicResource ButtonBottomMenu}" Content="{DynamicResource LOCFilter}" />
                                     </StackPanel>
-                                    <StackPanel Grid.Column="2" x:Name="PART_ElemSearchActive" VerticalAlignment="Top" HorizontalAlignment="Stretch" Margin="0,15,0,0">
-                                        <TextBlock FontSize="18" TextAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}" Text="{DynamicResource LOCGameListSearchResults}"/>
+                                    <StackPanel Grid.Column="1" x:Name="PART_ElemSearchActive" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock FontSize="16" TextAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}" Text="{DynamicResource LOCGameListSearchResults}"/>
                                         <TextBlock Foreground="{DynamicResource TextBrush}" TextAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}" Text="{Binding AppSettings.Fullscreen.FilterSettings.Name}"/>
                                     </StackPanel>
-                                    <TextBlock Grid.Column="2" x:Name="PART_ElemExtraFilterActive" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                    <TextBlock Grid.Column="1" x:Name="PART_ElemExtraFilterActive" FontSize="18" VerticalAlignment="Center" HorizontalAlignment="Center"
                                                TextAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}" Text="{DynamicResource LOCGameListExtraFiltered}"/>
-                                    <StackPanel x:Name="PART_ElemProgressIndicator" Orientation="Horizontal" Grid.Column="3" VerticalAlignment="Center">
-                                        <TextBlock x:Name="PART_TextProgressTooltip" Margin="0,0,15,0" FontSize="20" VerticalAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}"/>
-                                        <ContentControl Style="{DynamicResource ProgressIndicator}" Focusable="False" Height="38" Width="38" VerticalAlignment="Center" />
+                                    <StackPanel x:Name="PART_ElemProgressIndicator" Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center">
+                                        <TextBlock x:Name="PART_TextProgressTooltip" Margin="0,0,15,0" FontSize="18" VerticalAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}"/>
+                                        <ContentControl Style="{DynamicResource ProgressIndicator}" Focusable="False" Height="34" Width="34" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Grid>
                             </Grid>

@@ -597,6 +597,9 @@ namespace Selene
                 var fs = settings.GetType().GetProperty("Fullscreen").GetValue(settings, null);
                 var hl = fs.GetType().GetProperty("HorizontalLayout");
                 if (hl != null && !Equals(hl.GetValue(fs, null), true)) { hl.SetValue(fs, true, null); Log("library layout -> horizontal"); }
+                // Selene's library is one row under the trailer stage
+                var rows = fs.GetType().GetProperty("Rows");
+                if (rows != null && rows.PropertyType == typeof(int) && !Equals(rows.GetValue(fs, null), 1)) { rows.SetValue(fs, 1, null); Log("library rows -> 1"); }
             }
             catch (Exception ex) { Log("horizontal: " + ex.Message); }
         }
@@ -1192,6 +1195,15 @@ namespace Selene
         private static bool previewSound;          // stays on for the session once switched on
         private static TimeSpan? pendingSeek;
 
+        // the library's trailer card: the short silent clip when there is one, else the full trailer (played muted)
+        public static bool TrailerFor(object game, out string path, out bool silent)
+        {
+            path = game is string ? null : TrailerPath(game);
+            silent = path != null;
+            if (path == null && !(game is string)) path = FullTrailerPath(game);
+            return path != null;
+        }
+
         private static string FullTrailerPath(object game)
         {
             var id = Prop(game, "Id");
@@ -1239,7 +1251,7 @@ namespace Selene
         //   "login"   behind the login screens: its default track
         //   "home"    the home row: its default track too (like the legacy theme), never the selected game's song
         //   "trailer" a game's trailer card is open: that game's song
-        //   "normal"  the library: UniPlaySong as usual
+        //   "normal"  UniPlaySong as usual
         private static string musicMode;
 
         public static void SetMusic(string mode)
