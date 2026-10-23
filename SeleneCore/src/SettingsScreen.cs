@@ -53,6 +53,7 @@ namespace Selene
         public override void Shown()
         {
             for (int i = 0; i < rows.Count; i++) { Ui.Rise(rows[i], 60 + i * 45, 14, 280); ShowSwitch(i, false); }
+            Ui.Play("OpenPanel.wav", 0.8);
             ShowFocus();
         }
 
