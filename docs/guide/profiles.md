@@ -2,8 +2,6 @@
 
 # Profiles and the first launch
 
-![Who's playing?](../screenshots/who.png)
-
 **Who's playing?** shows at start (switch: *Who's playing?*; off, the last profile signs in by itself). Each person has
 their own name, avatar, theme, wallpaper, favorites, recently played and play time. Y edits a profile, X removes it,
 the + makes one.
