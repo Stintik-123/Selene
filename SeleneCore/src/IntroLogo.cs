@@ -20,7 +20,7 @@ namespace Selene
         private Dispatcher logoThread;
 
         // the mark, and under it the name in the logo's lettering (theme\Images\wordmark.png, painted in the theme's ink)
-        private const double LetterWidth = 1.3, LetterGap = 0.1;
+        private const double LetterWidth = 0.92, LetterGap = 0.06;   // narrower than the mark: wider, the S fell outside the logo's box and was cut off
         private const double LetterRatio = 117.0 / 900.0;
         public static double HeightFor(double size) { return size * (1 + LetterGap + LetterWidth * LetterRatio); }
 
