@@ -55,7 +55,8 @@ namespace Selene
                 Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0, 0.55), Ink.Stop("SeleneScrimColor", 0.9, 1) }, 90)
             });
 
-            var page = new Grid { RenderTransform = pageShift };
+            // taller than the screen (sized to it, the "More from" row below the edge was cut off even after gliding up)
+            var page = new Grid { RenderTransform = pageShift, Height = 1700, VerticalAlignment = VerticalAlignment.Top };
             Root.Children.Add(page);
 
             // left: the store, the name, the facts, the price, the description, the buttons
