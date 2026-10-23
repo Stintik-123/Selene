@@ -7,127 +7,47 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace Selene
 {
-    // Selene's own menu (replaces Playnite's list), like a console's control center: a panel along the bottom over the
-    // lightly shaded home, with who's signed in and the time on its top line, one row of tiles for Selene and Playnite,
-    // a row for power and the focused tile's description. Start or the menu button opens it; B or Start closes it.
+    // Selene's own menu (replaces Playnite's list), like a console's control center: one row of solid icons along the
+    // bottom over the lightly shaded home. The focused icon gets a ring and its name above it; Power opens a short list
+    // (sleep, restart, shut down, exit) above its icon. Start or the menu button opens it; B or Start closes it.
     public class MenuScreen : Screen
     {
         private class Item
         {
-            public string Glyph, Label, About;
+            public string Icon, Label;
+            public FrameworkElement Picture;   // instead of an icon (the profile's avatar)
             public Action Run;
         }
 
-        private readonly List<List<Item>> rows = new List<List<Item>>();
-        private readonly List<List<Tile>> tiles = new List<List<Tile>>();
-        private readonly List<FrameworkElement> rowPanels = new List<FrameworkElement>();
-        private readonly TextBlock about, clock;
-        private readonly DispatcherTimer clockTimer;
-        private readonly Border panel;
-        private int row, col;
+        private const double Cell = 96, Ring = 70;
+        private readonly List<Item> items = new List<Item>();
+        private readonly List<Grid> cells = new List<Grid>();
+        private readonly List<Ellipse> rings = new List<Ellipse>();
+        private readonly List<TextBlock> labels = new List<TextBlock>();
+        private readonly List<ScaleTransform> scales = new List<ScaleTransform>();
+        private readonly StackPanel bar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 70) };
+        private readonly TextBlock status = new TextBlock { FontSize = 16, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 30) };
+        private Border powerList;
+        private readonly List<Border> powerRows = new List<Border>();
+        private int index, powerIndex;
         private bool leaving;
+
+        private static readonly object[][] PowerItems =
+        {
+            new object[] { 0xef44, "Sleep", 0 },
+            new object[] { 0xf053, "Restart", 1 },
+            new object[] { 0xe8ac, "Shut down", 2 },
+            new object[] { 0xe9ba, "Exit Playnite", -1 },
+        };
 
         public override bool Overlay { get { return true; } }
 
-        public MenuScreen()
-        {
-            var profile = Profiles.Active;
-            rows.Add(new List<Item>
-            {
-                new Item { Glyph = "\uE77B", Label = "Switch profile", About = "Back to Who's playing?", Run = () => LoginScene.Show(new WhoScreen(null), 1) },
-                new Item { Glyph = "\uE70F", Label = "Edit profile", About = "Your name, avatar, theme and background.", Run = EditProfile },
-                new Item { Glyph = "\uE72C", Label = "Update library", About = "Look for new games in your stores and folders.", Run = UpdateLibrary },
-                new Item { Glyph = "\uE8B1", Label = "Random game", About = "Let Selene pick something to play.", Run = () => Later(() => PlayniteMenu.Main("SelectRandomGameCommand")) },
-                new Item { Glyph = "\uE771", Label = "Selene settings", About = "Turn Selene's features on or off: intro, login, sounds and more.", Run = () => LoginScene.Show(new SettingsScreen(), 1) },
-                new Item { Glyph = "\uE90F", Label = "Setup check", About = "Add-ons, save backups and what Selene needs.", Run = () => LoginScene.Show(new SetupScreen(false), 1) },
-            });
-            int seleneCount = rows[0].Count;
-            // Playnite's tiles go on the same row as Selene's (a thin divider between them)
-            rows[0].AddRange(new List<Item>
-            {
-                new Item { Glyph = "\uE713", Label = "Settings", About = "Playnite's settings: libraries, controller, audio and more.", Run = () => Later(PlayniteMenu.OpenSettings) },
-                new Item { Glyph = "\uEA86", Label = "Extensions", About = "What your add-ons offer from here.", Run = () => Later(PlayniteMenu.OpenExtensions) },
-                new Item { Glyph = "\uE7F4", Label = "Desktop mode", About = "Switch Playnite to its desktop window.", Run = () => Later(() => PlayniteMenu.Main("SwitchToDesktopCommand")) },
-                new Item { Glyph = "\uE712", Label = "More", About = "Playnite's own menu: tools, store clients and the rest.", Run = () => Later(PlayniteMenu.OpenOriginal) },
-            });
-            rows.Add(new List<Item>
-            {
-                new Item { Glyph = "\uE708", Label = "Sleep", About = "Put the PC to sleep.", Run = () => Power.Run(0) },
-                new Item { Glyph = "\uE777", Label = "Restart", About = "Restart the PC.", Run = () => Power.Run(1) },
-                new Item { Glyph = "\uE7E8", Label = "Shut down", About = "Turn the PC off.", Run = () => Power.Run(2) },
-                new Item { Glyph = "\uE711", Label = "Exit Playnite", About = "Close Playnite.", Run = () => Later(() => PlayniteMenu.Run("ExitCommand")) },
-            });
-
-            var body = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
-
-            // top line: who's signed in on the left, the time on the right
-            var header = new Grid { Margin = new Thickness(6, 0, 6, 22) };
-            var who = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left };
-            if (profile != null)
-            {
-                var face = WhoScreen.Avatar(profile, 46);
-                face.Margin = new Thickness(0, 0, 14, 0);
-                who.Children.Add(face);
-            }
-            var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            names.Children.Add(new TextBlock { Text = profile != null ? profile.Name : "Selene", FontSize = 22, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor") });
-            names.Children.Add(new TextBlock { Text = profile != null ? "Signed in" : "No profile", FontSize = 13, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6) });
-            who.Children.Add(names);
-            header.Children.Add(who);
-            clock = new TextBlock { FontSize = 30, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
-            header.Children.Add(clock);
-            body.Children.Add(header);
-            clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
-            clockTimer.Tick += (s, e) => clock.Text = DateTime.Now.ToString("t");
-            clock.Text = DateTime.Now.ToString("t");
-
-            // row 1: Selene's tiles, a thin divider, Playnite's; row 2: power, smaller (icon and label side by side)
-            for (int r = 0; r < rows.Count; r++)
-            {
-                bool power = r == 1;
-                var line = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, power ? 14 : 0, 0, 0) };
-                var rowTiles = new List<Tile>();
-                for (int c = 0; c < rows[r].Count; c++)
-                {
-                    var item = rows[r][c];
-                    if (!power && c == seleneCount)
-                        line.Children.Add(new Border { Width = 1, Height = 70, Background = Ink.Brush("SeleneInkColor", 0.18), Margin = new Thickness(10, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center });
-                    var t = power ? new Tile(150, 56, 16, 5) { FocusScale = 1.05 } : new Tile(146, 112, 18, 5) { FocusScale = 1.07 };
-                    var sp = new StackPanel { Orientation = power ? Orientation.Horizontal : Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-                    sp.Children.Add(new TextBlock { Text = item.Glyph, FontFamily = Ui.Glyphs, FontSize = power ? 18 : 26, Foreground = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
-                    sp.Children.Add(new TextBlock
-                    {
-                        Text = item.Label, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center,
-                        TextTrimming = TextTrimming.CharacterEllipsis, Margin = power ? new Thickness(10, 0, 0, 1) : new Thickness(0, 10, 0, 0)
-                    });
-                    t.Face.Child = sp;
-                    t.Root.Margin = new Thickness(6, 0, 6, 0);
-                    line.Children.Add(t.Root);
-                    rowTiles.Add(t);
-                }
-                body.Children.Add(line);
-                tiles.Add(rowTiles);
-                rowPanels.Add(line);
-            }
-            about = new TextBlock { FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.75), Margin = new Thickness(8, 20, 0, 0) };
-            body.Children.Add(about);
-
-            panel = new Border
-            {
-                Child = body, VerticalAlignment = VerticalAlignment.Bottom, Padding = new Thickness(60, 30, 60, 96),
-                Background = Ink.Brush("SeleneGlassColor", 0.55), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(0, 1, 0, 0),
-                RenderTransform = new TranslateTransform()
-            };
-            Root.Children.Add(panel);
-            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Close")));
-            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Select")));
-        }
-
-        // the home stays in view above the panel: a light shade at the top, deeper toward the panel
+        // the home stays in view: a light shade at the top, deeper toward the icons
         public override Brush OverlayShade
         {
             get
@@ -135,56 +55,171 @@ namespace Selene
                 var c = ((SolidColorBrush)Ink.Brush("SeleneScrimColor")).Color;
                 return new LinearGradientBrush(new GradientStopCollection
                 {
-                    new GradientStop(Color.FromArgb(0x55, c.R, c.G, c.B), 0),
-                    new GradientStop(Color.FromArgb(0x88, c.R, c.G, c.B), 0.45),
-                    new GradientStop(Color.FromArgb(0xE0, c.R, c.G, c.B), 1)
+                    new GradientStop(Color.FromArgb(0x66, c.R, c.G, c.B), 0),
+                    new GradientStop(Color.FromArgb(0x99, c.R, c.G, c.B), 0.55),
+                    new GradientStop(Color.FromArgb(0xEE, c.R, c.G, c.B), 1)
                 }, 90);
             }
         }
 
-        public override void Shown()
+        public MenuScreen()
         {
-            // the panel slides up from the bottom edge, its rows follow
-            ((TranslateTransform)panel.RenderTransform).BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(80, 0, TimeSpan.FromMilliseconds(280)) { EasingFunction = Ui.Out() });
-            for (int r = 0; r < rowPanels.Count; r++) Ui.Rise(rowPanels[r], 60 + r * 60, 14, 280);
-            clockTimer.Start();
-            Ui.Play("OpenPanel.wav", 0.8);
-            ShowFocus();
+            var profile = Profiles.Active;
+            items.Add(new Item { Icon = Ui.Icon(0xe853), Label = profile != null ? profile.Name + " · Switch profile" : "Switch profile", Picture = profile != null ? WhoScreen.Avatar(profile, 52) : null, Run = () => LoginScene.Show(new WhoScreen(null), 1) });
+            items.Add(new Item { Icon = Ui.Icon(0xe3c9), Label = "Edit profile", Run = EditProfile });
+            items.Add(new Item { Icon = Ui.Icon(0xe627), Label = "Update library", Run = UpdateLibrary });
+            items.Add(new Item { Icon = Ui.Icon(0xeb40), Label = "Random game", Run = () => Later(() => PlayniteMenu.Main("SelectRandomGameCommand")) });
+            items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Run = () => LoginScene.Show(new SettingsScreen(), 1) });
+            items.Add(new Item { Icon = Ui.Icon(0xf0c5), Label = "Setup check", Run = () => LoginScene.Show(new SetupScreen(false), 1) });
+            items.Add(new Item { Icon = Ui.Icon(0xe8b8), Label = "Playnite settings", Run = () => Later(PlayniteMenu.OpenSettings) });
+            items.Add(new Item { Icon = Ui.Icon(0xe87b), Label = "Extensions", Run = () => Later(PlayniteMenu.OpenExtensions) });
+            items.Add(new Item { Icon = Ui.Icon(0xe30c), Label = "Desktop mode", Run = () => Later(() => PlayniteMenu.Main("SwitchToDesktopCommand")) });
+            items.Add(new Item { Icon = Ui.Icon(0xe5d3), Label = "More", Run = () => Later(PlayniteMenu.OpenOriginal) });
+            items.Add(new Item { Icon = Ui.Icon(0xe8ac), Label = "Power", Run = OpenPower });
+
+            foreach (var item in items)
+            {
+                var cell = new Grid { Width = Cell, Height = Ring + 44 };
+                // the name floats above the icon, wider than the cell
+                var label = new TextBlock
+                {
+                    Text = item.Label, FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Opacity = 0,
+                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, TextAlignment = TextAlignment.Center,
+                    Width = 260, Margin = new Thickness(-82, 0, -82, 0), RenderTransform = new TranslateTransform(0, 6)
+                };
+                var dot = new Grid { Width = Ring, Height = Ring, VerticalAlignment = VerticalAlignment.Bottom, RenderTransformOrigin = new Point(0.5, 0.5) };
+                var scale = new ScaleTransform(1, 1);
+                dot.RenderTransform = scale;
+                var ring = new Ellipse { StrokeThickness = 3, Stroke = Ink.Brush("SeleneInkColor"), Fill = Ink.Brush("SeleneInkColor", 0.12), Opacity = 0 };
+                dot.Children.Add(ring);
+                if (item.Picture != null) { item.Picture.HorizontalAlignment = HorizontalAlignment.Center; item.Picture.VerticalAlignment = VerticalAlignment.Center; dot.Children.Add(item.Picture); }
+                else dot.Children.Add(new TextBlock { Text = item.Icon, FontFamily = Ui.Icons, FontSize = 34, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+                cell.Children.Add(label);
+                cell.Children.Add(dot);
+                bar.Children.Add(cell);
+                cells.Add(cell); rings.Add(ring); labels.Add(label); scales.Add(scale);
+            }
+            Root.Children.Add(bar);
+            status.Foreground = Ink.Brush("SeleneInkColor", 0.75);
+            Root.Children.Add(status);
+            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Close")));
+            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Select")));
         }
 
-        public override void Hidden() { clockTimer.Stop(); }
-
-        private void ShowFocus()
+        public override void Shown()
         {
-            for (int r = 0; r < tiles.Count; r++)
-                for (int c = 0; c < tiles[r].Count; c++) tiles[r][c].Focus(r == row && c == col);
-            about.Text = rows[row][col].About;
+            // the icons rise in from the bottom one after another
+            for (int i = 0; i < cells.Count; i++) Ui.Rise(cells[i], 40 + i * 25, 24, 260);
+            Ui.Play("OpenPanel.wav", 0.8);
+            ShowFocus(false);
+        }
+
+        private void ShowFocus(bool animate)
+        {
+            var ms = TimeSpan.FromMilliseconds(animate ? 180 : 0);
+            for (int i = 0; i < cells.Count; i++)
+            {
+                bool on = i == index;
+                rings[i].BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(on ? 1 : 0, ms));
+                labels[i].BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(on ? 1 : 0, ms));
+                ((TranslateTransform)labels[i].RenderTransform).BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(on ? 0 : 6, ms) { EasingFunction = Ui.Out() });
+                var grow = new DoubleAnimation(on ? 1.1 : 1, ms) { EasingFunction = Ui.Out() };
+                scales[i].BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+                scales[i].BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+            }
         }
 
         public override void Handle(string b)
         {
             if (leaving) return;
+            if (powerList != null) { HandlePower(b); return; }
             if (b == "B" || b == "Start") { leaving = true; Ui.Back(); LoginScene.Finish(); return; }
             if (b == "A")
             {
-                var item = rows[row][col];
+                var item = items[index];
                 Ui.Confirm();
                 try { item.Run(); }
-                catch (Exception ex) { HomeNav.Log("menu: " + item.Label + " failed: " + ex); Ui.Shake(tiles[row][col].Root); }
+                catch (Exception ex) { HomeNav.Log("menu: " + item.Label + " failed: " + ex); Ui.Shake(cells[index]); }
                 return;
             }
-            int r = row, c = col;
-            if (b == "DPadLeft") c--;
-            else if (b == "DPadRight") c++;
-            else if (b == "DPadUp") r--;
-            else if (b == "DPadDown") r++;
-            else return;
-            if (r < 0 || r >= rows.Count) return;
-            if (r != row) c = Math.Min(c, rows[r].Count - 1);
-            if (c < 0 || c >= rows[r].Count) return;
-            row = r; col = c;
+            int next = index + (b == "DPadLeft" ? -1 : b == "DPadRight" ? 1 : 0);
+            if (next == index || next < 0 || next >= items.Count) return;
+            index = next;
+            status.Text = "";
             Ui.Tick();
-            ShowFocus();
+            ShowFocus(true);
+        }
+
+        // ---- Power: a short list above its icon ----
+        private void OpenPower()
+        {
+            var list = new StackPanel();
+            powerRows.Clear();
+            foreach (var p in PowerItems)
+            {
+                var line = new StackPanel { Orientation = Orientation.Horizontal };
+                line.Children.Add(new TextBlock { Text = Ui.Icon((int)p[0]), FontFamily = Ui.Icons, FontSize = 24, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+                line.Children.Add(new TextBlock { Text = (string)p[1], FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 0, 1) });
+                var row = new Border { Child = line, CornerRadius = new CornerRadius(12), Padding = new Thickness(16, 10, 24, 10), Margin = new Thickness(0, 2, 0, 2) };
+                list.Children.Add(row);
+                powerRows.Add(row);
+            }
+            powerList = new Border
+            {
+                Child = list, CornerRadius = new CornerRadius(18), Padding = new Thickness(8), MinWidth = 240,
+                Background = Ink.Brush("SeleneGlassColor", 0.96), BorderBrush = Ink.Brush("SeleneInkColor", 0.16), BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black }
+            };
+            // over the Power icon, its right edge lined up with the icon's
+            var at = cells[index].TranslatePoint(new Point(Cell, 0), Root);
+            powerList.Margin = new Thickness(Math.Max(20, at.X - 260), 0, 0, Root.ActualHeight - at.Y + 16);
+            Root.Children.Add(powerList);
+            Ui.Rise(powerList, 0, 12, 200);
+            Ui.Play("OpenPanel.wav", 0.8);
+            powerIndex = 0;
+            ShowPowerFocus();
+        }
+
+        private void ShowPowerFocus()
+        {
+            for (int i = 0; i < powerRows.Count; i++)
+            {
+                bool on = i == powerIndex;
+                powerRows[i].Background = on ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
+                foreach (var t in ((StackPanel)powerRows[i].Child).Children.OfType<TextBlock>())
+                    t.Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor");
+            }
+        }
+
+        private void HandlePower(string b)
+        {
+            if (b == "B") { Ui.Back(); ClosePower(); return; }
+            if (b == "Start") { leaving = true; Ui.Back(); LoginScene.Finish(); return; }
+            if (b == "A")
+            {
+                Ui.Confirm();
+                int what = (int)PowerItems[powerIndex][2];
+                try
+                {
+                    if (what < 0) Later(() => PlayniteMenu.Run("ExitCommand"));
+                    else Power.Run(what);
+                }
+                catch (Exception ex) { HomeNav.Log("menu: power failed: " + ex); Ui.Shake(powerRows[powerIndex]); }
+                return;
+            }
+            int next = powerIndex + (b == "DPadUp" ? -1 : b == "DPadDown" ? 1 : 0);
+            if (next == powerIndex || next < 0 || next >= powerRows.Count) return;
+            powerIndex = next;
+            Ui.Tick();
+            ShowPowerFocus();
+        }
+
+        private void ClosePower()
+        {
+            var list = powerList;
+            powerList = null;
+            Ui.Fade(list, 0, 150, 0, () => Root.Children.Remove(list));
         }
 
         // Playnite's own windows open once the menu has faded away
@@ -203,13 +238,13 @@ namespace Selene
         }
 
         // starts Playnite's library update in the background (from the hidden Playnite menu it waited behind one already
-        // running); the menu says what happens, then closes
+        // running); says what happens under the icons, then closes
         private void UpdateLibrary()
         {
-            string status;
-            bool started = HomeNav.UpdateLibraryNow(out status);
-            about.Text = started ? "Updating your library in the background." : "Already updating: " + status;
-            if (!started) { Ui.Shake(tiles[row][col].Root); return; }
+            string busy;
+            bool started = HomeNav.UpdateLibraryNow(out busy);
+            status.Text = started ? "Updating your library in the background." : "Already updating: " + busy;
+            if (!started) { Ui.Shake(cells[index]); return; }
             leaving = true;
             var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
             t.Tick += (s, e) => { t.Stop(); LoginScene.Finish(); };

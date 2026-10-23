@@ -50,3 +50,7 @@ will be done right away.
 
 ## Fonts
 Fonts bundled with the Playnite theme template keep their own licenses (see `theme/Fonts`).
+
+## Material Icons
+The menu's icons are Google's Material Icons (`theme/Fonts/MaterialIcons-Regular.ttf`), Apache License 2.0
+(`theme/Fonts/MaterialIcons-LICENSE.txt`). https://github.com/google/material-design-icons

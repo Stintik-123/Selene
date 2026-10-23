@@ -16,6 +16,23 @@ namespace Selene
         public static readonly FontFamily Display = new FontFamily("Segoe UI Variable Display");
         public static readonly FontFamily Body = new FontFamily("Segoe UI");
         public static readonly FontFamily Glyphs = new FontFamily("Segoe MDL2 Assets");
+        private static FontFamily icons;
+
+        // solid icons: Google's Material Icons (theme\Fonts\MaterialIcons-Regular.ttf); Segoe's thin ones when it's missing
+        public static FontFamily Icons
+        {
+            get
+            {
+                if (icons != null) return icons;
+                var folder = SelenePaths.ThemeFile("Fonts");
+                icons = System.IO.File.Exists(System.IO.Path.Combine(folder, "MaterialIcons-Regular.ttf"))
+                    ? new FontFamily(new Uri(folder.TrimEnd('\\') + "\\"), "./#Material Icons") : Glyphs;
+                return icons;
+            }
+        }
+
+        // a Material Icons character from its code point (the font's codepoints list)
+        public static string Icon(int code) { return ((char)code).ToString(); }
 
         // ---------------- text ----------------
         public static TextBlock Text(string text, double size, double alpha = 1, FontFamily font = null)
