@@ -186,23 +186,29 @@ namespace Selene
             public readonly Grid Viewport;
             public readonly UniformGrid Panel;
             private readonly TranslateTransform shift = new TranslateTransform();
-            private readonly Dictionary<UIElement, double> edgeFade = new Dictionary<UIElement, double>();
+            private readonly GradientStop topClear, topSolid;
             private readonly int columns;
             private readonly double rowHeight, height;
-            private const double TopFade = 140, BottomFade = 150;
 
             public ScrollingGrid(int columns, double rowHeight, double height)
             {
                 this.columns = columns; this.rowHeight = rowHeight; this.height = height;
                 Panel = new UniformGrid { Columns = columns, VerticalAlignment = VerticalAlignment.Top, RenderTransform = shift, Margin = new Thickness(0, 20, 0, 0),
-                                          CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = false } };
+                                          CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = false } };   // one texture: the mask and the glide cost a blit, not a redraw of every tile
                 // on a canvas: a panel taller than its slot would get clipped to the slot, and the clip would scroll with it
                 Viewport = new Grid { Height = height, ClipToBounds = true };
                 var canvas = new Canvas();
                 canvas.Children.Add(Panel);
                 Viewport.Children.Add(canvas);
-                // the rows at the edges melt away instead of being cut off: each tile's own opacity, by how far into the edge
-                // its row sits (an opacity mask over the viewport redrew all 400 tiles on every frame of the glide: low fps)
+                // rows melt away at the edges instead of being cut off (pixel positions: the panel inside is far taller)
+                var mask = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, height) };
+                topClear = new GradientStop(Color.FromArgb(0, 0, 0, 0), 0);
+                topSolid = new GradientStop(Colors.Black, 0);   // moved down (a long fade, like the bottom) once rows scroll up
+                mask.GradientStops.Add(topClear);
+                mask.GradientStops.Add(topSolid);
+                mask.GradientStops.Add(new GradientStop(Colors.Black, 1 - 150 / height));
+                mask.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
+                Viewport.OpacityMask = mask;
             }
 
             public void Reveal(int index)
@@ -213,23 +219,11 @@ namespace Selene
                 double rowTop = (index / columns) * rowHeight;
                 double y = -Math.Max(0, Math.Min(rowTop - rowHeight, total + 20 - height + 110));   // the last row can rise above the fade
                 if (total <= height) y = 0;
+                // at the top nothing fades; scrolled, the row above melts away under the title like the bottom does
+                topSolid.BeginAnimation(GradientStop.OffsetProperty, new DoubleAnimation(y < 0 ? 140 / height : 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
                 var glide = new DoubleAnimation(y, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() };
                 Timeline.SetDesiredFrameRate(glide, 144);
                 shift.BeginAnimation(TranslateTransform.YProperty, glide);
-                // at the top nothing fades; scrolled, the row above melts away under the title like the bottom does
-                for (int k = 0; k < Panel.Children.Count; k++)
-                {
-                    var child = Panel.Children[k];
-                    double center = 20 + (k / columns) * rowHeight + y + rowHeight / 2;
-                    double a = Math.Max(0, Math.Min(1, (height - center) / BottomFade));
-                    if (y < 0) a = Math.Min(a, Math.Max(0, Math.Min(1, center / TopFade)));
-                    double last;
-                    if (edgeFade.TryGetValue(child, out last) && Math.Abs(last - a) < 0.01) continue;
-                    if (!edgeFade.ContainsKey(child) && a >= 0.99) { edgeFade[child] = 1; continue; }   // untouched: its rise-in stays its own
-                    edgeFade[child] = a;
-                    child.BeginAnimation(UIElement.OpacityProperty, null);
-                    child.Opacity = a;   // set, not animated: an animation would redraw the cached grid on every frame of the glide
-                }
             }
         }
 
