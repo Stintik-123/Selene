@@ -75,9 +75,13 @@ namespace Selene
                 Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0, 0.55), Ink.Stop("SeleneScrimColor", 0.9, 1) }, 90)
             });
 
-            // taller than the screen (sized to it, the "More from" row below the edge was cut off even after gliding up)
-            var page = new Grid { RenderTransform = pageShift, Height = 1700, VerticalAlignment = VerticalAlignment.Top };
-            Root.Children.Add(page);
+            // on a canvas, as wide as the screen and taller: a page laid out in the screen's own grid got clipped to the screen,
+            // and the clip moved up with it (the "More from" row stayed cut off even after gliding up)
+            var page = new Grid { RenderTransform = pageShift, Height = 1700 };
+            page.SetBinding(FrameworkElement.WidthProperty, new System.Windows.Data.Binding("ActualWidth") { Source = Root });
+            var sheet = new Canvas();
+            sheet.Children.Add(page);
+            Root.Children.Add(sheet);
 
             // left: the store, the name, the facts, the price, the description, the buttons
             var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 120, 0, 0), MaxWidth = 860 };

@@ -2136,6 +2136,7 @@ namespace Selene
             // the proxies sit higher up than the row's own panels: the whole window then
             if (proxy == null) { var w = Window.GetWindow(row); proxy = w != null ? FindByName(w, "SeleneNav_" + name) as System.Windows.Controls.Primitives.ButtonBase : null; }
             Log("card " + name + ": " + (proxy == null ? "no proxy" : proxy.Command == null ? "no command" : "run"));
+            if (proxy != null) Ui.Confirm();   // opening Store or Collection sounds like any other A
             try { if (proxy != null && proxy.Command != null && proxy.Command.CanExecute(proxy.CommandParameter)) proxy.Command.Execute(proxy.CommandParameter); }
             catch (Exception ex) { Log("card " + name + " failed: " + ex); }
         }
