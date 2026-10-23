@@ -272,14 +272,14 @@
                             </StackPanel>
 
                             <!-- band 2: your captures of it, and your activity with it -->
-                            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,1010,0,0">
+                            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,1080,0,0">
                                 <TextBlock Text="Your captures" Style="{StaticResource SeleneBandLabel}"/>
                                 <Grid>
                                     <StackPanel x:Name="SeleneDetailsCaptures" Orientation="Horizontal"/>
                                     <TextBlock x:Name="SeleneDetailsCapturesNote" Text="" FontSize="18" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk60Brush}" VerticalAlignment="Top" Margin="2,8,0,0" Visibility="Collapsed"/>
                                 </Grid>
                             </StackPanel>
-                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1300,1010,0,0" Width="510" Padding="0" BorderThickness="0">
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1300,1080,0,0" Width="510" Padding="0" BorderThickness="0">
                                 <StackPanel>
                                     <TextBlock Text="Your activity" Style="{StaticResource SeleneBandLabel}" Margin="0,0,0,12"/>
                                     <Grid>
@@ -312,7 +312,7 @@
                             </Border>
 
                             <!-- band 3: more like it, from your own games -->
-                            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,1270,0,0">
+                            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,1410,0,0">
                                 <TextBlock x:Name="SeleneDetailsMoreLabel" Text="More like this" Style="{StaticResource SeleneBandLabel}" Visibility="Collapsed"/>
                                 <StackPanel x:Name="SeleneDetailsMore" Orientation="Horizontal"/>
                             </StackPanel>

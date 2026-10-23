@@ -16,7 +16,7 @@ namespace Selene
     // one at a time (the page glides up), Left / Right move along a band, A opens what's picked, Up / B come back up.
     public static class DetailsStage
     {
-        private const double BandTop = 750, BandPitch = 260;
+        private const double BandTop = 750, BandPitch = 330;   // (the next band starts just off the screen, clear of the hints)
         private static FrameworkElement details;
         private static TranslateTransform shift;
         private static readonly List<Tile>[] tiles = { new List<Tile>(), new List<Tile>(), new List<Tile>() };   // screenshots, captures, more
@@ -56,6 +56,7 @@ namespace Selene
                 shift = page != null ? page.RenderTransform as TranslateTransform : null;
                 if (page == null) { HomeNav.Log("details stage: no page in the template"); return; }
                 if (shownId != g.Id || zone == 0) { zone = 0; if (shift != null) { shift.BeginAnimation(TranslateTransform.YProperty, null); shift.Y = 0; } }
+                if (shownId != g.Id) GameMedia.OnSelected(g, null);   // the screenshots follow Spotlight's row; here the game may be another (Collection's pick)
                 shownId = g.Id;
                 Fill(g);
             }), DispatcherPriority.Loaded);
@@ -279,13 +280,16 @@ namespace Selene
                     return true;
                 }
                 case "DPadUp":
-                case "B":
                 {
-                    int z = b == "DPadUp" ? NextBand(zone, -1) : -1;
+                    int z = NextBand(zone, -1);
                     if (z < 0) { zone = 0; Ui.Tick(); Glide(); ShowFocus(); FocusPills(); return true; }
                     zone = z; Ui.Tick(); Glide(); ShowFocus();
                     return true;
                 }
+                case "B":
+                    // B leaves the page from a band too (Playnite closes it); the page settles back first
+                    zone = 0; Glide(); ShowFocus();
+                    return false;
                 case "A":
                 {
                     int i = at[zone - 1];
