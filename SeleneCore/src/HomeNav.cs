@@ -1956,6 +1956,14 @@ namespace Selene
                     e.Cancel();  // Playnite out of sight: the pad belongs to whatever is in front (a menu here could restart the PC)
                     return;
                 }
+                // Start / View released: a short press does its usual thing (a hold already did its own)
+                if (ke.RoutedEvent == Keyboard.KeyUpEvent && holdButton != null)
+                {
+                    var upProp = ke.GetType().GetProperty("Button");
+                    var up = upProp != null ? upProp.GetValue(ke, null).ToString() : null;
+                    if (up == holdButton) { e.Cancel(); EndHold(true); }
+                    return;
+                }
                 if (ke.RoutedEvent != Keyboard.KeyDownEvent) return;
                 var button = ke.GetType().GetProperty("Button");
                 if (button == null) return;
@@ -1975,9 +1983,15 @@ namespace Selene
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
                 EndQuietFocus();   // the user is moving now: their moves tick
                 // View (Playnite calls it Back): home <-> library, like the legacy theme (Playnite opened its settings)
-                if (pressed == "Back" && Features.On("viewswitch") && ToggleHomeLibrary()) { e.Cancel(); return; }
+                // Start and View on the home or the library: short press or hold (Selene settings / library search)
+                if ((pressed == "Start" || pressed == "Back") && OnHomeOrLibrary())
+                {
+                    e.Cancel();
+                    if (holdButton != pressed) BeginHold(pressed);   // a held button repeats: one hold only
+                    return;
+                }
                 // Start opens Selene's menu (Playnite's own is under More in it)
-                if (pressed == "Start" && mainW != null && FocusOnHome()) { SeleneShell.OpenMenu(); e.Cancel(); return; }
+                if (pressed == "Start" && mainW != null && FocusOnHome()) { SeleneShell.OpenMenu(); e.Cancel(); return; }   // (home row not visible: other home sections)
                 if (GameMedia.HandleButton(pressed, Keyboard.FocusedElement)) { e.Cancel(); return; }
                 if (pressed == "RightStick" && previewShowing) { TogglePreviewSound(); e.Cancel(); return; }
                 // A still launches the game below; Up/Down leave the card playing (only sideways moves shrink it)
@@ -4688,6 +4702,68 @@ namespace Selene
                 Log("row focus -> " + row.Items[idx] + " (in row=" + row.IsKeyboardFocusWithin + ")");
             };
             timer.Start();
+        }
+
+        // ---- Start / View: a short press, or held for 0.6 s (fires while still held, like a console) ----
+        private static string holdButton;
+        private static bool holdFired;
+        private static System.Windows.Threading.DispatcherTimer holdTimer;
+
+        private static bool OnHomeOrLibrary()
+        {
+            var w = Application.Current.MainWindow;
+            if (w == null || !PlayniteInFront()) return false;
+            var details = FindByName(w, "PART_ElemGameDetails");
+            if (details != null && details.IsVisible) return false;
+            var hub = FindByName(w, "WelcomeHubOverlay");
+            var library = FindByName(w, "SeleneLibrary");
+            return (hub != null && hub.IsVisible) || (library != null && library.IsVisible);
+        }
+
+        private static void BeginHold(string button)
+        {
+            holdButton = button;
+            holdFired = false;
+            if (holdTimer == null)
+            {
+                holdTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+                holdTimer.Tick += (s, e) =>
+                {
+                    holdTimer.Stop();
+                    if (holdButton == null) return;
+                    holdFired = true;
+                    if (holdButton == "Start") { Ui.Confirm(); LoginScene.OpenWith(() => new SettingsScreen()); Log("hold start -> Selene settings"); }
+                    else OpenLibrarySearch();
+                };
+            }
+            holdTimer.Stop();
+            holdTimer.Start();
+        }
+
+        private static void EndHold(bool released)
+        {
+            var button = holdButton;
+            holdButton = null;
+            if (holdTimer != null) holdTimer.Stop();
+            if (!released || holdFired || button == null) return;
+            if (button == "Start") SeleneShell.OpenMenu();
+            else if (Features.On("viewswitch")) ToggleHomeLibrary();
+        }
+
+        // hold View: the library with Playnite's search open, to find a game fast
+        private static void OpenLibrarySearch()
+        {
+            var w = Application.Current.MainWindow;
+            if (w == null) return;
+            HidePreview();
+            Ui.Play("OpenPanel.wav", 0.8);
+            SeleneShell.ShowLibrary();
+            w.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var search = FindByName(w, "PART_ButtonSearch") as System.Windows.Controls.Primitives.ButtonBase;
+                if (search != null && search.Command != null && search.Command.CanExecute(search.CommandParameter)) search.Command.Execute(search.CommandParameter);
+                Log("hold view -> library search" + (search == null ? " (no search button)" : ""));
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         // the View button on the home or the library: switches to the other one (false elsewhere: details, overlays)

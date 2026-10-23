@@ -206,7 +206,7 @@ namespace Selene
         {
             new Option { Key = "intro", Label = "Logo intro", About = "The crescent intro when Playnite starts." },
             new Option { Key = "login", Label = "Who's playing? at start", About = "Off: the last profile signs in by itself (the very first start still sets you up)." },
-            new Option { Key = "viewswitch", Label = "View button: home and library", About = "The View button switches between the home and the library." },
+            new Option { Key = "viewswitch", Label = "View button: home and library", About = "The View button switches between the home and the library (hold it to search; hold Start for these settings)." },
             new Option { Key = "sounds", Label = "Interface sounds", About = "Selene's ticks and chimes when you move, select and go back." },
             new Option { Key = "music", Label = "Music control", About = "Keeps game songs from the music add-on off the cards, login and menus, and quiet under trailers." },
             new Option { Key = "hints", Label = "Button hints", About = "What each button does, at the bottom right of the home (off like a console's home).", DefaultOn = false },
