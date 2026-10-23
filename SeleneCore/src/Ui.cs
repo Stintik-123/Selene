@@ -200,6 +200,30 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("notice: " + ex.Message); }
         }
 
+        // frame times over the next `ms`, to the log: how smooth a move really was (count, average, worst gap)
+        private static bool measuring;
+        public static void MeasureFrames(string what, int ms)
+        {
+            if (measuring) return;
+            measuring = true;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            double last = 0, worst = 0; int n = 0;
+            EventHandler tick = null;
+            tick = (s2, e2) =>
+            {
+                double t = sw.Elapsed.TotalMilliseconds;
+                if (n > 0) worst = Math.Max(worst, t - last);
+                last = t; n++;
+                if (t >= ms)
+                {
+                    System.Windows.Media.CompositionTarget.Rendering -= tick;
+                    measuring = false;
+                    HomeNav.Log("frames: " + what + ": " + n + " in " + (int)t + " ms, avg " + (n > 1 ? (t / (n - 1)).ToString("0.0") : "-") + " ms, worst " + worst.ToString("0.0") + " ms");
+                }
+            };
+            System.Windows.Media.CompositionTarget.Rendering += tick;
+        }
+
         public static void Tick() { if (Features.On("sounds") && !HomeNav.PlayPlayniteSound(false)) Play("navigation.wav", 0.7); }
         public static void Key() { Play("Key.wav", 0.8); }              // typing, erasing, flipping a switch
         public static void Confirm() { if (Features.On("sounds") && !HomeNav.PlayPlayniteSound(true)) Play("activation.wav", 0.85); }

@@ -70,13 +70,40 @@ namespace Selene
                 shownId = g.Id;
                 Fill(g);
                 Blur(false);
+                HomeNav.Log("details stage: " + g.Name + " (bands " + tiles[0].Count + "/" + tiles[1].Count + "/" + tiles[2].Count + ")");
+                HideUnder(true);
                 var f = Keyboard.FocusedElement as DependencyObject;
                 if (f == null || !details.IsAncestorOf(f)) FocusPills();
             }), DispatcherPriority.Loaded);
         }
 
+        // Collection (the grid, its covers' shadows, its big art) lies under the page and was redrawn with every frame the page
+        // moved, though nothing of it shows; hidden while the page is up, back the moment it goes
+        private static UIElement hiddenUnder;
+        private static void HideUnder(bool on)
+        {
+            try
+            {
+                if (on)
+                {
+                    var w = Window.GetWindow(details);
+                    var lib = w != null ? HomeNav.FindByName(w, "SeleneLibrary") as UIElement : null;
+                    if (lib == null || lib.Visibility != Visibility.Visible || hiddenUnder != null) return;
+                    hiddenUnder = lib;
+                    lib.Visibility = Visibility.Hidden;
+                }
+                else if (hiddenUnder != null)
+                {
+                    if (hiddenUnder.Visibility == Visibility.Hidden) hiddenUnder.Visibility = Visibility.Visible;
+                    hiddenUnder = null;
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("details stage: hide under " + ex.Message); }
+        }
+
         private static void Closed()
         {
+            HideUnder(false);
             zone = 0;
             if (shotsWatch != null) shotsWatch.Stop();
             if (shift != null) { shift.BeginAnimation(TranslateTransform.YProperty, null); shift.Y = 0; }
@@ -250,7 +277,8 @@ namespace Selene
             var glide = new DoubleAnimation(to, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() };
             Timeline.SetDesiredFrameRate(glide, 144);   // the page is big: at WPF's 60 steps a second the move looked choppy on a fast screen
             shift.BeginAnimation(TranslateTransform.YProperty, glide);
-            Blur(true);   // the next band sharpens and brightens as it rises, with the glide (the store's rows do the same)
+            Blur(true);
+            Ui.MeasureFrames("details glide to zone " + zone, 420);   // the next band sharpens and brightens as it rises, with the glide (the store's rows do the same)
         }
 
         // the bands below the one in view are blurred (they peek in at the foot of the screen, as the store's rows do)
@@ -314,11 +342,13 @@ namespace Selene
         {
             if (!Active) { zone = 0; return false; }
             // B from Spotlight's details: the home comes back under the page before it closes (nothing else shows in between)
+            if (b == "B") HideUnder(false);   // whatever closes the page next finds Collection as it was
             if (b == "B" && HomeNav.CloseDetailsToHub()) { zone = 0; return true; }
             if (zone == 0)
             {
                 if (b != "DPadDown") return false;
                 int z = NextBand(0, 1);
+                HomeNav.Log("details stage: Down from the top, next band " + z + " (bands " + tiles[0].Count + "/" + tiles[1].Count + "/" + tiles[2].Count + "), focus " + (Keyboard.FocusedElement is FrameworkElement ? ((FrameworkElement)Keyboard.FocusedElement).Name + "/" + Keyboard.FocusedElement.GetType().Name : "none"));
                 if (z < 0) return false;
                 // from anywhere on the page but the description (Down there scrolls it); opened from Collection the focus
                 // sometimes sat on nothing at all, and Down did nothing
@@ -331,6 +361,7 @@ namespace Selene
                 return true;
             }
             var list = tiles[zone - 1];
+            if (b.StartsWith("DPad")) HomeNav.Log("details stage: " + b + " in zone " + zone + " (bands " + tiles[0].Count + "/" + tiles[1].Count + "/" + tiles[2].Count + ")");
             switch (b)
             {
                 case "DPadLeft":

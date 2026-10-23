@@ -224,6 +224,7 @@ namespace Selene
                 var glide = new DoubleAnimation(y, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() };
                 Timeline.SetDesiredFrameRate(glide, 144);
                 shift.BeginAnimation(TranslateTransform.YProperty, glide);
+                Ui.MeasureFrames("profile grid glide", 320);
             }
         }
 
