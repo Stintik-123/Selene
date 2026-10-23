@@ -561,7 +561,7 @@ namespace Selene
             Root = new Border
             {
                 Child = label, CornerRadius = new CornerRadius(27), Height = 54, MinWidth = minWidth, Padding = new Thickness(34, 0, 34, 2),
-                Background = Ink.Brush("SeleneInkColor", 0.14), BorderBrush = Ink.Brush("SeleneInkColor", 0.22), BorderThickness = new Thickness(1),
+                Background = Ink.Brush("SeleneGlassColor", 0.72), BorderBrush = Ink.Brush("SeleneInkColor", 0.22), BorderThickness = new Thickness(1),   // glass that reads over art
                 Margin = new Thickness(8, 0, 8, 0)
             };
         }
