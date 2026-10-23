@@ -2320,6 +2320,21 @@ namespace Selene
             return false;
         }
 
+        // B on the game details opened from Spotlight: the home shows again under the page first, then the details close.
+        // (Closing first left Playnite's library grid, then a still of it melting over Spotlight, on screen for a moment.)
+        public static bool CloseDetailsToHub()
+        {
+            if (!returnToHub) return false;
+            returnToHub = false;
+            try
+            {
+                SeleneShell.ShowHome(true);
+                PlayniteMenu.Main("ToggleGameDetailsCommand");
+            }
+            catch (Exception ex) { Log("details close: " + ex.Message); }
+            return true;
+        }
+
         private static void WatchDetails(Window w)
         {
             var details = FindByName(w, "PART_ElemGameDetails");

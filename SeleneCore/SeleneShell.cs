@@ -212,13 +212,26 @@ namespace Selene
             HomeNav.Log("shell: library");
         }
 
-        public static void ShowHome()
+        public static void ShowHome() { ShowHome(false); }
+
+        // instant: the home is back in the same frame, no still and no fade (the game details closing over it)
+        public static void ShowHome(bool instant)
         {
             var home = Part("WelcomeHubOverlay");
             var library = Part("SeleneLibrary");
             if (home == null) return;
             int mine = ++switchCount;
             CollectionActive = false;
+            if (instant)
+            {
+                if (library != null) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Visibility = Visibility.Collapsed; }
+                HomeNav.SyncSelectionForHome(null);
+                home.BeginAnimation(UIElement.OpacityProperty, null);
+                home.Opacity = 1;
+                home.Visibility = Visibility.Visible;
+                HomeNav.Log("shell: home (instant)");
+                return;
+            }
             // a still of Collection lies on top while everything changes under it, then melts away over Spotlight: Collection
             // itself goes at once (setting Spotlight's "no game" made its list jump to its first game: the 007 flash)
             // (held until Spotlight's art is back, at most 700 ms)

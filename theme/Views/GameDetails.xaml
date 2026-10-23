@@ -141,6 +141,16 @@
                         <!-- (tall on purpose: a child placed below the window's height got a slot a few pixels high and was clipped to it) -->
                         <!-- on a canvas: in the screen's own grid the page (taller than the screen) was clipped to the screen in its own
                              coordinates, and the glide couldn't bring the lower bands into view -->
+                        <!-- clipped to the screen and faded at its foot: the next band peeks in there, cut off, blurred (Selene Core) -->
+                        <Grid ClipToBounds="True">
+                            <Grid.OpacityMask>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#00000000" Offset="0"/>
+                                    <GradientStop Color="#FF000000" Offset="0.04"/>
+                                    <GradientStop Color="#FF000000" Offset="0.87"/>
+                                    <GradientStop Color="#00000000" Offset="0.985"/>
+                                </LinearGradientBrush>
+                            </Grid.OpacityMask>
                         <Canvas>
                         <Grid x:Name="SeleneDetailsPage" Height="1800" Width="{Binding ActualWidth, ElementName=PART_ViewHost}">
                             <Grid.RenderTransform><TranslateTransform x:Name="SeleneDetailsShift" Y="0"/></Grid.RenderTransform>
@@ -262,20 +272,20 @@
                             </StackPanel>
 
                             <!-- band 1: the game's screenshots -->
-                            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,750,0,0">
+                            <StackPanel x:Name="SeleneDetailsBand1" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,720,0,0">
                                 <TextBlock x:Name="SeleneDetailsShotsLabel" Text="Screenshots" Style="{StaticResource SeleneBandLabel}" Visibility="Collapsed"/>
                                 <StackPanel x:Name="SeleneDetailsShots" Orientation="Horizontal"/>
                             </StackPanel>
 
                             <!-- band 2: your captures of it, and your activity with it -->
-                            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,1080,0,0">
+                            <StackPanel x:Name="SeleneDetailsBand2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,950,0,0">
                                 <TextBlock Text="Your captures" Style="{StaticResource SeleneBandLabel}"/>
                                 <Grid>
                                     <StackPanel x:Name="SeleneDetailsCaptures" Orientation="Horizontal"/>
                                     <TextBlock x:Name="SeleneDetailsCapturesNote" Text="" FontSize="18" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk60Brush}" VerticalAlignment="Top" Margin="2,8,0,0" Visibility="Collapsed"/>
                                 </Grid>
                             </StackPanel>
-                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1300,1080,0,0" Width="510" Padding="0" BorderThickness="0">
+                            <Border x:Name="SeleneDetailsBand2b" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1300,950,0,0" Width="510" Padding="0" BorderThickness="0">
                                 <StackPanel>
                                     <TextBlock Text="Your activity" Style="{StaticResource SeleneBandLabel}" Margin="0,0,0,12"/>
                                     <Grid>
@@ -308,12 +318,13 @@
                             </Border>
 
                             <!-- band 3: more like it, from your own games -->
-                            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,1410,0,0">
+                            <StackPanel x:Name="SeleneDetailsBand3" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,1180,0,0">
                                 <TextBlock x:Name="SeleneDetailsMoreLabel" Text="More like this" Style="{StaticResource SeleneBandLabel}" Visibility="Collapsed"/>
                                 <StackPanel x:Name="SeleneDetailsMore" Orientation="Horizontal"/>
                             </StackPanel>
                         </Grid>
                         </Canvas>
+                        </Grid>
 
                         <!-- the hints along the bottom -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="80,0,0,38">

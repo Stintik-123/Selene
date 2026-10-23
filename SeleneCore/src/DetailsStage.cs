@@ -16,7 +16,7 @@ namespace Selene
     // one at a time (the page glides up), Left / Right move along a band, A opens what's picked, Up / B come back up.
     public static class DetailsStage
     {
-        private const double BandTop = 750, BandPitch = 330;   // (the next band starts just off the screen, clear of the hints)
+        private const double BandTop = 720, BandPitch = 230;   // (the next band starts at the foot of the screen: it peeks in, cut off and blurred)
         private static FrameworkElement details;
         private static TranslateTransform shift;
         private static readonly List<Tile>[] tiles = { new List<Tile>(), new List<Tile>(), new List<Tile>() };   // screenshots, captures, more
@@ -59,6 +59,7 @@ namespace Selene
                 if (shownId != g.Id) GameMedia.OnSelected(g, null);   // the screenshots follow Spotlight's row; here the game may be another (Collection's pick)
                 shownId = g.Id;
                 Fill(g);
+                Blur(false);
             }), DispatcherPriority.Loaded);
         }
 
@@ -233,8 +234,25 @@ namespace Selene
         {
             if (shift == null) return;
             // the last band (tall covers) rises further, so the whole covers sit above the hints
-            double to = zone <= 1 ? 0 : -(zone - 1) * BandPitch - (zone == 3 ? 130 : 0);
+            double to = zone <= 1 ? 0 : -(zone - 1) * BandPitch - (zone == 3 ? 100 : 0);
             shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() });
+            Blur(true);
+        }
+
+        // the bands below the one in view are blurred (they peek in at the foot of the screen, as the store's rows do)
+        private static void Blur(bool animate)
+        {
+            int shown = Math.Max(zone, 1);
+            var ms = TimeSpan.FromMilliseconds(animate ? 260 : 0);
+            foreach (var name in new[] { "SeleneDetailsBand1", "SeleneDetailsBand2", "SeleneDetailsBand2b", "SeleneDetailsBand3" })
+            {
+                var band = Part<FrameworkElement>(name);
+                if (band == null) continue;
+                int z = name.EndsWith("b") ? 2 : name[name.Length - 1] - 48;
+                var blur = band.Effect as System.Windows.Media.Effects.BlurEffect;
+                if (blur == null) { blur = new System.Windows.Media.Effects.BlurEffect { Radius = 0, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance }; band.Effect = blur; }
+                blur.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, new DoubleAnimation(z <= shown ? 0 : 5, ms));
+            }
         }
 
         private static void FocusPills()
@@ -246,6 +264,8 @@ namespace Selene
         public static bool Handle(string b)
         {
             if (!Active) { zone = 0; return false; }
+            // B from Spotlight's details: the home comes back under the page before it closes (nothing else shows in between)
+            if (b == "B" && HomeNav.CloseDetailsToHub()) { zone = 0; return true; }
             if (zone == 0)
             {
                 if (b != "DPadDown") return false;
