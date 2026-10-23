@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Game details: the lower bands really show as the page glides (they were clipped away, leaving the focus on tiles you couldn't see).
 - Game details: the screenshots are the open game's (opened from Collection they stayed the last Spotlight game's); B from a band leaves the page; the next band starts off the screen so it can't sit under the hints.
 - A game's options menu (Play, Favorite, Hide, Edit fields...) looks like Selene: a glass card with rounded corners, the game's name as its title, rounded rows with Material icons.
 - Game details: the bands below show whole as the page glides (they were clipped), and the description and activity sit on the art without glass boxes.

@@ -139,7 +139,10 @@
 
                         <!-- the page: it glides up as Down goes into the bands below (Selene Core moves SeleneDetailsShift) -->
                         <!-- (tall on purpose: a child placed below the window's height got a slot a few pixels high and was clipped to it) -->
-                        <Grid x:Name="SeleneDetailsPage" Height="1700" VerticalAlignment="Top">
+                        <!-- on a canvas: in the screen's own grid the page (taller than the screen) was clipped to the screen in its own
+                             coordinates, and the glide couldn't bring the lower bands into view -->
+                        <Canvas>
+                        <Grid x:Name="SeleneDetailsPage" Height="1700" Width="{Binding ActualWidth, ElementName=PART_ViewHost}">
                             <Grid.RenderTransform><TranslateTransform x:Name="SeleneDetailsShift" Y="0"/></Grid.RenderTransform>
 
                             <StackPanel Margin="110,96,0,0" Width="1060" HorizontalAlignment="Left" VerticalAlignment="Top">
@@ -317,6 +320,7 @@
                                 <StackPanel x:Name="SeleneDetailsMore" Orientation="Horizontal"/>
                             </StackPanel>
                         </Grid>
+                        </Canvas>
 
                         <!-- the hints along the bottom -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="80,0,0,38">
