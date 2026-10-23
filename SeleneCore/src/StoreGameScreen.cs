@@ -54,9 +54,12 @@ namespace Selene
             else { moreSection.OpacityMask = null; moreRow.Effect = null; }
         }
 
-        public StoreGameScreen(StoreItem item)
+        private readonly Func<Screen> back;   // where B goes: the game page this one was opened from (its "More from" row), else the Store
+
+        public StoreGameScreen(StoreItem item, Func<Screen> back = null, int startZone = 0, int startMore = 0)
         {
             this.item = item;
+            this.back = back;
             owned = StoreData.FindOwned(item);
             more = StoreData.MoreFrom(item);
             var dark = new Border();
@@ -153,6 +156,15 @@ namespace Selene
             Root.Children.Add(left);
             Root.Children.Add(right);
             slides.Tick += (s, e) => { if (zone == 0 && shots.Count > 1) ShowShot((shot + 1) % shots.Count, false); };
+            // coming back to this page from a game opened in its "More from" row: there, on that game
+            if (startZone == 1 && moreTiles.Count > 0)
+            {
+                zone = 1;
+                moreIndex = Math.Max(0, Math.Min(startMore, moreTiles.Count - 1));
+                pageShift.Y = -420;
+                moreShift.X = -Math.Max(0, moreIndex - 1) * MorePitch;
+                Peek(false);
+            }
         }
 
         // the main button: play it if it's yours, get it if it's free, else buy it in its store
@@ -259,9 +271,9 @@ namespace Selene
         {
             if (b == "B")
             {
-                if (zone == 1) { SetZone(0); return; }
+                if (zone == 1) { SetZone(0); return; }   // out of the row first, then back
                 Ui.Back();
-                LoginScene.Show(new StorePage(), 0);   // crossfades back
+                LoginScene.Show(back != null ? back() : new StorePage(), 0);   // crossfades back
                 return;
             }
             switch (b)
@@ -304,7 +316,14 @@ namespace Selene
                     LoginScene.Finish();
                     return;
                 case "A":
-                    if (zone == 1) { Ui.Confirm(); LoginScene.Show(new StoreGameScreen(more[moreIndex]), 0); return; }
+                    if (zone == 1)
+                    {
+                        Ui.Confirm();
+                        // B on that game comes back here, on this one in the row
+                        var me = item; var myBack = back; int at = moreIndex;
+                        LoginScene.Show(new StoreGameScreen(more[moreIndex], () => new StoreGameScreen(me, myBack, 1, at)), 0);
+                        return;
+                    }
                     Ui.Confirm();
                     if (owned != null)
                     {
