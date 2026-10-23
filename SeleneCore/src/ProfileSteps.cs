@@ -330,7 +330,7 @@ namespace Selene
                         var label = new TextBlock { Text = Label(v), FontSize = v.Length == 1 ? 24 : 19, FontFamily = v == "shift" || v == "erase" ? Ui.Glyphs : Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
                         if (v.Length == 1 && char.IsLetter(v[0])) letterLabels.Add(label);
                         // the controller shortcut for Done / erase, as a small badge on the key's top-right corner
-                        t.Face.Child = v == "done" || v == "erase" ? (UIElement)WithBadge(label, v == "done" ? "Y" : "X") : label;
+                        t.Face.Child = v == "done" || v == "erase" || v == "space" ? (UIElement)WithBadge(label, v == "done" ? "≡" : v == "space" ? "Y" : "X") : label;   // Y types a space, Start (≡) is Done
                         t.Root.Margin = new Thickness(gap / 2, 0, gap / 2, 0);
                         rowPanel.Children.Add(t.Root);
                         rowKeys.Add(t);
@@ -423,7 +423,7 @@ namespace Selene
             public override void Extra(string button)
             {
                 if (button == "X") Erase();
-                else if (button == "Y") Owner.Next();   // done with the name
+                else if (button == "Y") Type(" ");   // the space bar (Start is done: ProfileSteps.Handle)
             }
 
             private bool UpperNext { get { return (Owner.Name.Length == 0 || Owner.Name.EndsWith(" ")) != shift; } }

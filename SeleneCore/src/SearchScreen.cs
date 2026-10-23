@@ -84,7 +84,7 @@ namespace Selene
                     double w = KeyWidth(v, key);
                     var t = new Tile(w, key - 6, 16, 4) { FocusScale = 1.1 };
                     var label = new TextBlock { Text = KeyLabel(v), FontSize = v.Length == 1 ? 24 : 19, FontFamily = v == "erase" ? Ui.Glyphs : Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-                    t.Face.Child = v == "done" || v == "erase" ? (UIElement)WithBadge(label, v == "done" ? "Y" : "X") : label;
+                    t.Face.Child = v == "done" || v == "erase" || v == "space" ? (UIElement)WithBadge(label, v == "done" ? "≡" : v == "space" ? "Y" : "X") : label;   // Y types a space, Start (≡) is Done
                     t.Root.Margin = new Thickness(gap / 2, 0, gap / 2, 0);
                     rowPanel.Children.Add(t.Root);
                     rowKeys.Add(t);
@@ -99,7 +99,7 @@ namespace Selene
             layout.Children.Add(board);
             Root.Children.Add(layout);
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Close"), Ui.Prompt("X", "Erase")));
-            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("Y", "Open first"), Ui.Prompt("A", "Select")));
+            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("Y", "Space"), Ui.Prompt("≡", "Open first"), Ui.Prompt("A", "Select")));
             later.Tick += (s, e) => { later.Stop(); Search(); };
             Search();
         }
@@ -279,7 +279,8 @@ namespace Selene
             if (b == "B") { Ui.Back(); LoginScene.Finish(); return; }
             if (b.StartsWith("DPad")) { Move(b); return; }
             if (b == "X") { Erase(); return; }
-            if (b == "Y") { Open(0); return; }
+            if (b == "Y") { Type(" "); return; }   // the space bar
+            if (b == "Start") { Open(0); return; }
             if (b != "A") return;
             if (result >= 0) { Open(result); return; }
             var v = values[row][col];
