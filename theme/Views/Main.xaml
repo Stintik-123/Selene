@@ -304,7 +304,7 @@
 
                                 <!-- the whole library: one row of big covers, close together -->
                                 <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="14,0,0,0" Background="Transparent" BorderThickness="0"
-                                           ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                           ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Item"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
                                 <TextBlock Grid.Row="2" FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center"
                                            HorizontalAlignment="Center" VerticalAlignment="Center">
