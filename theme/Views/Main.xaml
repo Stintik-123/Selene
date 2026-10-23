@@ -33,10 +33,10 @@
                                  horizontal row below, over the selected game's art. PART_* names are Playnite's. -->
                             <Grid x:Name="SeleneLibrary" Visibility="Collapsed">
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="110" />
+                                    <RowDefinition Height="100" />
                                     <RowDefinition Height="*" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="96" />
+                                    <RowDefinition Height="44" />
                                 </Grid.RowDefinitions>
                                 <Border Grid.RowSpan="4" Background="{DynamicResource MainBackgourndBrush}"/>
                                 <Image Grid.RowSpan="4" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
@@ -62,12 +62,12 @@
                                 </Border>
 
                                 <!-- stage: the game on the left, its trailer card on the right -->
-                                <Grid Grid.Row="1" Margin="100,10,100,24">
+                                <Grid Grid.Row="1" Margin="100,0,100,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Bottom" Margin="0,0,40,10">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,40,0">
                                         <TextBlock x:Name="SeleneLibraryLogoPath" Tag="{Api Paths.ConfigurationPath}" Visibility="Collapsed">
                                             <TextBlock.Text>
                                                 <MultiBinding StringFormat="{}{0}\ExtraMetadata\games\{1}\logo.png">
@@ -129,18 +129,18 @@
                                         </StackPanel>
                                     </StackPanel>
                                     <!-- the trailer card: Selene Core puts the player in here and fades the card in -->
-                                    <Border x:Name="SeleneLibraryTrailerCard" Grid.Column="1" Width="820" Height="461" VerticalAlignment="Bottom" CornerRadius="18" Opacity="0"
+                                    <Border x:Name="SeleneLibraryTrailerCard" Grid.Column="1" Width="680" Height="383" VerticalAlignment="Center" CornerRadius="18" Opacity="0"
                                             BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1" Background="Black" RenderTransformOrigin="0.5,0.5" IsHitTestVisible="False">
                                         <Border.RenderTransform><ScaleTransform ScaleX="0.96" ScaleY="0.96"/></Border.RenderTransform>
                                         <Border.Effect><DropShadowEffect ShadowDepth="0" BlurRadius="40" Opacity="0.5" Color="Black"/></Border.Effect>
                                         <Grid x:Name="SeleneLibraryTrailerHost" ClipToBounds="True">
-                                            <Grid.Clip><RectangleGeometry Rect="0,0,818,459" RadiusX="17" RadiusY="17"/></Grid.Clip>
+                                            <Grid.Clip><RectangleGeometry Rect="0,0,678,381" RadiusX="17" RadiusY="17"/></Grid.Clip>
                                         </Grid>
                                     </Border>
                                 </Grid>
 
                                 <!-- the whole library, one horizontal row -->
-                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="300" Margin="70,0,70,0" Background="Transparent" BorderThickness="0"
+                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="480" Margin="60,0,60,0" Background="Transparent" BorderThickness="0"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
                                 <TextBlock Grid.Row="2" FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center"
                                            HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -170,7 +170,8 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- Playnite's button hints: hidden, like the home (a console's home shows none); the parts stay -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
                                         <ButtonEx x:Name="PART_ButtonInstall" Style="{DynamicResource ButtonBottomMenu}" Content="{DynamicResource LOCInstallGame}" />
                                         <ButtonEx x:Name="PART_ButtonPlay" Style="{DynamicResource ButtonBottomMenu}" Content="{DynamicResource LOCPlayGame}" />
                                         <ButtonEx x:Name="PART_ButtonDetails" Style="{DynamicResource ButtonBottomMenu}" Content="{DynamicResource LOCGameDetails}" />
@@ -786,7 +787,8 @@
                                 <FilterPresetSelector x:Name="PART_FilterPresetSelector" HorizontalAlignment="Left" VerticalAlignment="Center"
                                                       Visibility="{Binding Visibility, ElementName=SeleneLibrary}"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <ButtonEx x:Name="PART_ButtonNotifications" VerticalAlignment="Center" Margin="10,0,10,0" Height="48" MinWidth="48">
+                                    <!-- Playnite's notifications: not part of Selene's top bar (the part stays, hidden) -->
+                                    <ButtonEx x:Name="PART_ButtonNotifications" VerticalAlignment="Center" Margin="10,0,10,0" Height="48" MinWidth="48" Visibility="Collapsed">
                                         <Button.Content>
                                             <Grid>
                                                 <TextBlock Text="&#xEA8F;" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource SeleneInkBrush}" FontSize="26" />
@@ -795,11 +797,6 @@
                                         </Button.Content>
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource ButtonTopMenu}">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Api Notifications.Count}" Value="0">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
                                             </Style>
                                         </Button.Style>
                                     </ButtonEx>
