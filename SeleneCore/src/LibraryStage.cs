@@ -30,7 +30,7 @@ namespace Selene
             host = HomeNav.FindByName(w, "SeleneLibraryTrailerHost") as Grid;
             rsHint = HomeNav.FindByName(w, "SeleneLibraryRsHint") as TextBlock;
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
-            arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };   // like Aniki: about 2 s on a game
+            arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) };   // 3 s on a game before its trailer
             arm.Tick += (s, e) => { arm.Stop(); Play(); };
             list.SelectionChanged += (s, e) => Rearm();
             library.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Rearm(); else Stop(); };
