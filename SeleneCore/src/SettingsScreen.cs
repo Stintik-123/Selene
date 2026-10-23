@@ -38,8 +38,24 @@ namespace Selene
 
             // left: title and the groups
             var left = new StackPanel();
-            left.Children.Add(new TextBlock { Text = "Settings", FontSize = 40, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(18, 0, 0, 6) });
-            left.Children.Add(new TextBlock { Text = "Selene", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(20, 0, 0, 30) });
+            if (Features.On("brand"))
+            {
+                // Selene's own page: its mark, glowing, beside the title; the version under it
+                var head = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(14, 0, 0, 30) };
+                var mark = Brand.Mark(76, true);
+                mark.Margin = new Thickness(0, 0, 18, 0);
+                head.Children.Add(mark);
+                var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                words.Children.Add(new TextBlock { Text = "Settings", FontSize = 40, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor") });
+                words.Children.Add(new TextBlock { Text = "Selene " + Brand.Version, FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(2, 2, 0, 0) });
+                head.Children.Add(words);
+                left.Children.Add(head);
+            }
+            else
+            {
+                left.Children.Add(new TextBlock { Text = "Settings", FontSize = 40, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(18, 0, 0, 6) });
+                left.Children.Add(new TextBlock { Text = "Selene", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(20, 0, 0, 30) });
+            }
             for (int i = 0; i < Features.Groups.Length; i++)
             {
                 var line = new StackPanel { Orientation = Orientation.Horizontal };
@@ -138,6 +154,7 @@ namespace Selene
             {
                 var key = options[index].Key;
                 Features.Set(key, !Features.On(key));
+                if (key == "brand") Brand.Apply();
                 Ui.Key();
                 ShowSwitch(index, true);
                 if (key == "hints") HomeHints.Update();

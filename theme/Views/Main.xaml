@@ -305,10 +305,10 @@
                                 <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="0,0,0,0" Background="Transparent" BorderThickness="0"
                                            ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Item"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
-                                <TextBlock Grid.Row="2" FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock" BasedOn="{StaticResource TextBlockBaseStyle}">
+                                <!-- nothing to show: Selene's mark (drawn by Selene Core, slowly glowing) over Playnite's message -->
+                                <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding Items.Count, ElementName=PART_ListGameItems}" Value="0">
@@ -316,8 +316,10 @@
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                    </StackPanel.Style>
+                                    <Grid x:Name="SeleneEmptyMarkLibrary" Width="96" Height="96" Margin="0,0,0,20" HorizontalAlignment="Center" Visibility="Collapsed"/>
+                                    <TextBlock FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center" Style="{StaticResource TextBlockBaseStyle}"/>
+                                </StackPanel>
 
                                 <!-- Playnite's filter panels open over the left side -->
                                 <StackPanel Grid.Row="1" Grid.RowSpan="3" Orientation="Horizontal" HorizontalAlignment="Left" Panel.ZIndex="10">
@@ -349,7 +351,9 @@
                                                TextAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}" Text="{DynamicResource LOCGameListExtraFiltered}"/>
                                     <StackPanel x:Name="PART_ElemProgressIndicator" Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center">
                                         <TextBlock x:Name="PART_TextProgressTooltip" Margin="0,0,12,0" FontSize="15" VerticalAlignment="Center" Style="{DynamicResource TextBlockBaseStyle}"/>
-                                        <ContentControl Style="{DynamicResource ProgressIndicator}" Focusable="False" Height="26" Width="26" VerticalAlignment="Center" />
+                                        <ContentControl x:Name="SeleneBusySpinner" Style="{DynamicResource ProgressIndicator}" Focusable="False" Height="26" Width="26" VerticalAlignment="Center" />
+                                        <!-- with the Selene logo on: its mark, glowing, instead of the spinner (Selene Core) -->
+                                        <Grid x:Name="SeleneBusyMark" Width="30" Height="30" VerticalAlignment="Center" Visibility="Collapsed"/>
                                     </StackPanel>
                                 </Grid>
                             </Grid>
@@ -643,9 +647,13 @@
                                                 </TextBlock>
                                             </Canvas>
                                             <!-- the tab has no games: what it is and how it fills up (Selene Core sets the text and shows it) -->
-                                            <StackPanel x:Name="SeleneRowEmpty" Margin="440,46,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" IsHitTestVisible="False">
-                                                <TextBlock x:Name="SeleneRowEmptyTitle" Foreground="{DynamicResource SeleneInkBrush}" FontSize="30" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold"/>
-                                                <TextBlock x:Name="SeleneRowEmptyHint" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="19" FontFamily="{DynamicResource FontMain}" Margin="0,8,0,0" MaxWidth="760" TextWrapping="Wrap"/>
+                                            <StackPanel x:Name="SeleneRowEmpty" Orientation="Horizontal" Margin="440,46,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" IsHitTestVisible="False">
+                                                <!-- Selene's mark, slowly glowing (drawn by Selene Core) -->
+                                                <Grid x:Name="SeleneEmptyMarkHome" Width="64" Height="64" Margin="0,0,22,0" VerticalAlignment="Top" Visibility="Collapsed"/>
+                                                <StackPanel>
+                                                    <TextBlock x:Name="SeleneRowEmptyTitle" Foreground="{DynamicResource SeleneInkBrush}" FontSize="30" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold"/>
+                                                    <TextBlock x:Name="SeleneRowEmptyHint" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="19" FontFamily="{DynamicResource FontMain}" Margin="0,8,0,0" MaxWidth="760" TextWrapping="Wrap"/>
+                                                </StackPanel>
                                             </StackPanel>
                                         </Grid>
 
@@ -962,6 +970,8 @@
                             <Grid x:Name="HubTopBarBackground" VerticalAlignment="Top" Height="110" Margin="64,0,64,0">
                                 <!-- home: LB/RB filter tabs (drawn by Selene Core) -->
                                 <StackPanel x:Name="SeleneFilterTabs" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <!-- Selene's mark at the far left (Selene Core draws it; the "Selene logo" switch) -->
+                                <Grid x:Name="SeleneTopMark" Width="40" Height="40" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0" Visibility="Collapsed" IsHitTestVisible="False"/>
                                 <!-- library: Playnite's filter presets, styled like Spotlight's tabs (LB / RB) -->
                                 <FilterPresetSelector x:Name="PART_FilterPresetSelector" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">

@@ -1,0 +1,99 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+
+namespace Selene
+{
+    // Selene's mark around the theme (the "Selene logo" switch): small at the far left of the top bar, slowly glowing on
+    // empty screens and in place of Playnite's busy spinner. The menu and settings put it in their headers (Brand.Mark).
+    public static class Brand
+    {
+        private static readonly string[] Slots = { "SeleneTopMark", "SeleneEmptyMarkHome", "SeleneEmptyMarkLibrary", "SeleneBusyMark" };
+        private static Window window;
+        private static UIElement topGlow;
+
+        // the add-on's version (extension.yaml next to the add-on)
+        private static string version;
+        public static string Version
+        {
+            get
+            {
+                if (version != null) return version;
+                version = "";
+                try
+                {
+                    var file = Path.Combine(Path.GetDirectoryName(typeof(Brand).Assembly.Location), "extension.yaml");
+                    var line = File.Exists(file) ? File.ReadAllLines(file).FirstOrDefault(l => l.StartsWith("Version:", StringComparison.OrdinalIgnoreCase)) : null;
+                    if (line != null) version = line.Substring(8).Trim();
+                }
+                catch (Exception ex) { HomeNav.Log("brand: version " + ex.Message); }
+                return version;
+            }
+        }
+
+        // the mark; `breathe`: its halo keeps glowing softly
+        public static Grid Mark(double size, bool breathe)
+        {
+            UIElement glow;
+            var mark = Ui.Mark(size, out glow);
+            mark.IsHitTestVisible = false;
+            if (breathe) Breathe(glow);
+            return mark;
+        }
+
+        private static void Breathe(UIElement glow)
+        {
+            glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.45, 1, TimeSpan.FromMilliseconds(2200))
+            {
+                AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            });
+        }
+
+        public static void Attach(Window w)
+        {
+            window = w;
+            foreach (var name in Slots)
+            {
+                var slot = HomeNav.FindByName(w, name) as Grid;
+                if (slot == null) { HomeNav.Log("brand: no " + name); continue; }
+                if (slot.Children.Count > 0) continue;
+                UIElement glow;
+                var mark = Ui.Mark(slot.Width, out glow);
+                mark.IsHitTestVisible = false;
+                if (name == "SeleneTopMark") { topGlow = glow; glow.Opacity = 0.55; }
+                else Breathe(glow);
+                if (name.StartsWith("SeleneEmpty")) mark.Opacity = 0.7;   // quiet beside the message
+                slot.Children.Add(mark);
+            }
+            Apply();
+        }
+
+        // shows or hides every mark by the switch (the menu and settings check it when they open)
+        public static void Apply()
+        {
+            if (window == null) return;
+            bool on = Features.On("brand");
+            foreach (var name in Slots)
+            {
+                var slot = HomeNav.FindByName(window, name) as UIElement;
+                if (slot != null) slot.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            }
+            var spinner = HomeNav.FindByName(window, "SeleneBusySpinner") as UIElement;
+            if (spinner != null) spinner.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        // the top bar's mark glows up once and settles (signing in)
+        public static void Pulse(int delayMs)
+        {
+            if (topGlow == null || !Features.On("brand")) return;
+            var keys = new DoubleAnimationUsingKeyFrames { BeginTime = TimeSpan.FromMilliseconds(delayMs) };
+            keys.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(600)), new SineEase { EasingMode = EasingMode.EaseInOut }));
+            keys.KeyFrames.Add(new EasingDoubleKeyFrame(0.55, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1600)), new SineEase { EasingMode = EasingMode.EaseInOut }));
+            topGlow.BeginAnimation(UIElement.OpacityProperty, keys);
+        }
+    }
+}

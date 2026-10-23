@@ -36,6 +36,7 @@ namespace Selene
         private readonly List<Border> powerRows = new List<Border>();
         private int index, powerIndex;
         private bool leaving;
+        private StackPanel brand;
 
         private static readonly object[][] PowerItems =
         {
@@ -99,6 +100,17 @@ namespace Selene
                 cells.Add(cell); rings.Add(ring); labels.Add(label); scales.Add(scale);
             }
             Root.Children.Add(bar);
+            if (Features.On("brand"))
+            {
+                // Selene's menu: its mark and name at the top, the version under them
+                brand = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 120, 0, 0) };
+                var mark = Brand.Mark(84, true);
+                mark.HorizontalAlignment = HorizontalAlignment.Center;
+                brand.Children.Add(mark);
+                brand.Children.Add(new TextBlock { Text = "Selene", FontSize = 34, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 12, 0, 0) });
+                brand.Children.Add(new TextBlock { Text = Brand.Version, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 4, 0, 0) });
+                Root.Children.Add(brand);
+            }
             status.Foreground = Ink.Brush("SeleneInkColor", 0.75);
             Root.Children.Add(status);
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Close")));
@@ -109,6 +121,7 @@ namespace Selene
         {
             // the icons rise in from the bottom one after another
             for (int i = 0; i < cells.Count; i++) Ui.Rise(cells[i], 40 + i * 25, 24, 260);
+            if (brand != null) Ui.Rise(brand, 0, -14, 300);
             Ui.Play("OpenPanel.wav", 0.8);
             ShowFocus(false);
         }
