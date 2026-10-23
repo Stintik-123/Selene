@@ -43,6 +43,7 @@ namespace Selene
         private readonly TranslateTransform rowShift = new TranslateTransform();
         private readonly Image heroA = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 }, heroB = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
         private bool heroFront;
+        private readonly System.Windows.Shapes.Path storeIcon;
         private readonly TextBlock storeLabel, title, price, oldPrice, note, status, facts, about;
         private bool rebuildQueued;
         private readonly Border discount, owned;
@@ -92,7 +93,11 @@ namespace Selene
 
             // the focused game: store, name, price
             info = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(96, 130, 0, 0), MaxWidth = 860 };
-            storeLabel = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor") };
+            storeLabel = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center };
+            storeIcon = new System.Windows.Shapes.Path { Width = 18, Height = 18, Stretch = Stretch.Uniform, Fill = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 9, 0) };
+            var storeLine = new StackPanel { Orientation = Orientation.Horizontal };
+            storeLine.Children.Add(storeIcon);
+            storeLine.Children.Add(storeLabel);
             title = new TextBlock { FontSize = 54, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
             var priceLine = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 18, 0, 0) };
             discount = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 3, 10, 4), Margin = new Thickness(0, 0, 14, 0), Background = Ink.Brush("SeleneFocusColor"), VerticalAlignment = VerticalAlignment.Center };
@@ -105,7 +110,7 @@ namespace Selene
             note = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.7), Margin = new Thickness(0, 12, 0, 0) };
             facts = new TextBlock { FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(0, 10, 0, 0) };
             about = new TextBlock { FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.82), TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.WordEllipsis, MaxHeight = 84, LineHeight = 28, Margin = new Thickness(0, 14, 0, 0) };
-            info.Children.Add(storeLabel); info.Children.Add(title); info.Children.Add(facts); info.Children.Add(priceLine); info.Children.Add(note); info.Children.Add(about);
+            info.Children.Add(storeLine); info.Children.Add(title); info.Children.Add(facts); info.Children.Add(priceLine); info.Children.Add(note); info.Children.Add(about);
             Root.Children.Add(info);
 
             // rows of games; the focused row glides to the top of this area
@@ -129,8 +134,12 @@ namespace Selene
             status = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(98, 640, 0, 0) };
             Root.Children.Add(status);
 
-            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Store apps"), Ui.Prompt("X", "Currency")));
-            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Details")));
+            var leftHints = Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Store apps"), Ui.Prompt("X", "Currency"));
+            var rightHints = Ui.Prompts(true, Ui.Prompt("A", "Details"));
+            leftHints.Margin = new Thickness(46, 0, 0, 30);   // lower than elsewhere: centered in the band under the rows' fade
+            rightHints.Margin = new Thickness(0, 0, 64, 30);
+            Root.Children.Add(leftHints);
+            Root.Children.Add(rightHints);
 
             heroLater.Tick += (s, e) => { heroLater.Stop(); ShowHero(); };
         }
@@ -360,6 +369,9 @@ namespace Selene
             info.Visibility = item != null ? Visibility.Visible : Visibility.Hidden;
             if (item == null) { heroA.Opacity = heroB.Opacity = 0; return; }
             storeLabel.Text = item.StoreName.ToUpperInvariant();
+            var logo = PlatformIcons.For(item.StoreName);
+            storeIcon.Data = logo;
+            storeIcon.Visibility = logo != null ? Visibility.Visible : Visibility.Collapsed;
             title.Text = item.Title;
             price.Text = item.Free ? "Free" : item.Price ?? "";
             oldPrice.Text = item.OldPrice ?? "";
@@ -556,7 +568,7 @@ namespace Selene
             var a = front ? shotA : shotB;
             var b = front ? shotB : shotA;
             front = !front;
-            Panel.SetZIndex(a, 1); Panel.SetZIndex(b, 0);
+            Panel.SetZIndex(a, -1); Panel.SetZIndex(b, -2);   // the newer picture over the older one, both under the words (they covered them)
             a.BeginAnimation(UIElement.OpacityProperty, null);
             a.Opacity = 0;
             StorePage.Load(a, url, 1920);
