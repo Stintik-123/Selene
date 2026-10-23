@@ -1904,6 +1904,9 @@ namespace Selene
 
         private static void PlayIntro(ListBox row)
         {
+            // Collection is up (Find a game opened it as the layer closed): the home's selection would overwrite the game
+            // picked there (both follow Playnite's selected game); the home gets its own back when it shows (SyncSelectionForHome)
+            if (SeleneShell.CollectionActive) { LiftIntroCover(); return; }
             if ((DateTime.Now - lastIntro).TotalMilliseconds < 800) return;  // several watchers fire for one hub open
             lastIntro = DateTime.Now;
             LiftIntroCover();
