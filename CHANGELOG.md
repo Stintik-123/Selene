@@ -12,7 +12,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Light themes dim the home behind Playnite's menus with a dark shade instead of a bright one.
 - Power icons in the menu use the theme's color like the rest.
 - Background step: with "Game art" on, the preview shows a game's art (without selecting it, so no game song plays); with no games yet it says the wallpaper shows until you add some.
-- New sounds: a soft glassy ping and chime when a profile is made, Final Fantasy VII Remake menu sounds for confirming (A), closing (B), menus opening and when Selene asks "are you sure", a warm swell with a rising harp when you press Play, two soft harp notes when the game is up.
+- New sounds: a soft glassy ping and chime when a profile is made, Square Enix menu sounds for picking a profile, pressing Play and the game starting, Final Fantasy VII Remake menu sounds for confirming (A), closing (B), menus opening and when Selene asks "are you sure", a warm swell with a rising harp when you press Play, two soft harp notes when the game is up.
 - A Store card next to Library: opens the store apps on your PC (Steam, Epic, Xbox, GOG, Ubisoft, EA, Microsoft Store).
 - After Playnite starts or someone signs in, the home starts on the Library card.
 - Your own picture as an avatar: frame it in a circle first (move with the stick, zoom with the triggers).

@@ -8,9 +8,9 @@ Playnite - https://github.com/JosefNemec/Playnite - MIT License, Copyright (c) J
 The sounds in `theme/Audio` (except where noted) are from *Interface Sounds* by Kenney (www.kenney.nl),
 released under Creative Commons Zero (CC0): http://creativecommons.org/publicdomain/zero/1.0/
 The original license file is included as `theme/Audio/LICENSE-Kenney-Interface-Sounds.txt`.
-Not from Kenney: `navigation.wav`, `Boot.wav`, `Success.wav`, `LoginSelect.wav`, `Key.wav`, `GameStarting.wav` and `GameReady.wav` are Selene's own, synthesized by `tools/make_sounds.py` (no samples).
+Not from Kenney: `navigation.wav`, `Boot.wav`, `Success.wav` and `Key.wav` are Selene's own, synthesized by `tools/make_sounds.py` (no samples).
 
-`OpenPanel.wav` (a menu or panel opening), `activation.wav` (confirm), `CloseAdditionalView.wav` (back / close) and `Alert.wav` (asking before something can't be undone) are menu sounds from FINAL FANTASY VII REMAKE, (c) SQUARE ENIX. They are not free to reuse: they are here by the maintainer's choice and will be replaced if asked.
+`OpenPanel.wav` (a menu or panel opening), `LoginSelect.wav` (picking a profile), `GameStarting.wav` (pressing Play), `GameReady.wav` (the game is up), `activation.wav` (confirm), `CloseAdditionalView.wav` (back / close) and `Alert.wav` (asking before something can't be undone) are menu sounds from SQUARE ENIX games (FINAL FANTASY VII REMAKE, FINAL FANTASY XVI, CRISIS CORE, KINGDOM HEARTS III), (c) SQUARE ENIX. They are not free to reuse: they are here by the maintainer's choice and will be replaced if asked.
 
 ## Cinzel
 The "SELENE" lettering in the logo and banner (`tools/art/selene-wordmark.svg`, `docs/logo`) is set in Cinzel and converted
