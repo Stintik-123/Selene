@@ -72,6 +72,7 @@ namespace Selene
 
         public override void Hidden()
         {
+            HomeNav.ShowArtForPreview(false);
             // left without saving (B out of the first step, or the layer closed): the signed-in profile's look comes back
             if (!saved) Profiles.ApplyLook();
         }
@@ -219,8 +220,8 @@ namespace Selene
             }
         }
 
-        // the real home, mirrored live (row and top bar over the wallpaper, no game selected: its art would hide the
-        // wallpaper and start its song), so a theme or background is seen before picking it
+        // the real home, mirrored live (row and top bar; no game is selected, its song would start), so a theme or
+        // background is seen before picking it
         internal static FrameworkElement Preview(double width)
         {
             double height = width * 9 / 16;
@@ -730,6 +731,7 @@ namespace Selene
             private readonly List<string> groups = new List<string>();
             private readonly Later apply = new Later(130);
             private int index, generation;
+            private bool hasArt;   // the library has a game whose art the preview can show
 
             public BackgroundStep(ProfileSteps owner) : base(owner)
             {
@@ -796,6 +798,7 @@ namespace Selene
 
             public override void Shown()
             {
+                hasArt = HomeNav.ShowArtForPreview(true);
                 Fill();
                 look.Select(Owner.Look == "wallpaper" ? 1 : 0, false);
                 ShowNote();
@@ -819,10 +822,13 @@ namespace Selene
                 Profiles.ApplyHomeBackground(Owner.Look);
             }
 
+            public override void Left() { HomeNav.ShowArtForPreview(false); }
+
             private void ShowNote()
             {
                 lookNote.Text = Owner.Look == "wallpaper" ? "The home always shows this background."
-                              : "The home shows each game's art; this background is behind the login, the menus and an empty home.";
+                              : hasArt ? "The home shows each game's art; this background is behind the login, the menus and an empty home."
+                              : "Once you add games the home shows their art; until then it shows this background.";
             }
 
             public override void Move(string dir)

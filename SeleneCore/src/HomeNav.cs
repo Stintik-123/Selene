@@ -942,6 +942,37 @@ namespace Selene
             art.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
+        // the background step's preview: the row's first game's art goes straight into the home's art layer (its pictures,
+        // not Playnite's selected game, so no song starts). False when the library has no game to borrow it from.
+        public static bool ShowArtForPreview(bool on)
+        {
+            var w = Application.Current.MainWindow;
+            var art = w != null ? FindByName(w, "SeleneHubArt") as Panel : null;
+            if (art == null) return false;
+            var pictures = new List<FrameworkElement>();
+            foreach (var c in art.Children) { var fe = c as FrameworkElement; if (fe != null && fe.GetType().Name == "FadeImage") pictures.Add(fe); }
+            object game = null;
+            if (on)
+            {
+                var row = LiveRow();
+                int idx = row != null ? FirstGameIndex(row) : -1;
+                if (idx >= 0 && idx < row.Items.Count && !(row.Items[idx] is string) && !(row.Items[idx] is RowPad)) game = row.Items[idx];
+            }
+            var idProp = game != null ? game.GetType().GetProperty("Id") : null;
+            var bgProp = game != null ? game.GetType().GetProperty("DisplayBackgroundImage") : null;
+            var id = idProp != null ? idProp.GetValue(game, null) : null;
+            var hero = id != null ? System.IO.Path.Combine(SelenePaths.Media("Hero"), id + ".jpg") : null;
+            var sources = new[] { bgProp != null ? bgProp.GetValue(game, null) : null, hero != null && System.IO.File.Exists(hero) ? hero : null };
+            for (int i = 0; i < pictures.Count && i < sources.Length; i++)
+            {
+                var prop = System.ComponentModel.DependencyPropertyDescriptor.FromName("Source", pictures[i].GetType(), pictures[i].GetType());
+                if (prop == null) continue;
+                if (game != null) pictures[i].SetCurrentValue(prop.DependencyProperty, sources[i]);
+                else { var b = BindingOperations.GetBindingExpressionBase(pictures[i], prop.DependencyProperty); if (b != null) b.UpdateTarget(); }
+            }
+            return game != null;
+        }
+
         // while the login screens cover the home nothing is selected for Playnite (its music add-ons would play)
         public static void ClearSelectedGame()
         {

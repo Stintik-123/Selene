@@ -4,7 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Theme and background steps: the preview shows your wallpaper behind the home (no game is picked for it any more, so no game art covering it and no game song), with a note on what each home look does.
+- Theme and background steps: the preview shows your wallpaper and, on the background step, a game's art when "Game art" is on (borrowed without selecting the game, so no game song plays); with no games yet it says the wallpaper shows until you add some.
 - A Store card next to Library: opens the store apps on your PC (Steam, Epic, Xbox, GOG, Ubisoft, EA, Microsoft Store).
 - After Playnite starts or someone signs in, the home starts on the Library card.
 - Your own picture as an avatar: frame it in a circle first (move with the stick, zoom with the triggers).
