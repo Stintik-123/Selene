@@ -179,6 +179,7 @@ namespace Selene
         // spotlight and particles only on the plain gradient (no wallpaper behind)
         public static void RefreshBackdrop()
         {
+            ShowBackdropKind();
             if (glow == null) return;
             bool wallpaper = Application.Current.Resources["SeleneWallpaper"] != null;
             glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(wallpaper || !Features.On("glow") ? 0 : 1, TimeSpan.FromMilliseconds(300)));
@@ -314,9 +315,28 @@ namespace Selene
         }
 
         // the login's glow: a breathing accent spotlight, a hazy floor glow and drifting particles (the home uses it too)
+        // Selene's own backdrop behind the login, the menus and Spotlight's cards. On Selene's own theme it's the legacy home's
+        // looping video (theme\Media\selene-background.mp4); other themes get the drawn version in their color (a light
+        // beam, haze, drifting dust). Either only on themes without a wallpaper (RefreshBackdrop / RefreshHomeGlow).
+        private static readonly List<KeyValuePair<MediaElement, Grid>> backdrops = new List<KeyValuePair<MediaElement, Grid>>();
+
         private static Grid BuildGlow()
         {
+            var outer = new Grid { IsHitTestVisible = false };
+            MediaElement video = null;
+            var file = SelenePaths.ThemeFile("Media", "selene-background.mp4");
+            if (System.IO.File.Exists(file))
+            {
+                video = new MediaElement { Source = new Uri(file), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Manual, IsMuted = true, Stretch = Stretch.UniformToFill };
+                video.MediaEnded += (s, e) => { video.Position = TimeSpan.Zero; video.Play(); };
+                // plays only while it's on screen
+                video.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) video.Play(); else video.Pause(); };
+                outer.Children.Add(video);
+            }
             var glow = new Grid { IsHitTestVisible = false };
+            outer.Children.Add(glow);
+            backdrops.Add(new KeyValuePair<MediaElement, Grid>(video, glow));
+            ShowBackdropKind();
             // a beam of light in the theme's accent falling from the top left, slowly breathing
             var spot = new RadialGradientBrush { Center = new Point(0.14, -0.08), GradientOrigin = new Point(0.14, -0.08), RadiusX = 0.2, RadiusY = 0.85 };
             spot.GradientStops.Add(Ink.Stop("GlyphColor", 0.42, 0));
@@ -340,7 +360,20 @@ namespace Selene
             var canvas = new Canvas { IsHitTestVisible = false };
             glow.Children.Add(canvas);
             glow.SizeChanged += (s, e) => { if (canvas.Children.Count == 0 && e.NewSize.Width > 0) FillParticles(canvas, e.NewSize); };
-            return glow;
+            return outer;
+        }
+
+        // the video on Selene's own theme, the drawn backdrop on the others
+        private static void ShowBackdropKind()
+        {
+            var id = Application.Current.Resources["SeleneThemeId"] as string;
+            bool seleneTheme = string.IsNullOrEmpty(id) || id == ThemePalettes.DefaultId;
+            foreach (var pair in backdrops)
+            {
+                bool useVideo = seleneTheme && pair.Key != null;
+                if (pair.Key != null) pair.Key.Visibility = useVideo ? Visibility.Visible : Visibility.Collapsed;
+                pair.Value.Visibility = useVideo ? Visibility.Collapsed : Visibility.Visible;
+            }
         }
 
         // ---- the same glow on the home, behind the game art: seen on the cards (and with no games), off over a wallpaper ----

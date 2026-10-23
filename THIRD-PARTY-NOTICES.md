@@ -39,6 +39,9 @@ game publishers and are not covered by Selene's MIT license. Rights holders can 
 ## Collection trailer mask
 `theme/Images/TrailerMask.png` comes from the Aniki ReMake theme (its trailer mask), used as is.
 
+## Background video
+`theme/Media/selene-background.mp4` is the looping background from the maintainer's legacy setup (origin not recorded); it will be replaced if asked.
+
 ## Store logos
 The flat store logos (Steam, Epic Games, GOG, EA, Ubisoft, Battle.net, itch.io) are shapes from Simple Icons
 (https://simpleicons.org), CC0. The brands belong to their owners.
