@@ -1541,20 +1541,29 @@ namespace Selene
 
         private static DateTime lastIntro;
 
-        // the login is about to fade off a home that will play its intro: hide the row, game info and art now, or the old
-        // home shows through the fade for a moment before the intro starts. If no intro follows, they come back on their own.
+        // the login is about to fade off a home that will play its intro. The home's parts are rebuilt while the login
+        // fades (new copies, nothing to hide ahead of time), so a dark cover goes over the whole home instead and lifts
+        // when the intro starts; if no intro follows it lifts on its own.
+        private static Border introCover;
+
         public static void HoldHomeForIntro()
         {
             var w = Application.Current.MainWindow;
-            if (w == null) return;
-            var held = new List<UIElement>();
-            foreach (var n in new[] { "SeleneRowIntro", "SeleneInfoIntro", "SeleneHubGameBackground" })
+            var hub = w != null ? FindByName(w, "WelcomeHubOverlay") as Grid : null;
+            if (hub == null) { Log("intro: no home to cover"); return; }
+            if (introCover == null)
             {
-                var el = FindByName(w, n) as UIElement;
-                if (el == null) continue;
-                el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
-                held.Add(el);
+                introCover = new Border { IsHitTestVisible = false };
+                introCover.SetResourceReference(Border.BackgroundProperty, "SeleneScrimBrush");
+                Panel.SetZIndex(introCover, 1000);
+                Grid.SetRowSpan(introCover, 100);
+                Grid.SetColumnSpan(introCover, 100);
             }
+            var parent = VisualTreeHelper.GetParent(introCover) as Panel;
+            if (parent != hub) { if (parent != null) parent.Children.Remove(introCover); hub.Children.Add(introCover); }
+            introCover.BeginAnimation(UIElement.OpacityProperty, null);
+            introCover.Opacity = 1;
+            Log("intro: home covered for the login fade");
             var since = DateTime.Now;
             var check = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2500) };
             check.Tick += (s, e) =>
@@ -1562,10 +1571,20 @@ namespace Selene
                 check.Stop();
                 if (lastIntro >= since) return;
                 Log("intro: none followed the login, showing the home as it is");
-                foreach (var el in held) el.BeginAnimation(UIElement.OpacityProperty, null);
+                LiftIntroCover();
             };
             check.Start();
         }
+
+        private static void LiftIntroCover()
+        {
+            var cover = introCover;
+            if (cover == null || !(VisualTreeHelper.GetParent(cover) is Panel)) return;
+            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+            fade.Completed += (s, e) => { var p = VisualTreeHelper.GetParent(cover) as Panel; if (p != null && cover.Opacity < 0.01) p.Children.Remove(cover); };
+            cover.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+
         private static bool introDone;
         // right after Playnite starts or someone signs in, the row starts on the first card (Library), not a game
         private static bool startOnCards = true;
@@ -1574,6 +1593,7 @@ namespace Selene
         {
             if ((DateTime.Now - lastIntro).TotalMilliseconds < 800) return;  // several watchers fire for one hub open
             lastIntro = DateTime.Now;
+            LiftIntroCover();
             bool animate = !introDone && !Lite;  // full intro only the first time the hub is seen after Playnite starts (never in a streamed session)
             introDone = true;
             try
@@ -1609,14 +1629,7 @@ namespace Selene
                 row.UpdateLayout();
                 ScheduleTitle(row, animate ? 1300 : 250);
 
-                if (!animate)
-                {
-                    // no fly-in: anything HoldHomeForIntro hid simply shows again
-                    var w0 = Window.GetWindow(row);
-                    if (w0 != null) foreach (var n in new[] { "SeleneRowIntro", "SeleneInfoIntro", "SeleneHubGameBackground" }) { var el = FindByName(w0, n) as UIElement; if (el != null) el.BeginAnimation(UIElement.OpacityProperty, null); }
-                    Log("hub reopened: default view, no intro");
-                    return;
-                }
+                if (!animate) { Log("hub reopened: default view, no intro"); return; }
 
                 // Background fades up first, game info rises in after the tiles.
                 var window = Window.GetWindow(row);
