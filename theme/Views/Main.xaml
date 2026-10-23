@@ -282,11 +282,11 @@
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                         <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="X" Style="{StaticResource HintKey}"/></Border>
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="A" Style="{StaticResource HintKey}"/></Border>
                                             <TextBlock Text="Play" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="A" Style="{StaticResource HintKey}"/></Border>
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="X" Style="{StaticResource HintKey}"/></Border>
                                             <TextBlock Text="Details" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <StackPanel Style="{StaticResource HintItem}">

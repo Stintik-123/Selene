@@ -5,7 +5,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Game details open again (the redone page set a style twice, and Playnite fell over opening it).
-- Collection: X plays the game the way Spotlight's Play does (Selene's loading screen at once, the same way through); installs it when it isn't.
+- Collection: A plays the game the way Spotlight's A does (Selene's loading screen at once, the same way through; installs it when it isn't), X opens its details.
+- Play: no music under the loading screen (the selected game's trailer card still fired under it and switched the music to that game's song).
 - Collection: the game's art crossfades from game to game instead of cutting (Selene's own crossfade, over a good half second).
 - Playnite's dialogs (a yes / no box, an add-on install) look like Selene: a glass card with rounded corners and pill buttons; and a press in a dialog no longer also moves the screen behind it.
 - Who's playing: the power button's glyph sits in the middle of its circle.

@@ -1395,7 +1395,7 @@ namespace Selene
 
         private static void ArmPreview(ListBox row)
         {
-            if (Lite) return;  // no trailer cards in a streamed session
+            if (Lite || launching) return;  // no trailer cards in a streamed session, nor under a loading screen
             if (previewArm == null)
             {
                 previewArm = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
@@ -1571,6 +1571,7 @@ namespace Selene
             musicMode = mode;
             SetUpsSetting("ForceDefaultMusicOverride", WantDefault);
             ApplyVideoPause();
+            if (musicHeldForLaunch) SetUpsVideoPlaying(true);   // the add-on starts the song over when the override flips: paused again
             // UniPlaySong can switch to a game's song on its own when Playnite's selection changes: like the legacy theme,
             // the wanted state is checked 4x a second and put back
             if (musicGuard == null)
@@ -2482,9 +2483,16 @@ namespace Selene
                         return;
                     }
                 }
-                // X on a game in Collection: Selene's Play, as Spotlight's pill (the loading screen up at once, the same way through)
-                if (pressed == "X" && item != null && InLibraryList(item) && Api != null)
+                // a game in Collection: A plays it as Spotlight's A does (Selene's loading screen at once, the same way through), X opens
+                // its details (Playnite's own A)
+                if ((pressed == "A" || pressed == "X") && item != null && InLibraryList(item) && Api != null)
                 {
+                    if (pressed == "X")
+                    {
+                        try { PlayniteMenu.Main("ActivateSelectedCommand"); } catch (Exception ex) { Log("details in Collection: " + ex.Message); }
+                        e.Cancel();
+                        return;
+                    }
                     var dc = item.DataContext;
                     var gid = Prop(dc, "Id");
                     if (!(gid is Guid)) { var g = Prop(dc, "Game"); if (g != null) gid = Prop(g, "Id"); }
@@ -4448,6 +4456,7 @@ namespace Selene
                 {
                     startingSeen = false;
                     QuietFocus(2500);     // the loading screen and the game take focus: not a move
+                    if (previewArm != null) previewArm.Stop();   // no trailer card under the loading screen
                     HoldMusicForLaunch(true);
                     PlayStartingSound();  // Playnite played it when IT started the game (~1 s after the press now)
                     var swCover = System.Diagnostics.Stopwatch.StartNew();
