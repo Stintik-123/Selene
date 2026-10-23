@@ -138,7 +138,7 @@
                                                 <Path Data="{DynamicResource SelenePlatformIcon}" Fill="{DynamicResource SeleneInkBrush}" Stretch="Uniform"/>
                                                 <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource SeleneInkBrush}" VerticalAlignment="Center" Visibility="{DynamicResource SelenePlatformFallback}"/>
                                             </Grid>
-                                            <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{DynamicResource SelenePlatformName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </StackPanel>
                                     <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
@@ -306,7 +306,7 @@
                                 </Border>
 
                                 <!-- the whole library: one row of big covers, close together -->
-                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="14,0,0,0" Background="Transparent" BorderThickness="0"
+                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="0,0,0,0" Background="Transparent" BorderThickness="0"
                                            ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Item"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
                                 <TextBlock Grid.Row="2" FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center"
@@ -888,7 +888,7 @@
                                                 <Path Data="{DynamicResource SelenePlatformIcon}" Fill="{DynamicResource SeleneInkBrush}" Stretch="Uniform"/>
                                                 <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource SeleneInkBrush}" VerticalAlignment="Center" Visibility="{DynamicResource SelenePlatformFallback}"/>
                                             </Grid>
-                                                            <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{DynamicResource SelenePlatformName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </StackPanel>

@@ -34,11 +34,17 @@ namespace Selene
             return null;
         }
 
+        // Selene's crescent (its logo's moon), for games from no store at all ("Local")
+        private const string Crescent = "M 9.109,20.577 A 31,31 0 1 0 62.891,20.577 A 27,27 0 1 1 9.109,20.577 Z";
+
         public static void Publish(string source)
         {
-            string key = KeyFor(source), d;
+            string key = KeyFor(source), d = null;
             var res = Application.Current.Resources;
-            if (key != null && Paths.TryGetValue(key, out d))
+            res["SelenePlatformName"] = string.IsNullOrWhiteSpace(source) ? "Local" : source;
+            if (string.IsNullOrWhiteSpace(source)) key = "crescent";
+            if (key == "crescent") d = Crescent;
+            if (key == "crescent" || (key != null && Paths.TryGetValue(key, out d)))
             {
                 var g = Geometry.Parse(d);
                 g.Freeze();
