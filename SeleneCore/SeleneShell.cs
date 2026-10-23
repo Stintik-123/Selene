@@ -170,7 +170,7 @@ namespace Selene
             // Spotlight fades to black first, then Collection fades in (it was loading its art meanwhile, invisible): a
             // crossfade showed Collection's game art behind Spotlight's screen for a moment
             library.Opacity = 0;
-            var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(160)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+            var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(200)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
             fadeOut.Completed += (s, e) =>
             {
                 if (mine != switchCount) return;
@@ -179,7 +179,6 @@ namespace Selene
                 var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
                 fadeIn.Completed += (s2, e2) => { if (mine == switchCount) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Opacity = 1; } };
                 library.BeginAnimation(UIElement.OpacityProperty, fadeIn);
-                LibraryStage.FadeArtIn();   // the game's art eases in just after
             };
             home.BeginAnimation(UIElement.OpacityProperty, fadeOut);
             HomeNav.Log("shell: library");
