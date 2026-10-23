@@ -395,7 +395,19 @@
                                             </MultiBinding>
                                         </TextBlock.Text>
                                     </TextBlock>
-                                    <FadeImage Source="{Binding Text, ElementName=SeleneHeroPath}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
+                                    <!-- no game selected (a card): no hero picture at all; a path to a missing file kept the last game's art up -->
+                                    <FadeImage SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant">
+                                        <FadeImage.Style>
+                                            <Style TargetType="FadeImage">
+                                                <Setter Property="Source" Value="{Binding Text, ElementName=SeleneHeroPath}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedGame}" Value="{x:Null}">
+                                                        <Setter Property="Source" Value="{x:Null}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </FadeImage.Style>
+                                    </FadeImage>
                                     </Grid>
                                     <Border Background="{DynamicResource SeleneScrimBrush}">
                                         <Border.OpacityMask>
