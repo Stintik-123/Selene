@@ -3,7 +3,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 
 namespace Selene
 {
@@ -167,8 +169,16 @@ namespace Selene
                 var item = list.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, list.SelectedIndex)) as UIElement;
                 if (item != null) item.Focus(); else list.Focus();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
-            // Spotlight fades to black first, then Collection fades in (it was loading its art meanwhile, invisible): a
-            // crossfade showed Collection's game art behind Spotlight's screen for a moment
+            // a crossfade: a still of Spotlight lies on top and melts away over Collection
+            if (Crossfade(home, 260))
+            {
+                home.BeginAnimation(UIElement.OpacityProperty, null);
+                home.Visibility = Visibility.Collapsed;
+                library.Opacity = 1;
+                HomeNav.Log("shell: library");
+                return;
+            }
+            // (no still to be had: Spotlight fades to black first, then Collection fades in)
             library.Opacity = 0;
             var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(200)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
             fadeOut.Completed += (s, e) =>
@@ -191,11 +201,19 @@ namespace Selene
             if (home == null) return;
             int mine = ++switchCount;
             CollectionActive = false;
-            // Collection goes first: setting Spotlight's "no game" (a card) made its list jump to its first game, whose
-            // art showed for a moment under the fading-in Spotlight (the 007 flash)
+            // a still of Collection lies on top while everything changes under it, then melts away over Spotlight: Collection
+            // itself goes at once (setting Spotlight's "no game" made its list jump to its first game: the 007 flash)
+            bool still = library != null && library.IsVisible && !LibraryStage.Playing && Crossfade(library, 280);
             if (library != null) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Visibility = Visibility.Collapsed; }
             HomeNav.SyncSelectionForHome();   // Spotlight's own selection
             home.Visibility = Visibility.Visible;
+            if (still)
+            {
+                home.BeginAnimation(UIElement.OpacityProperty, null);
+                home.Opacity = 1;
+                HomeNav.Log("shell: home");
+                return;
+            }
             // Spotlight fades in over Collection, which goes once it's covered
             var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(280)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
             fade.Completed += (s, e) =>
@@ -206,6 +224,34 @@ namespace Selene
             };
             home.BeginAnimation(UIElement.OpacityProperty, fade);
             HomeNav.Log("shell: home");
+        }
+
+        // lays a still picture of the screen being left over everything and fades it out (false when one can't be taken)
+        private static Image crossfadeStill;
+
+        private static bool Crossfade(UIElement leaving, int ms)
+        {
+            var el = leaving as FrameworkElement;
+            var host = Part("PART_ViewHost") as Panel;
+            if (el == null || host == null || !el.IsVisible || el.ActualWidth < 1 || el.ActualHeight < 1) return false;
+            try
+            {
+                if (crossfadeStill != null) host.Children.Remove(crossfadeStill);
+                var rtb = new RenderTargetBitmap((int)Math.Ceiling(el.ActualWidth), (int)Math.Ceiling(el.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+                rtb.Render(el);
+                rtb.Freeze();
+                var img = new Image { Source = rtb, Stretch = Stretch.Fill, IsHitTestVisible = false };
+                RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                Grid.SetRowSpan(img, 99); Grid.SetColumnSpan(img, 99);
+                Panel.SetZIndex(img, 1000);
+                host.Children.Add(img);
+                crossfadeStill = img;
+                var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(ms)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+                fade.Completed += (s, e) => { host.Children.Remove(img); if (crossfadeStill == img) crossfadeStill = null; };
+                img.BeginAnimation(UIElement.OpacityProperty, fade);
+                return true;
+            }
+            catch (Exception ex) { HomeNav.Log("crossfade still: " + ex.Message); return false; }
         }
 
         public static void OpenMenu()

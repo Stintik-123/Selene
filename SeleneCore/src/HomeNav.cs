@@ -1049,8 +1049,8 @@ namespace Selene
                 {
                     var keys = new DoubleAnimationUsingKeyFrames();
                     keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-                    keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(320))));
-                    keys.KeyFrames.Add(new EasingDoubleKeyFrame(art.Opacity, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(620)), new CubicEase { EasingMode = EasingMode.EaseOut }));
+                    keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(120))));
+                    keys.KeyFrames.Add(new EasingDoubleKeyFrame(art.Opacity, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(420)), new CubicEase { EasingMode = EasingMode.EaseOut }));
                     keys.Completed += (s, e) => art.BeginAnimation(UIElement.OpacityProperty, null);
                     art.BeginAnimation(UIElement.OpacityProperty, keys);
                 }
