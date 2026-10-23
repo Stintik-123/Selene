@@ -2497,7 +2497,7 @@ namespace Selene
                 {
                     if (pressed == "X")
                     {
-                        try { PlayniteMenu.Main("ActivateSelectedCommand"); } catch (Exception ex) { Log("details in Collection: " + ex.Message); }
+                        try { PlayniteMenu.Main("ToggleGameDetailsCommand"); } catch (Exception ex) { Log("details in Collection: " + ex.Message); }   // (ActivateSelected was Play / Install: X opened Steam)
                         e.Cancel();
                         return;
                     }
