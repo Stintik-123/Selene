@@ -71,6 +71,9 @@ namespace Selene
                 Fill(g);
                 Blur(false);
                 HomeNav.Log("details stage: " + g.Name + " (bands " + tiles[0].Count + "/" + tiles[1].Count + "/" + tiles[2].Count + ")");
+                var idle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+                idle.Tick += (s2, e2) => { idle.Stop(); if (details.IsVisible) Ui.MeasureFrames("details at rest", 500); };
+                idle.Start();
                 HideUnder(true);
                 var f = Keyboard.FocusedElement as DependencyObject;
                 if (f == null || !details.IsAncestorOf(f)) FocusPills();
@@ -158,7 +161,22 @@ namespace Selene
             if (panel == null) return;
             panel.Children.Clear(); tiles[1].Clear(); opens[1].Clear();
             var mine = CapturesScreen.Known.Where(c => string.Equals(c.Game, g.Name, StringComparison.OrdinalIgnoreCase)).Take(4).ToList();
-            if (note != null) { note.Text = mine.Count == 0 ? "No screenshots or clips of this game yet." : ""; note.Visibility = mine.Count == 0 ? Visibility.Visible : Visibility.Collapsed; }
+            if (note != null) note.Visibility = Visibility.Collapsed;
+            if (mine.Count == 0)
+            {
+                // nothing of this game yet: one quiet tile says so and opens Captures (the band stays reachable, with the activity beside it)
+                var empty = new Tile(272, 153, 12, 5) { FocusScale = 1.05 };
+                empty.Root.Margin = new Thickness(0, 0, 20, 0);
+                empty.Face.Background = Ink.Brush("SeleneGlassColor", 0.35);
+                var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+                words.Children.Add(new TextBlock { Text = "", FontFamily = Ui.Glyphs, FontSize = 26, Foreground = Ink.Brush("SeleneInkColor", 0.55), HorizontalAlignment = HorizontalAlignment.Center });
+                words.Children.Add(new TextBlock { Text = "No captures of this game yet", FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(0, 8, 0, 0), TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 220 });
+                empty.Face.Child = words;
+                panel.Children.Add(empty.Root);
+                tiles[1].Add(empty);
+                opens[1].Add(() => LoginScene.OpenWith(() => new CapturesScreen()));
+                Ui.Rise(empty.Root, 0, 10, 240);
+            }
             var files = new List<string>(); var where = new List<int>();
             for (int i = 0; i < mine.Count; i++)
             {
@@ -229,6 +247,13 @@ namespace Selene
                 return s;
             };
             var like = all.Select(x => new { Game = x, Score = score(x) }).Where(x => x.Score >= 2).OrderByDescending(x => x.Score).ThenByDescending(x => GameFacts.Seconds(x.Game)).Take(8).Select(x => x.Game).ToList();
+            if (like.Count < 8)
+            {
+                // few close matches (a game with one genre, or none): one shared genre counts, then the games you play most
+                var loose = all.Where(x => !like.Contains(x)).Select(x => new { Game = x, Score = score(x) }).Where(x => x.Score >= 1).OrderByDescending(x => x.Score).ThenByDescending(x => GameFacts.Seconds(x.Game)).Select(x => x.Game);
+                foreach (var x in loose) { if (like.Count >= 8) break; like.Add(x); }
+                foreach (var x in all.Where(x => !like.Contains(x)).OrderByDescending(x => GameFacts.Seconds(x))) { if (like.Count >= 8) break; if (GameFacts.Seconds(x) > 0) like.Add(x); }
+            }
             Band("SeleneDetailsMore", "SeleneDetailsMoreLabel", 3, like.Count > 0);
             for (int i = 0; i < like.Count; i++)
             {
@@ -286,6 +311,7 @@ namespace Selene
         {
             int shown = Math.Max(zone, 1);
             var ms = TimeSpan.FromMilliseconds(animate ? 260 : 0);
+            bool noBlur = System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-noblur"));   // dev: the peek without its blur, to compare
             foreach (var name in new[] { "SeleneDetailsBand1", "SeleneDetailsBand2", "SeleneDetailsBand2b", "SeleneDetailsBand3" })
             {
                 var band = Part<FrameworkElement>(name);
@@ -294,7 +320,7 @@ namespace Selene
                 bool below = z > shown;
                 var blur = band.Effect as System.Windows.Media.Effects.BlurEffect;
                 if (blur == null) { blur = new System.Windows.Media.Effects.BlurEffect { Radius = 0, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance }; band.Effect = blur; }
-                blur.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, new DoubleAnimation(below ? 5 : 0, ms));
+                blur.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, new DoubleAnimation(below && !noBlur ? 5 : 0, ms));
                 Fade(band, below, ms);
             }
         }
