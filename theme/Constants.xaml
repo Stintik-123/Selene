@@ -75,7 +75,7 @@
     
     <Style x:Key="TextBlockBaseStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="{DynamicResource FontSize}" />
-        <Setter Property="FontFamily" Value="Segoe UI Variable Display" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI" />
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     </Style>
 

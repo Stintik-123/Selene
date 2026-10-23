@@ -3439,7 +3439,7 @@ namespace Selene
                 bool on = i == RowFilter;
                 var label = new TextBlock
                 {
-                    Text = RowFilterLabels[i], FontSize = 19, FontFamily = new FontFamily("Segoe UI Variable Display"),
+                    Text = RowFilterLabels[i], FontSize = 19, FontFamily = new FontFamily("Segoe UI Variable Display, Segoe UI"),
                     FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
                     Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.7)
                 };
@@ -3483,7 +3483,7 @@ namespace Selene
             if (filterPill == null || VisualTreeHelper.GetParent(filterPill) != host)
             {
                 if (filterPill != null) { var old = VisualTreeHelper.GetParent(filterPill) as Panel; if (old != null) old.Children.Remove(filterPill); }
-                filterPillText = new TextBlock { Foreground = Ink.Brush("SeleneInkColor"), FontSize = 17, FontFamily = new FontFamily("Segoe UI Variable Display"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+                filterPillText = new TextBlock { Foreground = Ink.Brush("SeleneInkColor"), FontSize = 17, FontFamily = new FontFamily("Segoe UI Variable Display, Segoe UI"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
                 var hint = new TextBlock { Text = "LT \u25C2  \u25B8 RT", Foreground = Ink.Brush("SeleneInkColor", 0.7), FontSize = 13, Margin = new Thickness(14, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center };
                 var sp = new StackPanel { Orientation = Orientation.Horizontal };
                 sp.Children.Add(filterPillText);
@@ -4056,7 +4056,7 @@ namespace Selene
                 }
                 stack.Children.Add(new TextBlock
                 {
-                    Text = name, FontSize = 38, FontFamily = new FontFamily("Segoe UI Variable Display"), FontWeight = FontWeights.SemiBold, Foreground = Brushes.White,
+                    Text = name, FontSize = 38, FontFamily = new FontFamily("Segoe UI Variable Display, Segoe UI"), FontWeight = FontWeights.SemiBold, Foreground = Brushes.White,
                     HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 34, 0, 0), TextAlignment = TextAlignment.Center
                 });
                 var status = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 14, 0, 0) };

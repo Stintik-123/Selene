@@ -13,7 +13,7 @@ namespace Selene
     // focus look, motion and sounds, so every screen moves and sounds the same (see docs/guide/building.md).
     public static class Ui
     {
-        public static readonly FontFamily Display = new FontFamily("Segoe UI Variable Display");
+        public static readonly FontFamily Display = new FontFamily("Segoe UI Variable Display, Segoe UI");
         public static readonly FontFamily Body = new FontFamily("Segoe UI");
         public static readonly FontFamily Glyphs = new FontFamily("Segoe MDL2 Assets");
         private static FontFamily icons;

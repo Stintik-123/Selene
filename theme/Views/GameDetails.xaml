@@ -24,7 +24,7 @@
                         <Border x:Name="Pill" CornerRadius="26" Height="52" MinWidth="{TemplateBinding MinWidth}" Padding="36,0" Background="{DynamicResource SeleneGlassBrush}" BorderBrush="{DynamicResource SeleneInk15Brush}" BorderThickness="1">
                             <ContentPresenter x:Name="Label" HorizontalAlignment="Center" VerticalAlignment="Center"
                                               TextElement.Foreground="{DynamicResource SeleneInkBrush}" TextElement.FontSize="21"
-                                              TextElement.FontFamily="Segoe UI Variable Display"/>
+                                              TextElement.FontFamily="Segoe UI Variable Display, Segoe UI"/>
                         </Border>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -57,7 +57,7 @@
         <Setter Property="Foreground" Value="{DynamicResource SeleneInkBrush}"/>
         <Setter Property="FontSize" Value="21"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="FontFamily" Value="Segoe UI Variable Display"/>
+        <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI"/>
         <Setter Property="Margin" Value="0,2,0,0"/>
     </Style>
     <!-- a band's title -->
@@ -162,7 +162,7 @@
                                     <Image x:Name="Logo" Source="{Binding Text, ElementName=LogoPath, Converter={StaticResource ImageStringToImageConverter}}"
                                            MaxWidth="680" MaxHeight="180" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Bottom"
                                            RenderOptions.BitmapScalingMode="Fant"/>
-                                    <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="62" FontFamily="Segoe UI Variable Display"
+                                    <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="62" FontFamily="Segoe UI Variable Display, Segoe UI"
                                                FontWeight="SemiBold" VerticalAlignment="Bottom" TextWrapping="Wrap">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
@@ -238,7 +238,7 @@
                                                 <Path Data="{DynamicResource SelenePlatformIcon}" Fill="{DynamicResource SeleneInkBrush}" Stretch="Uniform"/>
                                                 <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource SeleneInkBrush}" VerticalAlignment="Center" Visibility="{DynamicResource SelenePlatformFallback}"/>
                                             </Grid>
-                                            <TextBlock Text="{DynamicResource SelenePlatformName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="Segoe UI Variable Display" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{DynamicResource SelenePlatformName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="Segoe UI Variable Display, Segoe UI" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
@@ -278,7 +278,7 @@
                                     <TextBlock x:Name="SeleneDetailsCapturesNote" Text="" FontSize="18" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk60Brush}" VerticalAlignment="Top" Margin="2,8,0,0" Visibility="Collapsed"/>
                                 </Grid>
                             </StackPanel>
-                            <Border x:Name="SeleneDetailsBand2b" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1300,950,0,0" Width="510" Padding="0" BorderThickness="0">
+                            <Border x:Name="SeleneDetailsBand2b" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,950,110,0" Width="510" Padding="0" BorderThickness="0">
                                 <StackPanel>
                                     <TextBlock Text="Your activity" Style="{StaticResource SeleneBandLabel}" Margin="0,0,0,12"/>
                                     <Grid>

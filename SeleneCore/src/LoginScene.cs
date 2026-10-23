@@ -401,6 +401,9 @@ namespace Selene
             haze.GradientStops.Add(Ink.Stop("GlyphColor", 0, 1));
             glow.Children.Add(new Border { Background = haze });
 
+            // no dust when WPF draws in software (no usable graphics card: a VM, a remote desktop, an old driver): it can't keep
+            // 130 moving motes smooth, and the glow alone still reads as the animated background
+            if ((System.Windows.Media.RenderCapability.Tier >> 16) < 2) { HomeNav.Log("glow: software rendering, no dust"); return outer; }
             // the dust on a thread of its own: a busy main thread (start-up, a game starting) can't make it stumble
             var accent = Ink.Of("GlyphColor");
             var inkColor = Ink.Of("SeleneInkColor");

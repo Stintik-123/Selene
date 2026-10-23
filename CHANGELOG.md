@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Other PCs: text falls back to Segoe UI where Segoe UI Variable is missing (Windows 10); the details page's activity block hangs from the right edge, so screens that aren't 16:9 keep it on screen; the drifting dust stays off when WPF has no graphics card to draw with.
 ## 1.0.0 - 2026-10-23
 
 - Choose your avatar / theme / background: the soft fade at the grid's edges is back, over the cached grid (0.10.0 faded whole rows flatly).

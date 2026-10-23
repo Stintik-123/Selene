@@ -84,7 +84,7 @@ namespace Selene
                 var pill = new Border
                 {
                     CornerRadius = new CornerRadius(18), Padding = new Thickness(18, 5, 20, 7), Margin = new Thickness(2, 0, 2, 0), VerticalAlignment = VerticalAlignment.Center, RenderTransformOrigin = new Point(0.5, 0.5),
-                    Child = new TextBlock { Text = t, FontSize = 19, FontFamily = new FontFamily("Segoe UI Variable Display"), VerticalAlignment = VerticalAlignment.Center }
+                    Child = new TextBlock { Text = t, FontSize = 19, FontFamily = new FontFamily("Segoe UI Variable Display, Segoe UI"), VerticalAlignment = VerticalAlignment.Center }
                 };
                 tabPills.Add(pill);
                 tabBar.Children.Add(pill);
