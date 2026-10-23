@@ -229,6 +229,8 @@
                                         </EventTrigger>
                                     </Border.Triggers>
                                     <StackPanel Orientation="Horizontal">
+                                        <!-- signals each new game for the fade (Playnite's add-on bindings can't) -->
+                                        <TextBlock Text="{Binding SelectedGame.Id, NotifyOnTargetUpdated=True}" Visibility="Collapsed"/>
                                         <TextBlock Text="&#xEA23;" FontFamily="/Fonts/MaterialIcons-Regular.ttf#Material Icons" FontSize="30" VerticalAlignment="Center" Margin="0,0,14,0">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
@@ -246,7 +248,7 @@
                                             <Grid>
                                                 <TextBlock Text="ACHIEVEMENTS" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI" VerticalAlignment="Bottom"/>
                                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                    <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Unlocked, FallbackValue='-', NotifyOnTargetUpdated=True}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="17" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                    <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Unlocked, FallbackValue='-'}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="17" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                     <TextBlock Text=" / " Foreground="{DynamicResource SeleneInk60Brush}" FontSize="17" FontFamily="Segoe UI"/>
                                                     <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Total, FallbackValue='-'}" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="17" FontFamily="Segoe UI"/>
                                                 </StackPanel>
