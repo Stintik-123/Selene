@@ -69,6 +69,9 @@ namespace Selene
         {
             try
             {
+                // the login layer (menu, profiles...) is up: its keys are its own (this class handler runs before the
+                // layer's, and moved the home row behind the menu)
+                if (LoginScene.IsActive) return;
                 // Up/Down never shrink the card; Left/Right only while moving inside the row (not in the bar below)
                 bool dirKey = e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left || e.Key == Key.Right;
                 if (!e.Handled && previewShowing && (!dirKey || ((e.Key == Key.Left || e.Key == Key.Right) && IsInRow(Keyboard.FocusedElement as DependencyObject)))) SmoothClosePreview();
