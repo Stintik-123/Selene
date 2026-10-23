@@ -106,6 +106,7 @@ namespace Selene
             library.Visibility = Visibility.Visible;
             library.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
             home.Visibility = Visibility.Collapsed;
+            HomeNav.SetMusic("normal");   // the library: the music add-on as usual
             var list = Part("PART_ListGameItems") as ListBox;
             if (list != null) main.Dispatcher.BeginInvoke(new Action(() =>
             {

@@ -4,7 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- On the home a game's own song plays only while its trailer card is open; otherwise the default music keeps playing.
+- Every sound is leveled to sit together (tools/level_sounds.py); the moving tick is no longer louder than the rest.
+- The home is quiet: a game's own song plays only while its trailer card is open (the login keeps its music, the library behaves as before).
 - The menu is a row of solid icons along the bottom (like a console control center): a ring and the name on the focused one, Power opens sleep, restart, shut down and exit; the home stays in view above.
 - Update library starts right away in the background; if an update is already running, the menu says what it is doing instead of waiting.
 - No more moving sound when Playnite starts, when you sign in or when you press Play (Selene or Playnite moving focus itself sounded like a move).

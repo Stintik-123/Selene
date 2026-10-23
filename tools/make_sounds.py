@@ -596,6 +596,8 @@ if __name__ == "__main__":
         for target, name in CHOSEN.items():
             write(ROOT / "theme" / "Audio" / target, SOUNDS[name]())
             print(f"wrote theme/Audio/{target} ({name})")
+        import level_sounds   # every sound to one level, the new ones included
+        level_sounds.main()
         for old in (ROOT / "theme" / "Audio").glob("*.old"):
             try:
                 old.unlink()

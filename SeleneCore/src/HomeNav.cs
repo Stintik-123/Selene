@@ -987,7 +987,7 @@ namespace Selene
         // while the login screens cover the home nothing is selected for Playnite (its music add-ons would play)
         public static void ClearSelectedGame()
         {
-            PauseMusic(true);
+            SetMusic("login");
             var w = Application.Current.MainWindow;
             var vm = w != null ? w.DataContext : null;
             var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
@@ -999,8 +999,8 @@ namespace Selene
             if (LoginScene.CoversHome) { ClearSelectedGame(); return; }
             var game = row.SelectedItem;
             if (game == null) return;
-            // the default music on the home, cards and games alike: a game's song comes with its trailer card
-            PauseMusic(game is string || !previewShowing);
+            // the home is quiet, cards and games alike: a game's song comes with its trailer card
+            SetMusic(previewShowing ? "trailer" : "home");
             var vm = row.DataContext;
             var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
             if (prop == null || !prop.CanWrite) return;
@@ -1231,16 +1231,19 @@ namespace Selene
             v.Play();
         }
 
-        // UniPlaySong pauses on its own "video is playing" flag (PauseOnTrailer) and resumes when it is cleared.
-        private static bool? musicPaused;
+        // What the music add-on (UniPlaySong) plays, by where the user is:
+        //   "login"   behind the login screens: its default track
+        //   "home"    the home row: nothing (paused through its theme-overlay pause)
+        //   "trailer" a game's trailer card is open: that game's song
+        //   "normal"  the library: UniPlaySong as usual
+        private static string musicMode;
 
-        // true = the music add-on (UniPlaySong) plays its default track instead of a game's song: the home, its cards and
-        // behind the login screens; false only while a trailer card is open
-        private static void PauseMusic(bool onCard)
+        public static void SetMusic(string mode)
         {
-            if (musicPaused == onCard) return;
-            musicPaused = onCard;
-            SetUpsSetting("ForceDefaultMusicOverride", onCard);
+            if (musicMode == mode) return;
+            musicMode = mode;
+            SetUpsSetting("ForceDefaultMusicOverride", mode == "login" || mode == "home");
+            SetUpsSetting("ThemeOverlayActive", mode == "home");
         }
 
         // UniPlaySong's live settings: its settings view model holds them in .Settings
@@ -1254,7 +1257,7 @@ namespace Selene
         // music control switched off: every pause Selene set on the music add-on is let go now
         public static void ReleaseMusic()
         {
-            musicPaused = false;
+            musicMode = null;
             SetUpsSetting("ForceDefaultMusicOverride", false);
             SetUpsSetting("ThemeOverlayActive", false);
             SetUpsVideoPlaying(false);
@@ -4446,8 +4449,8 @@ namespace Selene
         }
 
 
-        // Home: the default music, a game's own song only while its trailer card is open (like the legacy theme)
-        private static void UpdateMusicOverride() { PauseMusic(!previewShowing); }
+        // Home: quiet, a game's own song only while its trailer card is open (like the legacy theme)
+        private static void UpdateMusicOverride() { SetMusic(previewShowing ? "trailer" : "home"); }
 
 
         // the window fills (nearly) the whole monitor Playnite is on (a game / fullscreen app, not a popup)
