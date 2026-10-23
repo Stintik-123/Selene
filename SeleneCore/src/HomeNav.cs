@@ -2105,6 +2105,8 @@ namespace Selene
                     e.Cancel();
                     return;
                 }
+                // LB / RB in Collection: Playnite's filter presets, like Spotlight's tabs
+                if ((pressed == "LeftShoulder" || pressed == "RightShoulder") && CyclePreset(pressed == "RightShoulder" ? 1 : -1)) { e.Cancel(); return; }
                 if (pressed == "LeftShoulder" || pressed == "RightShoulder")
                 {
                     lastShoulder = pressed;
@@ -4866,6 +4868,33 @@ namespace Selene
                 if (search != null && search.Command != null && search.Command.CanExecute(search.CommandParameter)) search.Command.Execute(search.CommandParameter);
                 Log("hold view -> library search" + (search == null ? " (no search button)" : ""));
             }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        // Collection's filter presets (the tabs in its top bar): the next or previous one is chosen as if clicked, so
+        // Playnite applies it. False when Collection isn't showing.
+        private static bool CyclePreset(int dir)
+        {
+            var w = Application.Current.MainWindow;
+            var library = w != null ? FindByName(w, "SeleneLibrary") : null;
+            if (library == null || !library.IsVisible) return false;
+            var selector = FindByName(w, "PART_FilterPresetSelector");
+            var items = selector != null ? FindByName(selector, "PART_ItemsFilterPresets") as ItemsControl : null;
+            if (items == null || items.Items.Count == 0) return true;
+            var boxes = new List<System.Windows.Controls.Primitives.ToggleButton>();
+            for (int i = 0; i < items.Items.Count; i++)
+            {
+                var c = items.ItemContainerGenerator.ContainerFromIndex(i) as DependencyObject;
+                var box = c as System.Windows.Controls.Primitives.ToggleButton ?? (c != null ? FindChild<System.Windows.Controls.Primitives.ToggleButton>(c) : null);
+                if (box != null) boxes.Add(box);
+            }
+            if (boxes.Count == 0) return true;
+            int at = boxes.FindIndex(b => b.IsChecked == true);
+            int next = ((at < 0 ? 0 : at + dir) % boxes.Count + boxes.Count) % boxes.Count;
+            var click = typeof(System.Windows.Controls.Primitives.ButtonBase).GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (click != null) click.Invoke(boxes[next], null);
+            Ui.Tick();
+            Log("collection preset -> " + next);
+            return true;
         }
 
         // the View button on the home or the library: switches to the other one (false elsewhere: details, overlays)

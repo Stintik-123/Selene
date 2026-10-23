@@ -41,7 +41,7 @@
                                 </Grid.RowDefinitions>
                                 <Border Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}"/>
                                 <Image x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
-                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="120"/>
+                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="120" Stretch="UniformToFill"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->
                                 <!-- the trailer: the right of the screen from about a quarter in, top edge down to the covers; it melts into
                                      black on its left (a long fade), darkens toward the top and fades out above the covers -->
@@ -60,8 +60,8 @@
                                                         </Rectangle.Fill>
                                                         <Rectangle.OpacityMask>
                                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                <GradientStop Color="#99000000" Offset="0"/>
-                                                                <GradientStop Color="#FF000000" Offset="0.22"/>
+                                                                <GradientStop Color="#00000000" Offset="0"/>
+                                                                <GradientStop Color="#FF000000" Offset="0.3"/>
                                                                 <GradientStop Color="#FF000000" Offset="0.72"/>
                                                                 <GradientStop Color="#00000000" Offset="1"/>
                                                             </LinearGradientBrush>
@@ -325,7 +325,7 @@
                                 </Border>
 
                                 <!-- the whole library: one row of big covers, close together -->
-                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="350" Margin="44,0,0,0" Background="Transparent" BorderThickness="0"
+                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="14,0,0,0" Background="Transparent" BorderThickness="0"
                                            ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
                                 <TextBlock Grid.Row="2" FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center"
@@ -969,10 +969,10 @@
                             <!-- ================= TOP BAR (home + library) ================= -->
                             <Grid x:Name="HubTopBarBackground" VerticalAlignment="Top" Height="110" Margin="64,0,64,0">
                                 <!-- home: LB/RB filter tabs (drawn by Selene Core) -->
-                                <StackPanel x:Name="SeleneFilterTabs" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                <StackPanel x:Name="SeleneFilterTabs" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
                                             Visibility="{Binding Visibility, ElementName=WelcomeHubOverlay}"/>
-                                <!-- library: Playnite's filter presets -->
-                                <FilterPresetSelector x:Name="PART_FilterPresetSelector" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                <!-- library: Playnite's filter presets, styled like Spotlight's tabs (LB / RB) -->
+                                <FilterPresetSelector x:Name="PART_FilterPresetSelector" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                       Visibility="{Binding Visibility, ElementName=SeleneLibrary}"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <!-- Playnite's notifications: not part of Selene's top bar (the part stays, hidden) -->

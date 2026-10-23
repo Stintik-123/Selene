@@ -30,8 +30,10 @@ namespace Selene
             library = HomeNav.FindByName(w, "SeleneLibrary");
             host = HomeNav.FindByName(w, "SeleneLibraryTrailerHost") as Grid;
             rsHint = HomeNav.FindByName(w, "SeleneLibraryRsHint") as TextBlock;
-            art = HomeNav.FindByName(w, "PART_ImageBackground") as UIElement;
-            wallpaper = HomeNav.FindByName(w, "SeleneLibraryWallpaper") as UIElement;
+            // Collection's own (game details has a PART_ImageBackground of its own, which was the one found before)
+            art = HomeNav.FindByName(library, "PART_ImageBackground") as UIElement;
+            wallpaper = HomeNav.FindByName(library, "SeleneLibraryWallpaper") as UIElement;
+            HomeNav.Log("library stage: art " + (art != null) + ", wallpaper " + (wallpaper != null));
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
             arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(4000) };   // like Aniki: the art first, the trailer about 4 s in
             arm.Tick += (s, e) => { arm.Stop(); Play(); };

@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Collection: LB / RB tabs (Playnite's filter presets) centered at the top like Spotlight's, which are centered too; bigger covers starting at the left edge; wide background art fills the screen; the game's art no longer shows through the trailer.
 - Selene's own backdrop: deep navy with a beam of light from the top left and a band of fine drifting dust and bokeh (login, menus and Spotlight's cards).
 - Spotlight and Collection crossfade into each other (the screen you leave stays up until the other has its picture).
 - Moving and confirming sound the same everywhere: Selene's screens play them through Playnite's own player (one volume).
