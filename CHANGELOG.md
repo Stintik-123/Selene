@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- A game's options menu (Play, Favorite, Hide, Edit fields...) looks like Selene: a glass card with rounded corners, the game's name as its title, rounded rows with Material icons.
 - Game details: the bands below show whole as the page glides (they were clipped), and the description and activity sit on the art without glass boxes.
 - Game details, filled in below: the game's screenshots (A opens them big), your captures of it (A opens one) with your activity beside them (play time, last played, this week, your rank), and more games like it from your own collection (A shows one on Spotlight). Down from the pills goes into these bands and the page glides up; Up or B comes back. The platform shows the store's mark and name like Spotlight (a PC game said "PC (Windows)").
 - Collection: X opens the details page (it started or installed the game instead); Y opens the game's options as the hint says (it opened Playnite's search box); Left works on the first tile after coming from Spotlight (it sat at the very edge with nothing built to its left).
