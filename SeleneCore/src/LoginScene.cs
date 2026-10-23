@@ -190,6 +190,7 @@ namespace Selene
         {
             if (scene == null) return;
             RefreshBackdrop();
+            FadeInBackdrop();
             var next = pending;
             pending = null;
             if (next != null) Show(next(), 0);
@@ -286,24 +287,41 @@ namespace Selene
         }
 
         // ---------------- backdrop ----------------
+        private static Grid backdropHost;
+
+        // the backdrop fades in once Playnite's busy start-up lets it be drawn (a fade run while it was busy was never seen:
+        // the wallpaper just popped up)
+        private static void FadeInBackdrop()
+        {
+            var host = backdropHost;
+            if (host == null || host.Opacity > 0.99) return;
+            host.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var fade = new DoubleAnimation(1, TimeSpan.FromMilliseconds(900)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                fade.Completed += (s, e) => { host.BeginAnimation(UIElement.OpacityProperty, null); host.Opacity = 1; };
+                host.BeginAnimation(UIElement.OpacityProperty, fade);
+            }), DispatcherPriority.ApplicationIdle);
+        }
         private static Grid BuildScene()
         {
             var g = new Grid { ClipToBounds = true };
+            backdropHost = new Grid { Opacity = 0 };   // faded in by FadeInBackdrop
+            g.Children.Add(backdropHost);
             var gradient = new Border();
             gradient.SetResourceReference(Border.BackgroundProperty, "MainBackgourndBrush");
-            g.Children.Add(gradient);
+            backdropHost.Children.Add(gradient);
             backdrop.Add(gradient);
             var wallpaper = new Image { Stretch = Stretch.UniformToFill };
             wallpaper.SetResourceReference(Image.SourceProperty, "SeleneWallpaper");
             RenderOptions.SetBitmapScalingMode(wallpaper, BitmapScalingMode.HighQuality);
-            g.Children.Add(wallpaper);
+            backdropHost.Children.Add(wallpaper);
             backdrop.Add(wallpaper);
             var veil = new Border { Background = Ink.Brush("SeleneScrimColor", 0.45) };
-            g.Children.Add(veil);
+            backdropHost.Children.Add(veil);
             backdrop.Add(veil);
             // the spotlight, floor glow and particles dress up the theme's plain gradient; over a wallpaper they stay off
             glow = BuildGlow();
-            g.Children.Add(glow);
+            backdropHost.Children.Add(glow);
             backdrop.Add(glow);
 
             stage = new Grid();

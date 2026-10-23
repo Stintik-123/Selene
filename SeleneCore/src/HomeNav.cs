@@ -1647,7 +1647,7 @@ namespace Selene
                 var infoHold = FindByName(window, "SeleneInfoIntro") as UIElement;
                 var bgHold = FindByName(window, "SeleneHubGameBackground") as UIElement;
                 if (infoHold != null) infoHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
-                if (bgHold != null) bgHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+                if (bgHold != null && !coveredForSignIn) bgHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
                 try
                 {
                     RebuildGames(row);
@@ -1788,6 +1788,7 @@ namespace Selene
                 RenderOptions.SetBitmapScalingMode(wallpaper, BitmapScalingMode.Fant);
                 wallpaper.SetResourceReference(Image.SourceProperty, "SeleneWallpaper");
                 introCover.Children.Add(wallpaper);
+                introCover.Children.Add(new Border { Background = Ink.Brush("SeleneScrimColor", 0.45) });   // the login's veil
                 Panel.SetZIndex(introCover, 1000);
                 Grid.SetRowSpan(introCover, 100);
                 Grid.SetColumnSpan(introCover, 100);
@@ -1863,12 +1864,18 @@ namespace Selene
                 row.UpdateLayout();
                 ScheduleTitle(row, animate ? 1300 : 250);
 
-                if (!animate) { Log("hub reopened: default view, no intro"); return; }
+                if (!animate)
+                {
+                    coveredForSignIn = false;
+                    Log("hub reopened: default view, no intro");
+                    return;
+                }
 
                 // Background fades up first, game info rises in after the tiles.
                 var window = Window.GetWindow(row);
                 var bg = window != null ? FindByName(window, "SeleneHubGameBackground") : null;
                 if (bg != null && !coveredForSignIn) bg.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, 0, 0.9, new CubicEase { EasingMode = EasingMode.EaseOut }));
+                else if (bg != null) bg.BeginAnimation(UIElement.OpacityProperty, null);   // signed in: the wallpaper just stays
                 coveredForSignIn = false;
                 var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "SeleneInfoIntro");
                 if (info != null)

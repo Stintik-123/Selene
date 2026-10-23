@@ -170,7 +170,7 @@ namespace Selene
                 if (item != null) item.Focus(); else list.Focus();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
             // a crossfade: a still of Spotlight lies on top and melts away over Collection
-            if (Crossfade(home, 260))
+            if (Crossfade(home, 260, 160))   // held a moment: Collection's covers load under it
             {
                 home.BeginAnimation(UIElement.OpacityProperty, null);
                 home.Visibility = Visibility.Collapsed;
@@ -203,7 +203,7 @@ namespace Selene
             CollectionActive = false;
             // a still of Collection lies on top while everything changes under it, then melts away over Spotlight: Collection
             // itself goes at once (setting Spotlight's "no game" made its list jump to its first game: the 007 flash)
-            bool still = library != null && library.IsVisible && !LibraryStage.Playing && Crossfade(library, 280);
+            bool still = library != null && library.IsVisible && !LibraryStage.Playing && Crossfade(library, 280, 0);
             if (library != null) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Visibility = Visibility.Collapsed; }
             HomeNav.SyncSelectionForHome();   // Spotlight's own selection
             home.Visibility = Visibility.Visible;
@@ -229,7 +229,7 @@ namespace Selene
         // lays a still picture of the screen being left over everything and fades it out (false when one can't be taken)
         private static Image crossfadeStill;
 
-        private static bool Crossfade(UIElement leaving, int ms)
+        private static bool Crossfade(UIElement leaving, int ms, int holdMs)
         {
             var el = leaving as FrameworkElement;
             var host = Part("PART_ViewHost") as Panel;
@@ -246,7 +246,7 @@ namespace Selene
                 Panel.SetZIndex(img, 1000);
                 host.Children.Add(img);
                 crossfadeStill = img;
-                var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(ms)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+                var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(holdMs), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
                 fade.Completed += (s, e) => { host.Children.Remove(img); if (crossfadeStill == img) crossfadeStill = null; };
                 img.BeginAnimation(UIElement.OpacityProperty, fade);
                 return true;

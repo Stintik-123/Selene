@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- The start-up backdrop fades in again instead of popping up.
 - Signing in keeps your wallpaper on screen: it no longer goes dark before the home comes in.
 - Switching between Spotlight and Collection is a real crossfade now, with no black gap in between.
 - Opening Theme no longer flickers (the current theme and wallpaper aren't reloaded), and saving a background no longer shows a game's art for a moment before it.
