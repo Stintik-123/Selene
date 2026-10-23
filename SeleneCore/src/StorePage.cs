@@ -116,12 +116,15 @@ namespace Selene
 
             // rows of games; the focused row glides to the top of this area
             // the focused row, and below it the top of the next one, blurred and fading to dark: there's more down there
-            const double peek = 70;
+            const double peek = 90;
             var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 600, 0, 0), Height = RowH + peek, ClipToBounds = true };
-            var fade = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+            // in pixels of this area (relative to the content, the gradient stretched over every row and never faded: a hard
+            // edge); the fade starts just under the focused row's pictures and reaches nothing at the bottom
+            double h = RowH + peek;
+            var fade = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, h) };
             fade.GradientStops.Add(new GradientStop(Colors.Black, 0));
-            fade.GradientStops.Add(new GradientStop(Colors.Black, (RowH - 6) / (RowH + peek)));
-            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x60, 0, 0, 0), (RowH + peek * 0.45) / (RowH + peek)));
+            fade.GradientStops.Add(new GradientStop(Colors.Black, (RowH - 20) / h));
+            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x70, 0, 0, 0), (RowH + 15) / h));
             fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
             rowsArea.OpacityMask = fade;
             rowStack.RenderTransform = rowShift;
