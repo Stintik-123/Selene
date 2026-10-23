@@ -72,6 +72,9 @@ namespace Selene
                 // the login layer (menu, profiles...) is up: its keys are its own (this class handler runs before the
                 // layer's, and moved the home row behind the menu)
                 if (LoginScene.IsActive) return;
+                // the Store card's game pictures (Down from the card goes into them)
+                var asPad = e.Key == Key.Down ? "DPadDown" : e.Key == Key.Up ? "DPadUp" : e.Key == Key.Left ? "DPadLeft" : e.Key == Key.Right ? "DPadRight" : e.Key == Key.Enter ? "A" : e.Key == Key.Escape || e.Key == Key.Back ? "B" : null;
+                if (asPad != null && !e.Handled && StoreShowcase.Handle(asPad)) { e.Handled = true; return; }
                 // Up/Down never shrink the card; Left/Right only while moving inside the row (not in the bar below)
                 bool dirKey = e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left || e.Key == Key.Right;
                 if (!e.Handled && previewShowing && (!dirKey || ((e.Key == Key.Left || e.Key == Key.Right) && IsInRow(Keyboard.FocusedElement as DependencyObject)))) SmoothClosePreview();
@@ -1034,6 +1037,14 @@ namespace Selene
 
         // back from the library: Playnite still has the library's game selected, and the home drew its art for a moment
         // before the row's own selection caught up; the row's selection (nothing for a card) goes to Playnite first
+        // the Store card is the one picked on Spotlight's row (its game pictures can be gone into with Down)
+        public static bool StoreCardFocused()
+        {
+            if (SeleneShell.CollectionActive || LoginScene.IsActive) return false;
+            var row = LiveRow();
+            return row != null && row.IsVisible && Equals(row.SelectedItem, "nav:store") && IsInRow(Keyboard.FocusedElement as DependencyObject);
+        }
+
         public static void SyncSelectionForHome(Action artReady = null)
         {
             bool reported = false;
@@ -2127,6 +2138,7 @@ namespace Selene
                 lastPadButton = same; lastPadRaw = pressed; lastPadAt = now;
                 HideCursorForController();
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
+                if (StoreShowcase.Handle(Ui.Normalize(pressed))) { e.Cancel(); return; }   // the Store card's game pictures
                 EndQuietFocus();   // the user is moving now: their moves tick
                 // View (Playnite calls it Back): home <-> library, like the legacy theme (Playnite opened its settings)
                 // R3 in the library while a trailer plays: its sound (else Playnite's filter, as usual)

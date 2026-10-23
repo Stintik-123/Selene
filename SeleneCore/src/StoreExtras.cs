@@ -75,6 +75,69 @@ namespace Selene
     public static class StoreShowcase
     {
         private static string shownKey;
+        private static readonly List<StoreItem> cardItems = new List<StoreItem>();
+        private static readonly List<FrameworkElement> cards = new List<FrameworkElement>();
+        private static readonly List<Border> rings = new List<Border>();
+        private static bool active;
+        private static int focus;
+
+        // Down from the Store card goes into its pictures: Left / Right pick one, A opens it in its store (Steam, Epic
+        // Games...), Up or B goes back to the row. True when the press was the pictures'.
+        public static bool Handle(string b)
+        {
+            if (!active)
+            {
+                if (b != "DPadDown" || cards.Count == 0 || !HomeNav.StoreCardFocused()) return false;
+                active = true;
+                focus = 0;
+                Ui.Tick();
+                ShowFocus();
+                return true;
+            }
+            if (!HomeNav.StoreCardFocused()) { Leave(); return false; }
+            switch (b)
+            {
+                case "DPadLeft":
+                case "DPadRight":
+                    int next = focus + (b == "DPadRight" ? 1 : -1);
+                    if (next >= 0 && next < cards.Count) { focus = next; Ui.Tick(); ShowFocus(); }
+                    return true;
+                case "DPadDown":
+                    return true;
+                case "DPadUp":
+                case "B":
+                    Ui.Tick();
+                    Leave();
+                    return true;
+                case "A":
+                    var item = cardItems[focus];
+                    Ui.Confirm();
+                    HomeNav.Log("store card: opening " + item.Title + " (" + item.Link + ")");
+                    try { System.Diagnostics.Process.Start(item.Link); }
+                    catch (Exception ex) { HomeNav.Log("store card: open failed: " + ex.Message); Ui.Shake(cards[focus]); return true; }
+                    Leave();
+                    return true;
+                default:
+                    Leave();   // anything else (Start, View, LB/RB): back to the row and let it do its thing
+                    return false;
+            }
+        }
+
+        private static void Leave()
+        {
+            active = false;
+            ShowFocus();
+        }
+
+        private static void ShowFocus()
+        {
+            for (int i = 0; i < cards.Count; i++)
+            {
+                bool on = active && i == focus;
+                Ui.ScaleTo(cards[i], on ? 1.05 : 1, on ? 200 : 160);
+                Ui.Fade(rings[i], on ? 1 : 0, on ? 180 : 140);
+            }
+        }
 
         public static void Fill()
         {
@@ -94,38 +157,115 @@ namespace Selene
             if (key == shownKey) return;
             shownKey = key;
             panel.Children.Clear();
+            cards.Clear(); rings.Clear(); cardItems.Clear();
+            active = false;
             for (int i = 0; i < picks.Count; i++)
             {
                 var card = Card(picks[i]);
+                cards.Add(card);
+                cardItems.Add(picks[i]);
                 panel.Children.Add(card);
                 Ui.Rise(card, i * 50, 12, 280);
             }
         }
 
-        // the card's headline is what's on now (the card's own name already says "Store")
+        // ---- the card's headline: what's on now, taking turns (the card's own name already says "Store") ----
+        private class Message { public string Head, About; public StoreItem Item; }
+        private static List<Message> messages = new List<Message>();
+        private static int shown = -1;
+        private static System.Windows.Threading.DispatcherTimer turns;
+        private static readonly Image[] feature = new Image[2];
+        private static int featureFront;
+
+        private static string Names(List<StoreItem> items)
+        {
+            var names = items.Select(i => i.Title).ToList();
+            return names.Count == 1 ? names[0] : string.Join(", ", names.Take(names.Count - 1)) + " and " + names.Last();
+        }
+
         private static void Headline(List<StoreItem> picks)
         {
-            var res = Application.Current.Resources;
+            var list = new List<Message>();
             var free = StoreData.List("epic:free");
-            var best = StoreData.List("steam:sale").Concat(StoreData.List("epic:sale")).Concat(StoreData.List("gog:sale")).Where(i => i.Discount > 0 && !i.Free).OrderByDescending(i => i.Discount).FirstOrDefault();
-            string head, about;
             if (free.Count > 0)
             {
-                head = free.Count == 1 ? "Free this week" : free.Count + " free games this week";
-                var names = free.Select(i => i.Title).ToList();
-                var list = names.Count == 1 ? names[0] : string.Join(", ", names.Take(names.Count - 1)) + " and " + names.Last();
                 var until = free[0].Note != null && free[0].Note.StartsWith("Free until ") ? free[0].Note.Substring(11) : null;
-                about = list + (names.Count == 1 ? " is" : " are") + " free to keep on Epic Games" + (until != null ? " until " + until : "") + ".";
-                if (best != null) about += " Up to " + best.Discount + "% off on " + best.StoreName + " right now.";
+                list.Add(new Message
+                {
+                    Head = free.Count == 1 ? "Free this week" : free.Count + " free games this week",
+                    About = Names(free) + (free.Count == 1 ? " is" : " are") + " free to keep on Epic Games" + (until != null ? " until " + until : "") + ".",
+                    Item = free[0]
+                });
             }
-            else if (best != null)
+            var best = StoreData.List("steam:sale").Concat(StoreData.List("epic:sale")).Concat(StoreData.List("gog:sale")).Where(i => i.Discount > 0 && !i.Free && !i.Owned).OrderByDescending(i => i.Discount).FirstOrDefault();
+            if (best != null)
+                list.Add(new Message { Head = "Up to " + best.Discount + "% off", About = best.Title + " is " + best.Price + " on " + best.StoreName + (best.OldPrice != null ? ", down from " + best.OldPrice : "") + ".", Item = best });
+            var fresh = StoreData.List("steam:new").FirstOrDefault(i => !i.Owned && !string.IsNullOrEmpty(i.Image));
+            if (fresh != null)
+                list.Add(new Message { Head = "New on Steam", About = fresh.Title + " just came out" + (fresh.Price != null ? " · " + fresh.Price : "") + ".", Item = fresh });
+            var ending = StoreData.List("epic:sale").Where(i => !i.Owned && i.Note != null && i.Note.StartsWith("Sale ends ")).OrderByDescending(i => i.Discount).FirstOrDefault();
+            if (ending != null)
+                list.Add(new Message { Head = "Sale ends " + ending.Note.Substring(10), About = ending.Title + " is " + ending.Discount + "% off on Epic Games, " + ending.Price + " until then.", Item = ending });
+            var next = StoreData.List("epic:next");
+            if (next.Count > 0)
             {
-                head = "Up to " + best.Discount + "% off";
-                about = "The biggest sales across your stores right now. You buy in the store's own app.";
+                var from = next[0].Note != null && next[0].Note.StartsWith("Free from ") ? next[0].Note.Substring(10) : null;
+                list.Add(new Message { Head = "Free next", About = Names(next) + (next.Count == 1 ? " is" : " are") + " free to keep on Epic Games" + (from != null ? " from " + from : " soon") + ".", Item = next[0] });
             }
-            else return;
-            res["SeleneStoreHeadline"] = head;
-            res["SeleneStoreAbout"] = about;
+            if (list.Count == 0) return;
+            bool first = messages.Count == 0;
+            messages = list;
+            if (turns == null)
+            {
+                turns = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(7) };
+                turns.Tick += (s, e) => Turn();
+                turns.Start();
+            }
+            if (first || shown >= messages.Count) { shown = -1; Turn(); }
+        }
+
+        // the next message: the words fade out and back with the new ones, the picture crossfades
+        private static void Turn()
+        {
+            if (messages.Count == 0) return;
+            var w = Application.Current.MainWindow;
+            var head = w != null ? HomeNav.FindByName(w, "SeleneStoreHead") as FrameworkElement : null;
+            var slot = w != null ? HomeNav.FindByName(w, "SeleneStoreFeature") as Grid : null;
+            if (head == null) return;
+            if (shown >= 0 && !head.IsVisible) return;   // the card isn't showing: it waits on the same message
+            shown = (shown + 1) % messages.Count;
+            var m = messages[shown];
+            var res = Application.Current.Resources;
+            if (!head.IsVisible) { res["SeleneStoreHeadline"] = m.Head; res["SeleneStoreAbout"] = m.About; }
+            else Ui.Fade(head, 0, 180, 0, () =>
+            {
+                res["SeleneStoreHeadline"] = m.Head;
+                res["SeleneStoreAbout"] = m.About;
+                Ui.Rise(head, 0, 8, 280);
+            });
+            if (slot == null || m.Item == null || string.IsNullOrEmpty(m.Item.Image)) return;
+            if (feature[0] == null)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    feature[i] = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
+                    RenderOptions.SetBitmapScalingMode(feature[i], BitmapScalingMode.HighQuality);
+                }
+                var frame = new Grid();
+                frame.Children.Add(feature[0]);
+                frame.Children.Add(feature[1]);
+                slot.Children.Add(new Border { CornerRadius = new CornerRadius(14), ClipToBounds = true, Background = Ink.Brush("SeleneInkColor", 0.08), Child = frame,
+                    Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.5, Color = Colors.Black } });
+                slot.Visibility = Visibility.Visible;
+            }
+            var front = feature[featureFront];
+            var back = feature[1 - featureFront];
+            featureFront = 1 - featureFront;
+            Panel.SetZIndex(front, 1); Panel.SetZIndex(back, 0);
+            front.BeginAnimation(UIElement.OpacityProperty, null);
+            front.Opacity = 0;
+            StorePage.Load(front, StoreData.Sharp(m.Item), 900);
+            back.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, TimeSpan.FromMilliseconds(500)) { BeginTime = TimeSpan.FromMilliseconds(250) });
         }
 
         // the store apps on this PC as chips with their logos (instead of the plain list)
@@ -169,7 +309,16 @@ namespace Selene
             if (price.Length > 0) chip.Children.Add(new TextBlock { Text = price, FontSize = 18, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(badge != null ? 8 : 0, 0, 0, 0) });
             if (chip.Children.Count > 0)
                 frame.Children.Add(new Border { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10), Padding = new Thickness(5, 4, 10, 4), CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)), Child = chip });
+            // the focus ring (Down from the Store card picks the pictures)
+            var ring = new Border
+            {
+                CornerRadius = new CornerRadius(19), Margin = new Thickness(-5), BorderThickness = new Thickness(3), BorderBrush = Ink.Brush("SeleneFocusColor"), Opacity = 0, IsHitTestVisible = false,
+                Effect = Ink.Track(new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 22, Opacity = 0.55 }, System.Windows.Media.Effects.DropShadowEffect.ColorProperty, "SeleneFocusColor")
+            };
+            frame.Children.Add(ring);
+            rings.Add(ring);
             col.Children.Add(frame);
+            col.RenderTransformOrigin = new Point(0.5, 0.5);
             return col;
         }
     }
