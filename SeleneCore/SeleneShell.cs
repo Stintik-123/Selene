@@ -45,6 +45,7 @@ namespace Selene
             var hub = HomeNav.FindByName(main, "SeleneNav_hub") as ButtonBase;
             if (library == null || hub == null) return false;
             library.Command = new Relay(ShowLibrary);
+            LoginScene.AttachHomeGlow(main);   // the login's glow behind the home's cards
             hub.Command = new Relay(ShowHome);
             var menuButton = HomeNav.FindByName(main, "PART_ButtonMainMenu") as ButtonBase;
             if (menuButton != null) menuButton.Command = new Relay(OpenMenu);

@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- The home has the login's glow and drifting particles behind its cards (and behind games when their art is off), on themes without a wallpaper.
 - The home's button hints are off by default, like a console's home (Selene settings, Button hints, turns them back on).
 - The menu no longer has More (Playnite's own menu) or Extensions (other add-ons' menus): only Selene, Playnite settings, desktop mode and power.
 - Every sound is leveled to sit together (tools/level_sounds.py); the moving tick is no longer louder than the rest.

@@ -999,7 +999,8 @@ namespace Selene
             if (LoginScene.CoversHome) { ClearSelectedGame(); return; }
             var game = row.SelectedItem;
             if (game == null) return;
-            // the home is quiet, cards and games alike: a game's song comes with its trailer card
+            LoginScene.HomeSelection(game is string);
+            // the default track on the home, cards and games alike: a game's song comes with its trailer card
             SetMusic(previewShowing ? "trailer" : "home");
             var vm = row.DataContext;
             var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;

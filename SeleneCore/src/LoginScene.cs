@@ -182,6 +182,7 @@ namespace Selene
             if (glow == null) return;
             bool wallpaper = Application.Current.Resources["SeleneWallpaper"] != null;
             glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(wallpaper || !Features.On("glow") ? 0 : 1, TimeSpan.FromMilliseconds(300)));
+            RefreshHomeGlow();
         }
 
         private static void Open()
@@ -298,10 +299,22 @@ namespace Selene
             g.Children.Add(veil);
             backdrop.Add(veil);
             // the spotlight, floor glow and particles dress up the theme's plain gradient; over a wallpaper they stay off
-            glow = new Grid { IsHitTestVisible = false };
+            glow = BuildGlow();
             g.Children.Add(glow);
             backdrop.Add(glow);
 
+            stage = new Grid();
+            g.Children.Add(stage);
+            // keyboard focus moves in here while the layer is up, so the home behind doesn't react to input
+            g.Focusable = true;
+            g.FocusVisualStyle = null;
+            return g;
+        }
+
+        // the login's glow: a breathing accent spotlight, a hazy floor glow and drifting particles (the home uses it too)
+        private static Grid BuildGlow()
+        {
+            var glow = new Grid { IsHitTestVisible = false };
             // soft spotlight in the theme's accent from the top left, slowly breathing
             var spot = new RadialGradientBrush { Center = new Point(0.16, -0.12), GradientOrigin = new Point(0.16, -0.12), RadiusX = 0.62, RadiusY = 1.15 };
             spot.GradientStops.Add(Ink.Stop("GlyphColor", 0.36, 0));
@@ -319,14 +332,42 @@ namespace Selene
 
             var canvas = new Canvas { IsHitTestVisible = false };
             glow.Children.Add(canvas);
-            g.SizeChanged += (s, e) => { if (canvas.Children.Count == 0 && e.NewSize.Width > 0) FillParticles(canvas, e.NewSize); };
+            glow.SizeChanged += (s, e) => { if (canvas.Children.Count == 0 && e.NewSize.Width > 0) FillParticles(canvas, e.NewSize); };
+            return glow;
+        }
 
-            stage = new Grid();
-            g.Children.Add(stage);
-            // keyboard focus moves in here while the layer is up, so the home behind doesn't react to input
-            g.Focusable = true;
-            g.FocusVisualStyle = null;
-            return g;
+        // ---- the same glow on the home, behind the game art: seen on the cards (and with no games), off over a wallpaper ----
+        private static Grid homeGlow;
+        private static bool homeOnCard = true;
+
+        public static void AttachHomeGlow(Window w)
+        {
+            var bg = w != null ? HomeNav.FindByName(w, "SeleneHubGameBackground") as Grid : null;
+            if (bg == null || homeGlow != null) return;
+            homeGlow = BuildGlow();
+            homeGlow.Opacity = 0;
+            bg.Children.Insert(Math.Min(2, bg.Children.Count), homeGlow);   // over the gradient and wallpaper, under the art
+            RefreshHomeGlow();
+        }
+
+        // the home shows a card (Library, Store) or a game: the glow fades in behind cards, out behind a game's art
+        public static void HomeSelection(bool onCard)
+        {
+            if (homeOnCard == onCard) return;
+            homeOnCard = onCard;
+            RefreshHomeGlow();
+        }
+
+        private static void RefreshHomeGlow()
+        {
+            if (homeGlow == null) return;
+            var res = Application.Current.Resources;
+            bool artHidden = res["SeleneArtOpacity"] is double && (double)res["SeleneArtOpacity"] < 0.01;
+            bool on = res["SeleneWallpaper"] == null && Features.On("glow") && (homeOnCard || artHidden);
+            if (on) homeGlow.Visibility = Visibility.Visible;
+            var fade = new DoubleAnimation(on ? 1 : 0, TimeSpan.FromMilliseconds(on ? 450 : 250)) { EasingFunction = Ui.Out() };
+            if (!on) fade.Completed += (s, e) => { if (homeGlow.Opacity < 0.01) homeGlow.Visibility = Visibility.Collapsed; };   // particles stop drawing
+            homeGlow.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
         private static void FillParticles(Canvas canvas, Size size)
