@@ -30,6 +30,8 @@ namespace Selene
         private readonly TranslateTransform pageShift = new TranslateTransform();
         private readonly DispatcherTimer slides = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
         private StoreData.Elsewhere elsewhere;
+        private WebTrailer trailer;
+        private Grid trailerHost;
         private int shot, moreIndex, zone;   // zone 0: the screenshots, 1: more from the store
         private bool front, closed;
         private const double MoreW = 380, MoreH = 214, MorePitch = MoreW + 24;
@@ -67,6 +69,9 @@ namespace Selene
             Panel.SetZIndex(dark, -10);   // under the screenshots (they sit at -1 / -2; at 0 this hid them: a black page)
             Root.Children.Add(dark);
             foreach (var img in new[] { shotA, shotB }) { RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality); Root.Children.Add(img); }
+            trailerHost = new Grid { IsHitTestVisible = false };
+            Panel.SetZIndex(trailerHost, -1);   // over the screenshots, under the words
+            Root.Children.Add(trailerHost);
             Root.Children.Add(new Border
             {
                 IsHitTestVisible = false,
@@ -193,6 +198,7 @@ namespace Selene
                 facts.Text = string.Join("   ·   ", new[] { d.Genres, d.Released, d.Score }.Where(x => !string.IsNullOrEmpty(x)));
                 foreach (var u in d.Shots) if (!shots.Contains(u)) shots.Add(u);
                 FillShots();
+                StartTrailer(d.Trailer);
             });
             StoreData.FindElsewhere(item, e =>
             {
@@ -205,7 +211,27 @@ namespace Selene
             ShowFocus();
         }
 
-        public override void Hidden() { closed = true; slides.Stop(); }
+        public override void Hidden()
+        {
+            closed = true;
+            slides.Stop();
+            if (trailer != null) { trailer.Stop(); trailer = null; }
+        }
+
+        // the trailer behind the page, a moment after it opens (shown once it plays; the screenshots stay until then)
+        private void StartTrailer(string url)
+        {
+            if (string.IsNullOrEmpty(url) || !Features.On("storetrailers")) return;
+            var wait = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+            wait.Tick += (s, e) =>
+            {
+                wait.Stop();
+                if (closed || zone != 0) return;
+                trailer = WebTrailer.Create(url, () => slides.Stop());   // playing: the screenshots stop changing behind it
+                if (trailer != null) trailerHost.Children.Add(trailer.View);
+            };
+            wait.Start();
+        }
 
         // the screenshot thumbnails along the bottom (rebuilt as more come in)
         private void FillShots()
@@ -289,6 +315,7 @@ namespace Selene
                         int next = shot + dir;
                         if (next < 0 || next >= shotTiles.Count) return;
                         Ui.Tick();
+                        if (trailer != null) { trailer.Stop(); trailer = null; }   // the picked screenshot shows instead
                         ShowShot(next, true);
                     }
                     else

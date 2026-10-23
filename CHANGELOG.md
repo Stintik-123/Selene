@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Store game page: the game's trailer plays behind it (muted, looping) where Playnite's built-in browser can play it; the screenshots stay until it does. Switch: Selene settings, Games, Store trailers.
+- Keyboards (profile name, Find a game): Y types a space, Start is Done.
+- Find a game: the picked game keeps the focus in Collection (the old tile took it back half a second later).
 - Store: opens smoothly (its tiles are made as they come near the screen, and it's built once instead of twice while it fades in).
 - Store game page, redone: the game's screenshots fill the screen behind (a row of them along the bottom, Left / Right show each one), the store's logo, name, genres, release date, score, price and description on the left, and one main button: Play or Install when the game is in your library, Get it free, or Buy on its store. The cheapest price in another store shows when there is one (Y opens it), and Down shows more games from the same store.
 - Text over bright pictures: the home's shading deepens as much as the wallpaper or game art behind it needs (a shade behind the top bar too), and the text halo is stronger.

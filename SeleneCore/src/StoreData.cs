@@ -512,7 +512,7 @@ namespace Selene
         // ---------------- a game's page ----------------
         public class Details
         {
-            public string About, Released, Genres, Score;
+            public string About, Released, Genres, Score, Trailer;   // Trailer: Steam's AV1 stream (DASH)
             public List<string> Shots = new List<string>();
         }
 
@@ -563,6 +563,8 @@ namespace Selene
                 var score = S(At(data, "metacritic", "score"));
                 if (score != null) d.Score = "Metacritic " + score;
                 d.Shots = A(At(data, "screenshots")).Select(s => S(At(s, "path_full"))).Where(s => s != null).Take(8).ToList();
+                var movie = A(At(data, "movies")).FirstOrDefault(m => S(At(m, "highlight")) == "True") ?? A(At(data, "movies")).FirstOrDefault();
+                d.Trailer = S(At(movie, "dash_av1"));
                 return d;
             }
             if (item.Store == "xbox")
