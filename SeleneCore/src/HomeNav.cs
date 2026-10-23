@@ -1057,10 +1057,34 @@ namespace Selene
                 Log("find a game: " + (hit != null ? "picked in Collection" : "not in Collection's list"));
                 if (hit == null) return;
                 list.SelectedItem = hit;
-                list.ScrollIntoView(hit);
-                list.UpdateLayout();
-                var c = list.ItemContainerGenerator.ContainerFromItem(hit) as UIElement;
-                if (c != null) c.Focus();
+                // its tile may not exist yet (the list only makes the ones near the screen): Playnite's panel scrolls to it,
+                // then the tile can take the focus (else the focus stayed on the first game and took the selection back)
+                int tries = 0;
+                var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
+                t.Tick += (s2, e2) =>
+                {
+                    tries++;
+                    if (!ReferenceEquals(list.SelectedItem, hit)) list.SelectedItem = hit;
+                    var c = list.ItemContainerGenerator.ContainerFromItem(hit) as UIElement;
+                    if (c == null || !c.IsVisible)
+                    {
+                        try
+                        {
+                            var vp = FindChild<VirtualizingPanel>(list);
+                            var scrollTo = vp != null ? vp.GetType().GetMethod("ScrollToItem", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(object) }, null) : null;
+                            if (scrollTo != null) scrollTo.Invoke(vp, new object[] { hit });
+                            else list.ScrollIntoView(hit);
+                        }
+                        catch (Exception ex) { Log("find a game scroll: " + ex.Message); }
+                        list.UpdateLayout();
+                        c = list.ItemContainerGenerator.ContainerFromItem(hit) as UIElement;
+                    }
+                    if ((c == null || !c.IsVisible) && tries < 25) return;
+                    t.Stop();
+                    if (c != null) { c.Focus(); Log("find a game: focused " + Prop(hit, "Name")); }
+                    else Log("find a game: its tile never appeared");
+                };
+                t.Start();
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
