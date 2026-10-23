@@ -6,6 +6,9 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     mc:Ignorable="d">
 
+    <!-- Google's Material Icons, for the menus Playnite builds (game options, its settings) -->
+    <FontFamily x:Key="FontMaterialIcons">./Fonts/#Material Icons</FontFamily>
+
     <Color x:Key="BlackColor">#FF000000</Color>
     <Color x:Key="WhiteColor">#FFFFFFFF</Color>
     <Color x:Key="GlyphColor">#FF9CCBFF</Color>  <!-- Selene: moonlight blue -->
