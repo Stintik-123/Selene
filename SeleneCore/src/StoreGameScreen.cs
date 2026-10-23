@@ -41,6 +41,7 @@ namespace Selene
             more = StoreData.MoreFrom(item);
             var dark = new Border();
             dark.SetResourceReference(Border.BackgroundProperty, "SeleneScrimBrush");
+            Panel.SetZIndex(dark, -10);   // under the screenshots (they sit at -1 / -2; at 0 this hid them: a black page)
             Root.Children.Add(dark);
             foreach (var img in new[] { shotA, shotB }) { RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality); Root.Children.Add(img); }
             Root.Children.Add(new Border
@@ -96,7 +97,7 @@ namespace Selene
             page.Children.Add(col);
 
             // bottom: the screenshots, then more from the same store (Down)
-            var bottom = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(110, 790, 0, 0) };
+            var bottom = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(110, 750, 0, 0) };
             bottom.Children.Add(shotStrip);
             if (more.Count > 0)
             {
@@ -168,17 +169,17 @@ namespace Selene
         // the screenshot thumbnails along the bottom (rebuilt as more come in)
         private void FillShots()
         {
-            var list = shots.Take(8).ToList();
+            var list = shots.Take(6).ToList();
             if (list.Count == shotTiles.Count) return;
             shotStrip.Children.Clear();
             shotTiles.Clear();
             for (int i = 0; i < list.Count; i++)
             {
-                var t = new Tile(176, 99, 10, 4) { FocusScale = 1.08 };
-                t.Root.Margin = new Thickness(0, 0, 16, 0);
-                var fill = new Border { CornerRadius = new CornerRadius(9), Opacity = 0 };
+                var t = new Tile(272, 153, 13, 5) { FocusScale = 1.06 };   // big enough to see what each one shows
+                t.Root.Margin = new Thickness(0, 0, 20, 0);
+                var fill = new Border { CornerRadius = new CornerRadius(12), Opacity = 0 };
                 t.Face.Child = fill;
-                StorePage.LoadFill(fill, list[i], 360);
+                StorePage.LoadFill(fill, list[i], 560);
                 shotStrip.Children.Add(t.Root);
                 shotTiles.Add(t);
             }
