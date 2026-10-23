@@ -827,6 +827,9 @@ namespace Selene
                     Log("library focus: tile never appeared, focusing list");
                     list.Focus(); return;
                 }
+                // the tile with one whole cover to its left (at the very edge, Left had nothing built to land on and did nothing)
+                SnapToWholeCovers(list, list.SelectedItem);
+                c = list.ItemContainerGenerator.ContainerFromIndex(list.SelectedIndex) as UIElement ?? c;
                 c.Focus();
                 Log("library focus -> " + list.SelectedItem + " (tile focused=" + c.IsKeyboardFocusWithin + ")");
             };
@@ -2490,11 +2493,18 @@ namespace Selene
                 }
                 // a game in Collection: A plays it as Spotlight's A does (Selene's loading screen at once, the same way through), X opens
                 // its details (Playnite's own A)
-                if ((pressed == "A" || pressed == "X") && item != null && InLibraryList(item) && Api != null)
+                if ((pressed == "A" || pressed == "X" || pressed == "Y") && item != null && InLibraryList(item) && Api != null)
                 {
                     if (pressed == "X")
                     {
                         try { PlayniteMenu.Main("ActivateSelectedCommand"); } catch (Exception ex) { Log("details in Collection: " + ex.Message); }
+                        e.Cancel();
+                        return;
+                    }
+                    if (pressed == "Y")
+                    {
+                        // Game options, as the hint says (Playnite's own Y opened its search box)
+                        try { PlayniteMenu.Main("OpenGameMenuCommand"); } catch (Exception ex) { Log("game options in Collection: " + ex.Message); }
                         e.Cancel();
                         return;
                     }
