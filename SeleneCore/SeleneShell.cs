@@ -107,15 +107,19 @@ namespace Selene
 
         private static UIElement Part(string name) { return main != null ? HomeNav.FindByName(main, name) as UIElement : null; }
 
+        // Switching between Spotlight and Collection is a crossfade: the screen you leave stays up while the other one gets
+        // its picture, so you never see an empty background. (Spotlight sits above Collection in the theme.)
+        private static int switchCount;
+
         public static void ShowLibrary()
         {
             var home = Part("WelcomeHubOverlay");
             var library = Part("SeleneLibrary");
             if (home == null || library == null) return;
-            library.Visibility = Visibility.Visible;
-            library.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
-            home.Visibility = Visibility.Collapsed;
-            HomeNav.SetMusic("home");   // the library like the home: the default track, a game's song with its trailer
+            int mine = ++switchCount;
+            library.BeginAnimation(UIElement.OpacityProperty, null);
+            library.Visibility = Visibility.Visible;   // under Spotlight, loading its art meanwhile
+            HomeNav.SetMusic("home");   // Collection like Spotlight: the default track, a game's song with its trailer
             var list = Part("PART_ListGameItems") as ListBox;
             if (list != null) main.Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -123,6 +127,15 @@ namespace Selene
                 var item = list.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, list.SelectedIndex)) as UIElement;
                 if (item != null) item.Focus(); else list.Focus();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
+            // a moment for its art, then Spotlight fades off it
+            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(280)) { BeginTime = TimeSpan.FromMilliseconds(200), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+            fade.Completed += (s, e) =>
+            {
+                if (mine != switchCount) return;
+                home.Visibility = Visibility.Collapsed;
+                home.BeginAnimation(UIElement.OpacityProperty, null);
+            };
+            home.BeginAnimation(UIElement.OpacityProperty, fade);
             HomeNav.Log("shell: library");
         }
 
@@ -131,10 +144,18 @@ namespace Selene
             var home = Part("WelcomeHubOverlay");
             var library = Part("SeleneLibrary");
             if (home == null) return;
-            HomeNav.SyncSelectionForHome();   // the home's own selection first: no flash of the library's game art
-            if (library != null) library.Visibility = Visibility.Collapsed;
+            int mine = ++switchCount;
+            HomeNav.SyncSelectionForHome();   // Spotlight's own selection first: no flash of Collection's game art
             home.Visibility = Visibility.Visible;
-            home.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
+            // Spotlight fades in over Collection, which goes once it's covered
+            var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(280)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+            fade.Completed += (s, e) =>
+            {
+                if (mine != switchCount) return;
+                home.BeginAnimation(UIElement.OpacityProperty, null);
+                if (library != null) library.Visibility = Visibility.Collapsed;
+            };
+            home.BeginAnimation(UIElement.OpacityProperty, fade);
             HomeNav.Log("shell: home");
         }
 
