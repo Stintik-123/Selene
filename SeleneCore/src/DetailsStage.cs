@@ -55,13 +55,23 @@ namespace Selene
                 var page = Part<Grid>("SeleneDetailsPage");
                 shift = page != null ? page.RenderTransform as TranslateTransform : null;
                 if (page == null) { HomeNav.Log("details stage: no page in the template"); return; }
-                // the page glides as one texture (redrawing its texts' halos, blurs and pictures on every frame made the move crawl)
-                if (page.CacheMode == null) page.CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = false };
+                // what the glide moves is cached in pieces: the top block and each band's pictures are textures, the bands' blur
+                // and fade animate over them (one cache for the whole page went soft and had to be redrawn for every step)
+                page.CacheMode = null;
+                foreach (var name in new[] { "SeleneDetailsTop", "SeleneDetailsShots", "SeleneDetailsCaptures", "SeleneDetailsMore" })
+                {
+                    var el = Part<FrameworkElement>(name);
+                    if (el != null && el.CacheMode == null) el.CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = true };
+                }
+                var activity = Part<Border>("SeleneDetailsBand2b");
+                if (activity != null && activity.Child != null && activity.Child.CacheMode == null) activity.Child.CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = true };
                 if (shownId != g.Id || zone == 0) { zone = 0; if (shift != null) { shift.BeginAnimation(TranslateTransform.YProperty, null); shift.Y = 0; } }
                 if (shownId != g.Id) GameMedia.OnSelected(g, null);   // the screenshots follow Spotlight's row; here the game may be another (Collection's pick)
                 shownId = g.Id;
                 Fill(g);
                 Blur(false);
+                var f = Keyboard.FocusedElement as DependencyObject;
+                if (f == null || !details.IsAncestorOf(f)) FocusPills();
             }), DispatcherPriority.Loaded);
         }
 
@@ -240,7 +250,7 @@ namespace Selene
             var glide = new DoubleAnimation(to, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() };
             Timeline.SetDesiredFrameRate(glide, 144);   // the page is big: at WPF's 60 steps a second the move looked choppy on a fast screen
             shift.BeginAnimation(TranslateTransform.YProperty, glide);
-            Blur(false);   // at once: a blur or fade still changing during the glide would redraw the cached page on every frame
+            Blur(true);   // the next band sharpens and brightens as it rises, with the glide (the store's rows do the same)
         }
 
         // the bands below the one in view are blurred (they peek in at the foot of the screen, as the store's rows do)
@@ -283,6 +293,17 @@ namespace Selene
             mask.GradientStops[1].BeginAnimation(GradientStop.ColorProperty, a2);
         }
 
+        private static bool InDescription(DependencyObject d)
+        {
+            for (; d != null; d = VisualTreeHelper.GetParent(d))
+            {
+                var fe = d as FrameworkElement;
+                if (fe != null && fe.Name == "PART_ScrollHtmlDescription") return true;
+                if (fe != null && fe == details) return false;
+            }
+            return false;
+        }
+
         private static void FocusPills()
         {
             var pill = Part<UIElement>("PART_ButtonContext");
@@ -299,9 +320,10 @@ namespace Selene
                 if (b != "DPadDown") return false;
                 int z = NextBand(0, 1);
                 if (z < 0) return false;
-                // only from the pills (the description can take the focus too; Down there scrolls it)
-                var focused = Keyboard.FocusedElement as FrameworkElement;
-                if (focused == null || (focused.Name != "PART_ButtonContext" && focused.Name != "PART_ButtonOptions")) return false;
+                // from anywhere on the page but the description (Down there scrolls it); opened from Collection the focus
+                // sometimes sat on nothing at all, and Down did nothing
+                var focused = Keyboard.FocusedElement as DependencyObject;
+                if (focused != null && InDescription(focused)) return false;
                 zone = z;
                 Ui.Tick();
                 Glide();

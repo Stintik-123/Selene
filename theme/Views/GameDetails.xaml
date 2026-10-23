@@ -148,7 +148,7 @@
                         <Grid x:Name="SeleneDetailsPage" Height="1800" Width="{Binding ActualWidth, ElementName=PART_ViewHost}">
                             <Grid.RenderTransform><TranslateTransform x:Name="SeleneDetailsShift" Y="0"/></Grid.RenderTransform>
 
-                            <StackPanel Margin="110,96,0,0" Width="1060" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <StackPanel x:Name="SeleneDetailsTop" Margin="110,96,0,0" Width="1060" HorizontalAlignment="Left" VerticalAlignment="Top">
                                 <!-- logo, or the name when there is none -->
                                 <TextBlock x:Name="LogoPath" Tag="{Api Paths.ConfigurationPath}" Visibility="Collapsed">
                                     <TextBlock.Text>

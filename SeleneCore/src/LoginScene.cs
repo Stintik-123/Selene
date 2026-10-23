@@ -175,6 +175,36 @@ namespace Selene
             next();
         }
 
+        // the backdrop changes (another theme or wallpaper picked) under a still of what it showed, which then melts away: a
+        // crossfade instead of a cut. One at a time; before the backdrop is on screen the change is simply made.
+        private static Image backdropStill;
+        public static void CrossfadeBackdrop(Action change)
+        {
+            var host = backdropHost;
+            var panel = host != null ? host.Parent as Panel : null;
+            if (host == null || panel == null || host.Opacity < 0.99 || host.ActualWidth < 2)
+            {
+                change();
+                return;
+            }
+            try
+            {
+                if (backdropStill != null) { panel.Children.Remove(backdropStill); backdropStill = null; }
+                int w = (int)Math.Round(host.ActualWidth / 2), h = (int)Math.Round(host.ActualHeight / 2);
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 48, 48, PixelFormats.Pbgra32);
+                rtb.Render(host);
+                rtb.Freeze();
+                var still = new Image { Source = rtb, Stretch = Stretch.Fill, IsHitTestVisible = false };
+                panel.Children.Insert(panel.Children.IndexOf(host) + 1, still);
+                backdropStill = still;
+                change();
+                var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(520)) { EasingFunction = Ui.Out() };
+                fade.Completed += (s2, e2) => { panel.Children.Remove(still); if (backdropStill == still) backdropStill = null; };
+                still.BeginAnimation(UIElement.OpacityProperty, fade);
+            }
+            catch (Exception ex) { HomeNav.Log("backdrop crossfade: " + ex.Message); change(); }
+        }
+
         // ---------------- flow ----------------
         // spotlight and particles only on the plain gradient (no wallpaper behind)
         public static void RefreshBackdrop()

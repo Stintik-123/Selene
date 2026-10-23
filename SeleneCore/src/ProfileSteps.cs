@@ -227,45 +227,79 @@ namespace Selene
             }
         }
 
-        // the real home, mirrored live (row and top bar; no game is selected, its song would start), so a theme or
-        // background is seen before picking it
+        // the real home (row and top bar; no game is selected, its song would start) as a picture, so a theme or background is
+        // seen before picking it. A snapshot, retaken when the choice changes: a live mirror redrew the whole home on every
+        // frame (its dust never stops moving) and the steps crawled.
+        private static Image previewBack, previewFront;
+        private static double previewWidth;
+
         internal static FrameworkElement Preview(double width)
         {
             double height = width * 9 / 16;
+            previewWidth = width;
             var host = new Grid { Width = width, Height = height, Clip = new RectangleGeometry(new Rect(0, 0, width, height), 15, 15) };
-            var main = Application.Current.MainWindow;
-            var viewHost = main != null ? HomeNav.FindByName(main, "PART_ViewHost") : null;
-            if (viewHost != null && viewHost.ActualWidth > 0)
-            {
-                foreach (var n in new[] { "WelcomeHubOverlay", "HubTopBarBackground" })
-                {
-                    var el = HomeNav.FindByName(main, n);
-                    if (el == null) continue;
-                    var at = el.TranslatePoint(new Point(0, 0), viewHost);
-                    host.Children.Add(new Rectangle
-                    {
-                        Fill = new VisualBrush(el)
-                        {
-                            Stretch = Stretch.Fill, ViewboxUnits = BrushMappingMode.Absolute,
-                            Viewbox = new Rect(-at.X, -at.Y, viewHost.ActualWidth, viewHost.ActualHeight)
-                        }
-                    });
-                }
-            }
-            if (host.Children.Count == 0)
-            {
-                host.Children.Add(new Border { Background = Ink.Brush("SeleneGlassColor", 0.7) });
-                host.Children.Add(Ui.Text("The home shows here once it has loaded", 18, 0.6));
-            }
+            host.Children.Add(new Border { Background = Ink.Brush("SeleneGlassColor", 0.7) });
+            host.Children.Add(Ui.Text("The home shows here once it has loaded", 18, 0.6));
+            previewBack = new Image { Stretch = Stretch.Fill };
+            previewFront = new Image { Stretch = Stretch.Fill };
+            host.Children.Add(previewBack);
+            host.Children.Add(previewFront);
             var frame = new Border
             {
                 Child = host, CornerRadius = new CornerRadius(16), BorderBrush = Ink.Brush("SeleneInkColor", 0.25), BorderThickness = new Thickness(1),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black }
             };
             var col = new StackPanel();
-            col.Children.Add(new TextBlock { Text = "PREVIEW", FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(4, 0, 0, 10) });
+            col.Children.Add(new TextBlock { Text = "PREVIEW", FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(2, 0, 0, 10) });
             col.Children.Add(frame);
+            RefreshPreviewLater();
             return col;
+        }
+
+        // a new picture of the home, once the change has been drawn, and again a moment later for anything that fades in
+        internal static void RefreshPreviewLater()
+        {
+            if (previewFront == null) return;
+            previewFront.Dispatcher.BeginInvoke(new Action(() => RefreshPreview()), DispatcherPriority.Loaded);
+            var again = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(520) };
+            again.Tick += (s, e) => { again.Stop(); RefreshPreview(); };
+            again.Start();
+        }
+
+        private static void RefreshPreview()
+        {
+            try
+            {
+                if (previewFront == null || !previewFront.IsLoaded) return;
+                var main = Application.Current.MainWindow;
+                var viewHost = main != null ? HomeNav.FindByName(main, "PART_ViewHost") : null;
+                if (viewHost == null || viewHost.ActualWidth < 1) return;
+                double scale = previewWidth / viewHost.ActualWidth;
+                var dv = new DrawingVisual();
+                using (var dc = dv.RenderOpen())
+                {
+                    foreach (var n in new[] { "WelcomeHubOverlay", "HubTopBarBackground" })
+                    {
+                        var el = HomeNav.FindByName(main, n);
+                        if (el == null || !el.IsVisible) continue;
+                        var at = el.TranslatePoint(new Point(0, 0), viewHost);
+                        dc.DrawRectangle(new VisualBrush(el) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top },
+                                         null, new Rect(at.X, at.Y, el.ActualWidth, el.ActualHeight));
+                    }
+                }
+                int w = (int)Math.Round(viewHost.ActualWidth * scale), h = (int)Math.Round(viewHost.ActualHeight * scale);
+                if (w < 2 || h < 2) return;
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96 * scale, 96 * scale, PixelFormats.Pbgra32);
+                rtb.Render(dv);
+                rtb.Freeze();
+                // the old picture stays under the new one as it fades in: a soft change, not a cut
+                if (previewFront.Source != null) { previewBack.Source = previewFront.Source; previewBack.Opacity = 1; }
+                previewFront.Source = rtb;
+                previewFront.BeginAnimation(UIElement.OpacityProperty, null);
+                previewFront.Opacity = 0;
+                Ui.Fade(previewFront, 1, 260);
+            }
+            catch (Exception ex) { HomeNav.Log("preview: " + ex.Message); }
         }
 
         // a debounced action: moving quickly through choices only applies the one you stop on
@@ -741,11 +775,15 @@ namespace Selene
             // the whole of Selene recolors, the home's wallpaper too (the theme's own, unless one was picked)
             private void Show(string id)
             {
-                ThemePalettes.Apply(id);
-                var wallpaper = Owner.Wallpaper ?? ThemePalettes.DefaultWallpaper(id);
-                Wallpapers.Show(wallpaper);
-                LoginScene.RefreshBackdrop();
-                Profiles.ApplyHomeBackground(Owner.Look);
+                LoginScene.CrossfadeBackdrop(() =>
+                {
+                    ThemePalettes.Apply(id);
+                    var wallpaper = Owner.Wallpaper ?? ThemePalettes.DefaultWallpaper(id);
+                    Wallpapers.Show(wallpaper);
+                    LoginScene.RefreshBackdrop();
+                    Profiles.ApplyHomeBackground(Owner.Look);
+                });
+                RefreshPreviewLater();
             }
 
             public override void Move(string dir)
@@ -846,6 +884,7 @@ namespace Selene
             {
                 hasArt = HomeNav.ShowArtForPreview(true);
                 Fill();
+                RefreshPreviewLater();
                 look.Select(Owner.Look == "wallpaper" ? 1 : 0, false);
                 ShowNote();
                 ShowFocus(false);
@@ -857,13 +896,14 @@ namespace Selene
                 grid.Reveal(index);
                 groupLabel.Text = (index == 0 ? "THEME" : groups[index].ToUpperInvariant());
                 var file = files[index] ?? ThemePalettes.DefaultWallpaper(Owner.Theme);
-                Action show = () => { Wallpapers.Show(file); LoginScene.RefreshBackdrop(); };
+                Action show = () => { LoginScene.CrossfadeBackdrop(() => { Wallpapers.Show(file); LoginScene.RefreshBackdrop(); }); RefreshPreviewLater(); };
                 if (live) apply.Run(show); else show();
             }
 
             private void ShowLook(bool changed)
             {
                 look.Select(Owner.Look == "wallpaper" ? 1 : 0, changed);
+                if (changed) RefreshPreviewLater();
                 ShowNote();
                 Profiles.ApplyHomeBackground(Owner.Look);
             }

@@ -571,7 +571,7 @@ namespace Selene
             Root.Children.Add(Face);
             Root.Children.Add(ring);
             // drawn once into a texture: moving it, scaling it or repainting what's under it costs a blit, not a redraw
-            Root.CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = false };
+            Root.CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1.12, SnapsToDevicePixels = true };   // a little larger than shown: grown (focused) it stays crisp
         }
 
         private DropShadowEffect glow;
