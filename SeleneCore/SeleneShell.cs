@@ -46,6 +46,9 @@ namespace Selene
             if (library == null || hub == null) return false;
             library.Command = new Relay(ShowLibrary);
             LoginScene.AttachHomeGlow(main);   // the login's glow behind the home's cards
+            // Playnite's "game is running" screen (switching back to Playnite while a game runs): the home instead
+            var status = HomeNav.FindByName(main, "PART_ElemGameStatus") as UIElement;
+            if (status != null) status.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) HomeNav.GameStatusShown(); };
             hub.Command = new Relay(ShowHome);
             var menuButton = HomeNav.FindByName(main, "PART_ButtonMainMenu") as ButtonBase;
             if (menuButton != null) menuButton.Command = new Relay(OpenMenu);

@@ -4636,6 +4636,32 @@ namespace Selene
             timer.Start();
         }
 
+        // Playnite brought itself forward while a game runs (taskbar click, Alt+Tab) and put up its "game is running"
+        // screen, which Selene's theme leaves empty: the home on the running game instead, game paused, like Guide
+        public static void GameStatusShown()
+        {
+            if (launching) return;   // the loading screen is up: Playnite's status belongs behind it
+            var w = Application.Current.MainWindow;
+            if (w == null) return;
+            w.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    var status = FindByName(w, "PART_ElemGameStatus") as UIElement;
+                    if (status == null || !status.IsVisible || launching) return;
+                    HidePreview();
+                    var hub = FindByName(w, "WelcomeHubOverlay");
+                    var proxy = FindByName(w, "SeleneNav_hub") as System.Windows.Controls.Primitives.ButtonBase;
+                    if ((hub == null || !hub.IsVisible) && proxy != null && proxy.Command != null && proxy.Command.CanExecute(null)) proxy.Command.Execute(null);
+                    FocusRowSoon(0);
+                    FocusRowSoon(300);
+                    if (gameWindow != IntPtr.Zero) PauseRunningGame();
+                    Log("game status -> home (Playnite came forward while a game runs)");
+                }
+                catch (Exception ex) { Log("game status -> home failed: " + ex.Message); }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
         private static void GoHomeFromGuide()
         {
             try

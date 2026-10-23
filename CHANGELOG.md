@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Switching back to Playnite while a game runs (taskbar, Alt+Tab) opens the home on the running game, with Resume and Close Game, instead of Playnite's "is running" screen.
 - Quiet loading screen: a starting game's intro sounds stay down until the game shows (Selene settings, Quiet loading screen).
 - Down on the Library and Store cards no longer moves focus to nothing.
 - No flash of light the first time the menu opens.
