@@ -2024,7 +2024,13 @@ namespace Selene
                 var item = Keyboard.FocusedElement as ListBoxItem;
 // per-press file logging removed (disk write on the UI thread every move)
                 //                 Log("pad " + pressed + " focus=" + (Keyboard.FocusedElement == null ? "null" : Keyboard.FocusedElement.GetType().Name) + " item=" + (item != null ? item.DataContext : null));
-                if ((pressed == "LeftShoulder" || pressed == "RightShoulder") && FocusOnHome()) { e.Cancel(); return; }  // no sections on home
+                // LB / RB switch the home's filters (All games, Installed...); moving a tile: nothing
+                if ((pressed == "LeftShoulder" || pressed == "RightShoulder") && FocusOnHome())
+                {
+                    if (movingCard == null && movingGame == null) CycleRowFilter(pressed == "RightShoulder" ? 1 : -1);   // also brings focus back to the game row
+                    e.Cancel();
+                    return;
+                }
                 if (pressed == "LeftShoulder" || pressed == "RightShoulder")
                 {
                     lastShoulder = pressed;
@@ -2040,12 +2046,7 @@ namespace Selene
                     check.Start();
                 }
                 bool onHome = movingCard == null && movingGame == null && FocusOnHome();
-                if ((pressed == "TriggerLeft" || pressed == "TriggerRight") && onHome)
-                {
-                    CycleRowFilter(pressed == "TriggerRight" ? 1 : -1);   // also brings focus back to the game row
-                    e.Cancel();
-                    return;
-                }
+                if ((pressed == "TriggerLeft" || pressed == "TriggerRight") && onHome) { e.Cancel(); return; }   // filters are on LB / RB now
                 if (pressed == "X" && onHome)
                 {
                     var hr = LiveRow();
@@ -2950,7 +2951,7 @@ namespace Selene
             var host = w != null ? FindByName(w, "SeleneFilterTabs") as StackPanel : null;
             if (host == null) return;
             host.Children.Clear();
-            host.Children.Add(FilterBadge("LT"));
+            host.Children.Add(FilterBadge("LB"));
             for (int i = 0; i < RowFilters.Length; i++)
             {
                 bool on = i == RowFilter;
@@ -2977,7 +2978,7 @@ namespace Selene
                     tab.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.4, 1, TimeSpan.FromMilliseconds(160)));
                 }
             }
-            host.Children.Add(FilterBadge("RT"));
+            host.Children.Add(FilterBadge("RB"));
         }
 
         private static Border FilterBadge(string text)

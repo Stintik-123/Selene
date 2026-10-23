@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Home filters switch with LB / RB instead of the triggers.
 - No notification bell in the top bar; the library shows no button hints, like the home.
 - New library: big game cards in one horizontal row along the bottom, the game's logo and stats above on the left; rest on a game and its trailer plays in a card above the row with the game's song (Selene settings, Library trailers).
 - The View button switches between the home and the library (it opened Playnite's settings); hold View to search the library, hold Start for Selene settings.

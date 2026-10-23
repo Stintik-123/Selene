@@ -780,7 +780,7 @@
 
                             <!-- ================= TOP BAR (home + library) ================= -->
                             <Grid x:Name="HubTopBarBackground" VerticalAlignment="Top" Height="110" Margin="64,0,64,0">
-                                <!-- home: LT/RT filter tabs (drawn by Selene Core) -->
+                                <!-- home: LB/RB filter tabs (drawn by Selene Core) -->
                                 <StackPanel x:Name="SeleneFilterTabs" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"
                                             Visibility="{Binding Visibility, ElementName=WelcomeHubOverlay}"/>
                                 <!-- library: Playnite's filter presets -->
