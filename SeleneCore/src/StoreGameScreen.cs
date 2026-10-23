@@ -35,6 +35,7 @@ namespace Selene
         private int shot, moreIndex, zone;   // zone 0: the screenshots, 1: more from the store
         private bool front, closed;
         private const double MoreW = 380, MoreH = 214, MorePitch = MoreW + 24;
+        private const double MoreLift = 300;   // how far the page glides up for the "More from" row: just enough to show it above the hints
         // the left edge of the words and the screenshots: six 272 px screenshots, 20 apart, centered on the 1920 screen
         private const double Side = (1920 - (6 * 272 + 5 * 20)) / 2.0;
         private StackPanel moreSection;
@@ -148,7 +149,12 @@ namespace Selene
                     moreRow.Children.Add(t.Root);
                     moreTiles.Add(t);
                 }
-                moreSection.Children.Add(moreRow);
+                // on a canvas: laid out in the page, the row got trimmed to its slot, and the trim moved with it as it
+                // scrolled (games cut off on the right) and as a tile grew (its ring cut at the top and bottom)
+                var rowSheet = new Canvas { Height = MoreH + 24, Margin = new Thickness(0, 0, 0, 12) };
+                Canvas.SetTop(moreRow, 12);
+                rowSheet.Children.Add(moreRow);
+                moreSection.Children.Add(rowSheet);
                 bottom.Children.Add(moreSection);
                 Peek(true);
             }
@@ -166,7 +172,7 @@ namespace Selene
             {
                 zone = 1;
                 moreIndex = Math.Max(0, Math.Min(startMore, moreTiles.Count - 1));
-                pageShift.Y = -420;
+                pageShift.Y = -MoreLift;
                 moreShift.X = -Math.Max(0, moreIndex - 1) * MorePitch;
                 Peek(false);
             }
@@ -282,7 +288,7 @@ namespace Selene
             zone = z;
             Peek(z == 0);
             // more from the store: the page glides up to show its row
-            pageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(z == 1 ? -420 : 0, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() });
+            pageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(z == 1 ? -MoreLift : 0, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() });
             Ui.Tick();
             ShowFocus();
         }
