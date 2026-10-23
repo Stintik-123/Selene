@@ -4203,15 +4203,25 @@ namespace Selene
                 CoverArtPaths(gameId, out bg, out logo);
                 var root = new Grid { Background = Brushes.Black, ClipToBounds = true };
                 // (no snapshot of the home any more: the whole window fades in over the live home instead, see below)
-                var scene = new Grid { RenderTransformOrigin = new Point(0.5, 0.5) };
-                var drift = new ScaleTransform(1.04, 1.04);
-                scene.RenderTransform = drift;
+                var scene = new Grid();
+                if (coverArtStage != null) { coverArtStage.Stop(); coverArtStage = null; }
                 if (bg != null && System.IO.File.Exists(bg))
                 {
-                    var art = new Image { Source = LoadNow(bg, (int)Math.Max(1920, main.ActualWidth)), Stretch = Stretch.UniformToFill };
-                    RenderOptions.SetBitmapScalingMode(art, BitmapScalingMode.HighQuality);
+                    // the art and its slow drift on a thread of their own: Playnite's start and the game's launch block the UI
+                    // thread for a few hundred ms at a time, which froze the drift mid-way
+                    var bmp = LoadNow(bg, (int)Math.Max(1920, main.ActualWidth));
+                    var art = new OffThread(sz =>
+                    {
+                        var img = new Image { Source = bmp, Stretch = Stretch.UniformToFill, RenderTransformOrigin = new Point(0.5, 0.5) };
+                        RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                        var zoom = new ScaleTransform(1.04, 1.04);
+                        img.RenderTransform = zoom;
+                        zoom.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.04, 1.12, TimeSpan.FromSeconds(20)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
+                        zoom.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.04, 1.12, TimeSpan.FromSeconds(20)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
+                        return img;
+                    }, "Selene loading art");
                     scene.Children.Add(art);
-                    scene.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
+                    coverArtStage = art;
                 }
                 // light, even dim so a white logo reads on bright art (console keeps the art bright)
                 var dim = new RadialGradientBrush { GradientOrigin = new Point(0.5, 0.5), Center = new Point(0.5, 0.5), RadiusX = 0.75, RadiusY = 0.75 };
@@ -4282,10 +4292,8 @@ namespace Selene
 
                 var easeOut = new CubicEase { EasingMode = EasingMode.EaseOut };
                 var softOut = new QuinticEase { EasingMode = EasingMode.EaseOut };
-                // art up from black, then a slow drift for as long as the game takes to load
+                // art up from black, then a slow drift for as long as the game takes to load (the drift runs on the art's own thread)
                 // art cross-fades in over the home still (user preferred this to a console-style slide)
-                drift.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.04, 1.12, TimeSpan.FromSeconds(20)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
-                drift.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.04, 1.12, TimeSpan.FromSeconds(20)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
                 dimLayer.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900)) { BeginTime = TimeSpan.FromMilliseconds(300) });
                 pendingLogo = null;
                 if (logoEl != null)
@@ -4798,10 +4806,24 @@ namespace Selene
             catch (Exception ex) { Log("steam minimise failed: " + ex.Message); }
         }
 
+        // the loading screen's art, drawn on its own thread (let go a while after the screen has gone)
+        private static OffThread coverArtStage;
+
+        private static void StopCoverArtLater()
+        {
+            var stage = coverArtStage;
+            if (stage == null) return;
+            coverArtStage = null;
+            var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+            later.Tick += (s, e) => { later.Stop(); stage.Stop(); };
+            later.Start();
+        }
+
         private static void EndLaunchCover()
         {
             if (!launching) return;
             launching = false;
+            StopCoverArtLater();
             if (launchTimer != null) launchTimer.Stop();
             var w = Application.Current.MainWindow;
             if (w != null) w.Topmost = false;

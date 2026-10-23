@@ -180,6 +180,7 @@ namespace Selene
         public static void RefreshBackdrop()
         {
             ShowBackdropKind();
+            RecolorDust();
             if (glow == null) return;
             bool wallpaper = Application.Current.Resources["SeleneWallpaper"] != null;
             double to = wallpaper || !Features.On("glow") ? 0 : 1;
@@ -400,10 +401,46 @@ namespace Selene
             haze.GradientStops.Add(Ink.Stop("GlyphColor", 0, 1));
             glow.Children.Add(new Border { Background = haze });
 
-            var canvas = new Canvas { IsHitTestVisible = false };
-            glow.Children.Add(canvas);
-            glow.SizeChanged += (s, e) => { if (canvas.Children.Count == 0 && e.NewSize.Width > 0) FillParticles(canvas, e.NewSize); };
+            // the dust on a thread of its own: a busy main thread (start-up, a game starting) can't make it stumble
+            var accent = Ink.Of("GlyphColor");
+            var inkColor = Ink.Of("SeleneInkColor");
+            var dust = new OffThread(sz => Dust(sz, accent, inkColor), "Selene dust");
+            dust.Resized = (el, sz) => { var c = el as Canvas; if (c != null) { c.Children.Clear(); FillParticles(c, sz, new Random(7), accent, inkColor); } };
+            glow.Children.Add(dust);
+            dusts.Add(dust);
             return outer;
+        }
+
+        private static readonly List<OffThread> dusts = new List<OffThread>();
+
+        private static Canvas Dust(Size size, Color accent, Color inkColor)
+        {
+            var c = new Canvas { IsHitTestVisible = false };
+            FillParticles(c, size, new Random(7), accent, inkColor);
+            return c;
+        }
+
+        private static Color WithAlpha(Color c, double alpha) { c.A = (byte)Math.Round(255 * alpha); return c; }
+
+        // the theme changed: the dust takes the new colors (on its thread)
+        private static void RecolorDust()
+        {
+            var accentNow = Ink.Of("GlyphColor");
+            var inkNow = Ink.Of("SeleneInkColor");
+            foreach (var d in dusts)
+                d.Run(el =>
+                {
+                    var c = el as Canvas;
+                    if (c == null) return;
+                    foreach (var child in c.Children)
+                    {
+                        var dot = child as Ellipse;
+                        var fill = dot != null ? dot.Fill as RadialGradientBrush : null;
+                        if (fill == null) continue;
+                        var col = Equals(dot.Tag, "accent") ? accentNow : inkNow;
+                        foreach (var stop in fill.GradientStops) { var cc = col; cc.A = stop.Color.A; stop.Color = cc; }
+                    }
+                });
         }
 
         // the video on Selene's own theme, the drawn backdrop on the others
@@ -453,7 +490,7 @@ namespace Selene
             homeGlow.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
-        private static void FillParticles(Canvas canvas, Size size)
+        private static void FillParticles(Canvas canvas, Size size, Random rnd, Color accent, Color inkColor)
         {
             // a band of fine dust rising from the lower left to the right (denser on the right), a few soft bokeh dots.
             // Their drift is slow, and WPF's usual 60 steps a second showed as uneven on a 144 Hz display (frames doubled and
@@ -462,11 +499,12 @@ namespace Selene
             {
                 bool bokeh = i < 14;
                 double d = bokeh ? 10 + rnd.NextDouble() * 26 : 1.5 + rnd.NextDouble() * 3;
-                var key = rnd.NextDouble() < 0.72 ? "GlyphColor" : "SeleneInkColor";
+                bool isAccent = rnd.NextDouble() < 0.72;
+                var color = isAccent ? accent : inkColor;
                 var fill = new RadialGradientBrush();
-                fill.GradientStops.Add(Ink.Stop(key, bokeh ? 0.33 : 0.94, 0));
-                fill.GradientStops.Add(Ink.Stop(key, 0, 1));
-                var dot = new Ellipse { Width = d, Height = d, Fill = fill };
+                fill.GradientStops.Add(new GradientStop(WithAlpha(color, bokeh ? 0.33 : 0.94), 0));
+                fill.GradientStops.Add(new GradientStop(WithAlpha(color, 0), 1));
+                var dot = new Ellipse { Width = d, Height = d, Fill = fill, Tag = isAccent ? "accent" : "ink" };
                 double fx = Math.Sqrt(rnd.NextDouble());                       // more of them to the right
                 double band = 0.74 - 0.32 * fx;                                 // the band climbs to the right
                 double spread = (rnd.NextDouble() + rnd.NextDouble() - 1) * (bokeh ? 0.3 : 0.14);

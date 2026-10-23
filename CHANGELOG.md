@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Smooth under load: the animated background's dust and the loading screen's slow art drift are drawn on threads of their own, so start-up work and a game's launch can't make them stumble.
 - Animated background: the drifting dust moves smoothly on high-refresh displays (it stepped at 60 frames a second on a 144 Hz screen).
 - Play: the loading screen no longer freezes for a moment as it comes up and again a second in (Steam's window is minimised off the UI thread; Playnite's own start waits for the loading screen's animation to finish).
 - Game details open again (the redone page set a style twice, and Playnite fell over opening it).
