@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Collection: an achievements bar above the covers (Playnite Achievements: unlocked / total and a progress bar, gold trophy when complete), and holding a direction moves as fast as on Spotlight.
 - Collection: the game's logo, chips and genres slide in together when you move to another game.
 - The two main screens are now Spotlight (the home row) and Collection (every game); Selene settings, Start on Collection, opens Collection after signing in.
 - Going from the library back to the home no longer flashes the library game's art.

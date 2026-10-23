@@ -41,7 +41,7 @@
                                 </Grid.RowDefinitions>
                                 <Border Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}"/>
                                 <Image Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
-                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="220"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->
                                 <Grid x:Name="SeleneLibraryTrailerHost" Grid.RowSpan="2" Margin="760,0,0,0" Opacity="0" IsHitTestVisible="False" ClipToBounds="True">
                                     <Grid.OpacityMask>
@@ -120,7 +120,7 @@
                                             </MultiBinding>
                                         </TextBlock.Text>
                                     </TextBlock>
-                                    <Image x:Name="SeleneLibraryLogo" Source="{Binding ElementName=SeleneLibraryLogoPath, Path=Text, Converter={StaticResource ImageStringToImageConverter}, NotifyOnTargetUpdated=True}"
+                                    <Image x:Name="SeleneLibraryLogo" Source="{Binding ElementName=SeleneLibraryLogoPath, Path=Text, Converter={StaticResource ImageStringToImageConverter}, NotifyOnTargetUpdated=True, IsAsync=True}"
                                            MaxWidth="600" MaxHeight="240" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Bottom" RenderOptions.BitmapScalingMode="Fant">
                                     </Image>
                                     <TextBlock Text="{Binding SelectedGame.DisplayName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="56" FontFamily="{DynamicResource FontMain}"
@@ -201,6 +201,69 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 </StackPanel>
+
+                                <!-- achievements of the selected game (Playnite Achievements), bottom right above the covers -->
+                                <Border Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,100,22" CornerRadius="20" Padding="18,11,20,12"
+                                        Background="{DynamicResource SeleneGlassBrush}" BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{PluginSettings Plugin=PlayniteAchievements, Path=HasData, FallbackValue=False}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Border.Triggers>
+                                        <EventTrigger RoutedEvent="Binding.TargetUpdated">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
+                                                        <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
+                                                        <LinearDoubleKeyFrame KeyTime="0:0:0.15" Value="0"/>
+                                                        <LinearDoubleKeyFrame KeyTime="0:0:0.45" Value="1"/>
+                                                    </DoubleAnimationUsingKeyFrames>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Border.Triggers>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xEA23;" FontFamily="/Fonts/MaterialIcons-Regular.ttf#Material Icons" FontSize="30" VerticalAlignment="Center" Margin="0,0,14,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource GlyphBrush}"/>
+                                                    <Style.Triggers>
+                                                        <!-- every achievement: a gold trophy -->
+                                                        <DataTrigger Binding="{PluginSettings Plugin=PlayniteAchievements, Path=IsCompleted}" Value="True">
+                                                            <Setter Property="Foreground" Value="#FFE8C46A"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <StackPanel VerticalAlignment="Center" Width="230">
+                                            <Grid>
+                                                <TextBlock Text="ACHIEVEMENTS" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI" VerticalAlignment="Bottom"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                    <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Unlocked, FallbackValue='-', NotifyOnTargetUpdated=True}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="17" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                    <TextBlock Text=" / " Foreground="{DynamicResource SeleneInk60Brush}" FontSize="17" FontFamily="Segoe UI"/>
+                                                    <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Total, FallbackValue='-'}" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="17" FontFamily="Segoe UI"/>
+                                                </StackPanel>
+                                            </Grid>
+                                            <ProgressBar Value="{PluginSettings Plugin=PlayniteAchievements, Path=Percent, FallbackValue=0}" Maximum="100" Height="6" Margin="0,7,0,0" Focusable="False">
+                                                <ProgressBar.Template>
+                                                    <ControlTemplate TargetType="ProgressBar">
+                                                        <Grid>
+                                                            <Border x:Name="PART_Track" CornerRadius="3" Background="{DynamicResource SeleneInk25Brush}"/>
+                                                            <Border x:Name="PART_Indicator" CornerRadius="3" Background="{DynamicResource GlyphBrush}" HorizontalAlignment="Left"/>
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </ProgressBar.Template>
+                                            </ProgressBar>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
 
                                 <!-- button hints along the bottom, split like the home -->
                                 <Border Grid.Row="3" Margin="64,0,64,0" VerticalAlignment="Center">
