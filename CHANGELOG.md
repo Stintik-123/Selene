@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Spotlight: a game picked in Find a game, Activity or Surprise me lands at the left edge of the row (it ended up cut off at the right); LT and RT jump to the start and the end of the row.
+- Game details, redone: who made it and the critic and player scores under the logo, the genres as chips, the description on glass that fades out at its foot instead of a big empty box, and button hints.
+- The home's and the details' pills are dark glass again, like the Setup check's buttons.
 - Playnite settings from the menu open as a Selene screen now: General, Visuals, Audio, Layout, Menus and Input as sections, their settings as Selene's switches and choices, saved straight into Playnite (a row opens Playnite's own pages for the monitor and theme). Switch: Navigation, Playnite settings, Selene's way.
 - Activity, redone: the numbers as cards, your top game called out with its share of your play time, bars under the most played, and two more rows: games to pick up again (an hour or more played, untouched for 45 days) and games still waiting (never played). The rows glide up.
 - Store game page: back from the screenshot viewer, the strip keeps a focused screenshot (going past the sixth in the viewer left it with none, and Left / Right stuck).

@@ -1083,14 +1083,33 @@ namespace Selene
                 // the focus comes from outside the row (the search layer): the row's guard would send it back to the old
                 // selection, so it's told which tile is wanted
                 wantedFocusIndex = idx;
-                try
-                {
-                    if (cur != idx) MoveTo(row, cur, idx);   // scrolls there and focuses the tile (the tile style selects what has the focus)
-                    else { var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement; if (c != null) c.Focus(); }
-                }
+                try { PlaceAtLeft(row, idx); }   // the game you went looking for, first on the row
                 finally { wantedFocusIndex = -1; }
                 Log("find a game: row focused=" + row.IsKeyboardFocusWithin + " selected=" + row.SelectedIndex);
             }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        // a tile at the left edge of the row, focused (a pick from a search or a card): the usual move keeps the third slot and,
+        // with the tile not built yet, left it at the right edge instead
+        private static void PlaceAtLeft(ListBox row, int idx)
+        {
+            if (idx < 0 || idx >= row.Items.Count) return;
+            var sv = FindChild<ScrollViewer>(row);
+            if (sv != null) { sv.ScrollToHorizontalOffset(idx); row.UpdateLayout(); }
+            var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement;
+            if (c == null)
+            {
+                row.ScrollIntoView(row.Items[idx]);
+                row.UpdateLayout();
+                if (sv != null) { sv.ScrollToHorizontalOffset(idx); row.UpdateLayout(); }
+                c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement;
+            }
+            var panel = FindChild<VirtualizingStackPanel>(row);
+            var shift = panel != null ? panel.RenderTransform as TranslateTransform : null;
+            if (shift != null && !shift.IsFrozen) { shift.BeginAnimation(TranslateTransform.XProperty, null); shift.X = 0; }   // no glide left over
+            if (c != null) c.Focus(); else row.SelectedIndex = idx;
+            ScheduleTitle(row, 230);
+            EnsureTileCaches(row);
         }
 
         private static int RowIndexOf(ListBox row, Guid id)
@@ -2416,7 +2435,20 @@ namespace Selene
                     check.Start();
                 }
                 bool onHome = movingCard == null && movingGame == null && FocusOnHome();
-                if ((pressed == "TriggerLeft" || pressed == "TriggerRight") && onHome) { e.Cancel(); return; }   // filters are on LB / RB now
+                if ((pressed == "TriggerLeft" || pressed == "TriggerRight") && onHome)
+                {
+                    // LT / RT: the start of the row, or its end (the filters are on LB / RB)
+                    var tr = LiveRow();
+                    if (tr != null && tr.Items.Count > 0)
+                    {
+                        int last = tr.Items.Count - 1;
+                        while (last > 0 && tr.Items[last] is RowPad) last--;
+                        int to = pressed == "TriggerLeft" ? 0 : last;
+                        if (to != tr.SelectedIndex) { HidePreview(); Ui.Tick(); PlaceAtLeft(tr, to); }
+                    }
+                    e.Cancel();
+                    return;
+                }
                 if (pressed == "X" && onHome)
                 {
                     var hr = LiveRow();
