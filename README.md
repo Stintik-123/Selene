@@ -47,16 +47,16 @@ Playnite 10 or newer, Windows 10 / 11, a controller recommended. Everything Sele
 
 ## Screens
 
-![Spotlight](docs/screenshots/home.png)
+![Collection](docs/screenshots/library.png)
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/who.png" alt="Who's playing?"><p align="center"><sub><b>Who's playing?</b></sub></p></td>
     <td width="50%"><img src="docs/screenshots/details.png" alt="Game details"><p align="center"><sub><b>Details</b></sub></p></td>
+    <td width="50%"><img src="docs/screenshots/store.png" alt="Store"><p align="center"><sub><b>Store</b></sub></p></td>
   </tr>
   <tr>
+    <td width="50%"><img src="docs/screenshots/captures.png" alt="Captures"><p align="center"><sub><b>Captures</b></sub></p></td>
     <td width="50%"><img src="docs/screenshots/activity.png" alt="Activity"><p align="center"><sub><b>Activity</b></sub></p></td>
-    <td width="50%"><img src="docs/screenshots/library.png" alt="Collection"><p align="center"><sub><b>Collection</b></sub></p></td>
   </tr>
 </table>
 

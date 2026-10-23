@@ -7,6 +7,8 @@ ideas). Down goes into the strip, A opens the picture. Each card has a switch un
 settings; *Pictures under the cards* switches the strips.
 
 ## Captures
+
+![Captures](../screenshots/captures.png)
 Your screenshots and clips, newest first, from Steam, Xbox Game Bar (`Videos\Captures`), the NVIDIA app
 (`Videos\NVIDIA`), `Videos\<game>` folders and any folder you add on Selene Core's add-on page. The grid sits on a dark
 vignette with the focused capture glowing behind it; LB / RB filter to screenshots or clips.
