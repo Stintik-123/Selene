@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Game details: the description shows whole lines with no fade; More like this is big covers without names; closing the details no longer flashes Playnite's library grid before Spotlight.
 - Game options menu: the icons show (the icon font is now named from the theme root, as other themes do) and the items are glass rows like Selene's keys and settings.
 - Game details: the lower bands really show as the page glides (they were clipped away, leaving the focus on tiles you couldn't see).
 - Game details: the screenshots are the open game's (opened from Collection they stayed the last Spotlight game's); B from a band leaves the page; the next band starts off the screen so it can't sit under the hints.

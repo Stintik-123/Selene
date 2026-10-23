@@ -188,15 +188,15 @@ namespace Selene
                 if (x.IsInstalled) s += 1;
                 return s;
             };
-            var like = all.Select(x => new { Game = x, Score = score(x) }).Where(x => x.Score >= 2).OrderByDescending(x => x.Score).ThenByDescending(x => GameFacts.Seconds(x.Game)).Take(9).Select(x => x.Game).ToList();
+            var like = all.Select(x => new { Game = x, Score = score(x) }).Where(x => x.Score >= 2).OrderByDescending(x => x.Score).ThenByDescending(x => GameFacts.Seconds(x.Game)).Take(8).Select(x => x.Game).ToList();
             Band("SeleneDetailsMore", "SeleneDetailsMoreLabel", 3, like.Count > 0);
             for (int i = 0; i < like.Count; i++)
             {
                 var x = like[i];
-                var t = GameFacts.CoverTile(x, 120, 160);
-                var item = new StackPanel { Width = 120, Margin = new Thickness(0, 0, 18, 0) };
+                // big covers, no names: the cover says which game it is
+                var t = GameFacts.CoverTile(x, 200, 280);
+                var item = new Grid { Width = 200, Margin = new Thickness(0, 0, 22, 0) };
                 item.Children.Add(t.Root);
-                item.Children.Add(new TextBlock { Text = x.Name, FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 8, 0, 0) });
                 panel.Children.Add(item);
                 tiles[2].Add(t);
                 var id = x.Id;
@@ -210,7 +210,7 @@ namespace Selene
                 });
                 Ui.Rise(item, i * 35, 10, 240);
             }
-            GameFacts.FillCovers(like, tiles[2], 240);
+            GameFacts.FillCovers(like, tiles[2], 400);
             if (at[2] >= tiles[2].Count) at[2] = 0;
         }
 
@@ -232,7 +232,8 @@ namespace Selene
         private static void Glide()
         {
             if (shift == null) return;
-            double to = zone <= 1 ? 0 : -(zone - 1) * BandPitch;
+            // the last band (tall covers) rises further, so the whole covers sit above the hints
+            double to = zone <= 1 ? 0 : -(zone - 1) * BandPitch - (zone == 3 ? 130 : 0);
             shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() });
         }
 

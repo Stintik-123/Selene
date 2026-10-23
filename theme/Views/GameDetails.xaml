@@ -142,7 +142,7 @@
                         <!-- on a canvas: in the screen's own grid the page (taller than the screen) was clipped to the screen in its own
                              coordinates, and the glide couldn't bring the lower bands into view -->
                         <Canvas>
-                        <Grid x:Name="SeleneDetailsPage" Height="1700" Width="{Binding ActualWidth, ElementName=PART_ViewHost}">
+                        <Grid x:Name="SeleneDetailsPage" Height="1800" Width="{Binding ActualWidth, ElementName=PART_ViewHost}">
                             <Grid.RenderTransform><TranslateTransform x:Name="SeleneDetailsShift" Y="0"/></Grid.RenderTransform>
 
                             <StackPanel Margin="110,96,0,0" Width="1060" HorizontalAlignment="Left" VerticalAlignment="Top">
@@ -252,15 +252,8 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <!-- the description on glass, fading out at its foot (the right stick / page keys scroll it) -->
-                                <Border Margin="2,18,0,0" MaxHeight="170" BorderThickness="0" Padding="0,0,26,30" HorizontalAlignment="Left" MinWidth="700">
-                                    <Border.OpacityMask>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#FF000000" Offset="0"/>
-                                            <GradientStop Color="#FF000000" Offset="0.72"/>
-                                            <GradientStop Color="#00000000" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.OpacityMask>
+                                <!-- the description: whole lines only (the page's CSS sets 26 px lines, so six of them fit; the right stick / page keys scroll it) -->
+                                <Border Margin="2,18,0,0" Height="156" BorderThickness="0" Padding="0,0,26,0" HorizontalAlignment="Left" MinWidth="700">
                                     <ScrollViewerEx x:Name="PART_ScrollHtmlDescription" CustomScrollAmount="42" VerticalScrollBarVisibility="Hidden">
                                         <HtmlTextView x:Name="PART_HtmlDescription" HtmlFontSize="17"
                                                       HtmlForeground="{DynamicResource SeleneInkColor}" LinkForeground="{DynamicResource GlyphColor}" FocusVisualStyle="{x:Null}"/>

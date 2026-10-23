@@ -2336,7 +2336,7 @@ namespace Selene
                     Log("details closed, reopening hub: hubVisible=" + (hub != null && hub.IsVisible) + " proxy=" + (proxy != null));
                     if (hub != null && hub.IsVisible) return;
                     if (proxy != null && proxy.Command != null && proxy.Command.CanExecute(null)) proxy.Command.Execute(null);
-                }), System.Windows.Threading.DispatcherPriority.Background);
+                }), System.Windows.Threading.DispatcherPriority.Normal);   // before the next frame: at Background, Playnite's library grid showed for a moment
             };
         }
 
