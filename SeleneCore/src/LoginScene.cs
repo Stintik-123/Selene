@@ -263,6 +263,10 @@ namespace Selene
         // signing in changes the home (new profile, its favorites): it starts fresh instead of as it was
         public static void HomeChanged() { keepHome = false; }
 
+        // the screen closing moves the focus itself (Find a game picks a game in Collection): the element focused before
+        // the layer opened isn't focused again (it took the pick back half a second later)
+        public static void ForgetReturnFocus() { returnFocus = null; }
+
         // menus show over the dimmed home; the login screens have the full backdrop
         private static void ApplyOverlay(bool on, Brush shade = null)
         {

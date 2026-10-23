@@ -269,6 +269,7 @@ namespace Selene
             if (i < 0 || i >= results.Count) { Ui.Shake(field); return; }
             var g = results[i];
             Ui.Confirm();
+            LoginScene.ForgetReturnFocus();   // the pick gets the focus, not what had it before the search
             LoginScene.Finish();
             HomeNav.ShowInCollection(g.Id);
         }
