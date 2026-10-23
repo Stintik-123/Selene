@@ -1081,7 +1081,7 @@ namespace Selene
                 var c = b.Color;
                 if (c.A < 115 || Math.Abs(c.R - ink.R) + Math.Abs(c.G - ink.G) + Math.Abs(c.B - ink.B) > 60) return;   // only the ink-colored text
                 if (textHalo == null)
-                    textHalo = Ink.Track(new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 12, Opacity = 0.8, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance },
+                    textHalo = Ink.Track(new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 14, Opacity = 0.95, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance },
                         System.Windows.Media.Effects.DropShadowEffect.ColorProperty, "SeleneScrimColor");
                 t.Effect = textHalo;
             }
@@ -5353,6 +5353,7 @@ namespace Selene
 
         private void Show(ImageSource img)
         {
+            if (Hub) Contrast.Art(this, img);   // the home's shades as deep as this picture needs
             var ease = new QuadraticEase { EasingMode = EasingMode.EaseInOut };
             if (img == null)
             {

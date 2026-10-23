@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Text over bright pictures: the home's shading deepens as much as the wallpaper or game art behind it needs (a shade behind the top bar too), and the text halo is stronger.
 - Signing in: the wallpaper no longer jumps as the login clears (the cover placed it differently from the home).
 - Store page: the store's logo beside its name, the button hints lower, and a game's page shows its name, price and buttons again (its pictures covered them).
 - Store: rows keep going as you scroll (Steam, GOG, PC Game Pass and the other stores' deals load their next games near the end of a row); the peek of the next row is shorter, lightly blurred and fades out above the button hints. Without store apps the Store card says games open in your browser.

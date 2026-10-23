@@ -50,7 +50,9 @@ namespace Selene
             if (shown != null && string.Equals(shown, file ?? "", StringComparison.OrdinalIgnoreCase)) return;
             shown = file ?? "";
             res["SeleneWallpaperPath"] = file;
-            res["SeleneWallpaper"] = Load(file);
+            var pic = Load(file);
+            res["SeleneWallpaper"] = pic;
+            Contrast.Wallpaper(pic);   // the home's shades as deep as this picture needs
         }
 
         public static List<WallpaperChoice> All()
