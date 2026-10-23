@@ -4,6 +4,10 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Captures: clips get stills (Windows' own thumbnail, or ffmpeg's when this PC has it), in the grid and under the card; clips the browser plays are drawn through a canvas (a big clip decoded by the graphics card stayed black).
+- Spotlight and Collection switch with a shorter hold on the crossfade.
+- Glass that reads: tiles (Setup check, keyboards, menus) and the home's Play / Details pills sit on a deeper glass over busy wallpapers.
+- Menu: Random game is gone (Surprise me on Spotlight does it, better).
 - Selene settings: settings with a choice of values, not only switches (Left / Right go round them): Trailer cards after (1 s, 2.5 s, 5 s, never), Trailer sound (off or on at start), Starting tab (where you left it, or a fixed one), Sound volume, Shade over the art (lighter, as needed, deeper), Store opens on (a tab), Surprise me picks from (installed, not played yet, all); and a switch for the pictures under the cards. The add-on page in Playnite's settings has them too.
 - Spotlight: three new cards. **Activity**: what you've been playing (this week's and all-time numbers, your most played and last played games; A shows one on Spotlight, X plays it). **Captures**: your screenshots and clips newest first, from Steam, Xbox Game Bar's Videos\Captures, the NVIDIA app's Videos\NVIDIA and folders you add in Selene Core's settings; A opens one full screen and clips play. **Surprise me**: covers flick past and stop on a game to play (LB / RB: installed, not played yet, all). Each card has its switch under Spotlight in Selene settings. The cards come as Captures, Activity, Surprise me, Store, and the row starts on the Store card. The Collection card is off by default now (the View button opens Collection); switch it back on under Spotlight.
 - Collection opens with its focus a little sooner from Spotlight.

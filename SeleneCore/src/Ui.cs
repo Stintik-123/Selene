@@ -516,10 +516,11 @@ namespace Selene
         public Tile(double width, double height, double radius, double gap = 6)
         {
             Root = new Grid { Width = width, Height = height };
+            // glass, deep enough to read over a busy wallpaper (the near-clear face lost its words in the art)
             Face = new Border
             {
-                CornerRadius = new CornerRadius(radius), Background = Ink.Brush("SeleneInkColor", 0.08),
-                BorderBrush = Ink.Brush("SeleneInkColor", 0.14), BorderThickness = new Thickness(1)
+                CornerRadius = new CornerRadius(radius), Background = Ink.Brush("SeleneGlassColor", 0.72),
+                BorderBrush = Ink.Brush("SeleneInkColor", 0.16), BorderThickness = new Thickness(1)
             };
             ring = new Border
             {

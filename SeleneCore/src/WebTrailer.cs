@@ -101,13 +101,20 @@ namespace Selene
                             if (playing != null) playing();
                         }
                         else if (text.StartsWith("failed")) HomeNav.Log("clip: the browser couldn't play it (" + text + ")");
+                        else if (text.StartsWith("t=") && t2.reports++ < 3) HomeNav.Log("clip: " + text + " (" + (int)view.ActualWidth + "x" + (int)view.ActualHeight + ", visible=" + view.IsVisible + ")");
                     });
                 var src = new Uri(path).AbsoluteUri;
+                // the frames go through a canvas: a big clip is decoded by the GPU and composited apart, which the browser's
+                // off-screen picture (what WPF shows) never got, so the page stayed black while the clip "played"
                 var html = "<!doctype html><html><head><meta charset='utf-8'><style>html,body{margin:0;background:#000;overflow:hidden}"
-                    + "video{position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain}</style></head><body>"
-                    + "<video id='v' src=\"" + src.Replace("\"", "%22") + "\" autoplay playsinline loop></video><script>"
-                    + "var v=document.getElementById('v');"
-                    + "v.addEventListener('playing',function(){document.title=v.muted?'playing muted':'playing';});"
+                    + "canvas{position:fixed;left:0;top:0;width:100vw;height:100vh}video{position:fixed;left:0;top:0;width:4px;height:4px;opacity:0.01}</style></head><body>"
+                    + "<canvas id='c'></canvas><video id='v' src=\"" + src.Replace("\"", "%22") + "\" autoplay playsinline loop></video><script>"
+                    + "var v=document.getElementById('v'),c=document.getElementById('c'),x=c.getContext('2d'),n=0;"
+                    + "function fit(){c.width=innerWidth;c.height=innerHeight;}fit();addEventListener('resize',fit);"
+                    + "function draw(){if(v.videoWidth>0){var s=Math.min(c.width/v.videoWidth,c.height/v.videoHeight),w=v.videoWidth*s,h=v.videoHeight*s;"
+                    + "x.drawImage(v,(c.width-w)/2,(c.height-h)/2,w,h);n++;}requestAnimationFrame(draw);}requestAnimationFrame(draw);"
+                    + "v.addEventListener('playing',function(){document.title=(v.muted?'playing muted ':'playing ')+v.videoWidth+'x'+v.videoHeight;});"
+                    + "setInterval(function(){if(!v.paused)document.title='t='+v.currentTime.toFixed(1)+' drawn='+n;},3000);"
                     + "v.addEventListener('error',function(){document.title='failed: '+(v.error?v.error.code+' '+v.error.message:'');});"
                     + "v.muted=false;var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play();});"
                     + "document.title='loading';</script></body></html>";
@@ -122,6 +129,7 @@ namespace Selene
         }
 
         private string pageFile;
+        private int reports;
 
         // fades away (a screenshot was picked); Stop ends it for good
         public void Hide()

@@ -130,11 +130,26 @@ namespace Selene
                 item.Children.Add(line);
                 if (c.IsVideo)
                 {
-                    // a clip: no still of its own; a film mark on the glass face
+                    // a clip: a film mark on the glass face until its still is made (Windows' thumbnail, or ffmpeg's)
                     var g = new Grid();
                     g.Children.Add(new TextBlock { Text = "\uE768", FontFamily = Ui.Glyphs, FontSize = 40, Foreground = Ink.Brush("SeleneInkColor", 0.85), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
                     g.Children.Add(new TextBlock { Text = System.IO.Path.GetExtension(c.Path).TrimStart('.').ToUpperInvariant() + " clip", FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 14) });
                     t.Face.Child = g;
+                    var tile = t;
+                    Thumbnails.Request(c.Path, still =>
+                    {
+                        if (closed || still == null) return;
+                        Ui.LoadInOrder(new List<string> { still }, 420, (k, pic) =>
+                        {
+                            if (closed) return;
+                            var face = new Grid();
+                            face.Children.Add(new Border { CornerRadius = new CornerRadius(11), Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } });
+                            face.Children.Add(new Border { CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(Color.FromArgb(0xB0, 0, 0, 0)), Padding = new Thickness(7, 3, 7, 4), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 10, 10, 0), Child = new TextBlock { Text = "\uE768", FontFamily = Ui.Glyphs, FontSize = 13, Foreground = Brushes.White } });
+                            face.Opacity = 0;
+                            tile.Face.Child = face;
+                            Ui.Fade(face, 1, 240);
+                        });
+                    });
                 }
                 else { files.Add(c.Path); at.Add(i); }
                 page.Children.Add(item);
@@ -365,6 +380,7 @@ namespace Selene
                     int clips = all.Count(c => c.IsVideo), shots = all.Count - clips;
                     text = all.Count == 0 ? "None found yet" : Count(shots, "screenshot") + (clips > 0 ? " · " + Count(clips, "clip") : "");
                     latest = all.Take(4).ToList();
+                    foreach (var c in latest) if (c.IsVideo) Thumbnails.Get(c.Path, 12000);   // stills for the card's clips (made here, off the UI thread)
                     if (all.Count == 0)
                     {
                         headline = "No captures yet";
@@ -385,7 +401,7 @@ namespace Selene
                     var entries = latest.Select(c =>
                     {
                         var path = c.Path;
-                        return new CardShowcase.Entry { Image = c.IsVideo ? null : c.Path, Title = c.Game, Sub = GameFacts.Ago(c.When), Glyph = "\uE714", Open = () => LoginScene.OpenWith(() => new CapturesScreen(path)) };
+                        return new CardShowcase.Entry { Image = c.IsVideo ? Thumbnails.Cached(c.Path) : c.Path, Title = c.Game, Sub = GameFacts.Ago(c.When), Glyph = "\uE714", Open = () => LoginScene.OpenWith(() => new CapturesScreen(path)) };
                     }).ToList();
                     CardShowcase.Set("nav:captures", "Captures", headline, about, entries);
                 }));

@@ -13,7 +13,7 @@ namespace Selene
     // flips one (saved straight away); Left or B goes back to the groups; B there goes back to the menu.
     public class SettingsScreen : Screen
     {
-        private static readonly int[] GroupIcons = { 0xEB9B, 0xEA28, 0xE80F, 0xE050, 0xE40A, 0xE338 };
+        private static readonly int[] GroupIcons = { 0xEB9B, 0xEA28, 0xE88A, 0xE050, 0xE40A, 0xE338 };
 
         private readonly List<Border> groupRows = new List<Border>();
         private readonly StackPanel optionList = new StackPanel();

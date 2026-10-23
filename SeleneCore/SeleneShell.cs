@@ -187,7 +187,7 @@ namespace Selene
                 if (item != null) item.Focus(); else list.Focus();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
             // a crossfade: a still of Spotlight lies on top and melts away over Collection
-            if (Crossfade(home, 260, 160))   // held a moment: Collection's covers load under it
+            if (Crossfade(home, 200, 60))   // held a moment: Collection's covers load under it (a longer hold read as a delay)
             {
                 home.BeginAnimation(UIElement.OpacityProperty, null);
                 home.Visibility = Visibility.Collapsed;
@@ -221,13 +221,13 @@ namespace Selene
             // a still of Collection lies on top while everything changes under it, then melts away over Spotlight: Collection
             // itself goes at once (setting Spotlight's "no game" made its list jump to its first game: the 007 flash)
             // (held until Spotlight's art is back, at most 700 ms)
-            bool still = library != null && library.IsVisible && !LibraryStage.Playing && Crossfade(library, 280, -1);
+            bool still = library != null && library.IsVisible && !LibraryStage.Playing && Crossfade(library, 220, -1);
             if (library != null) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Visibility = Visibility.Collapsed; }
             var held = crossfadeStill;
             HomeNav.SyncSelectionForHome(() => { if (still) ReleaseStill(held); });   // Spotlight's own selection
             if (still)
             {
-                var cap = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+                var cap = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
                 cap.Tick += (s, e) => { cap.Stop(); ReleaseStill(held); };
                 cap.Start();
             }
