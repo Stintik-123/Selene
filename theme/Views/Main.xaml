@@ -712,7 +712,8 @@
                                                 </StackPanel>
                                             </StackPanel>
                                             <!-- the store card selected: what it is, a few numbers, what A does -->
-                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="900" Opacity="0">
+                                            <!-- (wide: the showcase's big pictures go right across; the text keeps its own width) -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1760" Opacity="0">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -735,7 +736,7 @@
                                                     </Style>
                                                 </StackPanel.Style>
                                                 <TextBlock Text="Store" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
-                                                <TextBlock Text="{DynamicResource SeleneStoreAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
+                                                <TextBlock Text="{DynamicResource SeleneStoreAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" MaxWidth="900" HorizontalAlignment="Left" Margin="2,10,0,0"/>
                                                 <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
                                                     <StackPanel Margin="0,0,26,0">
                                                         <TextBlock Text="STORES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>

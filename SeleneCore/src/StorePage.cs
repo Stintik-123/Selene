@@ -208,7 +208,7 @@ namespace Selene
             var pic = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
             RenderOptions.SetBitmapScalingMode(pic, BitmapScalingMode.HighQuality);
             g.Children.Add(new Border { CornerRadius = new CornerRadius(13), ClipToBounds = true, Child = pic });
-            Load(pic, item.Image, 660);
+            Load(pic, StoreData.Sharp(item), 760);
             // price chip, bottom right
             var chip = new StackPanel { Orientation = Orientation.Horizontal };
             if (item.Discount > 0 && !item.Free)

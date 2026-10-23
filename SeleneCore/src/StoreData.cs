@@ -393,6 +393,22 @@ namespace Selene
             return items;
         }
 
+        // the sharpest wide picture for a big card: Steam's capsule at double size (its 616 px one for deals from other
+        // stores); Epic's (2560 px) and Microsoft's are big already and are decoded at card size
+        public static string Sharp(StoreItem item)
+        {
+            var url = item.Image;
+            if (string.IsNullOrEmpty(url)) return url;
+            if (url.Contains("/capsule_616x353") && url.Contains("store_item_assets") && !url.Contains("_2x"))
+            {
+                int dot = url.IndexOf(".jpg", StringComparison.Ordinal);
+                if (dot > 0 && url.Substring(url.LastIndexOf('/'), dot - url.LastIndexOf('/')).Contains("_alt_") || url.Contains("/capsule_616x353_")) return url.Insert(dot, "_2x");
+            }
+            if (!string.IsNullOrEmpty(item.SteamAppId) && url.EndsWith("/header.jpg"))
+                return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/" + item.SteamAppId + "/capsule_616x353.jpg";
+            return url;
+        }
+
         // ---------------- a game's page ----------------
         public class Details
         {

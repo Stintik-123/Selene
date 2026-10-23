@@ -86,7 +86,7 @@ namespace Selene
                 .Where(i => i.Discount > 0 && !i.Owned && !string.IsNullOrEmpty(i.Image)).OrderByDescending(i => i.Discount);
             foreach (var s in sales)
             {
-                if (picks.Count >= 5) break;
+                if (picks.Count >= 4) break;   // four big pictures across the card
                 if (!picks.Any(p => StoreData.Key(p.Title ?? "") == StoreData.Key(s.Title ?? ""))) picks.Add(s);
             }
             var key = string.Join("|", picks.Select(p => p.Title + p.Price));
@@ -103,22 +103,22 @@ namespace Selene
 
         private static FrameworkElement Card(StoreItem item)
         {
-            var col = new StackPanel { Width = 232, Margin = new Thickness(0, 0, 16, 0) };
-            var frame = new Grid { Height = 109 };
+            var col = new StackPanel { Width = 404, Margin = new Thickness(0, 0, 22, 0) };
+            var frame = new Grid { Height = 227 };
             var pic = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
             RenderOptions.SetBitmapScalingMode(pic, BitmapScalingMode.HighQuality);
-            frame.Children.Add(new Border { CornerRadius = new CornerRadius(10), ClipToBounds = true, Background = Ink.Brush("SeleneInkColor", 0.08), Child = pic });
-            StorePage.Load(pic, item.Image, 470);
+            frame.Children.Add(new Border { CornerRadius = new CornerRadius(14), ClipToBounds = true, Background = Ink.Brush("SeleneInkColor", 0.08), Child = pic });
+            StorePage.Load(pic, StoreData.Sharp(item), 1000);   // sharp at high-DPI too
             var chip = new StackPanel { Orientation = Orientation.Horizontal };
             var badge = item.Free ? "FREE" : item.Discount > 0 ? "-" + item.Discount + "%" : null;
             if (badge != null)
-                chip.Children.Add(new Border { Background = Ink.Brush("SeleneFocusColor"), CornerRadius = new CornerRadius(6), Padding = new Thickness(6, 1, 6, 2), Child = new TextBlock { Text = badge, FontSize = 13, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneOnFocusColor") } });
+                chip.Children.Add(new Border { Background = Ink.Brush("SeleneFocusColor"), CornerRadius = new CornerRadius(7), Padding = new Thickness(8, 2, 8, 3), Child = new TextBlock { Text = badge, FontSize = 17, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneOnFocusColor") } });
             var price = item.Free ? (item.Note ?? "") : item.Price ?? "";
-            if (price.Length > 0) chip.Children.Add(new TextBlock { Text = price, FontSize = 14, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(badge != null ? 6 : 0, 0, 0, 0) });
+            if (price.Length > 0) chip.Children.Add(new TextBlock { Text = price, FontSize = 18, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(badge != null ? 8 : 0, 0, 0, 0) });
             if (chip.Children.Count > 0)
-                frame.Children.Add(new Border { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6), Padding = new Thickness(4, 3, 8, 3), CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)), Child = chip });
+                frame.Children.Add(new Border { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10), Padding = new Thickness(5, 4, 10, 4), CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)), Child = chip });
             col.Children.Add(frame);
-            col.Children.Add(new TextBlock { Text = item.Title, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 6, 0, 0) });
+            col.Children.Add(new TextBlock { Text = item.Title, FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 6, 0, 0) });
             return col;
         }
     }
