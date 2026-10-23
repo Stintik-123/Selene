@@ -1513,6 +1513,7 @@ namespace Selene
         public static void ApplyValueSettings()
         {
             previewSound = Features.Value("trailersound") == "on";
+            Ui.RefreshPrompts();   // Button names
             // the tab set may have changed (Selene's / Playnite's / both): rebuilt, shown, and the row refiltered
             try
             {

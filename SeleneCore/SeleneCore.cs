@@ -248,6 +248,7 @@ namespace Selene
             new Option { Group = "Start-up", Key = "setuphint", Label = "Add-on hint", About = "A note on the home when logos and trailers need the Extra Metadata add-on and it isn't installed." },
             new Option { Group = "Navigation", Key = "viewswitch", Label = "View button", About = "Switches Spotlight and Collection. Hold it to search." },
             new Option { Group = "Navigation", Key = "hints", Label = "Button hints", About = "What each button does, along the bottom." },
+            new Option { Group = "Navigation", Key = "prompts", Label = "Button names", About = "Which controller's buttons the hints name: Playnite's own Button prompts setting, Xbox, or PlayStation.", Choices = new[] { "playnite", "xbox", "playstation" }, Names = new[] { "As Playnite's setting", "Xbox", "PlayStation" }, Default = "playnite" },
             new Option { Group = "Navigation", Key = "copylog", Label = "Copy log in the menu", About = "A menu entry that copies Selene's and Playnite's logs, for a bug report." },
             new Option { Group = "Navigation", Key = "playnitesettings", Label = "Playnite settings, Selene's way", About = "The menu's Playnite settings open as a Selene screen. Off: Playnite's own pages." },
             new Option { Group = "Spotlight", Key = "cardactivity", Label = "Activity card", About = "What you've been playing: most played, last played and the numbers." },

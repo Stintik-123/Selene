@@ -14,6 +14,7 @@ under Playnite → Add-ons → Generic → **Selene Core**. Settings with a choi
 | Navigation | View button | Switches Spotlight and Collection; hold it to search |
 | | Button hints | What each button does, along the bottom |
 | | Playnite settings, Selene's way | The menu's Playnite settings open as a Selene screen |
+| | Button names | Which controller's buttons the hints name: as Playnite's setting, Xbox, or PlayStation |
 | Spotlight | Activity card, Captures card, Surprise me card | Each card on or off |
 | | Collection card | A card that opens Collection (off by default: the View button does it) |
 | | Pictures under the cards | The latest captures, the games you played last and a few ideas under their cards |

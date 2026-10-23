@@ -85,6 +85,9 @@ namespace Selene
                 ps = value != null && value.ToString().IndexOf("PlayStation", StringComparison.OrdinalIgnoreCase) >= 0;
             }
             catch (Exception ex) { HomeNav.Log("prompts: " + ex.Message); }
+            // Selene's own choice wins when it isn't "as Playnite's"
+            var mine = Features.Value("prompts");
+            if (mine == "xbox") ps = false; else if (mine == "playstation") ps = true;
             bool changed = playStation != ps;
             playStation = ps;
             try
