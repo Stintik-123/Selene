@@ -203,9 +203,17 @@ namespace Selene
             CollectionActive = false;
             // a still of Collection lies on top while everything changes under it, then melts away over Spotlight: Collection
             // itself goes at once (setting Spotlight's "no game" made its list jump to its first game: the 007 flash)
-            bool still = library != null && library.IsVisible && !LibraryStage.Playing && Crossfade(library, 280, 0);
+            // (held until Spotlight's art is back, at most 700 ms)
+            bool still = library != null && library.IsVisible && !LibraryStage.Playing && Crossfade(library, 280, -1);
             if (library != null) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Visibility = Visibility.Collapsed; }
-            HomeNav.SyncSelectionForHome();   // Spotlight's own selection
+            var held = crossfadeStill;
+            HomeNav.SyncSelectionForHome(() => { if (still) ReleaseStill(held); });   // Spotlight's own selection
+            if (still)
+            {
+                var cap = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+                cap.Tick += (s, e) => { cap.Stop(); ReleaseStill(held); };
+                cap.Start();
+            }
             home.Visibility = Visibility.Visible;
             if (still)
             {
@@ -246,12 +254,22 @@ namespace Selene
                 Panel.SetZIndex(img, 1000);
                 host.Children.Add(img);
                 crossfadeStill = img;
-                var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(holdMs), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
-                fade.Completed += (s, e) => { host.Children.Remove(img); if (crossfadeStill == img) crossfadeStill = null; };
-                img.BeginAnimation(UIElement.OpacityProperty, fade);
+                img.Tag = ms;
+                if (holdMs >= 0) ReleaseStill(img, holdMs);   // -1: the caller lets it go (ReleaseStill)
                 return true;
             }
             catch (Exception ex) { HomeNav.Log("crossfade still: " + ex.Message); return false; }
+        }
+
+        private static void ReleaseStill(Image img, int holdMs = 0)
+        {
+            if (img == null || !(img.Tag is int)) return;
+            int ms = (int)img.Tag;
+            img.Tag = null;   // once
+            var host = VisualTreeHelper.GetParent(img) as Panel;
+            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(holdMs), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+            fade.Completed += (s, e) => { if (host != null) host.Children.Remove(img); if (crossfadeStill == img) crossfadeStill = null; };
+            img.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
         public static void OpenMenu()

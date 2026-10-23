@@ -1029,8 +1029,10 @@ namespace Selene
 
         // back from the library: Playnite still has the library's game selected, and the home drew its art for a moment
         // before the row's own selection caught up; the row's selection (nothing for a card) goes to Playnite first
-        public static void SyncSelectionForHome()
+        public static void SyncSelectionForHome(Action artReady = null)
         {
+            bool reported = false;
+            Action ready = () => { if (!reported) { reported = true; if (artReady != null) artReady(); } };
             try
             {
                 var row = LiveRow();
@@ -1044,19 +1046,20 @@ namespace Selene
                 // in once it has the right picture (none for a card), instead of fading the library game's art out
                 var art = FindByName(w, "SeleneHubArt") as UIElement;
                 // emptied, then loaded again for Spotlight's own game (the same game as Collection's left nothing to reload them)
-                if (art != null) foreach (var cf in FindAll(art, d => d is SeleneCrossfade)) { var x = (SeleneCrossfade)cf; x.Clear(); if (game != null) x.Dispatcher.BeginInvoke(new Action(x.Refresh), System.Windows.Threading.DispatcherPriority.Background); }   // after the selection below is set
-                if (art != null)
+                // each picture comes back at once (under the still of Collection, which waits for them: no wallpaper between)
+                var fades = art != null ? FindAll(art, d => d is SeleneCrossfade) : new List<FrameworkElement>();
+                int left = fades.Count;
+                foreach (var cf in fades)
                 {
-                    var keys = new DoubleAnimationUsingKeyFrames();
-                    keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-                    keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(120))));
-                    keys.KeyFrames.Add(new EasingDoubleKeyFrame(art.Opacity, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(420)), new CubicEase { EasingMode = EasingMode.EaseOut }));
-                    keys.Completed += (s, e) => art.BeginAnimation(UIElement.OpacityProperty, null);
-                    art.BeginAnimation(UIElement.OpacityProperty, keys);
+                    var x = (SeleneCrossfade)cf;
+                    x.Clear();
+                    if (game == null) continue;
+                    x.Dispatcher.BeginInvoke(new Action(() => x.RefreshNow(() => { if (--left <= 0) ready(); })), System.Windows.Threading.DispatcherPriority.Background);   // after the selection below is set
                 }
+                if (game == null || left == 0) ready();
                 if (!ReferenceEquals(prop.GetValue(vm, null), game)) prop.SetValue(vm, game, null);
             }
-            catch (Exception ex) { Log("home selection sync: " + ex.Message); }
+            catch (Exception ex) { Log("home selection sync: " + ex.Message); ready(); }
         }
 
         // while the login screens cover the home nothing is selected for Playnite (its music add-ons would play)
@@ -5175,6 +5178,15 @@ namespace Selene
 
         public void Refresh() { Load(Source); }
 
+        // the next picture appears at once (no fade) and `shown` is called when it's there (or there is none)
+        private Action whenShown;
+
+        public void RefreshNow(Action shown)
+        {
+            whenShown = shown;
+            Load(Source);
+        }
+
         // drop both pictures at once, no fade (and forget any load on its way)
         public void Clear()
         {
@@ -5251,6 +5263,16 @@ namespace Selene
         private void Show(ImageSource img)
         {
             var ease = new QuadraticEase { EasingMode = EasingMode.EaseInOut };
+            var told = whenShown;
+            whenShown = null;
+            if (told != null)
+            {
+                foreach (var i in new[] { front, back }) { i.BeginAnimation(OpacityProperty, null); i.Opacity = 0; i.Source = null; }
+                front.Source = img;
+                front.Opacity = img != null ? 1 : 0;
+                told();
+                return;
+            }
             if (img == null)
             {
                 // nothing to show (a card is selected): both layers go, the one still fading out included
