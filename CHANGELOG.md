@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+## 0.10.0 - 2026-10-23
+
 - Smooth big screens: tiles are drawn once into textures and their focus glow exists only while focused (every tile blurred an invisible ring on each repaint), and the game details page and the profile editor's grids glide as one texture.
 - Choose your avatar / theme / background: the grid glides smoothly (a fade mask over it redrew every tile on each frame; the edge rows now fade on their own).
 - Game details: the glide between bands is smooth (the whole page was redrawn through a fade mask on every frame; now only the peeking band fades, and the move runs at the screen's rate).
