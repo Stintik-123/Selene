@@ -16,21 +16,21 @@
                         <Storyboard x:Key="FocusedOn">
                             <DoubleAnimation Storyboard.TargetName="ScaleTransform"
                                              Storyboard.TargetProperty="ScaleX"
-                                             From="1" To="1.06" Duration="0:0:0.1"/>
+                                             From="1" To="1.05" Duration="0:0:0.15"/>
                             <DoubleAnimation Storyboard.TargetName="ScaleTransform"
                                              Storyboard.TargetProperty="ScaleY"
-                                             From="1" To="1.06" Duration="0:0:0.1"/>
+                                             From="1" To="1.05" Duration="0:0:0.15"/>
                         </Storyboard>
                         <Storyboard x:Key="FocusedOff">
                             <DoubleAnimation Storyboard.TargetName="ScaleTransform"
                                              Storyboard.TargetProperty="ScaleX"
-                                             From="1.06" To="1" Duration="0:0:0.2"/>
+                                             From="1.05" To="1" Duration="0:0:0.2"/>
                             <DoubleAnimation Storyboard.TargetName="ScaleTransform"
                                              Storyboard.TargetProperty="ScaleY"
-                                             From="1.06" To="1" Duration="0:0:0.2"/>
+                                             From="1.05" To="1" Duration="0:0:0.2"/>
                         </Storyboard>
                     </ControlTemplate.Resources>
-                    <Grid Margin="7,0,7,0"
+                    <Grid Margin="7,18,7,18"
                           RenderTransformOrigin="0.5,0.5"
                           d:DataContext="{x:Static DesignMainViewModel.DesignSelectedGameIntance}">
                         <Grid.RenderTransform>

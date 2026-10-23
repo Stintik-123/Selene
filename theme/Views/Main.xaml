@@ -36,8 +36,8 @@
                                     <RowDefinition Height="100" />
                                     <RowDefinition Height="*" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="34" />
+                                    <RowDefinition Height="104" />
+                                    <RowDefinition Height="0" />
                                 </Grid.RowDefinitions>
                                 <Border Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}"/>
                                 <Image Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
@@ -113,7 +113,7 @@
                                 </Grid>
 
                                 <!-- button hints, a thin line under them -->
-                                <Border Grid.Row="2" Margin="160,0,160,14" Padding="0,0,0,12" BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="0,0,0,1">
+                                <Border Grid.Row="3" Margin="64,0,64,0" VerticalAlignment="Center">
                                     <Border.Resources>
                                         <Style x:Key="HintBadge" TargetType="Border">
                                             <Setter Property="Width" Value="30"/>
@@ -148,7 +148,25 @@
                                             <Setter Property="VerticalAlignment" Value="Center"/>
                                         </Style>
                                     </Border.Resources>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Grid>
+                                    <!-- left: always there (like the home); right: what the selected game offers -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                        <StackPanel Style="{StaticResource HintItem}" Margin="0,0,22,0">
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource HintKey}" FontWeight="Normal"/></Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="Home" Style="{StaticResource HintLabel}"/>
+                                                <TextBlock Text="Hold: Search" Style="{StaticResource HintHold}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Style="{StaticResource HintItem}">
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource HintKey}" FontWeight="Normal"/></Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="Menu" Style="{StaticResource HintLabel}"/>
+                                                <TextBlock Text="Hold: Settings" Style="{StaticResource HintHold}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                         <StackPanel Style="{StaticResource HintItem}">
                                             <Border Style="{StaticResource HintBadge}"><TextBlock Text="X" Style="{StaticResource HintKey}"/></Border>
                                             <TextBlock Text="Play" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
@@ -170,27 +188,15 @@
                                             <!-- Selene Core shows "Trailer sound" here while a trailer plays -->
                                             <TextBlock x:Name="SeleneLibraryRsHint" Text="Filter" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
-                                        <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource HintKey}" FontWeight="Normal"/></Border>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="Home" Style="{StaticResource HintLabel}"/>
-                                                <TextBlock Text="Hold: Search" Style="{StaticResource HintHold}"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                        <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource HintKey}" FontWeight="Normal"/></Border>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="Menu" Style="{StaticResource HintLabel}"/>
-                                                <TextBlock Text="Hold: Settings" Style="{StaticResource HintHold}"/>
-                                            </StackPanel>
-                                        </StackPanel>
                                     </StackPanel>
+                                    </Grid>
                                 </Border>
 
                                 <!-- the whole library: one row of big covers, close together -->
-                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="3" Height="330" Margin="44,0,0,0" Background="Transparent" BorderThickness="0"
+                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="350" Margin="44,0,0,0" Background="Transparent" BorderThickness="0"
+                                           ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
-                                <TextBlock Grid.Row="3" FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center"
+                                <TextBlock Grid.Row="2" FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center"
                                            HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource TextBlockBaseStyle}">
@@ -212,7 +218,7 @@
                                 </StackPanel>
 
                                 <!-- Playnite's own parts: its button hints stay hidden (Selene's are above), search / filter state, progress -->
-                                <Grid Grid.Row="4" Margin="70,0,70,0">
+                                <Grid Grid.Row="1" Margin="70,0,70,0" VerticalAlignment="Top">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />

@@ -597,6 +597,9 @@ namespace Selene
                 var fs = settings.GetType().GetProperty("Fullscreen").GetValue(settings, null);
                 var hl = fs.GetType().GetProperty("HorizontalLayout");
                 if (hl != null && !Equals(hl.GetValue(fs, null), true)) { hl.SetValue(fs, true, null); Log("library layout -> horizontal"); }
+                // covers only, no names under them (Selene's library shows the selected game's logo instead)
+                var titles = fs.GetType().GetProperty("ShowGameTitles");
+                if (titles != null && Equals(titles.GetValue(fs, null), true)) { titles.SetValue(fs, false, null); Log("library titles -> off"); }
                 // Selene's library is one row under the trailer stage
                 var rows = fs.GetType().GetProperty("Rows");
                 if (rows != null && rows.PropertyType == typeof(int) && !Equals(rows.GetValue(fs, null), 1)) { rows.SetValue(fs, 1, null); Log("library rows -> 1"); }

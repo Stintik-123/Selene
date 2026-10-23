@@ -67,6 +67,7 @@ namespace Selene
                     Fade(true);
                     HomeNav.SetMusic("trailer");   // the game's song comes with its trailer
                     if (rsHint != null && videoHasSound) rsHint.Text = "Trailer sound";
+                    CropBars(player);
                 };
                 player.MediaFailed += (s, e) => { HomeNav.Log("library trailer failed: " + e.ErrorException.Message); Stop(); };
                 video = player;
@@ -89,6 +90,65 @@ namespace Selene
             Ui.Key();
             HomeNav.Log("library trailer sound " + (soundOn ? "on" : "off"));
             return true;
+        }
+
+        // Many trailers carry black cinema bars inside their 16:9 picture: looked at a few times while it plays (the first
+        // seconds are often a fade from black), and if there are bars at the top and bottom the video is zoomed just
+        // enough to push them off screen, so the picture reaches the top edge, behind the clock
+        private static void CropBars(MediaElement player)
+        {
+            player.RenderTransformOrigin = new Point(0.5, 0.5);
+            var zoom = new ScaleTransform(1, 1);
+            player.RenderTransform = zoom;
+            int[] at = { 1500, 3000, 6000 };
+            int step = 0;
+            var look = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(at[0]) };
+            look.Tick += (s, e) =>
+            {
+                look.Stop();
+                if (video != player) return;
+                double scale = BarZoom(player);
+                if (scale > zoom.ScaleX + 0.01)
+                {
+                    var grow = new DoubleAnimation(scale, TimeSpan.FromMilliseconds(500)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+                    zoom.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+                    zoom.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+                    HomeNav.Log("library trailer: black bars, zoomed to " + scale.ToString("0.00"));
+                }
+                if (++step < at.Length) { look.Interval = TimeSpan.FromMilliseconds(at[step] - at[step - 1]); look.Start(); }
+            };
+            look.Start();
+        }
+
+        // how much zoom hides the bars (1 = none): rows that are black right across, counted from the top and the bottom
+        private static double BarZoom(MediaElement player)
+        {
+            try
+            {
+                const int w = 160, h = 90;
+                var dv = new DrawingVisual();
+                using (var dc = dv.RenderOpen()) dc.DrawRectangle(new VisualBrush(player) { Stretch = Stretch.Fill }, null, new Rect(0, 0, w, h));
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+                rtb.Render(dv);
+                var px = new byte[w * h * 4];
+                rtb.CopyPixels(px, w * 4, 0);
+                Func<int, bool> dark = y =>
+                {
+                    for (int x = 0; x < w; x++)
+                    {
+                        int i = (y * w + x) * 4;
+                        if (px[i] > 28 || px[i + 1] > 28 || px[i + 2] > 28) return false;
+                    }
+                    return true;
+                };
+                int top = 0; while (top < h && dark(top)) top++;
+                if (top >= h) return 1;   // a black frame (fading in): nothing to measure yet
+                int bottom = 0; while (bottom < h && dark(h - 1 - bottom)) bottom++;
+                int band = Math.Min(top, bottom);
+                if (band < h * 0.05 || Math.Abs(top - bottom) > h * 0.05) return 1;   // no bars, or not even ones
+                return Math.Min(1.45, h / (double)(h - 2 * band));
+            }
+            catch { return 1; }
         }
 
         public static void Stop()
