@@ -4,7 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- The Selene logo around the theme: the mark, name and version at the top of the menu, a header on Selene settings, and a softly glowing mark on empty screens and while Playnite is busy. Switch: Selene settings, Look, Selene logo.
+- Collection trailers: the wallpaper no longer shows through as a trailer starts or stops, and moving on from a trailer no longer flashes the last game's art.
+- The Selene logo around the theme: a header on Selene settings, and a softly glowing mark on empty screens and while Playnite is busy. Switch: Selene settings, Look, Selene logo.
 - Back from Collection to a game on Spotlight, its art is there right away, with no wait and no wallpaper showing for a moment (Spotlight keeps its own art while Collection shows).
 - The start-up backdrop fades in again instead of popping up, without the light flashing up and dimming during it.
 - Signing in keeps your wallpaper on screen: it no longer goes dark before the home comes in.

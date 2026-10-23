@@ -43,13 +43,13 @@ namespace Selene
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
             arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(4000) };   // like Aniki: the art first, the trailer about 4 s in
             arm.Tick += (s, e) => { arm.Stop(); Play(); };
-            list.SelectionChanged += (s, e) => Rearm();
-            library.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Rearm(); else Stop(); };
+            list.SelectionChanged += (s, e) => Rearm(true);
+            library.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Rearm(false); else Stop(); };
         }
 
-        private static void Rearm()
+        private static void Rearm(bool moved)
         {
-            Stop();
+            Stop(moved);
             if (arm == null || !library.IsVisible) return;
             arm.Stop();
             arm.Start();
@@ -178,7 +178,11 @@ namespace Selene
             art.BeginAnimation(UIElement.OpacityProperty, keys);
         }
 
-        public static void Stop()
+        public static void Stop() { Stop(false); }
+
+        // `moved`: another game was picked, so the art waits for its picture before it comes back (it showed the last
+        // game's art for a moment)
+        private static void Stop(bool moved)
         {
             if (arm != null) arm.Stop();
             var old = video;
@@ -187,7 +191,7 @@ namespace Selene
             if (soundOn) { soundOn = false; HomeNav.TrailerSound(false); }
             if (old != null)
             {
-                Fade(false);
+                Fade(false, moved);
                 var gone = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(280) };   // after the fade, whatever came next
                 gone.Tick += (s, e) => { gone.Stop(); old.Stop(); old.Source = null; host.Children.Remove(old); };
                 gone.Start();
@@ -195,19 +199,40 @@ namespace Selene
             }
         }
 
-        private static void Fade(bool on)
+        // the art has a picture (it covers the wallpaper completely then)
+        private static bool ArtShowing()
+        {
+            if (art == null) return false;
+            var source = art.GetType().GetProperty("Source");
+            return source != null && source.GetValue(art, null) != null;
+        }
+
+        private static void Fade(bool on, bool moved = false)
         {
             var fade = new DoubleAnimation(on ? 1 : 0, TimeSpan.FromMilliseconds(on ? 700 : 250)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-            // the game's art and the wallpaper step aside while the trailer plays (dark on the left), and come back after
+            // the game's art and the wallpaper step aside while the trailer plays (dark on the left), and come back after.
+            // Under a picture the wallpaper goes and comes back unseen (fading it with the art let it show through)
+            bool covered = ArtShowing();
+            int artDelay = !on && moved ? 260 : 0;   // the next game's picture loads first (SourceUpdateDelay 120 + decoding)
             foreach (var el in new[] { art, wallpaper, baseLayer })
             {
                 if (el == null) continue;
-                if (on) el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(700)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+                bool under = el != art;
+                if (on)
+                {
+                    var ms = under && covered ? 0 : 700;
+                    el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(ms)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+                }
                 else
                 {
-                    // fades back to its own opacity (1 for the art, the theme's for the wallpaper), then lets go
+                    // fades back to its own opacity (1 for the art, the theme's for the wallpaper), then lets go; what's
+                    // under the art comes back once the art is up
                     var target = el == wallpaper ? 0.6 : 1.0;
-                    var back = new DoubleAnimation(target, TimeSpan.FromMilliseconds(300));
+                    var back = new DoubleAnimation(target, TimeSpan.FromMilliseconds(under && covered ? 0 : 300))
+                    {
+                        BeginTime = TimeSpan.FromMilliseconds(artDelay + (under && covered ? 300 : 0)),
+                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                    };
                     var who = el;
                     back.Completed += (s, e) => who.BeginAnimation(UIElement.OpacityProperty, null);
                     el.BeginAnimation(UIElement.OpacityProperty, back);
