@@ -536,10 +536,12 @@
                                                                     </Trigger.EnterActions>
                                                                     <Trigger.ExitActions>
                                                                         <RemoveStoryboard BeginStoryboardName="TileFx"/>
+                                                                        <!-- the same timing and curve as growing: the tile shrinks exactly as much as the next one grows,
+                                                                             so the tiles after them stay put (different curves made the whole row bounce) -->
                                                                         <BeginStoryboard>
                                                                             <Storyboard>
-                                                                                <DoubleAnimation Storyboard.TargetName="TileScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
-                                                                                <DoubleAnimation Storyboard.TargetName="TileScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
+                                                                                <DoubleAnimation Storyboard.TargetName="TileScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.18"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                                <DoubleAnimation Storyboard.TargetName="TileScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.18"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
                                                                             </Storyboard>
                                                                         </BeginStoryboard>
                                                                     </Trigger.ExitActions>

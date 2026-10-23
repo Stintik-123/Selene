@@ -79,15 +79,11 @@ namespace Selene
             foreach (var item in items)
             {
                 var cell = new Grid { Width = Cell, Height = Ring + 74 };
-                // the name floats above the icon in a glass pill, wider than the cell; the profile's has its action under it
+                // the name floats above the icon, wider than the cell; the profile's has its action under it
                 var words = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
                 words.Children.Add(new TextBlock { Text = item.Label, FontSize = 18, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center });
                 if (item.Sub != null) words.Children.Add(new TextBlock { Text = item.Sub, FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 1, 0, 0) });
-                var pill = new Border
-                {
-                    Child = words, Background = Ink.Brush("SeleneGlassColor", 0.85), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(12), Padding = new Thickness(16, 7, 16, 8), HorizontalAlignment = HorizontalAlignment.Center
-                };
+                var pill = new Border { Child = words, Padding = new Thickness(16, 7, 16, 8), HorizontalAlignment = HorizontalAlignment.Center };
                 var label = new Grid
                 {
                     Opacity = 0, Width = 300, Margin = new Thickness(-102, 0, -102, 0), VerticalAlignment = VerticalAlignment.Bottom,
