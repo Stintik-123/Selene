@@ -2114,6 +2114,8 @@ namespace Selene
                 // View (Playnite calls it Back): home <-> library, like the legacy theme (Playnite opened its settings)
                 // R3 in the library while a trailer plays: its sound (else Playnite's filter, as usual)
                 if (pressed == "RightStick" && LibraryStage.Playing && LibraryStage.ToggleSound()) { e.Cancel(); return; }
+                // LS in Collection opened Playnite's filter-preset list: the tabs (LB / RB) do that now, so it does nothing
+                if (pressed == "LeftStick" && SeleneShell.CollectionActive) { e.Cancel(); return; }
                 // Start and View on the home or the library: short press or hold (Selene settings / library search)
                 if ((pressed == "Start" || pressed == "Back") && OnHomeOrLibrary())
                 {

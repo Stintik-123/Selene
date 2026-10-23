@@ -293,10 +293,6 @@
                                             <TextBlock Text="Game options" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="LS" Style="{StaticResource HintKey}" FontSize="11"/></Border>
-                                            <TextBlock Text="Search" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <StackPanel Style="{StaticResource HintItem}">
                                             <Border Style="{StaticResource HintBadge}"><TextBlock Text="RS" Style="{StaticResource HintKey}" FontSize="11"/></Border>
                                             <!-- Selene Core shows "Trailer sound" here while a trailer plays -->
                                             <TextBlock x:Name="SeleneLibraryRsHint" Text="Filter" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
