@@ -40,6 +40,8 @@ namespace Selene
             if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use, staying off"); return; }
             HomeNav.Api = PlayniteApi;
             HomeNav.Install();
+            try { if (Features.On("quietbackups")) LudusaviApp.Quiet(PlayniteApi); }
+            catch (Exception ex) { logger.Warn("Selene Core: couldn't quieten Ludusavi: " + ex.Message); }
             try { Profiles.ApplyLook(); }
             catch (Exception ex)
             {
@@ -267,6 +269,7 @@ namespace Selene
             new Option { Group = "Games", Key = "freeze", Label = "Freeze on Guide", About = "Guide pauses offline games. Off: they're only muted." },
             new Option { Group = "Games", Key = "tray", Label = "Close to tray", About = "Exit hides Playnite so it comes back instantly." },
             new Option { Group = "Games", Key = "admin", Label = "No-prompt launchers", About = "Admin games skip the Windows prompt after their first run." },
+            new Option { Group = "Games", Key = "quietbackups", Label = "Quiet save backups", About = "Ludusavi backs up a game's saves after playing without asking each time." },
         };
 
         private static SeleneSettings settings;

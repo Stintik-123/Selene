@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Save backups: Ludusavi no longer asks "Back up save data?" after every game; it just backs up (switch: Games, Quiet save backups).
 - Play: the loading screen's fade to black plays again as the game's window comes up (handing the game the focus waited on the game's thread, seconds sometimes, and froze the fade; it waits on a thread of its own now).
 - Logo intro: the logo fades out as it lifts before the next screen (it was cut off).
 - Play: the game fades in out of the black at the end of the loading screen (it cut in, with a flash).

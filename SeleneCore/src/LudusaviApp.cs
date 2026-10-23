@@ -120,6 +120,42 @@ namespace Selene
             }
         }
 
+        // backups without the question: the add-on asks "Back up save data?" after every game unless told not to. Selene
+        // sets it to just do it (its live settings when it's running, its file otherwise). The Quiet save backups switch.
+        public static void Quiet(IPlayniteAPI api)
+        {
+            var quiet = new[] { "AskBackupOnGameStopped", "AskPlatformBackupOnNonPcGameStopped" };
+            var addon = api.Addons.Plugins.FirstOrDefault(p => p.Id == PluginId);
+            if (addon != null)
+            {
+                var settings = addon.GetSettings(false);
+                if (settings == null) return;
+                bool change = false;
+                foreach (var name in quiet)
+                {
+                    var prop = settings.GetType().GetProperty(name);
+                    if (prop != null && prop.PropertyType == typeof(bool) && Equals(prop.GetValue(settings, null), true)) change = true;
+                }
+                if (!change) return;
+                settings.BeginEdit();
+                foreach (var name in quiet)
+                {
+                    var prop = settings.GetType().GetProperty(name);
+                    if (prop != null && prop.PropertyType == typeof(bool)) prop.SetValue(settings, false, null);
+                }
+                settings.EndEdit();
+                logger.Info("Selene Core: Ludusavi backs up without asking now");
+                return;
+            }
+            var file = Path.Combine(api.Paths.ExtensionsDataPath, PluginId.ToString(), "config.json");
+            if (!File.Exists(file)) return;
+            var config = Serialization.FromJsonFile<Dictionary<string, object>>(file);
+            if (config == null) return;
+            bool changed = false;
+            foreach (var name in quiet) { object v; if (config.TryGetValue(name, out v) && v is bool && (bool)v) { config[name] = false; changed = true; } }
+            if (changed) File.WriteAllText(file, Serialization.ToJson(config, true));
+        }
+
         private static void PointAddon(IPlayniteAPI api, string program)
         {
             var addon = api.Addons.Plugins.FirstOrDefault(p => p.Id == PluginId);

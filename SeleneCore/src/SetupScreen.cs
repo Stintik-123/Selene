@@ -371,6 +371,7 @@ namespace Selene
                     {
                         if (failed != null) throw failed;
                         LudusaviApp.Setup(api);
+                        if (Features.On("quietbackups")) LudusaviApp.Quiet(api);
                         Ui.Chime();
                     }
                     catch (Exception ex)
