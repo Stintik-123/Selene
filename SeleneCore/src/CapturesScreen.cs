@@ -29,6 +29,10 @@ namespace Selene
         private static readonly string[] VideoExt = { ".mp4", ".mov", ".mkv", ".avi", ".wmv" };
         private static readonly Regex DateTail = new Regex(@"\s*[\d]{4}[.\-_][\d]{2}[.\-_][\d]{2}.*$");
 
+        private static readonly string[] Filters = { "All", "Screenshots", "Clips" };
+        private static int filter;   // remembered while Playnite runs
+        private readonly List<Capture> all = new List<Capture>();
+        private readonly List<Border> tabs = new List<Border>();
         private readonly List<Capture> items = new List<Capture>();
         private readonly List<Tile> tiles = new List<Tile>();
         private readonly Grid page = new Grid { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
@@ -69,6 +73,19 @@ namespace Selene
             Panel.SetZIndex(vignette, -5);
             Root.Children.Add(vignette);
             heroLater.Tick += (s, e) => { heroLater.Stop(); ShowHero(); };
+
+            // all / screenshots / clips: pills up top (LB / RB)
+            var tabBar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 36, 0, 0) };
+            tabBar.Children.Add(Ui.Prompt("LB", ""));
+            foreach (var f in Filters)
+            {
+                var pill = new Border { CornerRadius = new CornerRadius(18), Padding = new Thickness(18, 6, 18, 8), Margin = new Thickness(6, 0, 6, 0), Child = new TextBlock { Text = f, FontSize = 19, FontFamily = Ui.Body } };
+                tabs.Add(pill);
+                tabBar.Children.Add(pill);
+            }
+            tabBar.Children.Add(Ui.Prompt("RB", ""));
+            Root.Children.Add(tabBar);
+            ShowTabs();
 
             var head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 56, 0, 0) };
             head.Children.Add(new TextBlock { Text = "Captures", FontSize = 44, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
@@ -125,7 +142,7 @@ namespace Selene
             hideControls.Tick += (s, e) => { hideControls.Stop(); if (!paused) ShowControls(false); };
             playerClock.Tick += (s, e) => PollPlayer();
 
-            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
+            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("LB RB", "Filter")));
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Open")));
         }
 
@@ -135,7 +152,7 @@ namespace Selene
             System.Threading.Tasks.Task.Factory.StartNew(() =>
             {
                 var found = Scan(MaxItems);
-                dispatcher.BeginInvoke(new Action(() => { if (!closed) Fill(found); }), DispatcherPriority.Background);
+                dispatcher.BeginInvoke(new Action(() => { if (closed) return; all.Clear(); all.AddRange(found); Apply(); }), DispatcherPriority.Background);
             });
         }
 
@@ -200,6 +217,24 @@ namespace Selene
             catch { }
         }
 
+        private void ShowTabs()
+        {
+            for (int i = 0; i < tabs.Count; i++)
+            {
+                bool on = i == filter;
+                tabs[i].Background = on ? (Brush)Ink.Brush("SeleneFocusColor", 0.95) : Brushes.Transparent;
+                var label = (TextBlock)tabs[i].Child;
+                label.Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.7);
+                label.FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
+            }
+        }
+
+        // the grid as the filter wants it
+        private void Apply()
+        {
+            Fill(filter == 1 ? all.Where(c => !c.IsVideo).ToList() : filter == 2 ? all.Where(c => c.IsVideo).ToList() : all.ToList());
+        }
+
         private void Fill(List<Capture> found)
         {
             items.Clear();
@@ -210,7 +245,8 @@ namespace Selene
             caption.Text = items.Count == 0 ? "Screenshots and clips from your games" : Count(shots, "screenshot") + (clips > 0 ? " · " + Count(clips, "clip") : "") + ", newest first";
             if (items.Count == 0)
             {
-                note.Text = "No screenshots or clips found. Selene looks in Steam's screenshot folders, Videos\\Captures (Xbox Game Bar), Videos\\NVIDIA (the NVIDIA app) and the folders you add under Captures in Selene Core's settings.";
+                note.Text = all.Count > 0 ? (filter == 1 ? "No screenshots here. LB / RB show the clips, or everything." : "No clips here. LB / RB show the screenshots, or everything.")
+                    : "No screenshots or clips found. Selene looks in Steam's screenshot folders, Videos\\Captures (Xbox Game Bar), Videos\\NVIDIA (the NVIDIA app) and the folders you add under Captures in Selene Core's settings.";
                 return;
             }
             note.Text = "";
@@ -398,6 +434,18 @@ namespace Selene
                 return;
             }
             if (b == "B") { Ui.Back(); LoginScene.Finish(); return; }
+            if (b == "LeftShoulder" || b == "RightShoulder")
+            {
+                filter = (filter + (b == "RightShoulder" ? 1 : Filters.Length - 1)) % Filters.Length;
+                Ui.Tick();
+                ShowTabs();
+                Ui.Pop(tabs[filter]);
+                firstRow = -1;
+                Apply();
+                page.Opacity = 0;
+                Ui.Fade(page, 1, 220);
+                return;
+            }
             if (tiles.Count == 0) return;
             if (b == "A") { Ui.Confirm(); Open(index); return; }
             if (!b.StartsWith("DPad")) return;

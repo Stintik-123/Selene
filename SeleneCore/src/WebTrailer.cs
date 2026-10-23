@@ -93,12 +93,18 @@ namespace Selene
                     {
                         var text = view.GetValue(title.DependencyProperty) as string;
                         if (string.IsNullOrEmpty(text)) return;
-                        if (text.StartsWith("playing") && !t2.shown)
+                        if (text.StartsWith("playing"))
                         {
-                            t2.shown = true;
-                            view.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(300)));
+                            if (!t2.shown)
+                            {
+                                t2.shown = true;
+                                view.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(300)));
+                                if (playing != null) playing();
+                            }
                             HomeNav.Log("clip: " + text);
-                            if (playing != null) playing();
+                            // muted: the browser wants a gesture before sound. A click of our own on it counts as one; the page
+                            // unmutes on it
+                            if (text.StartsWith("playing muted") && !t2.poked) { t2.poked = true; view.Dispatcher.BeginInvoke(new Action(() => Poke(view)), System.Windows.Threading.DispatcherPriority.Input); }
                         }
                         else if (text.StartsWith("failed")) HomeNav.Log("clip: the browser couldn't play it (" + text + ")");
                         else if (text.StartsWith("p="))
@@ -128,6 +134,7 @@ namespace Selene
                     + "setInterval(function(){if(v.readyState>0)document.title='p='+v.currentTime.toFixed(1)+'|'+(isFinite(v.duration)?v.duration.toFixed(1):'0')+'|'+(v.paused?1:0)+'|'+n;},500);"
                     + "window.selene={toggle:function(){if(v.paused)v.play();else v.pause();},seek:function(d){try{var m=isFinite(v.duration)?v.duration-0.3:1e9;v.currentTime=Math.max(0,Math.min(m,v.currentTime+d));}catch(e){}}};"
                     + "v.addEventListener('error',function(){document.title='failed: '+(v.error?v.error.code+' '+v.error.message:'');});"
+                    + "document.addEventListener('mousedown',function(){if(v.muted){v.muted=false;var q=v.play();if(q&&q.catch)q.catch(function(){v.muted=true;v.play();});}});"
                     + "v.muted=false;var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play();});"
                     + "document.title='loading';</script></body></html>";
                 var page = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-clip-" + DateTime.Now.Ticks + ".html");
@@ -142,6 +149,21 @@ namespace Selene
 
         private string pageFile;
         private int reports;
+        private bool poked;
+
+        // a press of the mouse on the browser (WPF's own event, no pointer involved): the browser passes it on as a real one
+        private static void Poke(FrameworkElement view)
+        {
+            try
+            {
+                var down = new System.Windows.Input.MouseButtonEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, System.Windows.Input.MouseButton.Left) { RoutedEvent = System.Windows.Input.Mouse.MouseDownEvent, Source = view };
+                view.RaiseEvent(down);
+                var up = new System.Windows.Input.MouseButtonEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, System.Windows.Input.MouseButton.Left) { RoutedEvent = System.Windows.Input.Mouse.MouseUpEvent, Source = view };
+                view.RaiseEvent(up);
+                HomeNav.Log("clip: asked for sound");
+            }
+            catch (Exception ex) { HomeNav.Log("clip: couldn't ask for sound (" + ex.Message + ")"); }
+        }
 
         // where a clip is, how long it is, whether it's paused (twice a second, on the UI thread)
         public Action<double, double, bool> Progress;
