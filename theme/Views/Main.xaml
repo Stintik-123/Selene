@@ -265,14 +265,14 @@
                                     <!-- left: always there (like the home); right: what the selected game offers -->
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                                         <StackPanel Style="{StaticResource HintItem}" Margin="0,0,22,0">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource HintKey}" FontWeight="Normal"/></Border>
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="&#xE3E0;" FontFamily="{DynamicResource SeleneIconFont}" Style="{StaticResource HintKey}" FontSize="17" FontWeight="Normal" Margin="0"/></Border>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="Spotlight" Style="{StaticResource HintLabel}"/>
                                                 <TextBlock Text="Hold: Search" Style="{StaticResource HintHold}"/>
                                             </StackPanel>
                                         </StackPanel>
                                         <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource HintKey}" FontWeight="Normal"/></Border>
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="&#xE5D2;" FontFamily="{DynamicResource SeleneIconFont}" Style="{StaticResource HintKey}" FontSize="19" FontWeight="Normal" Margin="0"/></Border>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="Menu" Style="{StaticResource HintLabel}"/>
                                                 <TextBlock Text="Hold: Settings" Style="{StaticResource HintHold}"/>

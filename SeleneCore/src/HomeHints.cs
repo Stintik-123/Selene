@@ -24,8 +24,8 @@ namespace Selene
             Grid.SetRowSpan(bar, 99);
             hub.Children.Add(bar);
             always = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(64, 0, 0, 40), IsHitTestVisible = false };
-            always.Children.Add(Hold(Ui.Prompt("⧉", "Collection"), "Hold: Search"));
-            always.Children.Add(Hold(Ui.Prompt("≡", "Menu"), "Hold: Settings"));
+            always.Children.Add(Hold(IconPrompt(0xE3E0, 17, "Collection"), "Hold: Search"));
+            always.Children.Add(Hold(IconPrompt(0xE5D2, 19, "Menu"), "Hold: Settings"));
             Panel.SetZIndex(always, 60);
             Grid.SetRowSpan(always, 99);
             hub.Children.Add(always);
@@ -58,6 +58,16 @@ namespace Selene
             bar.Children.Clear();
             for (int i = 0; i + 1 < hints.Length; i += 2) bar.Children.Add(Ui.Prompt(hints[i], hints[i + 1]));
             bar.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.3, 1, TimeSpan.FromMilliseconds(180)) { EasingFunction = Ui.Out() });
+        }
+
+        // a hint whose button is a solid icon (View, Menu) instead of a letter, as bold as the letters beside it
+        private static StackPanel IconPrompt(int icon, double size, string label)
+        {
+            var prompt = Ui.Prompt(Ui.Icon(icon), label);
+            var dot = prompt.Children[0] as Grid;
+            var glyph = dot != null && dot.Children.Count > 1 ? dot.Children[1] as TextBlock : null;
+            if (glyph != null) { glyph.FontFamily = Ui.Icons; glyph.FontSize = size; glyph.FontWeight = FontWeights.Normal; glyph.Margin = new Thickness(0); }
+            return prompt;
         }
 
         // a hint with what holding the button does, small under its label

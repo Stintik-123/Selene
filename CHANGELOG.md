@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- The View and Menu hint badges use solid icons, as bold as the letter badges.
 - Games from no store show Selene's crescent and "Local" as their platform; the first cover's focus ring isn't cut at the left edge.
 - No game art flashing when going from Collection to Spotlight; the trailer sits on black (no navy on the left); filter tab text no longer touches the pill's edge.
 - Collection: the trailer exactly like the legacy theme (a 16:9 box on the right with its mask, the shades under it); Spotlight's tabs and filters on both screens (one choice, filled LB / RB badges); flat white store logos; Down on the Collection and Store cards stays put.
