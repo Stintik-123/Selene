@@ -188,9 +188,9 @@ namespace Selene
             var left = new StackPanel();
             if (Features.On("brand"))
             {
-                // Selene's mark beside the title, as Selene settings has it
+                // Playnite's own logo beside the title (these are its settings), with a soft breathing halo like Selene's mark
                 var head = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(14, 0, 0, 30) };
-                var mark = Brand.Mark(76, true);
+                var mark = PlayniteMark(76);
                 mark.Margin = new Thickness(0, 0, 18, 0);
                 head.Children.Add(mark);
                 var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
@@ -228,6 +228,35 @@ namespace Selene
         }
 
         private readonly ScrollViewer scroller;
+
+        // Playnite's logo (its default theme's picture, next to Playnite itself); nothing when it can't be found
+        private static FrameworkElement PlayniteMark(double size)
+        {
+            var box = new Grid { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
+            try
+            {
+                var home = System.IO.Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+                string file = null;
+                foreach (var candidate in new[] { System.IO.Path.Combine(home, "Themes", "Fullscreen", "Default", "Images", "applogo_clean.png"), System.IO.Path.Combine(home, "Themes", "Fullscreen", "Default", "Images", "applogo.png"), System.IO.Path.Combine(home, "Themes", "Desktop", "Default", "Images", "applogo.png") })
+                    if (System.IO.File.Exists(candidate)) { file = candidate; break; }
+                if (file == null) return box;
+                var halo = new System.Windows.Shapes.Ellipse { Width = size * 1.15, Height = size * 1.15, Opacity = 0.45, Fill = new RadialGradientBrush(new GradientStopCollection { Ink.Stop("GlyphColor", 0.45, 0), Ink.Stop("GlyphColor", 0, 1) }), Margin = new Thickness(-size * 0.075) };
+                halo.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.45, 1, TimeSpan.FromMilliseconds(2200)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
+                box.Children.Add(halo);
+                var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                bmp.DecodePixelWidth = (int)(size * 2);
+                bmp.UriSource = new Uri(file);
+                bmp.EndInit();
+                bmp.Freeze();
+                var img = new Image { Source = bmp, Width = size * 0.78, Height = size * 0.78, Stretch = Stretch.Uniform };
+                RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.Fant);
+                box.Children.Add(img);
+            }
+            catch (Exception ex) { HomeNav.Log("playnite mark: " + ex.Message); }
+            return box;
+        }
 
         public override void Shown()
         {
