@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Collection: the game's logo, chips and genres slide in together when you move to another game.
 - The two main screens are now Spotlight (the home row) and Collection (every game); Selene settings, Start on Collection, opens Collection after signing in.
 - Going from the library back to the home no longer flashes the library game's art.
 - Collection: under the logo, glass chips with the store's logo, playtime, last played and release year, genres beneath; trailers start after 3 seconds on a game and play on the right, fading into the dark on their left and bottom.

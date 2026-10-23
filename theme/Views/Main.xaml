@@ -92,7 +92,25 @@
                                 </Border>
 
                                 <!-- the game's logo (or name), big, on the left -->
+                                <!-- logo, chips and genres come in together each time the game changes (the logo's binding signals it) -->
                                 <StackPanel Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="150,0,0,0" Width="640">
+                                    <StackPanel.RenderTransform><TranslateTransform x:Name="LibraryInfoShift" X="0"/></StackPanel.RenderTransform>
+                                    <StackPanel.Triggers>
+                                        <EventTrigger RoutedEvent="Binding.TargetUpdated">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
+                                                        <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
+                                                        <LinearDoubleKeyFrame KeyTime="0:0:0.12" Value="0"/>
+                                                        <LinearDoubleKeyFrame KeyTime="0:0:0.42" Value="1"/>
+                                                    </DoubleAnimationUsingKeyFrames>
+                                                    <DoubleAnimation Storyboard.TargetName="LibraryInfoShift" Storyboard.TargetProperty="X" From="-24" To="0" BeginTime="0:0:0.12" Duration="0:0:0.3">
+                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </StackPanel.Triggers>
                                 <Grid Height="250">
                                     <TextBlock x:Name="SeleneLibraryLogoPath" Tag="{Api Paths.ConfigurationPath}" Visibility="Collapsed">
                                         <TextBlock.Text>
@@ -104,23 +122,6 @@
                                     </TextBlock>
                                     <Image x:Name="SeleneLibraryLogo" Source="{Binding ElementName=SeleneLibraryLogoPath, Path=Text, Converter={StaticResource ImageStringToImageConverter}, NotifyOnTargetUpdated=True}"
                                            MaxWidth="600" MaxHeight="240" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Bottom" RenderOptions.BitmapScalingMode="Fant">
-                                        <Image.RenderTransform><TranslateTransform x:Name="LibraryLogoShift" X="0"/></Image.RenderTransform>
-                                        <Image.Triggers>
-                                            <EventTrigger RoutedEvent="Binding.TargetUpdated">
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
-                                                            <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
-                                                            <LinearDoubleKeyFrame KeyTime="0:0:0.15" Value="0"/>
-                                                            <LinearDoubleKeyFrame KeyTime="0:0:0.45" Value="1"/>
-                                                        </DoubleAnimationUsingKeyFrames>
-                                                        <DoubleAnimation Storyboard.TargetName="LibraryLogoShift" Storyboard.TargetProperty="X" From="-24" To="0" BeginTime="0:0:0.15" Duration="0:0:0.3">
-                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </EventTrigger>
-                                        </Image.Triggers>
                                     </Image>
                                     <TextBlock Text="{Binding SelectedGame.DisplayName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="56" FontFamily="{DynamicResource FontMain}"
                                                HorizontalAlignment="Center" VerticalAlignment="Bottom" TextAlignment="Center" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="220">
