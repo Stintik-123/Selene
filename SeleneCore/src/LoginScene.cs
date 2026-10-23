@@ -531,7 +531,7 @@ namespace Selene
     }
 
     // ---------------- logo intro ----------------
-    // about 5 s: the crescent crown rises in, the full moon's glow swells and breathes twice, a chime, then on to the next screen
+    // about 4.5 s: the crescent crown rises in, the full moon's glow swells and breathes twice, a chime, then on to the next screen
     public class IntroScreen : Screen
     {
         private readonly IntroLogo logo = new IntroLogo(190);
@@ -555,7 +555,7 @@ namespace Selene
             {
                 ticks++;
                 if (ticks == 1) Ui.Boot();
-                if (ticks >= 11) Next();   // about 5 s: the halo swells, settles and breathes twice before the next screen (2.7 s felt rushed)
+                if (ticks >= 10) Next();   // about 4.5 s: the halo swells, settles and breathes twice before the next screen (2.7 s felt rushed)
             };
             timer.Start();
         }

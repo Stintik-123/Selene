@@ -4632,7 +4632,7 @@ namespace Selene
                     // for a moment (no window can cover that, and it comes on the game's own schedule): the loading screen
                     // fades to black first and the game gets the focus once it's dark, so the blank can't be seen
                     var gameHwnd = found;
-                    Action focusGame = () => { if (launching && IsWindow(gameHwnd)) { ForceForeground(gameHwnd); KeepCoverOnTop(); } };
+                    Action focusGame = () => { if (launching && IsWindow(gameHwnd)) ForceForegroundAsync(gameHwnd, KeepCoverOnTop); };
                     if (!coverArtGone) { coverArtGone = true; ArtToLogo(focusGame); }
                     else focusGame();
                 }
@@ -4712,7 +4712,7 @@ namespace Selene
             {
                 var target = game != IntPtr.Zero ? game : GetForegroundWindow();
                 var me = new System.Windows.Interop.WindowInteropHelper(w).Handle;
-                if (target != IntPtr.Zero && target != me) { gameWindow = target; ForceForeground(target); }
+                if (target != IntPtr.Zero && target != me) { gameWindow = target; ForceForegroundAsync(target, null); }
                 else if (root != null) FadeInRoot(root);  // nothing to show: Playnite back
             });
         }
@@ -4935,6 +4935,18 @@ namespace Selene
             if (coverWindow == null || coverDark) return;   // once dark, the game may come over it
             var coverHwnd = new System.Windows.Interop.WindowInteropHelper(coverWindow).Handle;
             if (coverHwnd != IntPtr.Zero) SetWindowPos(coverHwnd, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);   // TOPMOST, NOSIZE | NOMOVE | NOACTIVATE
+        }
+
+        // the same off the UI thread: attaching to the game's input thread waits for that thread to answer, and a game in the
+        // middle of its display-mode switch answered seconds later, freezing the loading screen's fade (and the veil's) with it
+        private static void ForceForegroundAsync(IntPtr hwnd, Action then)
+        {
+            var app = Application.Current;
+            System.Threading.Tasks.Task.Factory.StartNew(() =>
+            {
+                try { ForceForeground(hwnd); } catch (Exception ex) { Log("foreground: " + ex.Message); }
+                if (then != null && app != null) app.Dispatcher.BeginInvoke(then);
+            });
         }
 
         private static void ForceForeground(IntPtr hwnd)
