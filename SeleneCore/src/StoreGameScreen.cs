@@ -313,7 +313,7 @@ namespace Selene
         {
             if (b == "B")
             {
-                if (zone == 1) { SetZone(0); return; }   // out of the row first, then back
+                // from the "More from" row too: B leaves the page (Up is the way back to the screenshots)
                 Ui.Back();
                 LoginScene.Show(back != null ? back() : new StorePage(), 0);   // crossfades back
                 return;
