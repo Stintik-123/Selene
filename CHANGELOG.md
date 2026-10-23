@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Store: tabs look like the home's filter tabs, the Xbox tab shows its games (it stayed empty after scrolling down another tab), rounded pictures that fit the focus ring, sharper pictures (Steam's double-size art, GOG's big screenshots behind its games), deals without a sharp picture left out, only the focused row shows, and "Currency" without the code. The Store card's focus ring no longer gets cut off. Signing in no longer brings up the screenshot strip, and the empty-tab message on Spotlight has no logo.
 - The Library and Store cards' details no longer slide in from the left (signing in showed it).
 - Store page: a dark background like Collection's instead of the wallpaper, much bigger games, each game's genres, release date, score and description beside its picture, sharp full-screen art only (a game with just a small picture shows none instead of a blurry one), and it opens without the delay.
 - Store: opening it no longer crashes Playnite (its pictures come a few at a time, are kept on disk and load as you scroll). The Store card's pictures leave out the games the headline already shows. Signing in no longer slides the row.

@@ -12,7 +12,7 @@ namespace Selene
     // Playnite's busy spinner. The menu and settings put it in their headers (Brand.Mark).
     public static class Brand
     {
-        private static readonly string[] Slots = { "SeleneEmptyMarkHome", "SeleneEmptyMarkLibrary", "SeleneBusyMark" };
+        private static readonly string[] Slots = { "SeleneEmptyMarkLibrary", "SeleneBusyMark" };
         private static Window window;
 
         // the add-on's version (extension.yaml next to the add-on)

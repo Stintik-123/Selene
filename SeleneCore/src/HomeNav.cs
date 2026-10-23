@@ -2577,6 +2577,9 @@ namespace Selene
         // another profile signed in: its favorites, recently played and order
         private static bool profileRebuild;
 
+        // a profile is signing in (the row is rebuilt under the login): the home's own animations wait
+        public static bool SigningIn { get { return coveredForSignIn || profileRebuild; } }
+
         public static void ProfileChanged()
         {
             startOnCards = true;
@@ -3132,7 +3135,7 @@ namespace Selene
             host.Children.Add(FilterBadge("RB"));
         }
 
-        private static Border FilterBadge(string text)
+        internal static Border FilterBadge(string text)
         {
             return new Border
             {

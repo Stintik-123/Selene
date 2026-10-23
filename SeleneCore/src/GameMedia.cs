@@ -46,7 +46,7 @@ namespace Selene
                 // only once the selection has settled: stepping card by card with short pauses used to load (and animate) the
                 // strip after nearly every card, and that work landed right when the next move started
                 debounce = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
-                debounce.Tick += (s, e) => { debounce.Stop(); Load(pending); Preload(pendingNeighbours); };
+                debounce.Tick += (s, e) => { debounce.Stop(); if (HomeNav.SigningIn) return; Load(pending); Preload(pendingNeighbours); };
             }
             var g = AsGame(game);
             if (g == null || g.Id != shown) FadeOut();

@@ -134,7 +134,6 @@ namespace Selene
             for (int i = 0; i < cards.Count; i++)
             {
                 bool on = active && i == focus;
-                Ui.ScaleTo(cards[i], on ? 1.05 : 1, on ? 200 : 160);
                 Ui.Fade(rings[i], on ? 1 : 0, on ? 180 : 140);
             }
         }
@@ -274,10 +273,10 @@ namespace Selene
             // no name under it: the pictures carry the game's title themselves, so they get the room instead
             var col = new StackPanel { Width = 420, Margin = new Thickness(0, 0, 22, 0) };
             var frame = new Grid { Height = 236 };
-            var pic = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
-            RenderOptions.SetBitmapScalingMode(pic, BitmapScalingMode.HighQuality);
-            frame.Children.Add(new Border { CornerRadius = new CornerRadius(14), ClipToBounds = true, Background = Ink.Brush("SeleneInkColor", 0.08), Child = pic });
-            StorePage.Load(pic, StoreData.Sharp(item), 900);   // sharp at high-DPI too
+            frame.Children.Add(new Border { CornerRadius = new CornerRadius(14), Background = Ink.Brush("SeleneInkColor", 0.08) });
+            var pic = new Border { CornerRadius = new CornerRadius(14), Opacity = 0 };   // the picture as a rounded fill
+            frame.Children.Add(pic);
+            StorePage.LoadFill(pic, StoreData.Sharp(item), 900);   // sharp at high-DPI too
             var chip = new StackPanel { Orientation = Orientation.Horizontal };
             var badge = item.Free ? "FREE" : item.Discount > 0 ? "-" + item.Discount + "%" : null;
             if (badge != null)
@@ -289,7 +288,7 @@ namespace Selene
             // the focus ring (Down from the Store card picks the pictures)
             var ring = new Border
             {
-                CornerRadius = new CornerRadius(19), Margin = new Thickness(-5), BorderThickness = new Thickness(3), BorderBrush = Ink.Brush("SeleneFocusColor"), Opacity = 0, IsHitTestVisible = false,
+                CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(4), BorderBrush = Ink.Brush("SeleneFocusColor"), Opacity = 0, IsHitTestVisible = false,
                 Effect = Ink.Track(new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 22, Opacity = 0.55 }, System.Windows.Media.Effects.DropShadowEffect.ColorProperty, "SeleneFocusColor")
             };
             frame.Children.Add(ring);

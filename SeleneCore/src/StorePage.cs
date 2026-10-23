@@ -79,15 +79,19 @@ namespace Selene
                 Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0.85, 0), Ink.Stop("SeleneScrimColor", 0.35, 0.45), Ink.Stop("SeleneScrimColor", 0, 0.7) }, 0)
             });
 
-            // store tabs (LB / RB)
-            tabBar.Children.Add(Badge("LB"));
+            // store tabs (LB / RB), drawn like the home's filter tabs
+            tabBar.Children.Add(HomeNav.FilterBadge("LB"));
             foreach (var t in Tabs)
             {
-                var pill = new Border { CornerRadius = new CornerRadius(17), Padding = new Thickness(16, 5, 16, 6), Margin = new Thickness(4, 0, 4, 0), Child = new TextBlock { Text = t, FontSize = 19, FontFamily = Ui.Body, VerticalAlignment = VerticalAlignment.Center } };
+                var pill = new Border
+                {
+                    CornerRadius = new CornerRadius(18), Padding = new Thickness(18, 5, 20, 7), Margin = new Thickness(2, 0, 2, 0), VerticalAlignment = VerticalAlignment.Center, RenderTransformOrigin = new Point(0.5, 0.5),
+                    Child = new TextBlock { Text = t, FontSize = 19, FontFamily = new FontFamily("Segoe UI Variable Display"), VerticalAlignment = VerticalAlignment.Center }
+                };
                 tabPills.Add(pill);
                 tabBar.Children.Add(pill);
             }
-            tabBar.Children.Add(Badge("RB"));
+            tabBar.Children.Add(HomeNav.FilterBadge("RB"));
             Root.Children.Add(tabBar);
 
             // the focused game: store, name, price
@@ -109,7 +113,7 @@ namespace Selene
             Root.Children.Add(info);
 
             // rows of games; the focused row glides to the top of this area
-            var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 590, 0, 0), Height = 400, ClipToBounds = true };
+            var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 600, 0, 0), Height = RowH, ClipToBounds = true };
             rowStack.RenderTransform = rowShift;
             rowStack.Margin = new Thickness(96, 0, 0, 0);
             rowsArea.Children.Add(new Canvas { Children = { rowStack } });
@@ -118,7 +122,7 @@ namespace Selene
             status = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(98, 640, 0, 0) };
             Root.Children.Add(status);
 
-            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Store apps"), Ui.Prompt("X", "Currency · " + StoreData.CurrencyCode)));
+            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Store apps"), Ui.Prompt("X", "Currency")));
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Details")));
 
             heroLater.Tick += (s, e) => { heroLater.Stop(); ShowHero(); };
@@ -211,7 +215,9 @@ namespace Selene
             if (focusedTitle != null) { int i = rows.FindIndex(r => r.Title == focusedTitle); if (i >= 0) rowIndex = i; }
             rowIndex = Math.Max(0, Math.Min(rowIndex, rows.Count - 1));
             foreach (var r in rows) r.Shift.X = -Math.Max(0, r.Index - 1) * Pitch;
+            rowShift.BeginAnimation(TranslateTransform.YProperty, null);
             rowShift.Y = -rowIndex * RowH;
+            foreach (var r in rows) r.Shift.BeginAnimation(TranslateTransform.XProperty, null);
             LoadNearby();
             ShowFocus(false);
             ShowStatus();
@@ -237,12 +243,11 @@ namespace Selene
         {
             var tile = new Tile(TileW, TileH, 16, 5) { FocusScale = 1.06 };
             tile.Root.Margin = new Thickness(0, 0, Pitch - TileW, 0);
-            var g = new Grid { ClipToBounds = true };
-            var pic = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
-            RenderOptions.SetBitmapScalingMode(pic, BitmapScalingMode.HighQuality);
-            g.Children.Add(new Border { CornerRadius = new CornerRadius(15), ClipToBounds = true, Child = pic });
+            var g = new Grid();
+            var pic = new Border { CornerRadius = new CornerRadius(15), Opacity = 0 };   // the picture as a rounded fill (an Image kept square corners)
+            g.Children.Add(pic);
             var url = StoreData.Sharp(item);
-            load = () => Load(pic, url, 660);
+            load = () => LoadFill(pic, url, 760);
             // price chip, bottom right
             var chip = new StackPanel { Orientation = Orientation.Horizontal };
             if (item.Discount > 0 && !item.Free)
@@ -255,6 +260,22 @@ namespace Selene
                 g.Children.Add(new Border { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8), Padding = new Thickness(8, 2, 8, 3), CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)), Child = new TextBlock { Text = "Owned", FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Brushes.White } });
             tile.Face.Child = g;
             return tile;
+        }
+
+        // the same for a rounded Border: the picture becomes its fill
+        internal static void LoadFill(Border target, string url, int width)
+        {
+            if (string.IsNullOrEmpty(url)) return;
+            var mine = new object();
+            target.Tag = mine;
+            StoreImages.Get(url, width, img =>
+            {
+                if (img == null || target.Tag != mine) return;
+                var brush = new ImageBrush(img) { Stretch = Stretch.UniformToFill };
+                RenderOptions.SetBitmapScalingMode(brush, BitmapScalingMode.HighQuality);
+                target.Background = brush;
+                target.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(260)) { EasingFunction = Ui.Out() });
+            });
         }
 
         // a picture from the web (StoreImages: a few at a time, kept on disk), fading in once it's there. A newer request
@@ -279,8 +300,10 @@ namespace Selene
             for (int i = 0; i < tabPills.Count; i++)
             {
                 bool on = i == tab;
-                tabPills[i].Background = on ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
-                ((TextBlock)tabPills[i].Child).Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.75);
+                tabPills[i].Background = on ? (Brush)Ink.Brush("SeleneFocusColor", 0.95) : Brushes.Transparent;
+                var label = (TextBlock)tabPills[i].Child;
+                label.Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.7);
+                label.FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
                 if (on && animate) Ui.Pop(tabPills[i]);
             }
         }

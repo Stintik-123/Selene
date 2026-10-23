@@ -650,8 +650,6 @@
                                             </Canvas>
                                             <!-- the tab has no games: what it is and how it fills up (Selene Core sets the text and shows it) -->
                                             <StackPanel x:Name="SeleneRowEmpty" Orientation="Horizontal" Margin="440,46,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" IsHitTestVisible="False">
-                                                <!-- Selene's mark, slowly glowing (drawn by Selene Core) -->
-                                                <Grid x:Name="SeleneEmptyMarkHome" Width="64" Height="64" Margin="0,0,22,0" VerticalAlignment="Top" Visibility="Collapsed"/>
                                                 <StackPanel>
                                                     <TextBlock x:Name="SeleneRowEmptyTitle" Foreground="{DynamicResource SeleneInkBrush}" FontSize="30" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold"/>
                                                     <TextBlock x:Name="SeleneRowEmptyHint" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="19" FontFamily="{DynamicResource FontMain}" Margin="0,8,0,0" MaxWidth="760" TextWrapping="Wrap"/>

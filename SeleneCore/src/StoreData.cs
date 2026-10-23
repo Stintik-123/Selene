@@ -14,6 +14,7 @@ namespace Selene
     public class StoreItem
     {
         public string Store, StoreName, Id, Title, Image;   // Store: steam, epic, gog, xbox, deals; Image: a wide picture
+        public string Backdrop;                              // a screen-sized picture when the store has one
         public string Price, OldPrice;                       // formatted ("₱779.70"); OldPrice only when discounted
         public int Discount;                                 // percent off
         public bool Free;                                    // free to keep right now
@@ -313,6 +314,8 @@ namespace Selene
                 var slug = S(At(p, "slug"));
                 var link = S(At(p, "storeLink")) ?? ("https://www.gog.com/en/game/" + slug);
                 var item = new StoreItem { Store = "gog", StoreName = "GOG", Id = S(At(p, "id")), Title = S(At(p, "title")), Image = S(At(p, "coverHorizontal")) };
+                var shot = A(At(p, "screenshots")).Select(S).FirstOrDefault(x => x != null);
+                if (shot != null) item.Backdrop = shot.Replace("{formatter}", "1600");   // 1600 px wide
                 item.Price = S(At(p, "price", "final"));
                 var disc = S(At(p, "price", "discount"));
                 int pct;
@@ -373,7 +376,9 @@ namespace Selene
             foreach (var s in A(Get("https://www.cheapshark.com/api/1.0/stores"))) stores[S(At(s, "storeID"))] = S(At(s, "storeName"));
             var items = new List<StoreItem>();
             var seen = new HashSet<string>();
-            foreach (var d in A(Get("https://www.cheapshark.com/api/1.0/deals?pageSize=60&sortBy=Deal%20Rating&onSale=1")))
+            var deals = A(Get("https://www.cheapshark.com/api/1.0/deals?pageSize=60&sortBy=Deal%20Rating&onSale=1"));
+            var capsules = SteamCapsules(deals.Select(d => S(At(d, "steamAppID"))).Where(id => !string.IsNullOrEmpty(id) && id != "0").Distinct().Take(40).ToList());
+            foreach (var d in deals)
             {
                 var store = S(At(d, "storeID"));
                 if (store == "1" || store == "7" || store == "25") continue;   // Steam, GOG and Epic have their own tabs
@@ -382,7 +387,13 @@ namespace Selene
                 var steam = S(At(d, "steamAppID"));
                 string name;
                 var item = new StoreItem { Store = "deals", StoreName = stores.TryGetValue(store ?? "", out name) ? name : "Store", Id = S(At(d, "dealID")), Title = S(At(d, "title")), SteamAppId = steam };
-                item.Image = !string.IsNullOrEmpty(steam) && steam != "0" ? "https://cdn.akamai.steamstatic.com/steam/apps/" + steam + "/header.jpg" : S(At(d, "thumb"));
+                // a sharp wide picture or the deal is left out (the stores' own covers are tiny): Steam's 616 px capsule
+                // (by its picture service), a Steam package's capsule
+                string capsule = null, thumb = S(At(d, "thumb")) ?? "";
+                if (!string.IsNullOrEmpty(steam) && steam != "0") capsules.TryGetValue(steam, out capsule);
+                if (capsule == null && thumb.Contains("/steam/subs/") && thumb.Contains("capsule_231x87")) capsule = thumb.Replace("capsule_231x87", "capsule_616x353");
+                if (capsule == null) continue;
+                item.Image = capsule;
                 double sale = Num(At(d, "salePrice")), normal = Num(At(d, "normalPrice"));
                 item.Price = sale == 0 ? "Free" : Money(sale, "USD");
                 if (normal > sale) { item.OldPrice = Money(normal, "USD"); item.Discount = (int)Math.Round(Num(At(d, "savings"))); }
@@ -399,14 +410,40 @@ namespace Selene
         {
             var url = item.Image;
             if (string.IsNullOrEmpty(url)) return url;
-            if (url.Contains("/capsule_616x353") && url.Contains("store_item_assets") && !url.Contains("_2x"))
+            // Steam's hashed capsules (from its lists and picture service) come at double size too
+            if (url.Contains("/capsule_616x353") && url.Contains("store_item_assets") && !url.Contains("_2x") && !url.Contains("/subs/"))
             {
-                int dot = url.IndexOf(".jpg", StringComparison.Ordinal);
-                if (dot > 0 && url.Substring(url.LastIndexOf('/'), dot - url.LastIndexOf('/')).Contains("_alt_") || url.Contains("/capsule_616x353_")) return url.Insert(dot, "_2x");
+                var slash = url.LastIndexOf('/');
+                var folder = url.Substring(0, slash);
+                bool hashed = folder.Substring(folder.LastIndexOf('/') + 1).Length >= 32;
+                int dot = url.IndexOf(".jpg", slash, StringComparison.Ordinal);
+                if (hashed && dot > 0) return url.Insert(dot, "_2x");
             }
             if (!string.IsNullOrEmpty(item.SteamAppId) && url.EndsWith("/header.jpg"))
                 return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/" + item.SteamAppId + "/capsule_616x353.jpg";
             return url;
+        }
+
+        // Steam's picture service: each app's 616 px capsule (its file names carry a hash, so they can't be guessed)
+        private static Dictionary<string, string> SteamCapsules(List<string> ids)
+        {
+            var found = new Dictionary<string, string>();
+            if (ids.Count == 0) return found;
+            try
+            {
+                var json = "{\"ids\":[" + string.Join(",", ids.Select(id => "{\"appid\":" + id + "}")) + "],\"context\":{\"language\":\"english\",\"country_code\":\"" + Country + "\"},\"data_request\":{\"include_assets\":true}}";
+                var data = Get("https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=" + Uri.EscapeDataString(json));
+                foreach (var it in A(At(data, "response", "store_items")))
+                {
+                    var id = S(At(it, "appid"));
+                    var format = S(At(it, "assets", "asset_url_format"));
+                    var capsule = S(At(it, "assets", "main_capsule"));
+                    if (id == null || format == null || capsule == null) continue;
+                    found[id] = "https://shared.akamai.steamstatic.com/store_item_assets/" + format.Replace("${FILENAME}", capsule);
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("steam pictures: " + ex.Message); }
+            return found;
         }
 
         // ---------------- a game's page ----------------
@@ -439,6 +476,7 @@ namespace Selene
         public static void BigArt(StoreItem item, Action<string> done)
         {
             if (item == null || string.IsNullOrEmpty(item.Image)) { done(null); return; }
+            if (!string.IsNullOrEmpty(item.Backdrop)) { done(item.Backdrop); return; }
             if (item.Store == "epic") { done(item.Image); return; }
             if (item.Store == "xbox") { done(item.Image.Replace("?w=960", "?w=1920")); return; }
             if (!string.IsNullOrEmpty(item.SteamAppId) && item.SteamAppId != "0")
