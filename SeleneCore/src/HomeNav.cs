@@ -999,8 +999,8 @@ namespace Selene
             if (LoginScene.CoversHome) { ClearSelectedGame(); return; }
             var game = row.SelectedItem;
             if (game == null) return;
-            // no game music on the Library / Store cards (Playnite may fall back to its first game when none is selected)
-            PauseMusic(game is string);
+            // the default music on the home, cards and games alike: a game's song comes with its trailer card
+            PauseMusic(game is string || !previewShowing);
             var vm = row.DataContext;
             var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
             if (prop == null || !prop.CanWrite) return;
@@ -1234,8 +1234,8 @@ namespace Selene
         // UniPlaySong pauses on its own "video is playing" flag (PauseOnTrailer) and resumes when it is cleared.
         private static bool? musicPaused;
 
-        // no game's song on the cards and behind the login screens: the music add-on (UniPlaySong) plays its default
-        // track there instead (like the old theme's login music); on a game, that game's song
+        // true = the music add-on (UniPlaySong) plays its default track instead of a game's song: the home, its cards and
+        // behind the login screens; false only while a trailer card is open
         private static void PauseMusic(bool onCard)
         {
             if (musicPaused == onCard) return;
@@ -4407,9 +4407,6 @@ namespace Selene
 
         private static readonly Guid UniPlaySongId = new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
         private static object upsSettings;
-        private static WeakReference storeOverlayRef;
-        private static DateTime lastStoreSearch = DateTime.MinValue;
-        private static bool upsOverride;
 
         // UniPlaySong "continues the same song" for the home music (its private _lastDefaultMusicPath), so every start
         // came back to one track. Seed that with a random track from the folder: a different song per Playnite start,
@@ -4449,48 +4446,8 @@ namespace Selene
         }
 
 
-        // Home: default music unless the 16:9 trailer card is open (the game's song comes with the card).
-        // News row / Steam store: always default. Elsewhere (library, details) UniPlaySong behaves normally.
-        private static WeakReference hubOverlayRef;
-        private static DateTime lastHubSearch = DateTime.MinValue;
-
-        private static void UpdateMusicOverride()
-        {
-            if (upsSettings == null) return;
-            try
-            {
-                var w = Application.Current.MainWindow;
-                if (w == null) return;
-                var focused = Keyboard.FocusedElement as DependencyObject;
-                bool onNews = false;  // focus inside the live news row (hidden hub copies exist after LB/RB)
-                for (var d = focused; d != null && !onNews; d = GetParent(d)) { var fe = d as FrameworkElement; if (fe != null && fe.Name == "HubBottomCards") onNews = true; }
-                // the store overlay is looked up rarely: a full visual-tree search 4x a second made the row stutter
-                var store = storeOverlayRef != null ? storeOverlayRef.Target as FrameworkElement : null;
-                if (store == null && (DateTime.Now - lastStoreSearch).TotalSeconds > 3)
-                {
-                    lastStoreSearch = DateTime.Now;
-                    store = FindByName(w, "SteamStoreOverlay") as FrameworkElement;
-                    if (store != null) storeOverlayRef = new WeakReference(store);
-                }
-                bool inStore = store != null && store.IsVisible;
-                var row = LiveRow();
-                bool onHome = row != null && row.IsVisible;
-                // other home sections (Features & Apps, etc.): the hub is up but the game row is not -> home music, not the game's
-                var hub = hubOverlayRef != null ? hubOverlayRef.Target as FrameworkElement : null;
-                if (hub == null && (DateTime.Now - lastHubSearch).TotalSeconds > 3)
-                {
-                    lastHubSearch = DateTime.Now;
-                    hub = FindByName(w, "WelcomeHubOverlay") as FrameworkElement;
-                    if (hub != null) hubOverlayRef = new WeakReference(hub);
-                }
-                bool otherSection = hub != null && hub.IsVisible && !onHome;
-                bool want = onNews || inStore || otherSection || (onHome && !previewShowing);
-                if (want == upsOverride) return;
-                upsOverride = want;
-                upsSettings.GetType().GetProperty("ForceDefaultMusicOverride").SetValue(upsSettings, want, null);
-            }
-            catch (Exception ex) { Log("music override: " + ex.Message); }
-        }
+        // Home: the default music, a game's own song only while its trailer card is open (like the legacy theme)
+        private static void UpdateMusicOverride() { PauseMusic(!previewShowing); }
 
 
         // the window fills (nearly) the whole monitor Playnite is on (a game / fullscreen app, not a popup)
