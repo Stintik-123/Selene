@@ -358,6 +358,10 @@ namespace Selene
         {
             viewing = false;
             Ui.Fade(shotViewer, 0, 200, 0, () => { shotViewer.Visibility = Visibility.Collapsed; });
+            // the viewer goes through every screenshot, the strip shows the first six: back on the strip, the focus is on one of
+            // its own (past the end, Left and Right had nowhere to go and no tile was ringed)
+            if (shot >= shotTiles.Count && shotTiles.Count > 0) { shot = shotTiles.Count - 1; if (trailer == null) ShowShot(shot, false); }
+            ShowFocus();
             if (trailer == null && shots.Count > 1) slides.Start();
         }
 

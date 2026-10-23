@@ -6,6 +6,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 - Playnite settings from the menu open as a Selene screen now: General, Visuals, Audio, Layout, Menus and Input as sections, their settings as Selene's switches and choices, saved straight into Playnite (a row opens Playnite's own pages for the monitor and theme). Switch: Navigation, Playnite settings, Selene's way.
 - Activity, redone: the numbers as cards, your top game called out with its share of your play time, bars under the most played, and two more rows: games to pick up again (an hour or more played, untouched for 45 days) and games still waiting (never played). The rows glide up.
+- Store game page: back from the screenshot viewer, the strip keeps a focused screenshot (going past the sixth in the viewer left it with none, and Left / Right stuck).
 - Store game page: the focus starts on the Buy / Play button; Down goes to the screenshots and A there shows the screenshot on the whole screen (Left / Right go through them), Down again to "More from". Buying is the button's alone.
 - Captures: clips play with their sound (the browser wanted a press first; Selene gives it one).
 - Captures: the grid sits on a dark vignette with the focused capture's picture glowing softly behind; LB / RB filter it to screenshots or clips.
