@@ -20,6 +20,7 @@ under Playnite → Add-ons → Generic → **Selene Core**. Settings with a choi
 | | Trailer cards after | 1 s, 2.5 s, 5 s or never |
 | | Trailer sound | Trailer cards start with their sound on |
 | | Starting tab | The filter tab Spotlight opens on |
+| | Filter tabs | Selene's five, your own Playnite filter presets, or both |
 | Sound & music | Interface sounds | Sounds when you move, select and go back |
 | | Music control | Default music while browsing, a game's song with its trailer (needs UniPlaySong) |
 | | Quiet loading screen | A starting game stays quiet until it shows |

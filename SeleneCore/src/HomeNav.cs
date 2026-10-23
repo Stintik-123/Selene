@@ -1510,7 +1510,25 @@ namespace Selene
         private static bool previewSound;          // stays on for the session once switched on
 
         // the settings that are a choice of values, read once (the rest are read where they're used)
-        public static void ApplyValueSettings() { previewSound = Features.Value("trailersound") == "on"; }
+        public static void ApplyValueSettings()
+        {
+            previewSound = Features.Value("trailersound") == "on";
+            // the tab set may have changed (Selene's / Playnite's / both): rebuilt, shown, and the row refiltered
+            try
+            {
+                var before = string.Join("|", RowFilters);
+                RefreshRowFilters();
+                if (before != string.Join("|", RowFilters))
+                {
+                    if (rowFilter >= RowFilters.Length || rowFilter < 0) rowFilter = 0;
+                    var w = Application.Current.MainWindow;
+                    if (w != null) RenderFilterTabs(w, 0);
+                    var row = LiveRow();
+                    if (row != null) ApplyRowFilter(row);
+                }
+            }
+            catch (Exception ex) { Log("filter tabs: " + ex.Message); }
+        }
         private static TimeSpan? pendingSeek;
 
         // the library's background trailer: the full trailer when there is one (it has sound for R3), else the silent clip
@@ -3284,13 +3302,16 @@ namespace Selene
         // the tabs: the five built in, then the user's own Playnite filter presets (not Selene's, by name), when the switch is on
         public static void RefreshRowFilters()
         {
-            var keys = new List<string>(BuiltInFilters);
-            var labels = new List<string>(BuiltInFilterLabels);
+            var mode = Features.Value("filtertabs");   // selene / playnite / both
+            var keys = new List<string>();
+            var labels = new List<string>();
+            if (mode != "playnite") { keys.AddRange(BuiltInFilters); labels.AddRange(BuiltInFilterLabels); }
             try
             {
-                if (Api != null && Features.On("presettabs"))
+                if (Api != null && mode != "selene")
                 {
                     var own = new HashSet<Guid>(BuiltInFilters.Select(CollectionPresets.For));
+                    own.Add(BigScreenPreset);   // Selene's own working preset
                     foreach (var fp in Api.Database.FilterPresets.OrderBy(p => p.Name))
                     {
                         if (own.Contains(fp.Id) || string.IsNullOrWhiteSpace(fp.Name)) continue;
@@ -3310,6 +3331,7 @@ namespace Selene
                 }
             }
             catch (Exception ex) { Log("filter presets: " + ex.Message); }
+            if (keys.Count == 0) { keys.AddRange(BuiltInFilters); labels.AddRange(BuiltInFilterLabels); }   // no presets of your own yet
             var current = rowFilter >= 0 && rowFilter < RowFilters.Length ? RowFilters[rowFilter] : null;
             RowFilters = keys.ToArray();
             RowFilterLabels = labels.ToArray();
