@@ -1040,6 +1040,51 @@ namespace Selene
 
         // back from the library: Playnite still has the library's game selected, and the home drew its art for a moment
         // before the row's own selection caught up; the row's selection (nothing for a card) goes to Playnite first
+        // Find a game's pick, shown where the search was opened: on Spotlight's row when the home is up, in Collection
+        // when Collection is
+        public static void ShowGame(Guid id)
+        {
+            if (SeleneShell.CollectionActive) ShowInCollection(id);
+            else ShowInSpotlight(id);
+        }
+
+        // Spotlight's row moves to this game (on "All games" when the current tab doesn't have it)
+        public static void ShowInSpotlight(Guid id)
+        {
+            var w = Application.Current.MainWindow;
+            var row = LiveRow();
+            if (w == null || row == null) { ShowInCollection(id); return; }
+            HidePreview();
+            w.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                int idx = RowIndexOf(row, id);
+                if (idx < 0 && RowFilters[RowFilter] != "all")
+                {
+                    rowFilter = Array.IndexOf(RowFilters, "all");
+                    RenderFilterTabs(w, 0);
+                    ApplyRowFilter(row);
+                    idx = RowIndexOf(row, id);
+                }
+                Log("find a game: " + (idx >= 0 ? "picked on Spotlight (tile " + idx + ")" : "not on Spotlight's row"));
+                if (idx < 0) return;
+                int cur = row.SelectedIndex >= 0 && row.SelectedIndex < row.Items.Count ? row.SelectedIndex : 0;
+                if (cur != idx) MoveTo(row, cur, idx);   // scrolls there and focuses the tile (the tile style selects what has the focus)
+                else { var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement; if (c != null) c.Focus(); }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        private static int RowIndexOf(ListBox row, Guid id)
+        {
+            for (int i = 0; i < row.Items.Count; i++)
+            {
+                var item = row.Items[i];
+                if (item is string || item is RowPad) continue;
+                var gid = Prop(item, "Id");
+                if (gid is Guid && (Guid)gid == id) return i;
+            }
+            return -1;
+        }
+
         // Collection with this game picked (Find a game): Collection on "All games" so the game is surely in it
         public static void ShowInCollection(Guid id)
         {

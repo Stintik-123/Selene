@@ -750,7 +750,9 @@
                                                 <TextBlock x:Name="SeleneStoreNames" Text="{DynamicResource SeleneStatStores}" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="18" FontFamily="{DynamicResource FontMain}" Margin="2,20,0,0"/>
                                                 <StackPanel x:Name="SeleneStoreChips" Orientation="Horizontal" Margin="0,20,0,0" HorizontalAlignment="Left"/>
                                                 <!-- this week's free games and the biggest sales, as pictures with their price (Selene Core) -->
-                                                <StackPanel x:Name="SeleneStoreShowcase" Orientation="Horizontal" Margin="10,28,0,10" HorizontalAlignment="Left"/>
+                                                <!-- (room on the right: four pictures are wider than the card, and a strip that overflows gets clipped to its
+                                                     slot, which cut off the picked picture as it grew and its ring) -->
+                                                <StackPanel x:Name="SeleneStoreShowcase" Orientation="Horizontal" Margin="10,28,-80,10" HorizontalAlignment="Left"/>
                                             </StackPanel>
                                             <StackPanel Margin="0,30,0,0" HorizontalAlignment="Left" Width="900">
                                                 <StackPanel.Style>

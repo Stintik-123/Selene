@@ -29,7 +29,8 @@ namespace Selene
         }
 
         private static readonly string[] Tabs = { "All", "Steam", "Epic Games", "GOG", "Xbox", "More stores" };
-        private const double TileW = 420, TileH = 236, Pitch = TileW + 26, RowH = 318;
+        private const double TileW = 420, TileH = 236, Pitch = TileW + 26, RowH = 318, Peek = 90;   // Peek: how much of the next row shows below
+        private GradientStop fadeTop, fadeMid;   // the rows' fade: where it starts (under the focused row) and its first step
 
         // where you were, so coming back from a game's page puts you there again
         private static int savedTab, savedRow;
@@ -115,15 +116,14 @@ namespace Selene
 
             // rows of games; the focused row glides to the top of this area
             // the focused row, and below it the top of the next one, blurred and fading to dark: there's more down there
-            const double peek = 90;
-            var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 600, 0, 0), Height = RowH + peek, ClipToBounds = true };
+            var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 600, 0, 0), Height = RowH + Peek, ClipToBounds = true };
             // in pixels of this area (relative to the content, the gradient stretched over every row and never faded: a hard
             // edge); the fade starts just under the focused row's pictures and reaches nothing at the bottom
-            double h = RowH + peek;
+            double h = RowH + Peek;
             var fade = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, h) };
             fade.GradientStops.Add(new GradientStop(Colors.Black, 0));
-            fade.GradientStops.Add(new GradientStop(Colors.Black, RowH / h));   // the focused row stays whole
-            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x70, 0, 0, 0), (RowH + 30) / h));
+            fade.GradientStops.Add(fadeTop = new GradientStop(Colors.Black, RowH / h));   // the focused row stays whole
+            fade.GradientStops.Add(fadeMid = new GradientStop(Color.FromArgb(0x70, 0, 0, 0), (RowH + 30) / h));
             fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
             rowsArea.OpacityMask = fade;
             rowStack.RenderTransform = rowShift;
@@ -234,12 +234,24 @@ namespace Selene
             if (focusedTitle != null) { int i = rows.FindIndex(r => r.Title == focusedTitle); if (i >= 0) rowIndex = i; }
             rowIndex = Math.Max(0, Math.Min(rowIndex, rows.Count - 1));
             foreach (var r in rows) r.Shift.X = -Math.Max(0, r.Index - 1) * Pitch;
-            rowShift.BeginAnimation(TranslateTransform.YProperty, null);
-            rowShift.Y = -rowIndex * RowH;
+            PlaceRows(false);
             foreach (var r in rows) r.Shift.BeginAnimation(TranslateTransform.XProperty, null);
             LoadNearby();
             ShowFocus(false);
             ShowStatus();
+        }
+
+        // where the rows sit: the focused row at the top of the area with the next one peeking in below. The last row
+        // (nothing below it) sits lower, where that peek would be, so the page doesn't end in an empty band above the
+        // hints; the fade under the focused row steps out of the way then (it would dim the row's own pictures).
+        private void PlaceRows(bool animate)
+        {
+            bool last = rowIndex == rows.Count - 1;
+            double h = RowH + Peek;
+            var ms = TimeSpan.FromMilliseconds(animate ? 260 : 0);
+            rowShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-rowIndex * RowH + (last ? Peek : 0), ms) { EasingFunction = Ui.Out() });
+            fadeTop.BeginAnimation(GradientStop.OffsetProperty, new DoubleAnimation(last ? 1 : RowH / h, ms));
+            fadeMid.BeginAnimation(GradientStop.OffsetProperty, new DoubleAnimation(last ? 1 : (RowH + 30) / h, ms));
         }
 
         // near the end of a row: its lists fetch their next batch, which is added to the row's end
@@ -489,7 +501,7 @@ namespace Selene
                     int next = rowIndex + (b == "DPadDown" ? 1 : -1);
                     if (next < 0 || next >= rows.Count) return;
                     rowIndex = next;
-                    rowShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-rowIndex * RowH, TimeSpan.FromMilliseconds(260)) { EasingFunction = Ui.Out() });
+                    PlaceRows(true);
                     Ui.Tick();
                     LoadNearby();
                     ShowFocus(true);

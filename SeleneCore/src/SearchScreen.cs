@@ -12,8 +12,8 @@ using System.Windows.Threading;
 namespace Selene
 {
     // Finding a game (hold View): Selene's keyboard (the one the profile name uses, same sounds) with the matching games
-    // right above it as you type. Up goes into the results, A opens the game in Collection; X erases, Y opens the first
-    // result, B closes.
+    // right above it as you type. Up goes into the results, A picks the game where the search was opened (Spotlight's
+    // row, or Collection); X erases, Y types a space, Start opens the first result, B closes.
     public class SearchScreen : Screen
     {
         private static readonly string[] Rows = { "1234567890", "qwertyuiop", "asdfghjkl'", "zxcvbnm-." };
@@ -271,7 +271,7 @@ namespace Selene
             Ui.Confirm();
             LoginScene.ForgetReturnFocus();   // the pick gets the focus, not what had it before the search
             LoginScene.Finish();
-            HomeNav.ShowInCollection(g.Id);
+            HomeNav.ShowGame(g.Id);
         }
 
         public override void Handle(string b)

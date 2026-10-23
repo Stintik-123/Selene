@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Find a game: from Spotlight, the picked game is shown on Spotlight's row (on All games when the current tab doesn't have it); from Collection, in Collection as before.
+- Store card: the picked picture no longer gets cut off as it grows (the strip clipped it to its slot).
+- Store page: the last row sits where the next row would peek in, instead of leaving an empty band above the button hints.
 - Store game page: the game's trailer plays behind it (muted, looping) where Playnite's built-in browser can play it; the screenshots stay until it does. Switch: Selene settings, Games, Store trailers.
 - Keyboards (profile name, Find a game): Y types a space, Start is Done.
 - Find a game: the picked game keeps the focus in Collection (the old tile took it back half a second later).
