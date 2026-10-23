@@ -59,6 +59,7 @@ namespace Selene
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown));
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnWindowPreviewGotFocus));
             EventManager.RegisterClassHandler(typeof(ListBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnListLoaded));
+            EventManager.RegisterClassHandler(typeof(TextBlock), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnTextLoaded));
             var tvBackup = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "fullscreenConfig.tv.json");
             RowMode = System.IO.File.Exists(tvBackup) ? "all" : "tv";
             var app = Application.Current;
@@ -1061,6 +1062,30 @@ namespace Selene
                 var c = list.ItemContainerGenerator.ContainerFromItem(hit) as UIElement;
                 if (c != null) c.Focus();
             }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        // Readable text everywhere: Selene's and the theme's text in the theme's ink color gets a soft halo in the theme's
+        // background color (dark in dark themes, light in light ones), so it reads over bright art and wallpapers too.
+        // One shared halo that follows theme changes; text that already has an effect keeps it.
+        private static System.Windows.Media.Effects.DropShadowEffect textHalo;
+
+        private static void OnTextLoaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var t = sender as TextBlock;
+                if (t == null || t.Effect != null || !Features.On("textshadow")) return;
+                var b = t.Foreground as SolidColorBrush;
+                if (b == null || b.Opacity < 0.45) return;
+                var ink = Ink.Of("SeleneInkColor");
+                var c = b.Color;
+                if (c.A < 115 || Math.Abs(c.R - ink.R) + Math.Abs(c.G - ink.G) + Math.Abs(c.B - ink.B) > 60) return;   // only the ink-colored text
+                if (textHalo == null)
+                    textHalo = Ink.Track(new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 12, Opacity = 0.8, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance },
+                        System.Windows.Media.Effects.DropShadowEffect.ColorProperty, "SeleneScrimColor");
+                t.Effect = textHalo;
+            }
+            catch { }
         }
 
         // the Store card's own tile on the row: its highlight steps back while the focus is in the card's pictures

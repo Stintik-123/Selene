@@ -18,6 +18,7 @@ namespace Selene
         private class Row
         {
             public string Title;
+            public string[] Keys;
             public List<StoreItem> Items;
             public StackPanel Panel;
             public FrameworkElement Block;   // the row with its name (blurred when it isn't the focused one)
@@ -115,12 +116,12 @@ namespace Selene
 
             // rows of games; the focused row glides to the top of this area
             // the focused row, and below it the top of the next one, blurred and fading to dark: there's more down there
-            const double peek = 120;
+            const double peek = 70;
             var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 600, 0, 0), Height = RowH + peek, ClipToBounds = true };
             var fade = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
             fade.GradientStops.Add(new GradientStop(Colors.Black, 0));
-            fade.GradientStops.Add(new GradientStop(Colors.Black, (RowH - 10) / (RowH + peek)));
-            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x55, 0, 0, 0), (RowH + peek * 0.5) / (RowH + peek)));
+            fade.GradientStops.Add(new GradientStop(Colors.Black, (RowH - 6) / (RowH + peek)));
+            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x60, 0, 0, 0), (RowH + peek * 0.45) / (RowH + peek)));
             fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
             rowsArea.OpacityMask = fade;
             rowStack.RenderTransform = rowShift;
@@ -208,9 +209,9 @@ namespace Selene
             rowStack.Children.Clear();
             foreach (var spec in RowsFor(tab))
             {
-                var items = Mix(spec.Item2).Take(24).ToList();
+                var items = Mix(spec.Item2);
                 if (items.Count == 0) continue;
-                var row = new Row { Title = spec.Item1, Items = items };
+                var row = new Row { Title = spec.Item1, Items = items, Keys = spec.Item2 };
                 int saved;
                 row.Index = savedIndex.TryGetValue(Tabs[tab] + "/" + row.Title, out saved) ? Math.Min(saved, items.Count - 1) : 0;
                 var block = new StackPanel { Height = RowH };
@@ -231,6 +232,34 @@ namespace Selene
             LoadNearby();
             ShowFocus(false);
             ShowStatus();
+        }
+
+        // near the end of a row: its lists fetch their next batch, which is added to the row's end
+        private void MoreFor(Row row)
+        {
+            if (row.Index < row.Items.Count - 6) return;
+            foreach (var key in row.Keys)
+                if (StoreData.CanMore(key)) StoreData.More(key, k => { if (!closed) Extend(k); });
+        }
+
+        private void Extend(string key)
+        {
+            foreach (var row in rows)
+            {
+                if (!row.Keys.Contains(key)) continue;
+                var have = new HashSet<string>(row.Items.Select(i => StoreData.Key(i.Title ?? "")));
+                foreach (var item in StoreData.List(key))
+                {
+                    if (!have.Add(StoreData.Key(item.Title ?? ""))) continue;
+                    row.Items.Add(item);
+                    Action load;
+                    var tile = MakeTile(item, out load);
+                    row.Tiles.Add(tile);
+                    row.Loaders.Add(load);
+                    row.Panel.Children.Add(tile.Root);
+                }
+            }
+            LoadNearby();
         }
 
         // the pictures of the tiles on or near the screen (a row above and two below, a few tiles around the focused one)
@@ -325,8 +354,8 @@ namespace Selene
             {
                 if (rows[r].Block == null) continue;
                 var blur = rows[r].Block.Effect as System.Windows.Media.Effects.BlurEffect;
-                if (blur == null) { blur = new System.Windows.Media.Effects.BlurEffect { Radius = r == rowIndex ? 0 : 12, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance }; rows[r].Block.Effect = blur; }
-                blur.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, new DoubleAnimation(r == rowIndex ? 0 : 12, TimeSpan.FromMilliseconds(animate ? 240 : 0)));
+                if (blur == null) { blur = new System.Windows.Media.Effects.BlurEffect { Radius = r == rowIndex ? 0 : 5, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance }; rows[r].Block.Effect = blur; }
+                blur.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, new DoubleAnimation(r == rowIndex ? 0 : 5, TimeSpan.FromMilliseconds(animate ? 240 : 0)));
             }
             for (int r = 0; r < rows.Count; r++)
                 for (int i = 0; i < rows[r].Tiles.Count; i++) rows[r].Tiles[i].Focus(r == rowIndex && i == rows[r].Index);
@@ -429,6 +458,7 @@ namespace Selene
                     row.Shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-Math.Max(0, next - 1) * Pitch, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
                     Ui.Tick();
                     LoadNearby();
+                    MoreFor(row);
                     ShowFocus(true);
                     return;
                 }

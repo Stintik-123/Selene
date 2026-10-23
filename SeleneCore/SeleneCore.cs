@@ -218,6 +218,7 @@ namespace Selene
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },
             new Option { Group = "Look", Key = "brand", Label = "Selene logo", About = "The logo in Selene settings and on empty screens." },
             new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
+            new Option { Group = "Look", Key = "textshadow", Label = "Readable text", About = "A soft halo behind text so it reads over bright pictures." },
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
             new Option { Group = "Look", Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game and its trailer plays. R3 for its sound." },
             new Option { Group = "Games", Key = "storepage", Label = "Store page", About = "The Store card opens free games, sales and new releases. Off: it picks a store app." },

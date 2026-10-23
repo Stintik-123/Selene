@@ -99,6 +99,7 @@ namespace Selene
             chosen = country;
             HomeNav.Log("store: prices for " + country);
             lists.Clear();
+            nextPage.Clear(); exhausted.Clear();
             loadedAt = DateTime.MinValue;
             FromDisk = false;
             try { if (File.Exists(DiskFile)) File.Delete(DiskFile); } catch { }
@@ -112,6 +113,56 @@ namespace Selene
         }
 
         public static bool Has(string key) { return lists.ContainsKey(key); }
+
+        // ---------------- more as you scroll ----------------
+        // the lists that page: each gives its next batch for page 1, 2, 3... (an empty batch: that's all of it)
+        private static readonly Dictionary<string, Func<int, List<StoreItem>>> Pagers = new Dictionary<string, Func<int, List<StoreItem>>>
+        {
+            { "steam:sale", p => SteamSearch("specials=1", p) },
+            { "steam:top", p => SteamSearch("filter=topsellers", p) },
+            { "steam:new", p => SteamSearch("filter=popularnew&sort_by=Released_DESC", p) },
+            { "steam:soon", p => SteamSearch("filter=popularcomingsoon", p) },
+            { "gog:sale", p => Gog("order=desc:discount&discounted=eq:true", p) },
+            { "gog:best", p => Gog("order=desc:bestselling", p) },
+            { "xbox:gamepass", p => GamePass(p) },
+            { "deals:best", p => Deals(p) },
+        };
+        private static readonly Dictionary<string, int> nextPage = new Dictionary<string, int>();
+        private static readonly HashSet<string> paging = new HashSet<string>(), exhausted = new HashSet<string>();
+
+        public static bool CanMore(string key) { return Pagers.ContainsKey(key) && lists.ContainsKey(key) && !exhausted.Contains(key) && !FromDisk; }
+
+        // the list's next batch, added to its end (games it has already left out); `arrived(key)` on the UI thread
+        public static void More(string key, Action<string> arrived)
+        {
+            if (!CanMore(key) || paging.Contains(key)) return;
+            paging.Add(key);
+            int page;
+            if (!nextPage.TryGetValue(key, out page)) page = 1;
+            var owned = OwnedIndex();
+            var get = Pagers[key];
+            var ui = System.Windows.Application.Current.Dispatcher;
+            Task.Run(() =>
+            {
+                List<StoreItem> got = null;
+                try { got = get(page); }
+                catch (Exception ex) { HomeNav.Log("store more " + key + ": " + ex.Message); }
+                ui.BeginInvoke(new Action(() =>
+                {
+                    paging.Remove(key);
+                    List<StoreItem> list;
+                    if (got == null || !lists.TryGetValue(key, out list)) return;   // (a failed batch can be tried again)
+                    var have = new HashSet<string>(list.Select(i => i.Store + ":" + i.Id));
+                    var added = got.Where(i => have.Add(i.Store + ":" + i.Id)).ToList();
+                    if (added.Count == 0) { exhausted.Add(key); return; }
+                    foreach (var i in added) i.Owned = owned.Has(i);
+                    list.AddRange(added);
+                    nextPage[key] = page + 1;
+                    HomeNav.Log("store: " + key + " +" + added.Count + " (" + list.Count + ")");
+                    arrived(key);
+                }));
+            });
+        }
 
         // the Store card on Spotlight: what it opens, and this week's free games (loaded a little after start)
         public static void AttachCard()
@@ -160,17 +211,14 @@ namespace Selene
                 ui.BeginInvoke(new Action(() =>
                 {
                     lists[key] = got;
+                    nextPage.Remove(key); exhausted.Remove(key);
                     FromDisk = false;
                     loadedAt = DateTime.Now;
                     foreach (var w in waiting.ToList()) w(key);
                 }));
             }));
-            fetch("steam", Steam);   // fills steam:* itself (one request for four lists)
-            fetch("epic", Epic);
-            fetch("gog:sale", () => Gog("order=desc:discount&discounted=eq:true"));
-            fetch("gog:best", () => Gog("order=desc:bestselling"));
-            fetch("xbox:gamepass", GamePass);
-            fetch("deals:best", Deals);
+            fetch("epic", Epic);   // fills epic:* itself (one request for three lists)
+            foreach (var pager in Pagers) { var key = pager.Key; var first = pager.Value; fetch(key, () => first(0)); }
             Task.WhenAll(jobs).ContinueWith(t => ui.BeginInvoke(new Action(() => { loading = false; WriteDisk(); })));
         }
 
@@ -214,37 +262,49 @@ namespace Selene
             return web;
         }
 
-        // Steam's featured lists in this region's prices: on sale, top sellers, new releases, coming soon
-        private static List<StoreItem> Steam()
+        // Steam's lists are its search results (they page: 25 games at a time, as far as you scroll), in this region's prices
+        private static List<StoreItem> SteamSearch(string query, int page)
         {
-            var data = Get("https://store.steampowered.com/api/featuredcategories?l=english&cc=" + Country);
-            var ui = System.Windows.Application.Current.Dispatcher;
-            var owned = OwnedIndex();
-            foreach (var pair in new[] { new[] { "specials", "steam:sale" }, new[] { "top_sellers", "steam:top" }, new[] { "new_releases", "steam:new" }, new[] { "coming_soon", "steam:soon" } })
+            const int count = 25;
+            var data = Get("https://store.steampowered.com/search/results/?query&infinite=1&category1=998&l=english&cc=" + Country + "&count=" + count + "&start=" + (page * count) + "&" + query);
+            var html = S(At(data, "results_html")) ?? "";
+            var items = new List<StoreItem>();
+            foreach (var block in html.Split(new[] { "<a href=" }, StringSplitOptions.None))
             {
-                var items = new List<StoreItem>();
-                var seen = new HashSet<string>();
-                foreach (var o in A(At(data, pair[0], "items")))
+                var id = Match(block, "data-ds-appid=\"(\\d+)\"");
+                var title = Match(block, "<span class=\"title\">(.*?)</span>");
+                if (id == null || title == null) continue;   // bundles and packages have no single app
+                var item = new StoreItem { Store = "steam", StoreName = "Steam", Id = id, SteamAppId = id, Title = WebUtility.HtmlDecode(title) };
+                int pct;
+                if (int.TryParse(Match(block, "data-discount=\"(\\d+)\"") ?? "", out pct)) item.Discount = pct;
+                var final = Match(block, "discount_final_price[^\"]*\">([^<]*)<");
+                var original = Match(block, "discount_original_price\">([^<]*)<");
+                if (!string.IsNullOrEmpty(final)) item.Price = WebUtility.HtmlDecode(final.Trim());
+                if (item.Discount > 0 && !string.IsNullOrEmpty(original)) item.OldPrice = WebUtility.HtmlDecode(original.Trim());
+                if (item.Price != null && item.Price.IndexOf("free", StringComparison.OrdinalIgnoreCase) >= 0) item.Price = "Free";
+                if (item.Price == null)
                 {
-                    var id = S(At(o, "id"));
-                    if (id == null || !seen.Add(id)) continue;
-                    var item = new StoreItem { Store = "steam", StoreName = "Steam", Id = id, SteamAppId = id, Title = S(At(o, "name")) };
-                    item.Image = S(At(o, "large_capsule_image")) ?? S(At(o, "header_image"));
-                    var cur = S(At(o, "currency")) ?? "USD";
-                    double final = Num(At(o, "final_price")) / 100, initial = Num(At(o, "original_price")) / 100;
-                    item.Discount = (int)Num(At(o, "discount_percent"));
-                    if (pair[0] == "coming_soon" && final == 0) item.Note = "Coming soon";
-                    else item.Price = final == 0 ? "Free" : Money(final, cur);
-                    if (item.Discount > 0 && initial > final) item.OldPrice = Money(initial, cur);
-                    item.Link = Open("steam", "steam://store/" + id, "https://store.steampowered.com/app/" + id);
-                    item.WebLink = "https://store.steampowered.com/app/" + id;
-                    item.Owned = owned.Has(item);
-                    items.Add(item);
+                    var released = Match(block, "search_released[^>]*>\\s*([^<]*?)\\s*<");
+                    item.Note = string.IsNullOrEmpty(released) ? "Coming soon" : WebUtility.HtmlDecode(released);
                 }
-                var key = pair[1];
-                ui.BeginInvoke(new Action(() => { lists[key] = items; FromDisk = false; loadedAt = DateTime.Now; foreach (var w in waiting.ToList()) w(key); }));
+                item.Link = Open("steam", "steam://store/" + id, "https://store.steampowered.com/app/" + id);
+                item.WebLink = "https://store.steampowered.com/app/" + id;
+                items.Add(item);
             }
-            return null;   // (each list was handed over above)
+            // sharp pictures from Steam's picture service (the search's own are 231 px)
+            var capsules = SteamCapsules(items.Select(i => i.Id).ToList());
+            foreach (var i in items)
+            {
+                string c;
+                i.Image = capsules.TryGetValue(i.Id, out c) ? c : "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/" + i.Id + "/header.jpg";
+            }
+            return items;
+        }
+
+        private static string Match(string text, string pattern)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(text, pattern, System.Text.RegularExpressions.RegexOptions.Singleline);
+            return m.Success ? m.Groups[1].Value : null;
         }
 
         // Epic's promotions: the free games (now and next) and the games on sale this week
@@ -305,9 +365,9 @@ namespace Selene
         }
 
         // GOG's catalog (prices in dollars outside its own regions)
-        private static List<StoreItem> Gog(string query)
+        private static List<StoreItem> Gog(string query, int page)
         {
-            var data = Get("https://catalog.gog.com/v1/catalog?limit=30&productType=in:game,pack&locale=en-US&countryCode=" + Country + "&" + query);
+            var data = Get("https://catalog.gog.com/v1/catalog?limit=30&productType=in:game,pack&locale=en-US&countryCode=" + Country + "&page=" + (page + 1) + "&" + query);
             var items = new List<StoreItem>();
             foreach (var p in A(At(data, "products")))
             {
@@ -329,10 +389,14 @@ namespace Selene
         }
 
         // PC Game Pass: Microsoft's list, then its catalog for names, pictures and prices
-        private static List<StoreItem> GamePass()
+        private static List<string> gamePassIds;
+
+        private static List<StoreItem> GamePass(int page)
         {
-            var ids = A(Get("https://catalog.gamepass.com/sigls/v2?id=fdd9e2a7-0fee-49f6-ad69-4354098401ff&language=en-us&market=" + Country))
-                .Select(o => S(At(o, "id"))).Where(id => id != null).Take(40).ToList();
+            if (page == 0 || gamePassIds == null)
+                gamePassIds = A(Get("https://catalog.gamepass.com/sigls/v2?id=fdd9e2a7-0fee-49f6-ad69-4354098401ff&language=en-us&market=" + Country))
+                    .Select(o => S(At(o, "id"))).Where(id => id != null).ToList();
+            var ids = gamePassIds.Skip(page * 40).Take(40).ToList();
             var items = new List<StoreItem>();
             for (int at = 0; at < ids.Count; at += 20)
             {
@@ -370,13 +434,13 @@ namespace Selene
         }
 
         // the best deals from the other stores (CheapShark; dollar prices)
-        private static List<StoreItem> Deals()
+        private static List<StoreItem> Deals(int page)
         {
             var stores = new Dictionary<string, string>();
             foreach (var s in A(Get("https://www.cheapshark.com/api/1.0/stores"))) stores[S(At(s, "storeID"))] = S(At(s, "storeName"));
             var items = new List<StoreItem>();
             var seen = new HashSet<string>();
-            var deals = A(Get("https://www.cheapshark.com/api/1.0/deals?pageSize=60&sortBy=Deal%20Rating&onSale=1"));
+            var deals = A(Get("https://www.cheapshark.com/api/1.0/deals?pageSize=60&sortBy=Deal%20Rating&onSale=1&pageNumber=" + page));
             var capsules = SteamCapsules(deals.Select(d => S(At(d, "steamAppID"))).Where(id => !string.IsNullOrEmpty(id) && id != "0").Distinct().Take(40).ToList());
             foreach (var d in deals)
             {
@@ -399,7 +463,6 @@ namespace Selene
                 if (normal > sale) { item.OldPrice = Money(normal, "USD"); item.Discount = (int)Math.Round(Num(At(d, "savings"))); }
                 item.Link = item.WebLink = "https://www.cheapshark.com/redirect?dealID=" + Uri.EscapeDataString(WebUtility.UrlDecode(item.Id));
                 items.Add(item);
-                if (items.Count >= 30) break;
             }
             return items;
         }

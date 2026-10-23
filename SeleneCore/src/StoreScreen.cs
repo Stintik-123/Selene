@@ -62,7 +62,7 @@ namespace Selene
         public static string InstalledNames()
         {
             var names = Known.Where(s => Registered(s.Protocol)).Select(s => s.Name).ToList();
-            return names.Count > 0 ? string.Join(" · ", names) : "None found";
+            return names.Count > 0 ? string.Join(" · ", names) : "No store apps on this PC: games open in your browser";
         }
 
         private static bool Registered(string protocol)

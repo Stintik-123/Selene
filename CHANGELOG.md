@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Store: rows keep going as you scroll (Steam, GOG, PC Game Pass and the other stores' deals load their next games near the end of a row); the peek of the next row is shorter, lightly blurred and fades out above the button hints. Without store apps the Store card says games open in your browser.
+- Readable text: text everywhere gets a soft halo in the theme's background color so it reads over bright pictures (Selene settings, Look, Readable text).
 - Find a game (hold View): Selene's own search with its keyboard and sounds, matching games shown as you type; A opens the game in Collection.
 - The cards fly in again after you sign in, as the login's dimming clears.
 - A controller press is never handled twice (the Store card's pictures skipped one); one gate for every screen.
