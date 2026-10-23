@@ -33,6 +33,26 @@ namespace Selene
         private int shot, moreIndex, zone;   // zone 0: the screenshots, 1: more from the store
         private bool front, closed;
         private const double MoreW = 380, MoreH = 214, MorePitch = MoreW + 24;
+        // the left edge of the words and the screenshots: six 272 px screenshots, 20 apart, centered on the 1920 screen
+        private const double Side = (1920 - (6 * 272 + 5 * 20)) / 2.0;
+        private StackPanel moreSection;
+
+        // the "More from" row as a peek (blurred, fading out) or whole
+        private void Peek(bool on)
+        {
+            if (moreSection == null) return;
+            if (on)
+            {
+                var fade = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, 220) };
+                fade.GradientStops.Add(new GradientStop(Colors.Black, 0));
+                fade.GradientStops.Add(new GradientStop(Colors.Black, 0.4));
+                fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x60, 0, 0, 0), 0.55));
+                fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0.72));
+                moreSection.OpacityMask = fade;
+                moreRow.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 5, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance };
+            }
+            else { moreSection.OpacityMask = null; moreRow.Effect = null; }
+        }
 
         public StoreGameScreen(StoreItem item)
         {
@@ -60,7 +80,7 @@ namespace Selene
             Root.Children.Add(page);
 
             // left: the store, the name, the facts, the price, the description, the buttons
-            var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(110, 120, 0, 0), MaxWidth = 860 };
+            var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 120, 0, 0), MaxWidth = 860 };
             var storeLine = new StackPanel { Orientation = Orientation.Horizontal };
             var logo = PlatformIcons.For(item.StoreName);
             if (logo != null) storeLine.Children.Add(new System.Windows.Shapes.Path { Data = logo, Width = 20, Height = 20, Stretch = Stretch.Uniform, Fill = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
@@ -98,11 +118,13 @@ namespace Selene
             page.Children.Add(col);
 
             // bottom: the screenshots, then more from the same store (Down)
-            var bottom = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(110, 750, 0, 0) };
+            var bottom = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 750, 0, 0) };
             bottom.Children.Add(shotStrip);
             if (more.Count > 0)
             {
-                bottom.Children.Add(new TextBlock { Text = "More from " + item.StoreName, FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(2, 64, 0, 14) });
+                // more from the store: under the screenshots it only peeks in, lightly blurred and fading to dark; Down shows it
+                moreSection = new StackPanel();
+                moreSection.Children.Add(new TextBlock { Text = "More from " + item.StoreName, FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(2, 64, 0, 14) });
                 moreRow.RenderTransform = moreShift;
                 foreach (var m in more)
                 {
@@ -114,7 +136,9 @@ namespace Selene
                     moreRow.Children.Add(t.Root);
                     moreTiles.Add(t);
                 }
-                bottom.Children.Add(moreRow);
+                moreSection.Children.Add(moreRow);
+                bottom.Children.Add(moreSection);
+                Peek(true);
             }
             page.Children.Add(bottom);
 
@@ -214,6 +238,7 @@ namespace Selene
         private void SetZone(int z)
         {
             zone = z;
+            Peek(z == 0);
             // more from the store: the page glides up to show its row
             pageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(z == 1 ? -420 : 0, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() });
             Ui.Tick();
