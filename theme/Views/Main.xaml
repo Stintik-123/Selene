@@ -41,7 +41,8 @@
                                 </Grid.RowDefinitions>
                                 <Border x:Name="SeleneLibraryBase" Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}" Panel.ZIndex="-3"/>
                                 <Image Panel.ZIndex="-3" x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
-                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" Panel.ZIndex="-3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="120" Stretch="UniformToFill"/>
+                                <!-- (AnimationEnabled: the art crossfades from game to game instead of cutting; the small wait lets a held stick settle) -->
+                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" Panel.ZIndex="-3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="150" AnimationEnabled="True" Stretch="UniformToFill"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->
                                 <!-- the trailer, like the legacy theme: a 16:9 box 800 high on the right, top edge, masked by its picture
                                      (fades in from the left over the first half, fades out toward the bottom) -->
