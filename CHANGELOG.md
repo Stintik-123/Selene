@@ -4,7 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Collection: the game's art crossfades from game to game instead of cutting.
+- Game details open again (the redone page set a style twice, and Playnite fell over opening it).
+- Collection: X plays the game the way Spotlight's Play does (Selene's loading screen at once, the same way through); installs it when it isn't.
+- Collection: the game's art crossfades from game to game instead of cutting (Selene's own crossfade, over a good half second).
 - Playnite's dialogs (a yes / no box, an add-on install) look like Selene: a glass card with rounded corners and pill buttons; and a press in a dialog no longer also moves the screen behind it.
 - Who's playing: the power button's glyph sits in the middle of its circle.
 - Spotlight: a game picked in Find a game, Activity or Surprise me lands at the left edge of the row (it ended up cut off at the right); LT and RT jump to the start and the end of the row.

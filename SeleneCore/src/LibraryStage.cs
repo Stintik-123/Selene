@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -45,6 +48,85 @@ namespace Selene
             arm.Tick += (s, e) => { arm.Stop(); Play(); };
             list.SelectionChanged += (s, e) => Rearm(true);
             library.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Rearm(false); else Stop(); };
+            HookArtCrossfade(grid);
+        }
+
+        // ---- the art from game to game: a crossfade of Selene's own ----
+        // Playnite's image swaps its picture with a blink of a fade. Here the picture as it was stays over it while the next
+        // one comes in, then melts away over a good half second.
+        private static Image artSnap;
+        private static DispatcherTimer snapFallback;
+        private static bool snapCovering;
+        private static readonly HashSet<Image> watched = new HashSet<Image>();
+
+        private static void HookArtCrossfade(Panel grid)
+        {
+            var fe = art as FrameworkElement;
+            if (fe == null || grid == null) return;
+            artSnap = new Image { Stretch = Stretch.UniformToFill, IsHitTestVisible = false, Opacity = 0 };
+            RenderOptions.SetBitmapScalingMode(artSnap, BitmapScalingMode.Fant);
+            Grid.SetRowSpan(artSnap, Grid.GetRowSpan(fe));
+            Panel.SetZIndex(artSnap, Panel.GetZIndex(fe));
+            int at = grid.Children.IndexOf(fe);
+            grid.Children.Insert(at + 1, artSnap);   // right over the art
+            snapFallback = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+            snapFallback.Tick += (s, e) => { snapFallback.Stop(); MeltSnapshot(); };   // no new picture came (the same art): the still goes anyway
+            list.SelectionChanged += (s, e) => TakeSnapshot();
+            fe.Loaded += (s, e) => WatchInnerImages(fe);
+            WatchInnerImages(fe);
+        }
+
+        // Playnite's image holds its pictures in Image elements inside: one of them getting a new picture means the next art is in
+        private static void WatchInnerImages(FrameworkElement fe)
+        {
+            foreach (var img in Inner(fe).ToList())
+            {
+                if (!watched.Add(img)) continue;
+                DependencyPropertyDescriptor.FromProperty(Image.SourceProperty, typeof(Image)).AddValueChanged(img, (s, e) =>
+                {
+                    if (snapCovering && img.Source != null) fe.Dispatcher.BeginInvoke(new Action(MeltSnapshot), DispatcherPriority.Loaded);
+                });
+            }
+        }
+
+        private static IEnumerable<Image> Inner(DependencyObject d)
+        {
+            int n = VisualTreeHelper.GetChildrenCount(d);
+            for (int i = 0; i < n; i++)
+            {
+                var c = VisualTreeHelper.GetChild(d, i);
+                var img = c as Image;
+                if (img != null) yield return img;
+                foreach (var deeper in Inner(c)) yield return deeper;
+            }
+        }
+
+        // the picture showing now, kept over the art until the next one is in
+        private static void TakeSnapshot()
+        {
+            var fe = art as FrameworkElement;
+            if (fe == null || artSnap == null || video != null || !fe.IsVisible) return;
+            if (snapCovering) { snapFallback.Stop(); snapFallback.Start(); return; }   // still covering from the last move: that still stays
+            if (watched.Count == 0) WatchInnerImages(fe);
+            var showing = Inner(fe).FirstOrDefault(i => i.Source != null && i.Opacity > 0.5 && i.IsVisible);
+            if (showing == null) return;
+            artSnap.Source = showing.Source;
+            artSnap.Stretch = showing.Stretch;
+            artSnap.RenderTransform = fe.RenderTransform;             // the same crop as the art's (the letterbox trim)
+            artSnap.RenderTransformOrigin = fe.RenderTransformOrigin;
+            artSnap.BeginAnimation(UIElement.OpacityProperty, null);
+            artSnap.Opacity = fe.Opacity;
+            snapCovering = true;
+            snapFallback.Stop();
+            snapFallback.Start();
+        }
+
+        private static void MeltSnapshot()
+        {
+            if (!snapCovering || artSnap == null) return;
+            snapCovering = false;
+            snapFallback.Stop();
+            artSnap.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(650)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         }
 
         private static void Rearm(bool moved)

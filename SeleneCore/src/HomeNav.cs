@@ -2482,6 +2482,20 @@ namespace Selene
                         return;
                     }
                 }
+                // X on a game in Collection: Selene's Play, as Spotlight's pill (the loading screen up at once, the same way through)
+                if (pressed == "X" && item != null && InLibraryList(item) && Api != null)
+                {
+                    var dc = item.DataContext;
+                    var gid = Prop(dc, "Id");
+                    if (!(gid is Guid)) { var g = Prop(dc, "Game"); if (g != null) gid = Prop(g, "Id"); }
+                    if (gid is Guid)
+                    {
+                        if (Equals(Prop(dc, "IsInstalled"), true)) { Log("play in Collection -> " + Prop(dc, "Name")); StartGameNow((Guid)gid); }
+                        else Api.InstallGame((Guid)gid);
+                        e.Cancel();
+                        return;
+                    }
+                }
                 if (pressed == "X" && item != null && IsInRow(item) && CanReturnToGame())
                 {
                     var g = item.DataContext;

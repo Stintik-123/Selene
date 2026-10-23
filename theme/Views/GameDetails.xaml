@@ -161,7 +161,7 @@
                                 <TextBlock FontSize="17" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk90Brush}" VerticalAlignment="Center" Margin="0,0,18,0">
                                     <Run Text="{Binding Developers, Converter={StaticResource ListToStringConverter}, Mode=OneWay}"/>
                                 </TextBlock>
-                                <Border Style="{StaticResource SeleneScoreBadge}">
+                                <Border>
                                     <Border.Style>
                                         <Style TargetType="Border" BasedOn="{StaticResource SeleneScoreBadge}">
                                             <Style.Triggers>
@@ -173,7 +173,7 @@
                                         <Run Text="Critics" Foreground="{DynamicResource SeleneInk60Brush}"/><Run Text=" "/><Run Text="{Binding CriticScore, Mode=OneWay}" FontWeight="SemiBold"/>
                                     </TextBlock>
                                 </Border>
-                                <Border Style="{StaticResource SeleneScoreBadge}">
+                                <Border>
                                     <Border.Style>
                                         <Style TargetType="Border" BasedOn="{StaticResource SeleneScoreBadge}">
                                             <Style.Triggers>
