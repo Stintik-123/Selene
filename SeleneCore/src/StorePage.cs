@@ -68,12 +68,6 @@ namespace Selene
             hero.Children.Add(heroA);
             hero.Children.Add(heroB);
             Root.Children.Add(hero);
-            // a shade from the bottom under the rows
-            Root.Children.Add(new Border
-            {
-                IsHitTestVisible = false,
-                Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0, 0.45), Ink.Stop("SeleneScrimColor", 0.92, 0.75) }, 90)
-            });
             // a shade from the left keeps the text readable
             Root.Children.Add(new Border
             {
@@ -123,8 +117,8 @@ namespace Selene
             double h = RowH + peek;
             var fade = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, h) };
             fade.GradientStops.Add(new GradientStop(Colors.Black, 0));
-            fade.GradientStops.Add(new GradientStop(Colors.Black, (RowH - 20) / h));
-            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x70, 0, 0, 0), (RowH + 15) / h));
+            fade.GradientStops.Add(new GradientStop(Colors.Black, RowH / h));   // the focused row stays whole
+            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x70, 0, 0, 0), (RowH + 30) / h));
             fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
             rowsArea.OpacityMask = fade;
             rowStack.RenderTransform = rowShift;
