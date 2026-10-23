@@ -4,7 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Store: opening it no longer crashes Playnite (its pictures come a few at a time, are kept on disk and load as you scroll). The Store card shows the featured game's art behind it instead of a small picture, and its pictures below leave out the games the headline already shows. Signing in no longer slides the row.
+- The Library and Store cards' details no longer slide in from the left (signing in showed it).
+- Store page: a dark background like Collection's instead of the wallpaper, much bigger games, each game's genres, release date, score and description beside its picture, sharp full-screen art only (a game with just a small picture shows none instead of a blurry one), and it opens without the delay.
+- Store: opening it no longer crashes Playnite (its pictures come a few at a time, are kept on disk and load as you scroll). The Store card's pictures leave out the games the headline already shows. Signing in no longer slides the row.
 - Store card: the headline takes turns between what's on (free games, the biggest sale, new on Steam, a sale ending soon, next week's free game) with that game's picture beside it. Down from the card goes into the game pictures: Left / Right pick one, A opens it in its store, Up or B goes back.
 - Store card: the headline says what's on ("2 free games this week", "Up to 90% off") with the free games and the biggest sale under it, your store apps as chips with their logos, and four big game pictures without names under them; the "Open the store" line that ran into the button hints is gone (A Open is in the hints).
 - Up on Spotlight's row, and Up / Down in Collection, no longer move the focus off to hidden parts (the row dropped away).

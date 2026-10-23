@@ -417,16 +417,36 @@ namespace Selene
         }
 
         // more about one game (description, screenshots); `done` on the UI thread (null when there's nothing more)
+        private static readonly Dictionary<string, Details> detailsCache = new Dictionary<string, Details>();
+
         public static void LoadDetails(StoreItem item, Action<Details> done)
         {
+            var key = item.Store + ":" + (item.SteamAppId ?? item.Id);
+            Details cached;
+            if (detailsCache.TryGetValue(key, out cached)) { done(cached); return; }
             var ui = System.Windows.Application.Current.Dispatcher;
             Task.Run(() =>
             {
                 Details d = null;
                 try { d = FetchDetails(item); }
                 catch (Exception ex) { HomeNav.Log("store details " + item.Title + ": " + ex.Message); }
-                ui.BeginInvoke(new Action(() => done(d)));
+                ui.BeginInvoke(new Action(() => { detailsCache[key] = d; done(d); }));
             });
+        }
+
+        // a picture big enough to fill the screen behind a game (null when it only has small ones: better dark than
+        // blurry): a Steam game's first 1920 px screenshot, Epic's 2560 px art, Microsoft's hero art at full width
+        public static void BigArt(StoreItem item, Action<string> done)
+        {
+            if (item == null || string.IsNullOrEmpty(item.Image)) { done(null); return; }
+            if (item.Store == "epic") { done(item.Image); return; }
+            if (item.Store == "xbox") { done(item.Image.Replace("?w=960", "?w=1920")); return; }
+            if (!string.IsNullOrEmpty(item.SteamAppId) && item.SteamAppId != "0")
+            {
+                LoadDetails(item, d => done(d != null && d.Shots.Count > 0 ? d.Shots[0] : null));
+                return;
+            }
+            done(null);   // GOG's and the other stores' pictures are card-sized
         }
 
         private static Details FetchDetails(StoreItem item)

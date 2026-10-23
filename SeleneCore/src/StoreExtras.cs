@@ -177,8 +177,6 @@ namespace Selene
         private static List<Message> messages = new List<Message>();
         private static int shown = -1;
         private static System.Windows.Threading.DispatcherTimer turns;
-        private static readonly Image[] feature = new Image[2];
-        private static int featureFront;
 
         private static string Names(List<StoreItem> items)
         {
@@ -227,7 +225,7 @@ namespace Selene
             if (first || shown >= messages.Count) { shown = -1; Turn(); }
         }
 
-        // the next message: the words fade out and back with the new ones; that game's art crossfades in behind the card
+        // the next message: the words fade out and back with the new ones (the wallpaper behind stays)
         private static void Turn()
         {
             if (messages.Count == 0) return;
@@ -244,44 +242,6 @@ namespace Selene
                 res["SeleneStoreHeadline"] = m.Head;
                 res["SeleneStoreAbout"] = m.About;
                 Ui.Rise(head, 0, 8, 280);
-            });
-            ShowArt(head, m.Item);
-        }
-
-        // the featured game's art fills the home behind the Store card (like a game's does), and goes when the card does
-        private static void ShowArt(FrameworkElement head, StoreItem item)
-        {
-            var w = Application.Current.MainWindow;
-            var art = w != null ? HomeNav.FindByName(w, "SeleneHubArt") as Panel : null;
-            if (art == null || item == null || string.IsNullOrEmpty(item.Image)) return;
-            if (feature[0] == null)
-            {
-                for (int i = 0; i < 2; i++)
-                {
-                    feature[i] = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
-                    RenderOptions.SetBitmapScalingMode(feature[i], BitmapScalingMode.HighQuality);
-                    art.Children.Add(feature[i]);
-                }
-                head.IsVisibleChanged += (s, e) =>
-                {
-                    if ((bool)e.NewValue) { shown--; Turn(); return; }   // back on the card: its art again (the same message)
-                    foreach (var img in feature) img.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, TimeSpan.FromMilliseconds(300)));
-                };
-            }
-            var front = feature[featureFront];
-            var back = feature[1 - featureFront];
-            featureFront = 1 - featureFront;
-            Panel.SetZIndex(front, 1); Panel.SetZIndex(back, 0);
-            front.BeginAnimation(UIElement.OpacityProperty, null);
-            front.Opacity = 0;
-            var mine = new object();
-            front.Tag = mine;
-            StoreImages.Get(StoreData.Sharp(item), 1600, img =>
-            {
-                if (img == null || front.Tag != mine || !head.IsVisible) return;
-                front.Source = img;
-                front.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(1, TimeSpan.FromMilliseconds(700)) { EasingFunction = Ui.Out() });
-                back.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, TimeSpan.FromMilliseconds(700)) { BeginTime = TimeSpan.FromMilliseconds(200) });
             });
         }
 

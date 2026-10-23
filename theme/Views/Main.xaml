@@ -674,7 +674,6 @@
                                                                     <BeginStoryboard>
                                                                         <Storyboard>
                                                                             <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
-                                                                            <ThicknessAnimation Storyboard.TargetProperty="Margin" From="-30,40,0,0" To="0,40,0,0" BeginTime="0:0:0.12" Duration="0:0:0.35"><ThicknessAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ThicknessAnimation.EasingFunction></ThicknessAnimation>
                                                                         </Storyboard>
                                                                     </BeginStoryboard>
                                                                 </DataTrigger.EnterActions>
@@ -724,7 +723,6 @@
                                                                     <BeginStoryboard>
                                                                         <Storyboard>
                                                                             <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
-                                                                            <ThicknessAnimation Storyboard.TargetProperty="Margin" From="-30,40,0,0" To="0,40,0,0" BeginTime="0:0:0.12" Duration="0:0:0.35"><ThicknessAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ThicknessAnimation.EasingFunction></ThicknessAnimation>
                                                                         </Storyboard>
                                                                     </BeginStoryboard>
                                                                 </DataTrigger.EnterActions>

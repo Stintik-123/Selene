@@ -27,7 +27,7 @@ namespace Selene
         }
 
         private static readonly string[] Tabs = { "All", "Steam", "Epic Games", "GOG", "Xbox", "More stores" };
-        private const double TileW = 330, TileH = 155, Pitch = TileW + 26, RowH = 232;
+        private const double TileW = 420, TileH = 236, Pitch = TileW + 26, RowH = 318;
 
         // where you were, so coming back from a game's page puts you there again
         private static int savedTab, savedRow;
@@ -41,7 +41,8 @@ namespace Selene
         private readonly TranslateTransform rowShift = new TranslateTransform();
         private readonly Image heroA = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 }, heroB = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
         private bool heroFront;
-        private readonly TextBlock storeLabel, title, price, oldPrice, note, status;
+        private readonly TextBlock storeLabel, title, price, oldPrice, note, status, facts, about;
+        private bool rebuildQueued;
         private readonly Border discount, owned;
         private readonly StackPanel info;
         private readonly System.Windows.Threading.DispatcherTimer heroLater = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(160) };
@@ -52,6 +53,10 @@ namespace Selene
             tab = savedTab;
             rowIndex = savedRow;
 
+            // a dark base like Collection's (no wallpaper in the Store: the games' art is the picture here)
+            var dark = new Border();
+            dark.SetResourceReference(Border.BackgroundProperty, "SeleneScrimBrush");
+            Root.Children.Add(dark);
             // the focused game's picture: big, top right, melting into the backdrop (the Collection trailer's mask)
             var hero = new Grid { Width = 1500, Height = 844, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, IsHitTestVisible = false };
             var mask = SelenePaths.ThemeFile("Images", "TrailerMask.png");
@@ -61,6 +66,12 @@ namespace Selene
             hero.Children.Add(heroA);
             hero.Children.Add(heroB);
             Root.Children.Add(hero);
+            // a shade from the bottom under the rows
+            Root.Children.Add(new Border
+            {
+                IsHitTestVisible = false,
+                Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0, 0.45), Ink.Stop("SeleneScrimColor", 0.92, 0.75) }, 90)
+            });
             // a shade from the left keeps the text readable
             Root.Children.Add(new Border
             {
@@ -80,7 +91,7 @@ namespace Selene
             Root.Children.Add(tabBar);
 
             // the focused game: store, name, price
-            info = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(96, 170, 0, 0), MaxWidth = 900 };
+            info = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(96, 130, 0, 0), MaxWidth = 860 };
             storeLabel = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor") };
             title = new TextBlock { FontSize = 54, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
             var priceLine = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 18, 0, 0) };
@@ -92,17 +103,19 @@ namespace Selene
             owned.Child = new TextBlock { Text = "In your library", FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor") };
             priceLine.Children.Add(discount); priceLine.Children.Add(oldPrice); priceLine.Children.Add(price); priceLine.Children.Add(owned);
             note = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.7), Margin = new Thickness(0, 12, 0, 0) };
-            info.Children.Add(storeLabel); info.Children.Add(title); info.Children.Add(priceLine); info.Children.Add(note);
+            facts = new TextBlock { FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(0, 10, 0, 0) };
+            about = new TextBlock { FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.82), TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.WordEllipsis, MaxHeight = 84, LineHeight = 28, Margin = new Thickness(0, 14, 0, 0) };
+            info.Children.Add(storeLabel); info.Children.Add(title); info.Children.Add(facts); info.Children.Add(priceLine); info.Children.Add(note); info.Children.Add(about);
             Root.Children.Add(info);
 
             // rows of games; the focused row glides to the top of this area
-            var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 560, 0, 0), Height = 470, ClipToBounds = true };
+            var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 590, 0, 0), Height = 400, ClipToBounds = true };
             rowStack.RenderTransform = rowShift;
             rowStack.Margin = new Thickness(96, 0, 0, 0);
             rowsArea.Children.Add(new Canvas { Children = { rowStack } });
             Root.Children.Add(rowsArea);
 
-            status = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(98, 600, 0, 0) };
+            status = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(98, 640, 0, 0) };
             Root.Children.Add(status);
 
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Store apps"), Ui.Prompt("X", "Currency · " + StoreData.CurrencyCode)));
@@ -134,7 +147,9 @@ namespace Selene
         private void Arrived(string key)
         {
             if (!RowsFor(tab).Any(r => r.Item2.Contains(key))) { ShowStatus(); return; }
-            Build();
+            if (rebuildQueued) return;
+            rebuildQueued = true;
+            Root.Dispatcher.BeginInvoke(new Action(() => { rebuildQueued = false; if (!closed) Build(); }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         // the rows each tab shows, and the lists they're made of (mixed in turn)
@@ -180,7 +195,7 @@ namespace Selene
             rowStack.Children.Clear();
             foreach (var spec in RowsFor(tab))
             {
-                var items = Mix(spec.Item2);
+                var items = Mix(spec.Item2).Take(24).ToList();
                 if (items.Count == 0) continue;
                 var row = new Row { Title = spec.Item1, Items = items };
                 int saved;
@@ -220,22 +235,22 @@ namespace Selene
 
         private Tile MakeTile(StoreItem item, out Action load)
         {
-            var tile = new Tile(TileW, TileH, 14, 5) { FocusScale = 1.06 };
+            var tile = new Tile(TileW, TileH, 16, 5) { FocusScale = 1.06 };
             tile.Root.Margin = new Thickness(0, 0, Pitch - TileW, 0);
             var g = new Grid { ClipToBounds = true };
             var pic = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
             RenderOptions.SetBitmapScalingMode(pic, BitmapScalingMode.HighQuality);
-            g.Children.Add(new Border { CornerRadius = new CornerRadius(13), ClipToBounds = true, Child = pic });
+            g.Children.Add(new Border { CornerRadius = new CornerRadius(15), ClipToBounds = true, Child = pic });
             var url = StoreData.Sharp(item);
             load = () => Load(pic, url, 660);
             // price chip, bottom right
             var chip = new StackPanel { Orientation = Orientation.Horizontal };
             if (item.Discount > 0 && !item.Free)
-                chip.Children.Add(new Border { Background = Ink.Brush("SeleneFocusColor"), CornerRadius = new CornerRadius(6), Padding = new Thickness(6, 1, 6, 2), Margin = new Thickness(0, 0, 6, 0), Child = new TextBlock { Text = "-" + item.Discount + "%", FontSize = 14, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneOnFocusColor") } });
+                chip.Children.Add(new Border { Background = Ink.Brush("SeleneFocusColor"), CornerRadius = new CornerRadius(6), Padding = new Thickness(6, 1, 6, 2), Margin = new Thickness(0, 0, 6, 0), Child = new TextBlock { Text = "-" + item.Discount + "%", FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneOnFocusColor") } });
             var label = item.Free ? "Free" : item.Price ?? item.Note;
-            if (!string.IsNullOrEmpty(label)) chip.Children.Add(new TextBlock { Text = label, FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center });
+            if (!string.IsNullOrEmpty(label)) chip.Children.Add(new TextBlock { Text = label, FontSize = 18, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center });
             if (chip.Children.Count > 0)
-                g.Children.Add(new Border { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 8, 8), Padding = new Thickness(6, 4, 8, 4), CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)), Child = chip });
+                g.Children.Add(new Border { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 10, 10), Padding = new Thickness(6, 4, 10, 4), CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)), Child = chip });
             if (item.Owned)
                 g.Children.Add(new Border { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8), Padding = new Thickness(8, 2, 8, 3), CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)), Child = new TextBlock { Text = "Owned", FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Brushes.White } });
             tile.Face.Child = g;
@@ -287,6 +302,8 @@ namespace Selene
             owned.Visibility = item.Owned ? Visibility.Visible : Visibility.Collapsed;
             note.Text = item.Note ?? "";
             note.Visibility = string.IsNullOrEmpty(item.Note) || item.Note == price.Text ? Visibility.Collapsed : Visibility.Visible;
+            facts.Text = ""; about.Text = "";   // filled once the selection rests (ShowHero)
+            facts.Visibility = about.Visibility = Visibility.Collapsed;
             if (animate) { info.Opacity = 0.4; Ui.Fade(info, 1, 180); }
             heroLater.Stop();
             heroLater.Start();   // the big picture follows once the selection rests a moment
@@ -303,7 +320,18 @@ namespace Selene
             front.BeginAnimation(UIElement.OpacityProperty, null);
             front.Opacity = 0;
             Panel.SetZIndex(front, 1); Panel.SetZIndex(back, 0);
-            Load(front, item.Image, 1600);
+            var mine = new object();
+            front.Tag = mine;
+            StoreData.BigArt(item, url => { if (url != null && front.Tag == mine && !closed) Load(front, url, 1920); });
+            StoreData.LoadDetails(item, d =>
+            {
+                if (closed || Focused != item) return;
+                facts.Text = d == null ? "" : string.Join("   ·   ", new[] { d.Genres, d.Released, d.Score }.Where(x => !string.IsNullOrEmpty(x)));
+                about.Text = d != null ? d.About ?? "" : "";
+                facts.Visibility = facts.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+                about.Visibility = about.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+                Ui.Fade(about, 1, 220);
+            });
         }
 
         private void ShowStatus()
