@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Logo intro: stays about 5 seconds, long enough for the moon's glow to breathe twice (it moved on after under 3).
 - Play: the game fades in out of the black at the end of the loading screen (it cut in, with a flash).
 - Keyboards (Find a game, profile name): Left past the first key lands on the last, Right past the last on the first.
 - Smooth under load: the animated background's dust and the loading screen's slow art drift are drawn on threads of their own, so start-up work and a game's launch can't make them stumble.
