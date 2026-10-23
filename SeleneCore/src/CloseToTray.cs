@@ -214,7 +214,7 @@ namespace Selene
                 if (w != null) HomeNav.FadeInRoot(w.Content as UIElement);
             }
             SetOwnAudioMute(false);
-            HomeNav.RefreshLibrary("shown");
+            if (Features.On("startrefresh")) HomeNav.RefreshLibrary("shown");
             if (tray != null) tray.Visible = false;
         }
 

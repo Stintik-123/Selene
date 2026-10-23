@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Start-up: the library update Selene asks for 20 s after start (and when Playnite comes back from the tray) has a switch: Start-up, Library update at start.
 - Playnite's progress window (installing an add-on, updating the library) shows Selene's mark with its halo breathing under the words instead of a loading bar; the Playnite settings screen has Playnite's logo beside its title, with a breathing halo like Selene's mark.
 - Setup check: Left / Right between Install all and Done answer at once (the missing-add-ons list was read from disk on every move); Install all asks for the next add-on only once Playnite's restart question is out of the way (the two came up one over the other).
 - Collection: a game's trailer starts after the same wait as Spotlight's trailer cards (the Trailer cards after setting), not its own 4 seconds.

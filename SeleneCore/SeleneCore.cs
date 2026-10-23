@@ -241,6 +241,7 @@ namespace Selene
             new Option { Group = "Start-up", Key = "intro", Label = "Logo intro", About = "The Selene logo when Playnite starts." },
             new Option { Group = "Start-up", Key = "login", Label = "Who's playing?", About = "Pick a profile at start. Off: the last one signs in by itself." },
             new Option { Group = "Start-up", Key = "startcollection", Label = "Start on Collection", About = "Open on all your games instead of Spotlight.", DefaultOn = false },
+            new Option { Group = "Start-up", Key = "startrefresh", Label = "Library update at start", About = "Selene asks Playnite to look for new and removed games 20 s after it starts, and when it comes back from the tray. Only the small mark in the top bar shows it." },
             new Option { Group = "Navigation", Key = "viewswitch", Label = "View button", About = "Switches Spotlight and Collection. Hold it to search." },
             new Option { Group = "Navigation", Key = "hints", Label = "Button hints", About = "What each button does, along the bottom." },
             new Option { Group = "Navigation", Key = "playnitesettings", Label = "Playnite settings, Selene's way", About = "The menu's Playnite settings open as a Selene screen. Off: Playnite's own pages." },

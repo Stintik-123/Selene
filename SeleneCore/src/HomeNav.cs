@@ -54,7 +54,7 @@ namespace Selene
             LocalGames.StartRunningWatch();
             Smoothness.Start();
             var libTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
-            libTimer.Tick += (s, e) => { libTimer.Stop(); RefreshLibrary("start"); };
+            libTimer.Tick += (s, e) => { libTimer.Stop(); if (Features.On("startrefresh")) RefreshLibrary("start"); };   // the Library update at start switch
             libTimer.Start();
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown));
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnWindowPreviewGotFocus));
