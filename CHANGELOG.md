@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Smooth big screens: tiles are drawn once into textures and their focus glow exists only while focused (every tile blurred an invisible ring on each repaint), and the game details page and the profile editor's grids glide as one texture.
+- Choose your avatar / theme / background: the grid glides smoothly (a fade mask over it redrew every tile on each frame; the edge rows now fade on their own).
 - Game details: the glide between bands is smooth (the whole page was redrawn through a fade mask on every frame; now only the peeking band fades, and the move runs at the screen's rate).
 - Game details: the next band peeks in at the foot of the screen, cut off and blurred, as the store's rows do; B back to Spotlight is seamless (the home is back under the page before it closes).
 - Game details: the description shows whole lines with no fade; More like this is big covers without names; closing the details no longer flashes Playnite's library grid before Spotlight.

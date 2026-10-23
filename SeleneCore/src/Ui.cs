@@ -525,18 +525,25 @@ namespace Selene
             ring = new Border
             {
                 CornerRadius = new CornerRadius(radius + gap), Margin = new Thickness(-gap), BorderThickness = new Thickness(3),
-                BorderBrush = Ink.Brush("SeleneFocusColor"), Opacity = 0, IsHitTestVisible = false,
-                Effect = Ink.Track(new DropShadowEffect { ShadowDepth = 0, BlurRadius = 22, Opacity = 0.55 }, DropShadowEffect.ColorProperty, "SeleneFocusColor")
+                BorderBrush = Ink.Brush("SeleneFocusColor"), Opacity = 0, IsHitTestVisible = false
             };
+            // the ring's glow is a blur: it's on the ring only while the ring shows (hundreds of tiles each blurring an invisible
+            // ring on every repaint made big grids crawl)
+            glow = Ink.Track(new DropShadowEffect { ShadowDepth = 0, BlurRadius = 22, Opacity = 0.55 }, DropShadowEffect.ColorProperty, "SeleneFocusColor");
             Root.Children.Add(Face);
             Root.Children.Add(ring);
+            // drawn once into a texture: moving it, scaling it or repainting what's under it costs a blit, not a redraw
+            Root.CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = false };
         }
+
+        private DropShadowEffect glow;
 
         // a ring in a fixed color instead of the theme's focus color (each profile glows in its own theme's accent)
         public void Tint(Color color)
         {
             ring.BorderBrush = new SolidColorBrush(color);
-            ring.Effect = new DropShadowEffect { ShadowDepth = 0, BlurRadius = 26, Opacity = 0.7, Color = color };
+            glow = new DropShadowEffect { ShadowDepth = 0, BlurRadius = 26, Opacity = 0.7, Color = color };
+            if (Focused) ring.Effect = glow;
         }
 
         public void Focus(bool on)
@@ -544,7 +551,14 @@ namespace Selene
             if (on == Focused) return;
             Focused = on;
             Ui.ScaleTo(Root, on ? FocusScale : 1, on ? 200 : 160);
+            if (on) ring.Effect = glow;
             Ui.Fade(ring, on ? 1 : 0, on ? 180 : 140);
+            if (!on)
+            {
+                var gone = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(160) };
+                gone.Tick += (s, e) => { gone.Stop(); if (!Focused) ring.Effect = null; };
+                gone.Start();
+            }
         }
     }
 

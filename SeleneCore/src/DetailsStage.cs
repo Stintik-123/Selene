@@ -55,6 +55,8 @@ namespace Selene
                 var page = Part<Grid>("SeleneDetailsPage");
                 shift = page != null ? page.RenderTransform as TranslateTransform : null;
                 if (page == null) { HomeNav.Log("details stage: no page in the template"); return; }
+                // the page glides as one texture (redrawing its texts' halos, blurs and pictures on every frame made the move crawl)
+                if (page.CacheMode == null) page.CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = false };
                 if (shownId != g.Id || zone == 0) { zone = 0; if (shift != null) { shift.BeginAnimation(TranslateTransform.YProperty, null); shift.Y = 0; } }
                 if (shownId != g.Id) GameMedia.OnSelected(g, null);   // the screenshots follow Spotlight's row; here the game may be another (Collection's pick)
                 shownId = g.Id;
@@ -238,7 +240,7 @@ namespace Selene
             var glide = new DoubleAnimation(to, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() };
             Timeline.SetDesiredFrameRate(glide, 144);   // the page is big: at WPF's 60 steps a second the move looked choppy on a fast screen
             shift.BeginAnimation(TranslateTransform.YProperty, glide);
-            Blur(true);
+            Blur(false);   // at once: a blur or fade still changing during the glide would redraw the cached page on every frame
         }
 
         // the bands below the one in view are blurred (they peek in at the foot of the screen, as the store's rows do)
