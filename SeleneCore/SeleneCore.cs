@@ -24,6 +24,9 @@ namespace Selene
             Features.Init(settings.Settings, () => SavePluginSettings(settings.Settings));
             Profiles.Init(GetPluginUserDataPath());
             Properties = new GenericPluginProperties { HasSettings = true };
+            // Playnite selects its first elements while starting, and each played the move sound: quiet until the
+            // login is up (or the user's first press)
+            if (Active) HomeNav.QuietFocus(8000);
         }
 
         private bool Active

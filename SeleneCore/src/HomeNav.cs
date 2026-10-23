@@ -1570,10 +1570,17 @@ namespace Selene
                 if (current != IntPtr.Zero) { savedNavigateSound = current; navigateSound.SetValue(null, IntPtr.Zero, null); }
                 if (quietTimer == null)
                 {
-                    quietTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                    // checks often: at startup Playnite loads its move sound while Selene is already quiet, and the first
+                    // focus right after must find it emptied too
+                    quietTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Send) { Interval = TimeSpan.FromMilliseconds(15) };
                     quietTimer.Tick += (s, e) =>
                     {
-                        if (DateTime.Now < quietUntil) return;
+                        if (DateTime.Now < quietUntil)
+                        {
+                            var loaded = (IntPtr)navigateSound.GetValue(null, null);
+                            if (loaded != IntPtr.Zero) { savedNavigateSound = loaded; navigateSound.SetValue(null, IntPtr.Zero, null); }
+                            return;
+                        }
                         quietTimer.Stop();
                         if (savedNavigateSound != IntPtr.Zero && (IntPtr)navigateSound.GetValue(null, null) == IntPtr.Zero) navigateSound.SetValue(null, savedNavigateSound, null);
                     };

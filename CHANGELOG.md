@@ -6,7 +6,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 - The menu is a panel along the bottom (like a console control center): one row for Selene and Playnite, one for power, the home still in view above.
 - Update library starts right away in the background; if an update is already running, the menu says what it is doing instead of waiting.
-- No more moving sound when you sign in or press Play (Selene moving focus itself sounded like a move).
+- No more moving sound when Playnite starts, when you sign in or when you press Play (Selene or Playnite moving focus itself sounded like a move).
 - Theme step: each theme shows its own wallpaper on its tile, and a strip of its colors sits under the preview.
 - Signing in no longer flashes the old home for a moment before the home's intro plays.
 - Selene settings (menu, and the add-on's settings page): turn off the logo intro, Who's playing? at start, interface sounds, music control, button hints, glow and particles, freezing games on Guide, close to tray or no-prompt launchers.
