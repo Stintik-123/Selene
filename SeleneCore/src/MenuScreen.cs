@@ -19,7 +19,7 @@ namespace Selene
     {
         private class Item
         {
-            public string Icon, Label;
+            public string Icon, Label, Sub;   // Sub: a second, quieter line (the profile item's action)
             public FrameworkElement Picture;   // instead of an icon (the profile's avatar)
             public Action Run;
         }
@@ -28,7 +28,7 @@ namespace Selene
         private readonly List<Item> items = new List<Item>();
         private readonly List<Grid> cells = new List<Grid>();
         private readonly List<Ellipse> rings = new List<Ellipse>();
-        private readonly List<TextBlock> labels = new List<TextBlock>();
+        private readonly List<FrameworkElement> labels = new List<FrameworkElement>();
         private readonly List<ScaleTransform> scales = new List<ScaleTransform>();
         private readonly StackPanel bar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 70) };
         private readonly TextBlock status = new TextBlock { FontSize = 16, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 30) };
@@ -65,7 +65,7 @@ namespace Selene
         public MenuScreen()
         {
             var profile = Profiles.Active;
-            items.Add(new Item { Icon = Ui.Icon(0xe853), Label = profile != null ? profile.Name + " · Switch profile" : "Switch profile", Picture = profile != null ? WhoScreen.Avatar(profile, 52) : null, Run = () => LoginScene.Show(new WhoScreen(null), 1) });
+            items.Add(new Item { Icon = Ui.Icon(0xe853), Label = profile != null ? profile.Name : "Switch profile", Sub = profile != null ? "Switch profile" : null, Picture = profile != null ? WhoScreen.Avatar(profile, 52) : null, Run = () => LoginScene.Show(new WhoScreen(null), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe3c9), Label = "Edit profile", Run = EditProfile });
             items.Add(new Item { Icon = Ui.Icon(0xe40a), Label = "Theme", Run = ChangeTheme });
             items.Add(new Item { Icon = Ui.Icon(0xe627), Label = "Update library", Run = UpdateLibrary });
@@ -78,14 +78,22 @@ namespace Selene
 
             foreach (var item in items)
             {
-                var cell = new Grid { Width = Cell, Height = Ring + 44 };
-                // the name floats above the icon, wider than the cell
-                var label = new TextBlock
+                var cell = new Grid { Width = Cell, Height = Ring + 74 };
+                // the name floats above the icon in a glass pill, wider than the cell; the profile's has its action under it
+                var words = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+                words.Children.Add(new TextBlock { Text = item.Label, FontSize = 18, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center });
+                if (item.Sub != null) words.Children.Add(new TextBlock { Text = item.Sub, FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 1, 0, 0) });
+                var pill = new Border
                 {
-                    Text = item.Label, FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Opacity = 0,
-                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, TextAlignment = TextAlignment.Center,
-                    Width = 260, Margin = new Thickness(-82, 0, -82, 0), RenderTransform = new TranslateTransform(0, 6)
+                    Child = words, Background = Ink.Brush("SeleneGlassColor", 0.85), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(12), Padding = new Thickness(16, 7, 16, 8), HorizontalAlignment = HorizontalAlignment.Center
                 };
+                var label = new Grid
+                {
+                    Opacity = 0, Width = 300, Margin = new Thickness(-102, 0, -102, 0), VerticalAlignment = VerticalAlignment.Bottom,
+                    RenderTransform = new TranslateTransform(0, 6)
+                };
+                label.Children.Add(new Border { Child = pill, VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, Ring + 12) });
                 var dot = new Grid { Width = Ring, Height = Ring, VerticalAlignment = VerticalAlignment.Bottom, RenderTransformOrigin = new Point(0.5, 0.5) };
                 var scale = new ScaleTransform(1, 1);
                 dot.RenderTransform = scale;

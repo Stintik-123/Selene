@@ -15,6 +15,10 @@ namespace Selene
         {
             slot = w != null ? HomeNav.FindByName(w, "SeleneTopProfile") as Grid : null;
             if (slot == null) { HomeNav.Log("top profile: no slot"); return; }
+            // the menu (and the other screens of that layer) cover the top bar's right side: the profile steps away meanwhile
+            var layer = HomeNav.FindByName(w, "AcceuilSettings") as UIElement;
+            if (layer != null) layer.IsVisibleChanged += (s, e) =>
+                slot.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation((bool)e.NewValue ? 0 : 1, TimeSpan.FromMilliseconds((bool)e.NewValue ? 140 : 260)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
             Refresh();
         }
 
