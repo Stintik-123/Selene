@@ -5,7 +5,7 @@ using System.Windows.Media.Animation;
 
 namespace Selene
 {
-    // The signed-in profile in the top bar (Spotlight and Collection), left of the clock: avatar and name. Follows signing
+    // The signed-in profile in the top bar (Spotlight and Collection), left of the clock: the avatar. Follows signing
     // in, switching and editing profiles (Profiles.ApplyLook). Switch: "topprofile".
     public static class TopProfile
     {
@@ -31,11 +31,6 @@ namespace Selene
             var avatar = WhoScreen.Avatar(p, 44);
             avatar.VerticalAlignment = VerticalAlignment.Center;
             line.Children.Add(avatar);
-            line.Children.Add(new TextBlock
-            {
-                Text = p.Name, FontSize = 22, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"),
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0)
-            });
             slot.Children.Clear();
             slot.Children.Add(line);
             slot.Visibility = Visibility.Visible;

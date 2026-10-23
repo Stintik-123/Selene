@@ -217,7 +217,7 @@ namespace Selene
             new Option { Group = "Sound & music", Key = "music", Label = "Music control", About = "Default music while browsing, a game's song with its trailer." },
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },
             new Option { Group = "Look", Key = "brand", Label = "Selene logo", About = "The logo in Selene settings and on empty screens." },
-            new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar and name beside the clock." },
+            new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
             new Option { Group = "Look", Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game and its trailer plays. R3 for its sound." },
             new Option { Group = "Games", Key = "freeze", Label = "Freeze on Guide", About = "Guide pauses offline games. Off: they're only muted." },

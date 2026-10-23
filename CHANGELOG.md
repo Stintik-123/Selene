@@ -6,7 +6,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 - Spotlight: moving between the Store and Library cards no longer makes the row bounce.
 - Menu: the profile shows its name with "Switch profile" under it. The top bar's profile steps away while the menu is open.
-- The signed-in profile (avatar and name) in the top bar beside the clock. Switch: Selene settings, Look, Profile in the top bar.
+- The signed-in profile's avatar in the top bar beside the clock. Switch: Selene settings, Look, Profile in the top bar.
 - Collection trailers: the wallpaper no longer shows through as a trailer starts or stops, and moving on from a trailer no longer flashes the last game's art.
 - The Selene logo around the theme: a header on Selene settings, and a softly glowing mark on empty screens and while Playnite is busy. Switch: Selene settings, Look, Selene logo.
 - Back from Collection to a game on Spotlight, its art is there right away, with no wait and no wallpaper showing for a moment (Spotlight keeps its own art while Collection shows).
