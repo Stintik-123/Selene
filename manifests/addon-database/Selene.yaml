@@ -1,0 +1,25 @@
+AddonId: 'Selene_a98e0027-fa6a-4f5e-a087-bad8d69f2443'
+Type: ThemeFullscreen
+Name: 'Selene'
+Author: 'Matthew Silva'
+ShortDescription: 'A calm, console-style fullscreen theme: one row of your games with the art filling the screen, profiles, trailer cards and 23 color themes. Pair it with the Selene Core add-on.'
+Description: |
+    Selene is a fullscreen theme named after the Greek goddess of the moon. Spotlight shows one row of your games with the art filling the screen and the tile growing into the trailer when you rest on it; Collection is Playnite's full grid in the same look. 23 color themes, each with its own wallpaper.
+
+    Install the Selene Core add-on with it: it brings Who's playing? profiles, the Store page, your captures, Activity, the loading screen that waits for the game, and a settings screen where everything can be switched off.
+InstallerManifestUrl: https://raw.githubusercontent.com/mattxslv/Selene/main/manifests/Selene.yaml
+SourceUrl: https://github.com/mattxslv/Selene
+Links:
+    GitHub: https://github.com/mattxslv/Selene
+    Guide: https://github.com/mattxslv/Selene/blob/main/docs/guide/README.md
+IconUrl: https://raw.githubusercontent.com/mattxslv/Selene/main/SeleneCore/icon.png
+Screenshots:
+    - Thumbnail: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/library.png
+      Image: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/library.png
+    - Thumbnail: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/home.png
+      Image: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/home.png
+    - Thumbnail: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/details.png
+      Image: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/details.png
+    - Thumbnail: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/store.png
+      Image: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/store.png
+Tags: ['Fullscreen', 'Console', 'Controller', 'Profiles', 'Trailers']

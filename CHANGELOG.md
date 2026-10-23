@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Other PCs: a note on the home when the Extra Metadata add-on (logos, trailers) isn't installed, pointing at the setup check (switch: Start-up, Add-on hint); Copy log in the menu puts both logs on the clipboard for a bug report (switch: Navigation); games that start through Ubisoft Connect, the EA app, Rockstar, Battle.net or the Xbox app get longer waits on the loading screen; Selene speaks Playnite's language when theme\Localization has a file for it (switch: Look), with a way to collect every phrase for translators.
 - Other PCs: text falls back to Segoe UI where Segoe UI Variable is missing (Windows 10); the details page's activity block hangs from the right edge, so screens that aren't 16:9 keep it on screen; the drifting dust stays off when WPF has no graphics card to draw with.
 ## 1.0.0 - 2026-10-23
 

@@ -40,6 +40,7 @@ namespace Selene
             if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use, staying off"); return; }
             HomeNav.Api = PlayniteApi;
             HomeNav.Install();
+            if (Features.On("translate")) Lang.Load(PlayniteApi);
             try { if (Features.On("quietbackups")) LudusaviApp.Quiet(PlayniteApi); }
             catch (Exception ex) { logger.Warn("Selene Core: couldn't quieten Ludusavi: " + ex.Message); }
             try { Profiles.ApplyLook(); }
@@ -242,8 +243,10 @@ namespace Selene
             new Option { Group = "Start-up", Key = "login", Label = "Who's playing?", About = "Pick a profile at start. Off: the last one signs in by itself." },
             new Option { Group = "Start-up", Key = "startcollection", Label = "Start on Collection", About = "Open on all your games instead of Spotlight.", DefaultOn = false },
             new Option { Group = "Start-up", Key = "startrefresh", Label = "Library update at start", About = "Selene asks Playnite to look for new and removed games 20 s after it starts, and when it comes back from the tray. Only the small mark in the top bar shows it." },
+            new Option { Group = "Start-up", Key = "setuphint", Label = "Add-on hint", About = "A note on the home when logos and trailers need the Extra Metadata add-on and it isn't installed." },
             new Option { Group = "Navigation", Key = "viewswitch", Label = "View button", About = "Switches Spotlight and Collection. Hold it to search." },
             new Option { Group = "Navigation", Key = "hints", Label = "Button hints", About = "What each button does, along the bottom." },
+            new Option { Group = "Navigation", Key = "copylog", Label = "Copy log in the menu", About = "A menu entry that copies Selene's and Playnite's logs, for a bug report." },
             new Option { Group = "Navigation", Key = "playnitesettings", Label = "Playnite settings, Selene's way", About = "The menu's Playnite settings open as a Selene screen. Off: Playnite's own pages." },
             new Option { Group = "Spotlight", Key = "cardactivity", Label = "Activity card", About = "What you've been playing: most played, last played and the numbers." },
             new Option { Group = "Spotlight", Key = "cardcaptures", Label = "Captures card", About = "Your screenshots and clips from Steam, Xbox Game Bar and the NVIDIA app." },
@@ -260,6 +263,7 @@ namespace Selene
             new Option { Group = "Look", Key = "brand", Label = "Selene logo", About = "The logo in Selene settings and on empty screens." },
             new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
             new Option { Group = "Look", Key = "textshadow", Label = "Readable text", About = "A soft halo behind text so it reads over bright pictures." },
+            new Option { Group = "Look", Key = "translate", Label = "Selene in Playnite's language", About = "Selene's words follow Playnite's language when theme\\Localization has a file for it." },
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
             new Option { Group = "Look", Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game and its trailer plays. R3 for its sound." },
             new Option { Group = "Look", Key = "shade", Label = "Shade over the art", About = "How much the home darkens the picture behind its words.", Choices = new[] { "0.7", "1", "1.3" }, Names = new[] { "Lighter", "As needed", "Deeper" }, Default = "1" },

@@ -6,7 +6,8 @@
 
 **Start** opens a control-center row along the bottom over the dimmed home: switch or edit your profile, update the
 library, Selene settings, the setup check, Playnite's settings and desktop mode. **Power** on the row opens sleep,
-restart, shut down and exit right above it. Hold Start to go straight to Selene settings.
+restart, shut down and exit right above it. Hold Start to go straight to Selene settings. **Copy log** puts the tail of Selene's and Playnite's logs on the clipboard, ready to paste into
+a GitHub issue.
 
 **Playnite's settings** open as a Selene screen: General, Visuals, Audio, Layout, Menus and Input as sections, their
 settings as Selene's switches and choices, saved straight into Playnite. A row opens Playnite's own pages for the

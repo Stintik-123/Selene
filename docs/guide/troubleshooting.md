@@ -17,7 +17,7 @@ Run the setup check from the menu; it installs what's missing.
 **A game's loading screen stays too long.** Selene waits until the game's window is up and it's making sound. Games
 that start silent get a time limit; tell us which game and it can be tuned.
 
-**Logs.** Selene writes `%TEMP%\selene.log`; Playnite writes `%APPDATA%\Playnite\playnite.log`. Both help a lot in an
+**Logs.** Menu → Copy log puts both logs on the clipboard. By hand: Selene writes `%TEMP%\selene.log`; Playnite writes `%APPDATA%\Playnite\playnite.log`. Both help a lot in an
 issue.
 
 **Known limits.** Windows only (WPF). The clips the browser plays (AV1) start a moment later than the others. Store

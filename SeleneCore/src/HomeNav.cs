@@ -5,6 +5,7 @@
 // the key handled. Everything else is left to the old theme plugin.
 // Loaded by the ClaudeLibraryTools extension via Add-Type (C# 5: no ?. or string interpolation).
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -1192,7 +1193,9 @@ namespace Selene
             try
             {
                 var t = sender as TextBlock;
-                if (t == null || t.Effect != null || !Features.On("textshadow")) return;
+                if (t == null) return;
+                Lang.Apply(t);   // Selene's words in Playnite's language, when there's a file for it
+                if (t.Effect != null || !Features.On("textshadow")) return;
                 var b = t.Foreground as SolidColorBrush;
                 if (b == null || b.Opacity < 0.45) return;
                 var ink = Ink.Of("SeleneInkColor");
@@ -4151,6 +4154,26 @@ namespace Selene
         private static bool launching;
         private static bool coverCancelledByGuide;
         private static Guid launchGameId = Guid.Empty;
+        // games that start through another launcher (Ubisoft Connect, the EA app, Rockstar, Battle.net, the Xbox app) take
+        // longer before anything of the game shows: their waits are stretched by this
+        private static double launchGrace = 1;
+        private static readonly string[] slowLaunchers = { "ubisoft", "uplay", "ea app", "ea play", "origin", "rockstar", "battle.net", "blizzard", "xbox", "microsoft store" };
+        private static double LaunchGrace(Guid id)
+        {
+            try
+            {
+                var g = Api != null ? Api.Database.Games.Get(id) : null;
+                if (g == null) return 1;
+                var names = new List<string>();
+                if (g.Source != null) names.Add(g.Source.Name);
+                var plugin = Api.Addons.Plugins.FirstOrDefault(p => p.Id == g.PluginId);
+                if (plugin != null) names.Add(plugin.GetType().Name);
+                if (g.GameActions != null) foreach (var act in g.GameActions) { if (act.Path != null) names.Add(act.Path); if (act.Arguments != null) names.Add(act.Arguments); }
+                foreach (var n in names) { var low = n.ToLowerInvariant(); foreach (var k in slowLaunchers) if (low.Contains(k)) { Log("play: launcher game (" + n + "), longer waits"); return 2.2; } }
+            }
+            catch (Exception ex) { Log("play: launcher check " + ex.Message); }
+            return 1;
+        }
         private static IntPtr steamDialog = IntPtr.Zero;
         private static int steamDialogTicks;
         private static DateTime launchStart;
@@ -4581,6 +4604,7 @@ namespace Selene
                 soundSince = DateTime.MinValue;
                 lastSoundAt = DateTime.MinValue;
                 launchGameId = gameId;
+                launchGrace = LaunchGrace(gameId);
                 coverCancelledByGuide = false;
                 steamDialog = IntPtr.Zero;
                 steamDialogTicks = 0;
@@ -4678,7 +4702,7 @@ namespace Selene
             IntPtr readyWindow = IntPtr.Zero;
             string why = null;
             if (ours && sounding) { readyWindow = found; why = "game window + sound"; }
-            else if (gameWindowSeenAt != DateTime.MinValue && (now - gameWindowSeenAt).TotalSeconds >= 12 && lastGameWindow != IntPtr.Zero && IsWindow(lastGameWindow))
+            else if (gameWindowSeenAt != DateTime.MinValue && (now - gameWindowSeenAt).TotalSeconds >= 12 * launchGrace && lastGameWindow != IntPtr.Zero && IsWindow(lastGameWindow))
             { readyWindow = lastGameWindow; why = "game window up 12 s, no sound"; }
             else if (soundSince != DateTime.MinValue && (now - soundSince).TotalSeconds >= 10 && found == IntPtr.Zero)
             {

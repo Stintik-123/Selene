@@ -71,6 +71,7 @@ namespace Selene
             var status = HomeNav.FindByName(main, "PART_ElemGameStatus") as UIElement;
             if (status != null) status.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) HomeNav.GameStatusShown(); };
             hub.Command = new Relay(ShowHome);
+            AddonHintLater();
             var menuButton = HomeNav.FindByName(main, "PART_ButtonMainMenu") as ButtonBase;
             if (menuButton != null) menuButton.Command = new Relay(OpenMenu);
             // every way Playnite opens its main menu (Start, keys, the button) opens Selene's; Playnite's own stays reachable
@@ -210,6 +211,33 @@ namespace Selene
             };
             home.BeginAnimation(UIElement.OpacityProperty, fadeOut);
             HomeNav.Log("shell: library");
+        }
+
+        // a note on the home when the Extra Metadata add-on (logos, trailers) isn't installed: Spotlight looks bare without it and
+        // nothing says why; the setup check installs it
+        private static void AddonHintLater()
+        {
+            if (!Features.On("setuphint")) return;
+            int waited = 0;
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            t.Tick += (s, e) =>
+            {
+                if (++waited > 40) { t.Stop(); return; }
+                if (LoginScene.IsActive || CollectionActive) return;
+                var home = Part("WelcomeHubOverlay");
+                if (home == null || !home.IsVisible) return;
+                t.Stop();
+                try
+                {
+                    var api = HomeNav.Api;
+                    if (api == null) return;
+                    bool missing = false;
+                    foreach (var a in SetupCheck.MissingIncluded(api)) if (a.Id.StartsWith("ExtraMetadataLoader")) missing = true;
+                    if (missing) Ui.Notice("Logos and trailers come with the Extra Metadata add-on. Menu, Setup check installs it.", 9000);
+                }
+                catch (Exception ex) { HomeNav.Log("add-on hint: " + ex.Message); }
+            };
+            t.Start();
         }
 
         public static void ShowHome() { ShowHome(false); }

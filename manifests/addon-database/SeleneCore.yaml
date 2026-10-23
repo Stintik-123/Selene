@@ -1,0 +1,21 @@
+AddonId: 'SeleneCore_cd424c29-97f4-4dd0-aa66-4d8e01cc8724'
+Type: Generic
+Name: 'Selene Core'
+Author: 'Matthew Silva'
+ShortDescription: 'The companion add-on of the Selene fullscreen theme: profiles, the Store page, captures, Activity, the loading screen and Selene settings. Does nothing without the theme.'
+Description: |
+    Selene Core only works while the Selene fullscreen theme is in use. It adds what a theme alone can't: Who's playing? profiles with their own avatar, theme and wallpaper; the Store page with free games, sales and new releases; your screenshots and clips from Steam, Xbox Game Bar and the NVIDIA app; Activity; Surprise me; a loading screen with the game's art that waits until the game is really on screen; Playnite's settings, dialogs and menus in Selene's look; and Selene settings, where every one of these can be switched off.
+InstallerManifestUrl: https://raw.githubusercontent.com/mattxslv/Selene/main/manifests/SeleneCore.yaml
+SourceUrl: https://github.com/mattxslv/Selene
+Links:
+    GitHub: https://github.com/mattxslv/Selene
+    Guide: https://github.com/mattxslv/Selene/blob/main/docs/guide/README.md
+IconUrl: https://raw.githubusercontent.com/mattxslv/Selene/main/SeleneCore/icon.png
+Screenshots:
+    - Thumbnail: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/captures.png
+      Image: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/captures.png
+    - Thumbnail: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/activity.png
+      Image: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/activity.png
+    - Thumbnail: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/loading.png
+      Image: https://raw.githubusercontent.com/mattxslv/Selene/main/docs/screenshots/loading.png
+Tags: ['Generic', 'Fullscreen', 'Selene', 'Profiles', 'Store', 'Captures']

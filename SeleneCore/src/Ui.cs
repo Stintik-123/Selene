@@ -162,6 +162,44 @@ namespace Selene
         }
 
         // moving and confirming go through Playnite's own player (same sound, same volume as its views); the file is the fallback
+        // a short note at the top of the screen (a glass pill): rises in, stays a few seconds, fades; one at a time
+        private static Border notice;
+        public static void Notice(string text, int ms = 5000)
+        {
+            try
+            {
+                var w = Application.Current != null ? Application.Current.MainWindow : null;
+                var host = w != null ? HomeNav.FindByName(w, "PART_MainHost") as Grid : null;
+                if (host == null) return;
+                if (notice != null) { host.Children.Remove(notice); notice = null; }
+                var pill = new Border
+                {
+                    CornerRadius = new CornerRadius(22), Padding = new Thickness(26, 11, 26, 13), MaxWidth = 900,
+                    Background = Ink.Brush("SeleneGlassColor", 0.94), BorderBrush = Ink.Brush("SeleneInkColor", 0.18), BorderThickness = new Thickness(1),
+                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 26, 0, 0),
+                    Child = new TextBlock { Text = text, FontSize = 19, FontFamily = Body, Foreground = Ink.Brush("SeleneInkColor"), TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center },
+                    Effect = new DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
+                    IsHitTestVisible = false
+                };
+                Grid.SetRowSpan(pill, 99); Grid.SetColumnSpan(pill, 99);
+                Panel.SetZIndex(pill, 9999);
+                host.Children.Add(pill);
+                notice = pill;
+                Rise(pill, 0, 12, 260);
+                var gone = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
+                gone.Tick += (s2, e2) =>
+                {
+                    gone.Stop();
+                    if (notice != pill) return;
+                    var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(320)) { EasingFunction = Out() };
+                    fade.Completed += (s3, e3) => { host.Children.Remove(pill); if (notice == pill) notice = null; };
+                    pill.BeginAnimation(UIElement.OpacityProperty, fade);
+                };
+                gone.Start();
+            }
+            catch (Exception ex) { HomeNav.Log("notice: " + ex.Message); }
+        }
+
         public static void Tick() { if (Features.On("sounds") && !HomeNav.PlayPlayniteSound(false)) Play("navigation.wav", 0.7); }
         public static void Key() { Play("Key.wav", 0.8); }              // typing, erasing, flipping a switch
         public static void Confirm() { if (Features.On("sounds") && !HomeNav.PlayPlayniteSound(true)) Play("activation.wav", 0.85); }

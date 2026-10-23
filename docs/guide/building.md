@@ -23,3 +23,10 @@ into `%APPDATA%\Playnite\Themes\Fullscreen\Selene_a98e0027-fa6a-4f5e-a087-bad8d6
 **Releasing:** `python tools/release.py <version>` moves the Unreleased notes to the version and sets it everywhere;
 commit and push; `tools\package.ps1`; then
 `gh release create v<version> dist\Selene.pthm dist\SeleneCore.pext --title "Selene <version>"`.
+
+## Translating
+
+Selene's words follow Playnite's language when `theme/Localization` has a file for it: `de_DE.txt`, or `de.txt` for
+every German. One phrase per line, English on the left, the translation on the right, separated by ` = `. To collect
+every English phrase, create an empty file `%TEMP%\selene-strings`, use Selene for a while, and read
+`%TEMP%\selene-strings.txt`. Details in `theme/Localization/README.txt`. Pull requests with translations are welcome.
