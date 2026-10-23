@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Moving and confirming sound the same everywhere: Selene's screens play them through Playnite's own player (one volume).
 - Switching between Spotlight and Collection: no old game art fading out on Spotlight, and Collection's art arrives sooner.
 - Collection: an achievements bar above the covers (Playnite Achievements: unlocked / total and a progress bar, gold trophy when complete), and holding a direction moves as fast as on Spotlight.
 - Collection: the game's logo, chips and genres slide in together when you move to another game.

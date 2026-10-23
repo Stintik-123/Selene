@@ -1686,6 +1686,41 @@ namespace Selene
             catch (Exception ex) { Log("quiet focus: " + ex.Message); }
         }
 
+        // ONE player for moving and confirming everywhere: Selene's screens ask Playnite's own sound player (the one that
+        // plays when the selection moves in Playnite's views, at its interface volume), so every move sounds the same.
+        // During a quiet moment its move sound is emptied: it's put in just for this one play. False if Playnite's player
+        // can't be reached (the caller plays the file itself then).
+        private static MethodInfo playNavigate, playActivate;
+
+        public static bool PlayPlayniteSound(bool confirm)
+        {
+            try
+            {
+                if (playNavigate == null)
+                {
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        var t = asm.GetType("Playnite.FullscreenApp.FullscreenApplication", false);
+                        if (t == null) continue;
+                        const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+                        playNavigate = t.GetMethod("PlayNavigateSound", any);
+                        playActivate = t.GetMethod("PlayActivateSound", any);
+                        if (navigateSound == null) navigateSound = t.GetProperty("NavigateSound", any);
+                        break;
+                    }
+                    if (playNavigate == null || playActivate == null) return false;
+                }
+                if (confirm) { playActivate.Invoke(null, null); return true; }
+                var current = navigateSound != null ? (IntPtr)navigateSound.GetValue(null, null) : IntPtr.Zero;
+                bool borrow = current == IntPtr.Zero && savedNavigateSound != IntPtr.Zero;
+                if (borrow) navigateSound.SetValue(null, savedNavigateSound, null);
+                playNavigate.Invoke(null, null);
+                if (borrow) navigateSound.SetValue(null, IntPtr.Zero, null);
+                return true;
+            }
+            catch (Exception ex) { Log("playnite sound: " + ex.Message); return false; }
+        }
+
         public static void EndQuietFocus()
         {
             if (quietUntil == DateTime.MinValue) return;
