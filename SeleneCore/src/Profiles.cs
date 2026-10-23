@@ -280,6 +280,7 @@ namespace Selene
             Wallpapers.Show(wallpaper);
             LoginScene.RefreshBackdrop();
             ApplyHomeBackground(p != null ? p.HomeBackground : null);
+            TopProfile.Refresh();
         }
 
         public static readonly string[] HomeBackgrounds = { "art", "wallpaper" };

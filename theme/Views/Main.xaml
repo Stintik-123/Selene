@@ -990,6 +990,8 @@
                                     <ButtonEx x:Name="PART_ButtonMainMenu" VerticalAlignment="Center" Style="{DynamicResource ButtonTopMenu}" Margin="10,0,16,0" Height="48" MinWidth="48" Visibility="Collapsed">
                                         <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource SeleneInkBrush}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </ButtonEx>
+                                    <!-- the signed-in profile: avatar and name (Selene Core fills it; the "Profile in the top bar" switch) -->
+                                    <Grid x:Name="SeleneTopProfile" VerticalAlignment="Center" Margin="0,0,28,0" Visibility="Collapsed" IsHitTestVisible="False"/>
                                     <TextBlock x:Name="PART_TextClock" Foreground="{DynamicResource SeleneInkBrush}" FontSize="30" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                 </StackPanel>
                             </Grid>

@@ -155,6 +155,7 @@ namespace Selene
                 var key = options[index].Key;
                 Features.Set(key, !Features.On(key));
                 if (key == "brand") Brand.Apply();
+                if (key == "topprofile") TopProfile.Refresh();
                 Ui.Key();
                 ShowSwitch(index, true);
                 if (key == "hints") HomeHints.Update();
