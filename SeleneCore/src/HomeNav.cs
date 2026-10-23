@@ -1802,8 +1802,8 @@ namespace Selene
         {
             var cover = introCover;
             if (cover == null || !(VisualTreeHelper.GetParent(cover) is Panel)) return;
-            // once the home's rebuild is done and drawn under it (it melts away on its own thread, smooth however busy)
-            cover.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(320)), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            // as the home's intro starts, so its whole fly-in is seen (it melts away on its own thread, smooth however busy)
+            cover.FadeOut(260);
         }
 
         private static bool introDone;
