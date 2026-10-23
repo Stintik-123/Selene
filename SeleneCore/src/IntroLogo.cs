@@ -66,6 +66,23 @@ namespace Selene
             ready.WaitOne(2000);
         }
 
+        private Grid rootEl;
+        private TranslateTransform liftTr;
+
+        // the way out: the logo fades as it lifts a little (on its own thread, like the rest of it)
+        public void FadeOut(int ms)
+        {
+            var d = logoThread;
+            if (d == null) return;
+            d.BeginInvoke(new Action(() =>
+            {
+                if (rootEl == null) return;
+                var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+                rootEl.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(ms)) { EasingFunction = ease });
+                if (liftTr != null) liftTr.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-14, TimeSpan.FromMilliseconds(ms)) { EasingFunction = ease });
+            }));
+        }
+
         public void Stop()
         {
             var d = logoThread;
@@ -77,6 +94,7 @@ namespace Selene
         private Grid Build(int delayMs)
         {
             var root = new Grid { Width = size, Height = size, Opacity = 0 };
+            rootEl = root;
             var canvas = new Canvas { Width = 72, Height = 72 };
             var view = new Viewbox { Child = canvas, Stretch = Stretch.Uniform };
             var haloBrush = new RadialGradientBrush();
@@ -100,6 +118,7 @@ namespace Selene
             // rise in: fade and lift
             var lift = new TranslateTransform(0, 16);
             root.RenderTransform = lift;
+            liftTr = lift;
             var begin = TimeSpan.FromMilliseconds(delayMs);
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900)) { BeginTime = begin, EasingFunction = ease });

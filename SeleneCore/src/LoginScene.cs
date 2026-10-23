@@ -531,7 +531,7 @@ namespace Selene
     }
 
     // ---------------- logo intro ----------------
-    // about 4.5 s: the crescent crown rises in, the full moon's glow swells and breathes twice, a chime, then on to the next screen
+    // about 2.6 s: the crescent crown rises in, the full moon's glow breathes once, a chime, the logo fades out, then on to the next screen
     public class IntroScreen : Screen
     {
         private readonly IntroLogo logo = new IntroLogo(190);
@@ -555,7 +555,7 @@ namespace Selene
             {
                 ticks++;
                 if (ticks == 1) Ui.Boot();
-                if (ticks >= 10) Next();   // about 4.5 s: the halo swells, settles and breathes twice before the next screen (2.7 s felt rushed)
+                if (ticks >= 6) Next();
             };
             timer.Start();
         }
@@ -580,8 +580,16 @@ namespace Selene
             done = true;
             LoginScene.AllowBackdropVideo();
             if (timer != null) timer.Stop();
-            if (LoginScene.SignInLast()) LoginScene.Finish();
-            else LoginScene.Show(LoginScene.Start(), 0);
+            // the logo fades out as it lifts, then the next screen
+            logo.FadeOut(380);
+            var then = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(340) };
+            then.Tick += (s, e) =>
+            {
+                then.Stop();
+                if (LoginScene.SignInLast()) LoginScene.Finish();
+                else LoginScene.Show(LoginScene.Start(), 0);
+            };
+            then.Start();
         }
     }
 
