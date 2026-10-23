@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Store: opens smoothly (its tiles are made as they come near the screen, and it's built once instead of twice while it fades in).
 - Store game page, redone: the game's screenshots fill the screen behind (a row of them along the bottom, Left / Right show each one), the store's logo, name, genres, release date, score, price and description on the left, and one main button: Play or Install when the game is in your library, Get it free, or Buy on its store. The cheapest price in another store shows when there is one (Y opens it), and Down shows more games from the same store.
 - Text over bright pictures: the home's shading deepens as much as the wallpaper or game art behind it needs (a shade behind the top bar too), and the text halo is stronger.
 - Signing in: the wallpaper no longer jumps as the login clears (the cover placed it differently from the home).

@@ -45,7 +45,7 @@ namespace Selene
         private bool heroFront;
         private readonly System.Windows.Shapes.Path storeIcon;
         private readonly TextBlock storeLabel, title, price, oldPrice, note, status, facts, about;
-        private bool rebuildQueued;
+        private bool rebuildQueued, opening;
         private readonly Border discount, owned;
         private readonly StackPanel info;
         private readonly System.Windows.Threading.DispatcherTimer heroLater = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(160) };
@@ -156,9 +156,11 @@ namespace Selene
         public override void Shown()
         {
             ShowTabs(false);
+            opening = true;
+            StoreData.Load(key => { if (!closed && !opening) Arrived(key); });   // the saved lists come in at once: built below
+            opening = false;
             Build();
             Ui.Rise(info, 60, 16, 320);
-            StoreData.Load(key => { if (!closed) Arrived(key); });
         }
 
         public override void Hidden() { closed = true; heroLater.Stop(); }
@@ -223,7 +225,7 @@ namespace Selene
                 var block = new StackPanel { Height = RowH };
                 block.Children.Add(new TextBlock { Text = row.Title, FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(2, 0, 0, 14) });
                 row.Panel = new StackPanel { Orientation = Orientation.Horizontal, RenderTransform = row.Shift };
-                foreach (var item in items) { Action load; var tile = MakeTile(item, out load); row.Tiles.Add(tile); row.Loaders.Add(load); row.Panel.Children.Add(tile.Root); }
+                EnsureTiles(row, 8);   // the rest as you scroll (EnsureTiles in LoadNearby)
                 block.Children.Add(row.Panel);
                 row.Block = block;
                 rowStack.Children.Add(block);
@@ -257,23 +259,33 @@ namespace Selene
                 foreach (var item in StoreData.List(key))
                 {
                     if (!have.Add(StoreData.Key(item.Title ?? ""))) continue;
-                    row.Items.Add(item);
-                    Action load;
-                    var tile = MakeTile(item, out load);
-                    row.Tiles.Add(tile);
-                    row.Loaders.Add(load);
-                    row.Panel.Children.Add(tile.Root);
+                    row.Items.Add(item);   // its tile is made when it comes near
                 }
             }
             LoadNearby();
         }
 
         // the pictures of the tiles on or near the screen (a row above and two below, a few tiles around the focused one)
+        // a row's tiles up to `upTo` games (made only as they come near the screen)
+        private void EnsureTiles(Row row, int upTo)
+        {
+            int end = Math.Min(row.Items.Count, upTo);
+            while (row.Tiles.Count < end)
+            {
+                Action load;
+                var tile = MakeTile(row.Items[row.Tiles.Count], out load);
+                row.Tiles.Add(tile);
+                row.Loaders.Add(load);
+                row.Panel.Children.Add(tile.Root);
+            }
+        }
+
         private void LoadNearby()
         {
             for (int r = Math.Max(0, rowIndex - 1); r < Math.Min(rows.Count, rowIndex + 3); r++)
             {
                 var row = rows[r];
+                EnsureTiles(row, row.Index + 8);
                 for (int i = Math.Max(0, row.Index - 2); i < Math.Min(row.Loaders.Count, row.Index + 6); i++)
                 {
                     var load = row.Loaders[i];
