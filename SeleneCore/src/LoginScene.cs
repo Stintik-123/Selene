@@ -463,58 +463,21 @@ namespace Selene
     // about 2.6 s: the crescent crown rises in, the full moon's glow breathes once, a chime, then on to the next screen
     public class IntroScreen : Screen
     {
-        private readonly FrameworkElement content;
-        private readonly UIElement glow;
+        private readonly IntroLogo logo = new IntroLogo(190);
         private DispatcherTimer timer;
         private bool done;
 
         public IntroScreen()
         {
-            var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            UIElement halo;
-            col.Children.Add(Ui.Mark(190, out halo));
-            glow = halo;
-            content = col;
-            Root.Children.Add(col);
+            logo.HorizontalAlignment = HorizontalAlignment.Center;
+            logo.VerticalAlignment = VerticalAlignment.Center;
+            Root.Children.Add(logo);
         }
 
         public override void Shown()
         {
-            // Playnite is at its busiest right at startup (library, the home row, pictures): the logo waits for the first
-            // quiet moment so its rise doesn't stutter (at most 1.2 s)
-            content.Opacity = 0;
-            bool started = false;
-            Action go = () => { if (started || done) return; started = true; Begin(); };
-            var fallback = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
-            fallback.Tick += (s, e) => { fallback.Stop(); go(); };
-            fallback.Start();
-            Root.Dispatcher.BeginInvoke(new Action(() => { fallback.Stop(); go(); }), DispatcherPriority.ApplicationIdle);
-        }
-
-        private void Begin()
-        {
-            Ui.Rise(content, 120, 16, 900);
-            var breathe = new DoubleAnimationUsingKeyFrames();
-            breathe.KeyFrames.Add(new LinearDoubleKeyFrame(0.4, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            breathe.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1300)), new SineEase { EasingMode = EasingMode.EaseInOut }));
-            breathe.KeyFrames.Add(new EasingDoubleKeyFrame(0.65, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2100)), new SineEase { EasingMode = EasingMode.EaseInOut }));
-            // then it keeps glowing: a slow breath, and the halo swells a little with it
-            breathe.Completed += (s, e) =>
-            {
-                if (done) return;
-                glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.65, 1, TimeSpan.FromMilliseconds(1100)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
-            };
-            glow.BeginAnimation(UIElement.OpacityProperty, breathe);
-            var halo = glow as FrameworkElement;
-            if (halo != null)
-            {
-                halo.RenderTransformOrigin = new Point(0.5, 0.5);
-                var swell = new ScaleTransform(1, 1);
-                halo.RenderTransform = swell;
-                var grow = new DoubleAnimation(0.94, 1.08, TimeSpan.FromMilliseconds(1100)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
-                swell.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
-                swell.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
-            }
+            // the logo animates on its own thread (IntroLogo): smooth however busy Playnite's start-up keeps the main one
+            logo.Start(120);
             int ticks = 0;
             timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
             timer.Tick += (s, e) =>
@@ -531,7 +494,14 @@ namespace Selene
             if (button == "A" || button == "B" || button == "Start") Next();
         }
 
-        public override void Hidden() { if (timer != null) timer.Stop(); }
+        public override void Hidden()
+        {
+            if (timer != null) timer.Stop();
+            // its thread goes once the intro has slid away (stopping it at once made the logo vanish mid-fade)
+            var later = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+            later.Tick += (s, e) => { later.Stop(); logo.Stop(); };
+            later.Start();
+        }
 
         private void Next()
         {

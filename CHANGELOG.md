@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- The logo intro runs on its own thread, so it stays smooth while Playnite starts up; screenshots come back when you return to a game on Spotlight; going back to Spotlight from a trailer shows the game's art again.
 - Collection: LS no longer opens Playnite's filter-preset list (the tabs do filtering); its hint is gone.
 - Entering Collection, the game's art eases in smoothly instead of popping up.
 - Back to Spotlight from Collection: its art is emptied at once (no faint frame of the last game); the start-up background is never black (the video fades in after the intro).

@@ -88,7 +88,14 @@ namespace Selene
         {
             var g = AsGame(o);
             if (g == null) { Clear(); return; }  // Capture / Store / Library tiles: no game, no strip
-            if (g.Id == shown) return;
+            if (g.Id == shown)
+            {
+                // back on the game already loaded (moved away and back before another loaded): the strip had started to
+                // fade out on the way away, so it comes back
+                var strip = Strip();
+                if (strip != null && strip.Opacity < 0.99) strip.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(1, TimeSpan.FromMilliseconds(200)));
+                return;
+            }
             List<ShotItem> items;
             if (cache.TryGetValue(g.Id, out items)) { Apply(g.Id, items); return; }
             Clear();  // never leave the previous game's pictures up while this one loads

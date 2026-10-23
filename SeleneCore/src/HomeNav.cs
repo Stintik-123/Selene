@@ -1043,7 +1043,8 @@ namespace Selene
                 // the home's art layer kept following the library's game while hidden: blank it at once and fade it back
                 // in once it has the right picture (none for a card), instead of fading the library game's art out
                 var art = FindByName(w, "SeleneHubArt") as UIElement;
-                if (art != null) foreach (var cf in FindAll(art, d => d is SeleneCrossfade)) ((SeleneCrossfade)cf).Clear();
+                // emptied, then loaded again for Spotlight's own game (the same game as Collection's left nothing to reload them)
+                if (art != null) foreach (var cf in FindAll(art, d => d is SeleneCrossfade)) { var x = (SeleneCrossfade)cf; x.Clear(); if (game != null) x.Dispatcher.BeginInvoke(new Action(x.Refresh), System.Windows.Threading.DispatcherPriority.Background); }   // after the selection below is set
                 if (art != null)
                 {
                     var keys = new DoubleAnimationUsingKeyFrames();
