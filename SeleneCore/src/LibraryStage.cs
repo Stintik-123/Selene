@@ -30,7 +30,7 @@ namespace Selene
             host = HomeNav.FindByName(w, "SeleneLibraryTrailerHost") as Grid;
             rsHint = HomeNav.FindByName(w, "SeleneLibraryRsHint") as TextBlock;
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
-            arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+            arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };   // like Aniki: about 2 s on a game
             arm.Tick += (s, e) => { arm.Stop(); Play(); };
             list.SelectionChanged += (s, e) => Rearm();
             library.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Rearm(); else Stop(); };
@@ -64,10 +64,14 @@ namespace Selene
                 player.MediaOpened += (s, e) =>
                 {
                     if (video != player) return;
-                    Fade(true);
-                    HomeNav.SetMusic("trailer");   // the game's song comes with its trailer
-                    if (rsHint != null && videoHasSound) rsHint.Text = "Trailer sound";
-                    CropBars(player);
+                    // black cinema bars are measured while it's still hidden, so any crop is in place before it shows
+                    CropBars(player, () =>
+                    {
+                        if (video != player) return;
+                        Fade(true);
+                        HomeNav.SetMusic("trailer");   // the game's song comes with its trailer
+                        if (rsHint != null && videoHasSound) rsHint.Text = "Trailer sound";
+                    });
                 };
                 player.MediaFailed += (s, e) => { HomeNav.Log("library trailer failed: " + e.ErrorException.Message); Stop(); };
                 video = player;
@@ -92,30 +96,26 @@ namespace Selene
             return true;
         }
 
-        // Many trailers carry black cinema bars inside their 16:9 picture: looked at a few times while it plays (the first
-        // seconds are often a fade from black), and if there are bars at the top and bottom the video is zoomed just
-        // enough to push them off screen, so the picture reaches the top edge, behind the clock
-        private static void CropBars(MediaElement player)
+        // Many trailers carry black cinema bars inside their 16:9 picture. Measured twice while the trailer is still hidden
+        // (0.6 s and 0.9 s in); only when both agree is it zoomed, at once, just enough to push the bars off screen, so the
+        // picture reaches the top edge. Then `show`. A trailer starting on black frames just isn't cropped (no zoom later).
+        private static void CropBars(MediaElement player, Action show)
         {
             player.RenderTransformOrigin = new Point(0.5, 0.5);
-            var zoom = new ScaleTransform(1, 1);
-            player.RenderTransform = zoom;
-            int[] at = { 1500, 3000, 6000 };
-            int step = 0;
-            var look = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(at[0]) };
+            double first = 0;
+            var look = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
             look.Tick += (s, e) =>
             {
-                look.Stop();
-                if (video != player) return;
+                if (video != player) { look.Stop(); return; }
                 double scale = BarZoom(player);
-                if (scale > zoom.ScaleX + 0.01)
+                if (first == 0) { first = scale; look.Interval = TimeSpan.FromMilliseconds(300); return; }
+                look.Stop();
+                if (scale > 1.02 && Math.Abs(scale - first) < 0.03)
                 {
-                    var grow = new DoubleAnimation(scale, TimeSpan.FromMilliseconds(500)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
-                    zoom.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
-                    zoom.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+                    player.RenderTransform = new ScaleTransform(scale, scale);
                     HomeNav.Log("library trailer: black bars, zoomed to " + scale.ToString("0.00"));
                 }
-                if (++step < at.Length) { look.Interval = TimeSpan.FromMilliseconds(at[step] - at[step - 1]); look.Start(); }
+                show();
             };
             look.Start();
         }
@@ -146,6 +146,9 @@ namespace Selene
                 int bottom = 0; while (bottom < h && dark(h - 1 - bottom)) bottom++;
                 int band = Math.Min(top, bottom);
                 if (band < h * 0.05 || Math.Abs(top - bottom) > h * 0.05) return 1;   // no bars, or not even ones
+                // a real bar ends on a sharp edge (a dark scene fades out instead): the first rows past it hold picture
+                Func<int, double> mean = y => { double sum = 0; for (int x = 0; x < w; x++) { int i = (y * w + x) * 4; sum += px[i] + px[i + 1] + px[i + 2]; } return sum / (w * 3); };
+                if (mean(Math.Min(h - 1, top + 1)) < 40 || mean(Math.Max(0, h - 2 - bottom)) < 40) return 1;
                 return Math.Min(1.45, h / (double)(h - 2 * band));
             }
             catch { return 1; }

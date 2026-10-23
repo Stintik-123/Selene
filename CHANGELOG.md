@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Library: the game's playtime, last played, platform, release year and genres under its logo; trailers start after 2 seconds on a game, and are never zoomed while playing.
+- No menu button in the top bar (Start opens the menu).
 - Home filters switch with LB / RB instead of the triggers.
 - No notification bell in the top bar. Home hints along the bottom: Library and Menu (with their holds) on the left, what the focused thing does on the right.
 - New library: the game's art behind its big logo, and when you rest on a game its trailer takes over the background (black fade on the left) with the game's song, R3 for the trailer's sound (trailers with black cinema bars are zoomed so the picture reaches the top); one row of big covers close together, no names, no scrollbar, hints along the bottom like the home.

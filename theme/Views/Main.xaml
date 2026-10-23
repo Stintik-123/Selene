@@ -68,7 +68,8 @@
                                 </Border>
 
                                 <!-- the game's logo (or name), big, on the left -->
-                                <Grid Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="150,0,0,0" Width="640" Height="300">
+                                <StackPanel Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="150,0,0,0" Width="640">
+                                <Grid Height="250">
                                     <TextBlock x:Name="SeleneLibraryLogoPath" Tag="{Api Paths.ConfigurationPath}" Visibility="Collapsed">
                                         <TextBlock.Text>
                                             <MultiBinding StringFormat="{}{0}\ExtraMetadata\games\{1}\logo.png">
@@ -78,7 +79,7 @@
                                         </TextBlock.Text>
                                     </TextBlock>
                                     <Image x:Name="SeleneLibraryLogo" Source="{Binding ElementName=SeleneLibraryLogoPath, Path=Text, Converter={StaticResource ImageStringToImageConverter}, NotifyOnTargetUpdated=True}"
-                                           MaxWidth="600" MaxHeight="280" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="Fant">
+                                           MaxWidth="600" MaxHeight="240" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Bottom" RenderOptions.BitmapScalingMode="Fant">
                                         <Image.RenderTransform><TranslateTransform x:Name="LibraryLogoShift" X="0"/></Image.RenderTransform>
                                         <Image.Triggers>
                                             <EventTrigger RoutedEvent="Binding.TargetUpdated">
@@ -98,7 +99,7 @@
                                         </Image.Triggers>
                                     </Image>
                                     <TextBlock Text="{Binding SelectedGame.DisplayName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="56" FontFamily="{DynamicResource FontMain}"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="220">
+                                               HorizontalAlignment="Center" VerticalAlignment="Bottom" TextAlignment="Center" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="220">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -111,8 +112,44 @@
                                         </TextBlock.Style>
                                     </TextBlock>
                                 </Grid>
+                                <!-- the game at a glance: playtime, last played, where it's from, its year; genres under -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,28,0,0">
+                                    <StackPanel Margin="0,0,26,0">
+                                        <TextBlock Text="PLAYTIME" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                        <TextBlock Text="{Binding SelectedGame.Playtime, Mode=OneWay, Converter={StaticResource PlayTimeToStringConverter}}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                    <StackPanel Margin="0,0,26,0">
+                                        <TextBlock Text="LAST PLAYED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                        <TextBlock Text="{Binding SelectedGame.LastActivity, Mode=OneWay, StringFormat='{}{0:MMM d, yyyy}', TargetNullValue=Never}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                    <StackPanel Margin="0,0,26,0">
+                                        <TextBlock Text="PLATFORM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                        <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                    <StackPanel>
+                                        <TextBlock Text="RELEASED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                        <TextBlock Text="{Binding SelectedGame.ReleaseYear, Mode=OneWay, TargetNullValue=-, FallbackValue=-}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <!-- genres as soft chips -->
+                                <ItemsControl ItemsSource="{Binding SelectedGame.Genres}" HorizontalAlignment="Center" Margin="0,18,0,0" Focusable="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="14" Padding="14,5,14,6" Margin="4,0,4,8" Background="{DynamicResource SeleneInk15Brush}" BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1">
+                                                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="15" FontFamily="Segoe UI"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                </StackPanel>
 
-                                <!-- button hints, a thin line under them -->
+                                <!-- button hints along the bottom, split like the home -->
                                 <Border Grid.Row="3" Margin="64,0,64,0" VerticalAlignment="Center">
                                     <Border.Resources>
                                         <Style x:Key="HintBadge" TargetType="Border">
@@ -853,7 +890,8 @@
                                             </Style>
                                         </Button.Style>
                                     </ButtonEx>
-                                    <ButtonEx x:Name="PART_ButtonMainMenu" VerticalAlignment="Center" Style="{DynamicResource ButtonTopMenu}" Margin="10,0,16,0" Height="48" MinWidth="48">
+                                    <!-- the menu opens with Start (or Menu); the part stays for Playnite, hidden -->
+                                    <ButtonEx x:Name="PART_ButtonMainMenu" VerticalAlignment="Center" Style="{DynamicResource ButtonTopMenu}" Margin="10,0,16,0" Height="48" MinWidth="48" Visibility="Collapsed">
                                         <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource SeleneInkBrush}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </ButtonEx>
                                     <TextBlock x:Name="PART_TextClock" Foreground="{DynamicResource SeleneInkBrush}" FontSize="30" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,0"/>
