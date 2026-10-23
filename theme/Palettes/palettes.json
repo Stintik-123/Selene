@@ -6,7 +6,15 @@
     "Accent": "#9CCBFF",
     "Background": "#0A142C",
     "Foreground": "#EBEBEB",
-    "Wallpaper": ""
+    "Wallpaper": "",
+    "Swatches": [
+      "#0a142c",
+      "#1a2a4a",
+      "#ebebeb",
+      "#9ccbff",
+      "#ff6b6b",
+      "#3ddc84"
+    ]
   },
   {
     "Id": "catppuccin-latte",
@@ -15,7 +23,19 @@
     "Accent": "#1e66f5",
     "Background": "#eff1f5",
     "Foreground": "#4c4f69",
-    "Wallpaper": "Wallpapers/catppuccin-latte/1-color-fade.png"
+    "Wallpaper": "Wallpapers/catppuccin-latte/1-color-fade.png",
+    "Swatches": [
+      "#eff1f5",
+      "#dce0e8",
+      "#4c4f69",
+      "#1e66f5",
+      "#d20f39",
+      "#d84e2b",
+      "#df8e1d",
+      "#40a02b",
+      "#179299",
+      "#ea76cb"
+    ]
   },
   {
     "Id": "catppuccin",
@@ -24,7 +44,19 @@
     "Accent": "#89b4fa",
     "Background": "#1e1e2e",
     "Foreground": "#cdd6f4",
-    "Wallpaper": "Wallpapers/catppuccin/1-totoro.png"
+    "Wallpaper": "Wallpapers/catppuccin/1-totoro.png",
+    "Swatches": [
+      "#1e1e2e",
+      "#313244",
+      "#cdd6f4",
+      "#89b4fa",
+      "#f38ba8",
+      "#f6b6ab",
+      "#f9e2af",
+      "#a6e3a1",
+      "#94e2d5",
+      "#f5c2e7"
+    ]
   },
   {
     "Id": "ethereal",
@@ -33,7 +65,19 @@
     "Accent": "#7d82d9",
     "Background": "#060B1E",
     "Foreground": "#ffcead",
-    "Wallpaper": "Wallpapers/ethereal/1-cosmic.jpg"
+    "Wallpaper": "Wallpapers/ethereal/1-cosmic.jpg",
+    "Swatches": [
+      "#060b1e",
+      "#131a3a",
+      "#ffcead",
+      "#7d82d9",
+      "#ed5b5a",
+      "#eb8b54",
+      "#e9bb4f",
+      "#92a593",
+      "#a3bfd1",
+      "#c89dc1"
+    ]
   },
   {
     "Id": "everforest",
@@ -42,7 +86,19 @@
     "Accent": "#7fbbb3",
     "Background": "#2d353b",
     "Foreground": "#d3c6aa",
-    "Wallpaper": "Wallpapers/everforest/1-tree-tops.jpg"
+    "Wallpaper": "Wallpapers/everforest/1-tree-tops.jpg",
+    "Swatches": [
+      "#2d353b",
+      "#343f44",
+      "#d3c6aa",
+      "#7fbbb3",
+      "#e67e80",
+      "#e09d7f",
+      "#dbbc7f",
+      "#a7c080",
+      "#83c092",
+      "#d699b6"
+    ]
   },
   {
     "Id": "flexoki-light",
@@ -51,7 +107,19 @@
     "Accent": "#205EA6",
     "Background": "#FFFCF0",
     "Foreground": "#100F0F",
-    "Wallpaper": "Wallpapers/flexoki-light/1-orb.png"
+    "Wallpaper": "Wallpapers/flexoki-light/1-orb.png",
+    "Swatches": [
+      "#fffcf0",
+      "#e6e4d9",
+      "#100f0f",
+      "#205ea6",
+      "#d14d41",
+      "#d0772b",
+      "#d0a215",
+      "#879a39",
+      "#3aa99f",
+      "#ce5d97"
+    ]
   },
   {
     "Id": "gruvbox",
@@ -60,7 +128,19 @@
     "Accent": "#7daea3",
     "Background": "#282828",
     "Foreground": "#d4be98",
-    "Wallpaper": "Wallpapers/gruvbox/1-the-backwater.jpg"
+    "Wallpaper": "Wallpapers/gruvbox/1-the-backwater.jpg",
+    "Swatches": [
+      "#282828",
+      "#3c3836",
+      "#d4be98",
+      "#7daea3",
+      "#ea6962",
+      "#e1875c",
+      "#d8a657",
+      "#a9b665",
+      "#89b482",
+      "#d3869b"
+    ]
   },
   {
     "Id": "hackerman",
@@ -69,7 +149,20 @@
     "Accent": "#82FB9C",
     "Background": "#0B0C16",
     "Foreground": "#ddf7ff",
-    "Wallpaper": "Wallpapers/hackerman/1-synth-scape.jpg"
+    "Wallpaper": "Wallpapers/hackerman/1-synth-scape.jpg",
+    "Swatches": [
+      "#0b0c16",
+      "#151828",
+      "#ddf7ff",
+      "#82fb9c",
+      "#50f872",
+      "#50f7a3",
+      "#50f7d4",
+      "#4fe88f",
+      "#7cf8f7",
+      "#829dd4",
+      "#86a7df"
+    ]
   },
   {
     "Id": "kanagawa",
@@ -78,7 +171,19 @@
     "Accent": "#dcd7ba",
     "Background": "#1f1f28",
     "Foreground": "#dcd7ba",
-    "Wallpaper": "Wallpapers/kanagawa/1-kanagawa.jpg"
+    "Wallpaper": "Wallpapers/kanagawa/1-kanagawa.jpg",
+    "Swatches": [
+      "#1f1f28",
+      "#223249",
+      "#dcd7ba",
+      "#c34043",
+      "#c17158",
+      "#c0a36e",
+      "#76946a",
+      "#6a9589",
+      "#7e9cd8",
+      "#957fb8"
+    ]
   },
   {
     "Id": "last-horizon",
@@ -87,7 +192,17 @@
     "Accent": "#b59790",
     "Background": "#0c0b0c",
     "Foreground": "#FAFCFB",
-    "Wallpaper": "Wallpapers/last-horizon/1-eyes-wide.jpg"
+    "Wallpaper": "Wallpapers/last-horizon/1-eyes-wide.jpg",
+    "Swatches": [
+      "#0c0b0c",
+      "#fafcfb",
+      "#b59790",
+      "#c38b7b",
+      "#6b5e73",
+      "#87a9b0",
+      "#a5a0b6",
+      "#c4d8e2"
+    ]
   },
   {
     "Id": "lumon",
@@ -96,7 +211,18 @@
     "Accent": "#8bc9eb",
     "Background": "#16242d",
     "Foreground": "#d6e2ee",
-    "Wallpaper": "Wallpapers/lumon/01-united-in-severance.jpg"
+    "Wallpaper": "Wallpapers/lumon/01-united-in-severance.jpg",
+    "Swatches": [
+      "#16242d",
+      "#1b2d40",
+      "#d6e2ee",
+      "#8bc9eb",
+      "#4d86b0",
+      "#6fa4c9",
+      "#5e95bc",
+      "#b4e4f6",
+      "#6fb8e3"
+    ]
   },
   {
     "Id": "lupine",
@@ -105,7 +231,18 @@
     "Accent": "#3264eb",
     "Background": "#fafafa",
     "Foreground": "#212121",
-    "Wallpaper": "Wallpapers/lupine/01-cherry-blossom-bokeh.jpg"
+    "Wallpaper": "Wallpapers/lupine/01-cherry-blossom-bokeh.jpg",
+    "Swatches": [
+      "#fafafa",
+      "#f5f5f5",
+      "#212121",
+      "#3264eb",
+      "#c900c4",
+      "#026fde",
+      "#4a2fd0",
+      "#0c67de",
+      "#8a4ad7"
+    ]
   },
   {
     "Id": "matte-black",
@@ -114,7 +251,17 @@
     "Accent": "#e68e0d",
     "Background": "#121212",
     "Foreground": "#bebebe",
-    "Wallpaper": "Wallpapers/matte-black/0-ship-at-sea.jpg"
+    "Wallpaper": "Wallpapers/matte-black/0-ship-at-sea.jpg",
+    "Swatches": [
+      "#121212",
+      "#1e1e1e",
+      "#bebebe",
+      "#e68e0d",
+      "#d35f5f",
+      "#c63d3d",
+      "#b91c1c",
+      "#ffc107"
+    ]
   },
   {
     "Id": "miasma",
@@ -123,7 +270,19 @@
     "Accent": "#78824b",
     "Background": "#222222",
     "Foreground": "#c2c2b0",
-    "Wallpaper": "Wallpapers/miasma/01-nature-of-fear.jpg"
+    "Wallpaper": "Wallpapers/miasma/01-nature-of-fear.jpg",
+    "Swatches": [
+      "#222222",
+      "#2c2c2c",
+      "#c2c2b0",
+      "#78824b",
+      "#685742",
+      "#8d6242",
+      "#b36d43",
+      "#5f875f",
+      "#c9a554",
+      "#bb7744"
+    ]
   },
   {
     "Id": "nord",
@@ -132,7 +291,19 @@
     "Accent": "#81a1c1",
     "Background": "#2e3440",
     "Foreground": "#d8dee9",
-    "Wallpaper": "Wallpapers/nord/0-black-moon.jpg"
+    "Wallpaper": "Wallpapers/nord/0-black-moon.jpg",
+    "Swatches": [
+      "#2e3440",
+      "#3b4252",
+      "#d8dee9",
+      "#81a1c1",
+      "#bf616a",
+      "#d5967a",
+      "#ebcb8b",
+      "#a3be8c",
+      "#88c0d0",
+      "#b48ead"
+    ]
   },
   {
     "Id": "osaka-jade",
@@ -141,7 +312,19 @@
     "Accent": "#509475",
     "Background": "#111c18",
     "Foreground": "#C1C497",
-    "Wallpaper": "Wallpapers/osaka-jade/1-glowing-city.jpg"
+    "Wallpaper": "Wallpapers/osaka-jade/1-glowing-city.jpg",
+    "Swatches": [
+      "#111c18",
+      "#23372b",
+      "#c1c497",
+      "#509475",
+      "#ff5345",
+      "#a2734b",
+      "#459451",
+      "#549e6a",
+      "#2dd5b7",
+      "#d2689c"
+    ]
   },
   {
     "Id": "retro-82",
@@ -150,7 +333,18 @@
     "Accent": "#faa968",
     "Background": "#05182e",
     "Foreground": "#f6dcac",
-    "Wallpaper": "Wallpapers/retro-82/1-in-the-groove.jpg"
+    "Wallpaper": "Wallpapers/retro-82/1-in-the-groove.jpg",
+    "Swatches": [
+      "#05182e",
+      "#0a2540",
+      "#f6dcac",
+      "#faa968",
+      "#f85525",
+      "#e97b3c",
+      "#028391",
+      "#8cbfb8",
+      "#3f8f8a"
+    ]
   },
   {
     "Id": "ristretto",
@@ -159,7 +353,19 @@
     "Accent": "#f38d70",
     "Background": "#2c2525",
     "Foreground": "#e6d9db",
-    "Wallpaper": "Wallpapers/ristretto/0-launch.png"
+    "Wallpaper": "Wallpapers/ristretto/0-launch.png",
+    "Swatches": [
+      "#2c2525",
+      "#3d2f2a",
+      "#e6d9db",
+      "#f38d70",
+      "#fd6883",
+      "#fb9a77",
+      "#f9cc6c",
+      "#adda78",
+      "#85dacc",
+      "#a8a9eb"
+    ]
   },
   {
     "Id": "rose-pine",
@@ -168,7 +374,19 @@
     "Accent": "#56949f",
     "Background": "#faf4ed",
     "Foreground": "#575279",
-    "Wallpaper": "Wallpapers/rose-pine/1-funky-shapes.jpg"
+    "Wallpaper": "Wallpapers/rose-pine/1-funky-shapes.jpg",
+    "Swatches": [
+      "#faf4ed",
+      "#f2e9e1",
+      "#575279",
+      "#56949f",
+      "#b4637a",
+      "#cf8057",
+      "#ea9d34",
+      "#286983",
+      "#d7827e",
+      "#907aa9"
+    ]
   },
   {
     "Id": "solitude",
@@ -177,7 +395,17 @@
     "Accent": "#798186",
     "Background": "#101315",
     "Foreground": "#cacccc",
-    "Wallpaper": "Wallpapers/solitude/1-on-pole.jpg"
+    "Wallpaper": "Wallpapers/solitude/1-on-pole.jpg",
+    "Swatches": [
+      "#101315",
+      "#cacccc",
+      "#798186",
+      "#565d60",
+      "#d9dbdc",
+      "#9fa5a9",
+      "#707070",
+      "#aeaeae"
+    ]
   },
   {
     "Id": "tokyo-night",
@@ -186,7 +414,19 @@
     "Accent": "#7aa2f7",
     "Background": "#1a1b26",
     "Foreground": "#a9b1d6",
-    "Wallpaper": "Wallpapers/tokyo-night/0-winding-road.jpg"
+    "Wallpaper": "Wallpapers/tokyo-night/0-winding-road.jpg",
+    "Swatches": [
+      "#1a1b26",
+      "#24283b",
+      "#a9b1d6",
+      "#7aa2f7",
+      "#f7768e",
+      "#eb927b",
+      "#e0af68",
+      "#9ece6a",
+      "#449dab",
+      "#ad8ee6"
+    ]
   },
   {
     "Id": "vantablack",
@@ -195,7 +435,19 @@
     "Accent": "#8d8d8d",
     "Background": "#000000",
     "Foreground": "#ffffff",
-    "Wallpaper": "Wallpapers/vantablack/0-dot-hands.jpg"
+    "Wallpaper": "Wallpapers/vantablack/0-dot-hands.jpg",
+    "Swatches": [
+      "#000000",
+      "#1a1a1a",
+      "#ffffff",
+      "#8d8d8d",
+      "#a4a4a4",
+      "#b9b9b9",
+      "#cecece",
+      "#b6b6b6",
+      "#b0b0b0",
+      "#9b9b9b"
+    ]
   },
   {
     "Id": "white",
@@ -204,6 +456,18 @@
     "Accent": "#6e6e6e",
     "Background": "#ffffff",
     "Foreground": "#000000",
-    "Wallpaper": "Wallpapers/white/1-white.jpg"
+    "Wallpaper": "Wallpapers/white/1-white.jpg",
+    "Swatches": [
+      "#ffffff",
+      "#c0c0c0",
+      "#000000",
+      "#6e6e6e",
+      "#2a2a2a",
+      "#4a4a4a",
+      "#3a3a3a",
+      "#3e3e3e",
+      "#1a1a1a",
+      "#2e2e2e"
+    ]
   }
 ]

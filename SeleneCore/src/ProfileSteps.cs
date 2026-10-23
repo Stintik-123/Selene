@@ -638,6 +638,7 @@ namespace Selene
             private readonly List<ThemeInfo> themes;
             private readonly List<Tile> tiles = new List<Tile>();
             private readonly TextBlock nameLabel;
+            private readonly StackPanel colors = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 18, 0, 0) };
             private readonly Later apply = new Later(110);
             private int index;
 
@@ -651,11 +652,22 @@ namespace Selene
                 row.Children.Add(grid);
                 var right = new StackPanel { Margin = new Thickness(60, 0, 0, 0) };
                 right.Children.Add(Preview(780));
-                nameLabel = new TextBlock { FontSize = 26, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(4, 18, 0, 0) };
+                right.Children.Add(colors);
+                nameLabel = new TextBlock { FontSize = 26, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(4, 12, 0, 0) };
                 right.Children.Add(nameLabel);
                 row.Children.Add(right);
                 Root.Children.Add(row);
                 index = Math.Max(0, themes.FindIndex(t => string.Equals(t.Id, owner.Theme, StringComparison.OrdinalIgnoreCase)));
+                // each tile shows its theme's own wallpaper (themes without one keep their plain color)
+                var pictures = themes.Select(t => ThemePalettes.DefaultWallpaper(t.Id)).ToList();
+                Ui.LoadInOrder(pictures, 280, (i, pic) =>
+                {
+                    if (i >= tiles.Count) return;
+                    var layer = new Border { CornerRadius = new CornerRadius(13), Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill }, Opacity = 0 };
+                    var host = (Grid)tiles[i].Face.Child;
+                    host.Children.Insert(0, layer);
+                    Ui.Fade(layer, 1, 250);
+                });
             }
 
             private FrameworkElement Swatch(ThemeInfo t)
@@ -663,10 +675,19 @@ namespace Selene
                 var tile = new Tile(132, 76, 14, 5) { FocusScale = 1.08 };
                 tile.Face.Background = new SolidColorBrush(Parse(t.Background, Colors.Black));
                 tile.Face.BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
+                var host = new Grid();
+                // the wallpaper goes under this; the theme's background color fades in from the left so "Aa" stays readable
+                var bg = Parse(t.Background, Colors.Black);
+                host.Children.Add(new Border
+                {
+                    CornerRadius = new CornerRadius(13),
+                    Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Color.FromArgb(0xE6, bg.R, bg.G, bg.B), 0), new GradientStop(Color.FromArgb(0x55, bg.R, bg.G, bg.B), 0.55), new GradientStop(Color.FromArgb(0, bg.R, bg.G, bg.B), 1) }, 0)
+                });
                 var inner = new Grid { Margin = new Thickness(12, 10, 12, 10) };
                 inner.Children.Add(new TextBlock { Text = "Aa", FontSize = 22, FontFamily = Ui.Display, Foreground = new SolidColorBrush(Parse(t.Foreground, Colors.White)), VerticalAlignment = VerticalAlignment.Center });
-                inner.Children.Add(new Ellipse { Width = 20, Height = 20, Fill = new SolidColorBrush(Parse(t.Accent, Colors.White)), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center });
-                tile.Face.Child = inner;
+                inner.Children.Add(new Ellipse { Width = 20, Height = 20, Fill = new SolidColorBrush(Parse(t.Accent, Colors.White)), Stroke = new SolidColorBrush(Color.FromArgb(0x66, 0, 0, 0)), StrokeThickness = 1, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center });
+                host.Children.Add(inner);
+                tile.Face.Child = host;
                 tiles.Add(tile);
                 var cell = new StackPanel { Margin = new Thickness(9, 6, 9, 8) };
                 cell.Children.Add(tile.Root);
@@ -688,8 +709,26 @@ namespace Selene
                 if (themes.Count == 0) return;
                 var theme = themes[index];
                 nameLabel.Text = theme.Name + (theme.Mode == "light" ? "  ·  light" : "");
+                ShowColors(theme);
                 if (live) apply.Run(() => Show(theme.Id));
                 else Show(theme.Id);
+            }
+
+            // the theme's colors as a strip of chips; they rise in one after another
+            private void ShowColors(ThemeInfo theme)
+            {
+                colors.Children.Clear();
+                var list = theme.Swatches ?? new List<string> { theme.Background, theme.Foreground, theme.Accent };
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var chip = new Border
+                    {
+                        Width = 46, Height = 26, CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 0, 8, 0),
+                        Background = new SolidColorBrush(Parse(list[i], Colors.Gray)), BorderBrush = Ink.Brush("SeleneInkColor", 0.25), BorderThickness = new Thickness(1)
+                    };
+                    colors.Children.Add(chip);
+                    Ui.Rise(chip, i * 25, 8, 200);
+                }
             }
 
             // the whole of Selene recolors, the home's wallpaper too (the theme's own, unless one was picked)

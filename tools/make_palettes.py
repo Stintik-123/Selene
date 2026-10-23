@@ -194,11 +194,14 @@ themes = [("selene", "Selene", SELENE)]
 themes += [(p.stem, NAMES.get(p.stem, p.stem.replace("-", " ").title()), tomllib.loads(p.read_text(encoding="utf-8")))
            for p in sorted(SOURCES.glob("*.toml"))]
 
+SWATCHES = ("background", "lighter_background", "foreground", "accent", "red", "orange", "yellow", "green", "cyan", "blue", "magenta")
 index = []
 for theme_id, name, colors in themes:
     wallpaper = default_wallpaper(theme_id)
     (OUT / f"{theme_id}.xaml").write_text(xaml(theme_id, name, colors, wallpaper), encoding="utf-8")
     index.append({"Id": theme_id, "Name": name, "Mode": colors.get("mode", "dark"), "Accent": colors["accent"],
-                  "Background": colors["background"], "Foreground": colors["foreground"], "Wallpaper": wallpaper})
+                  "Background": colors["background"], "Foreground": colors["foreground"], "Wallpaper": wallpaper,
+                  # the strip of colors under the theme step's preview: its background shades, text, accent, then the rest
+                  "Swatches": list(dict.fromkeys(colors[k].lower() for k in SWATCHES if k in colors))})
 (OUT / "palettes.json").write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 print(f"wrote {len(index)} themes to {OUT.relative_to(ROOT)}")

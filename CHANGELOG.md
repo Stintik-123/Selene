@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Theme step: each theme shows its own wallpaper on its tile, and a strip of its colors sits under the preview.
 - Signing in no longer flashes the old home for a moment before the home's intro plays.
 - Selene settings (menu, and the add-on's settings page): turn off the logo intro, Who's playing? at start, interface sounds, music control, button hints, glow and particles, freezing games on Guide, close to tray or no-prompt launchers.
 - The intro shows only the crescent (no SELENE lettering).

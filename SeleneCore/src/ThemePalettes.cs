@@ -19,6 +19,8 @@ namespace Selene
         public string Background { get; set; }
         public string Foreground { get; set; }
         public string Wallpaper { get; set; }
+        // its colors, for the strip under the theme step's preview
+        public List<string> Swatches { get; set; }
     }
 
     // Selene's color themes: theme\Palettes\<id>.xaml (made by tools/make_palettes.py) layered over theme\Constants.xaml
