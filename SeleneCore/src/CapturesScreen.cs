@@ -49,6 +49,9 @@ namespace Selene
         private bool viewing, closed, paused, controlsShown;
         private double clipAt, clipLength;
         private readonly string openPath;   // opened from the card's pictures: straight to this one
+        private readonly Image hero = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
+        private readonly DispatcherTimer heroLater = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
+        private string heroShown;
 
         public CapturesScreen(string openPath = null)
         {
@@ -57,6 +60,15 @@ namespace Selene
             dark.SetResourceReference(Border.BackgroundProperty, "SeleneScrimBrush");
             Panel.SetZIndex(dark, -10);
             Root.Children.Add(dark);
+            // the focused capture's picture, soft and faint, behind everything; a vignette keeps the edges dark
+            RenderOptions.SetBitmapScalingMode(hero, BitmapScalingMode.LowQuality);
+            hero.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 40, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance };
+            Panel.SetZIndex(hero, -6);
+            Root.Children.Add(hero);
+            var vignette = new Border { IsHitTestVisible = false, Background = new RadialGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0.35, 0), Ink.Stop("SeleneScrimColor", 0.6, 0.6), Ink.Stop("SeleneScrimColor", 0.92, 1) }) { RadiusX = 0.78, RadiusY = 0.85 } };
+            Panel.SetZIndex(vignette, -5);
+            Root.Children.Add(vignette);
+            heroLater.Tick += (s, e) => { heroLater.Stop(); ShowHero(); };
 
             var head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 56, 0, 0) };
             head.Children.Add(new TextBlock { Text = "Captures", FontSize = 44, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
@@ -127,7 +139,7 @@ namespace Selene
             });
         }
 
-        public override void Hidden() { closed = true; StopVideo(); hideControls.Stop(); playerClock.Stop(); }
+        public override void Hidden() { closed = true; StopVideo(); hideControls.Stop(); playerClock.Stop(); heroLater.Stop(); }
 
         // ---- the words, bar and hints over the viewer ----
         private void ShowControls(bool on)
@@ -258,8 +270,28 @@ namespace Selene
 
         private static string Count(int n, string what) { return n + " " + what + (n == 1 ? "" : "s"); }
 
+        // the focused capture behind, once the focus rests on it (a still for a clip, the picture itself for a screenshot)
+        private void ShowHero()
+        {
+            if (index >= items.Count || viewing) return;
+            var c = items[index];
+            var path = c.IsVideo ? Thumbnails.Cached(c.Path) : c.Path;
+            if (path == heroShown) return;
+            heroShown = path;
+            if (path == null) { Ui.Fade(hero, 0, 300); return; }
+            Ui.LoadInOrder(new List<string> { path }, 480, (k, pic) =>
+            {
+                if (closed || path != heroShown) return;
+                hero.Source = pic;
+                hero.Opacity = 0;
+                Ui.Fade(hero, 0.55, 600);
+            });
+        }
+
         private void ShowFocus(bool animate)
         {
+            heroLater.Stop();
+            heroLater.Start();
             for (int i = 0; i < tiles.Count; i++) tiles[i].Focus(i == index);
             int row = index / Columns, rows = (tiles.Count + Columns - 1) / Columns;
             // the focused row stays in the middle of the three on screen, within the grid's ends

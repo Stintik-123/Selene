@@ -4,6 +4,10 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Playnite settings from the menu open as a Selene screen now: General, Visuals, Audio, Layout, Menus and Input as sections, their settings as Selene's switches and choices, saved straight into Playnite (a row opens Playnite's own pages for the monitor and theme). Switch: Navigation, Playnite settings, Selene's way.
+- Activity, redone: the numbers as cards, your top game called out with its share of your play time, bars under the most played, and two more rows: games to pick up again (an hour or more played, untouched for 45 days) and games still waiting (never played). The rows glide up.
+- Store game page: the focus starts on the Buy / Play button; Down goes to the screenshots and A there shows the screenshot on the whole screen (Left / Right go through them), Down again to "More from". Buying is the button's alone.
+- Captures: the grid sits on a dark vignette with the focused capture's picture glowing softly behind.
 - Captures viewer: A pauses and plays a clip, Left / Right go 10 seconds, LB / RB go to the previous or next capture; a bar with the time, the game and date at the bottom left, hints that fade away after a moment. Clips that start on a black frame get a still from further in.
 - Home: the Play / Details / Favorite pills are white, a little see-through, without an outline; the focused screenshot's ring is no longer cut off.
 - Captures: clips get stills (Windows' own thumbnail, or ffmpeg's when this PC has it), in the grid and under the card; clips the browser plays are drawn through a canvas (a big clip decoded by the graphics card stayed black).

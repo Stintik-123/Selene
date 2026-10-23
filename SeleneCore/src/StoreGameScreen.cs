@@ -33,6 +33,14 @@ namespace Selene
         private WebTrailer trailer;
         private Grid trailerHost;
         private int shot, moreIndex, zone;   // zone 0: the screenshots, 1: more from the store
+        // the buttons (Buy / Play, Web page) are where the focus starts; Down goes to the screenshots, Down again to "More from"
+        private readonly List<Border> pills = new List<Border>();
+        private readonly List<Action> pillActions = new List<Action>();
+        private int pill;
+        private bool onActions = true;
+        private Grid shotViewer;   // a screenshot on the whole screen (A on the strip)
+        private Image bigShot;
+        private bool viewing;
         private bool front, closed;
         private const double MoreW = 380, MoreH = 214, MorePitch = MoreW + 24;
         private const double MoreLift = 300;   // how far the page glides up for the "More from" row: just enough to show it above the hints
@@ -130,8 +138,8 @@ namespace Selene
             about = new TextBlock { Opacity = 0, FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.WordEllipsis, MaxHeight = 120, LineHeight = 30, Margin = new Thickness(0, 22, 0, 0) };
             col.Children.Add(about);
             var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 30, 0, 0) };
-            actions.Children.Add(Ui.ActionPill("A", MainLabel(), true));
-            if (item.WebLink != null && item.WebLink != item.Link) actions.Children.Add(Ui.ActionPill("X", "Web page", false));
+            AddPill(actions, "A", MainLabel(), RunMain);
+            if (item.WebLink != null && item.WebLink != item.Link) AddPill(actions, "X", "Web page", OpenWeb);
             col.Children.Add(actions);
             page.Children.Add(col);
 
@@ -176,6 +184,7 @@ namespace Selene
             if (startZone == 1 && moreTiles.Count > 0)
             {
                 zone = 1;
+                onActions = false;
                 moreIndex = Math.Max(0, Math.Min(startMore, moreTiles.Count - 1));
                 pageShift.Y = -MoreLift;
                 moreShift.X = -Math.Max(0, moreIndex - 1) * MorePitch;
@@ -289,8 +298,93 @@ namespace Selene
 
         private void ShowFocus()
         {
-            for (int i = 0; i < shotTiles.Count; i++) shotTiles[i].Focus(zone == 0 && i == shot);
+            for (int i = 0; i < shotTiles.Count; i++) shotTiles[i].Focus(!onActions && zone == 0 && i == shot);
             for (int i = 0; i < moreTiles.Count; i++) moreTiles[i].Focus(zone == 1 && i == moreIndex);
+            for (int i = 0; i < pills.Count; i++) PillLook(pills[i], onActions && i == pill);
+        }
+
+        private void AddPill(Panel into, string button, string label, Action run)
+        {
+            var p = Ui.ActionPill(button, label, false);
+            p.RenderTransformOrigin = new Point(0.5, 0.5);
+            into.Children.Add(p);
+            pills.Add(p);
+            pillActions.Add(run);
+        }
+
+        // the focused button is the filled one (the focus color), the others glass
+        private static void PillLook(Border p, bool on)
+        {
+            p.Background = on ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneInkColor", 0.12);
+            p.BorderBrush = on ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneInkColor", 0.2);
+            var row = p.Child as StackPanel;
+            if (row == null || row.Children.Count < 2) return;
+            var dot = row.Children[0] as Grid;
+            if (dot != null && dot.Children.Count >= 2)
+            {
+                ((System.Windows.Shapes.Ellipse)dot.Children[0]).Fill = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.9);
+                ((TextBlock)dot.Children[1]).Foreground = on ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneScrimColor");
+            }
+            ((TextBlock)row.Children[1]).Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor");
+            Ui.ScaleTo(p, on ? 1.06 : 1, 160);
+        }
+
+        // ---- a screenshot on the whole screen ----
+        private void OpenViewer()
+        {
+            if (shots.Count == 0) return;
+            if (shotViewer == null)
+            {
+                shotViewer = new Grid { Opacity = 0 };
+                shotViewer.SetResourceReference(Panel.BackgroundProperty, "SeleneScrimBrush");
+                bigShot = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(40, 40, 40, 90) };
+                RenderOptions.SetBitmapScalingMode(bigShot, BitmapScalingMode.HighQuality);
+                shotViewer.Children.Add(bigShot);
+                shotViewer.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
+                shotViewer.Children.Add(Ui.Prompts(true, Ui.Prompt("\u25C0 \u25B6", "Previous / next")));
+                Panel.SetZIndex(shotViewer, 30);
+                Root.Children.Add(shotViewer);
+            }
+            viewing = true;
+            slides.Stop();
+            shotViewer.Visibility = Visibility.Visible;
+            ShowBig();
+            Ui.Fade(shotViewer, 1, 220);
+        }
+
+        private void ShowBig() { if (shot < shots.Count) StorePage.Load(bigShot, shots[shot], 1920); }
+
+        private void CloseViewer()
+        {
+            viewing = false;
+            Ui.Fade(shotViewer, 0, 200, 0, () => { shotViewer.Visibility = Visibility.Collapsed; });
+            if (trailer == null && shots.Count > 1) slides.Start();
+        }
+
+        private void RunMain()
+        {
+            Ui.Confirm();
+            if (owned != null)
+            {
+                var id = owned.Id;
+                bool installed = owned.IsInstalled;
+                LoginScene.Finish();
+                if (installed) HomeNav.StartGameNow(id);
+                else if (HomeNav.Api != null) HomeNav.Api.InstallGame(id);
+                HomeNav.Log("store: " + (installed ? "play " : "install ") + item.Title);
+                return;
+            }
+            HomeNav.Log("store: opening " + item.Title + " (" + item.Link + ")");
+            Open(item.Link);
+            LoginScene.Finish();
+        }
+
+        private void OpenWeb()
+        {
+            if (item.WebLink == null) return;
+            Ui.Confirm();
+            Open(item.WebLink);
+            LoginScene.Finish();
         }
 
         private void SetZone(int z)
@@ -311,6 +405,20 @@ namespace Selene
 
         public override void Handle(string b)
         {
+            if (viewing)
+            {
+                if (b == "B") { Ui.Back(); CloseViewer(); return; }
+                if (b == "DPadLeft" || b == "DPadRight")
+                {
+                    int next = shot + (b == "DPadRight" ? 1 : -1);
+                    if (next < 0 || next >= shots.Count) return;
+                    Ui.Tick();
+                    if (trailer != null) shot = next; else ShowShot(next, true);
+                    ShowBig();
+                    ShowFocus();
+                }
+                return;
+            }
             if (b == "B")
             {
                 // from the "More from" row too: B leaves the page (Up is the way back to the screenshots)
@@ -320,12 +428,35 @@ namespace Selene
             }
             switch (b)
             {
-                case "DPadDown": if (zone == 0 && moreTiles.Count > 0) SetZone(1); return;
-                case "DPadUp": if (zone == 1) SetZone(0); return;
+                case "DPadDown":
+                    if (onActions)
+                    {
+                        if (shotTiles.Count > 0) { onActions = false; Ui.Tick(); ShowFocus(); }
+                        else if (moreTiles.Count > 0) { onActions = false; SetZone(1); }
+                        return;
+                    }
+                    if (zone == 0 && moreTiles.Count > 0) SetZone(1);
+                    return;
+                case "DPadUp":
+                    if (onActions) return;
+                    if (zone == 1) { SetZone(0); if (shotTiles.Count == 0) { onActions = true; ShowFocus(); } return; }
+                    onActions = true;
+                    Ui.Tick();
+                    ShowFocus();
+                    return;
                 case "DPadLeft":
                 case "DPadRight":
                 {
                     int dir = b == "DPadRight" ? 1 : -1;
+                    if (onActions)
+                    {
+                        int nextPill = pill + dir;
+                        if (nextPill < 0 || nextPill >= pills.Count) return;
+                        pill = nextPill;
+                        Ui.Tick();
+                        ShowFocus();
+                        return;
+                    }
                     if (zone == 0)
                     {
                         int next = shot + dir;
@@ -355,12 +486,10 @@ namespace Selene
                     LoginScene.Finish();
                     return;
                 case "X":
-                    if (item.WebLink == null) return;
-                    Ui.Confirm();
-                    Open(item.WebLink);
-                    LoginScene.Finish();
+                    OpenWeb();
                     return;
                 case "A":
+                    if (onActions) { if (pill < pillActions.Count) pillActions[pill](); return; }
                     if (zone == 1)
                     {
                         Ui.Confirm();
@@ -369,20 +498,9 @@ namespace Selene
                         LoginScene.Show(new StoreGameScreen(more[moreIndex], () => new StoreGameScreen(me, myBack, 1, at)), 0);
                         return;
                     }
+                    // a screenshot: big, on the whole screen (buying is the button's, up top)
                     Ui.Confirm();
-                    if (owned != null)
-                    {
-                        var id = owned.Id;
-                        bool installed = owned.IsInstalled;
-                        LoginScene.Finish();
-                        if (installed) HomeNav.StartGameNow(id);
-                        else if (HomeNav.Api != null) HomeNav.Api.InstallGame(id);
-                        HomeNav.Log("store: " + (installed ? "play " : "install ") + item.Title);
-                        return;
-                    }
-                    HomeNav.Log("store: opening " + item.Title + " (" + item.Link + ")");
-                    Open(item.Link);
-                    LoginScene.Finish();
+                    OpenViewer();
                     return;
             }
         }
