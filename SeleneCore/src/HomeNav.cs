@@ -1158,7 +1158,7 @@ namespace Selene
                     follow = (s, e) => { if (!previewShowing) { tileGrid.SizeChanged -= follow; return; } ClipVideoToTile(video); };
                     tileGrid.SizeChanged += follow;
                 }
-                if (previewSound) SetUpsVideoPlaying(true);
+                ApplyVideoPause();
                 video.Source = new Uri(path);
                 video.Opacity = 0;
                 video.MediaOpened -= OnPreviewOpened;
@@ -1217,7 +1217,7 @@ namespace Selene
             previewSound = !previewSound;
             // the silent clip starts 4 s into the trailer
             pendingSeek = previewSound ? pos + TimeSpan.FromSeconds(4) : (pos > TimeSpan.FromSeconds(4) ? pos - TimeSpan.FromSeconds(4) : TimeSpan.Zero);
-            SetUpsVideoPlaying(previewSound);
+            ApplyVideoPause();
             video.Source = new Uri(previewSound ? full : clip);
             video.Play();
             ShowSoundBadge(item, true);
@@ -1233,7 +1233,8 @@ namespace Selene
 
         // What the music add-on (UniPlaySong) plays, by where the user is:
         //   "login"   behind the login screens: its default track
-        //   "home"    the home row: nothing (paused through its theme-overlay pause)
+        //   "home"    the home row: nothing (paused through its "a video is playing" pause; its theme-overlay pause
+        //             is ignored while a game is selected)
         //   "trailer" a game's trailer card is open: that game's song
         //   "normal"  the library: UniPlaySong as usual
         private static string musicMode;
@@ -1243,7 +1244,18 @@ namespace Selene
             if (musicMode == mode) return;
             musicMode = mode;
             SetUpsSetting("ForceDefaultMusicOverride", mode == "login" || mode == "home");
-            SetUpsSetting("ThemeOverlayActive", mode == "home");
+            ApplyVideoPause();
+        }
+
+        // UniPlaySong pauses while its "video is playing" flag is up: on the quiet home, and under a trailer with sound
+        private static bool? videoPause;
+
+        private static void ApplyVideoPause()
+        {
+            bool want = musicMode == "home" || (previewShowing && previewSound);
+            if (videoPause == want) return;
+            videoPause = want;
+            SetUpsVideoPlaying(want);
         }
 
         // UniPlaySong's live settings: its settings view model holds them in .Settings
@@ -1258,6 +1270,7 @@ namespace Selene
         public static void ReleaseMusic()
         {
             musicMode = null;
+            videoPause = null;
             SetUpsSetting("ForceDefaultMusicOverride", false);
             SetUpsSetting("ThemeOverlayActive", false);
             SetUpsVideoPlaying(false);
@@ -1400,7 +1413,7 @@ namespace Selene
                 if (vh != null) vh.Children.Remove(video);  // frees the player (one per tile used to cost a lot on every row rebuild)
             }
             ShowSoundBadge(item, false);
-            if (previewSound) SetUpsVideoPlaying(false);
+            ApplyVideoPause();
             foreach (var w in previewFaded)
             {
                 var li = w.Target as ListBoxItem;
