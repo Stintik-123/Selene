@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Spotlight to Collection: Spotlight fades out, then Collection fades in (no game art behind Spotlight's screen); "Local" games show the full Selene mark.
 - Selene's own theme plays the legacy home's looping background video behind the login, menus and Spotlight's cards (other themes keep the drawn backdrop in their color).
 - The View and Menu hint badges use solid icons, as bold as the letter badges.
 - Games from no store show Selene's crescent and "Local" as their platform; the first cover's focus ring isn't cut at the left edge.

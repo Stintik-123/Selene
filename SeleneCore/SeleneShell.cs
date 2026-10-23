@@ -157,15 +157,20 @@ namespace Selene
                 var item = list.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, list.SelectedIndex)) as UIElement;
                 if (item != null) item.Focus(); else list.Focus();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
-            // a moment for its art, then Spotlight fades off it
-            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(280)) { BeginTime = TimeSpan.FromMilliseconds(200), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
-            fade.Completed += (s, e) =>
+            // Spotlight fades to black first, then Collection fades in (it was loading its art meanwhile, invisible): a
+            // crossfade showed Collection's game art behind Spotlight's screen for a moment
+            library.Opacity = 0;
+            var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(160)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+            fadeOut.Completed += (s, e) =>
             {
                 if (mine != switchCount) return;
                 home.Visibility = Visibility.Collapsed;
                 home.BeginAnimation(UIElement.OpacityProperty, null);
+                var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                fadeIn.Completed += (s2, e2) => { if (mine == switchCount) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Opacity = 1; } };
+                library.BeginAnimation(UIElement.OpacityProperty, fadeIn);
             };
-            home.BeginAnimation(UIElement.OpacityProperty, fade);
+            home.BeginAnimation(UIElement.OpacityProperty, fadeOut);
             HomeNav.Log("shell: library");
         }
 
