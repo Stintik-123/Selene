@@ -2137,6 +2137,8 @@ namespace Selene
             if (!dirPad && pressed != "A") return false;
             bool inRow = focused != null && IsInRow(focused);
             if (inRow && !down) return false;
+            // the Library and Store cards have nothing under them: Down stays put (it used to move focus somewhere unseen)
+            if (inRow && down && movingCard == null && movingGame == null && row.SelectedItem is string) return true;
             // the pills next to the LIVE row (LB/RB rebuilds leave hidden copies of the hub page around), found once per row
             Button[] pills;
             if (!rowPills.TryGetValue(row, out pills) || pills[0] == null)
@@ -2156,7 +2158,7 @@ namespace Selene
             if (focused != null && IsInRow(focused) && down && movingCard == null && movingGame == null)
             {
                 var it = row.SelectedItem;
-                if (it == null || it is string) return false;  // cards keep their own Down
+                if (it == null || it is string) return true;   // cards: nothing below
                 FocusPill(play);
                 return true;
             }

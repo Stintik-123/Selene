@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Down on the Library and Store cards no longer moves focus to nothing.
 - No flash of light the first time the menu opens.
 - Smoother logo intro: it starts at the first quiet moment after Playnite starts.
 - The home has the login's glow and drifting particles behind its cards (and behind games when their art is off), on themes without a wallpaper.
