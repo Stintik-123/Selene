@@ -455,8 +455,10 @@ namespace Selene
 
         private static void FillParticles(Canvas canvas, Size size)
         {
-            // a band of fine dust rising from the lower left to the right (denser on the right), a few soft bokeh dots
-            for (int i = 0; i < 170; i++)
+            // a band of fine dust rising from the lower left to the right (denser on the right), a few soft bokeh dots.
+            // Their drift is slow, and WPF's usual 60 steps a second showed as uneven on a 144 Hz display (frames doubled and
+            // tripled by turns): the drift asks for the display's rate, as the row's glide does
+            for (int i = 0; i < 130; i++)
             {
                 bool bokeh = i < 14;
                 double d = bokeh ? 10 + rnd.NextDouble() * 26 : 1.5 + rnd.NextDouble() * 3;
@@ -474,7 +476,9 @@ namespace Selene
                 dot.RenderTransform = tr;
                 double dur = 16 + rnd.NextDouble() * 18;
                 var begin = TimeSpan.FromSeconds(-rnd.NextDouble() * dur);
-                tr.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, -size.Height * (0.10 + rnd.NextDouble() * 0.18), TimeSpan.FromSeconds(dur)) { RepeatBehavior = RepeatBehavior.Forever, BeginTime = begin });
+                var drift = new DoubleAnimation(0, -size.Height * (0.10 + rnd.NextDouble() * 0.18), TimeSpan.FromSeconds(dur)) { RepeatBehavior = RepeatBehavior.Forever, BeginTime = begin };
+                Timeline.SetDesiredFrameRate(drift, 144);
+                tr.BeginAnimation(TranslateTransform.YProperty, drift);
                 tr.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-14, 14 + rnd.NextDouble() * 20, TimeSpan.FromSeconds(5 + rnd.NextDouble() * 6)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, BeginTime = begin, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
                 double peak = bokeh ? 0.25 + rnd.NextDouble() * 0.3 : 0.4 + rnd.NextDouble() * 0.6;
                 var op = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromSeconds(dur), RepeatBehavior = RepeatBehavior.Forever, BeginTime = begin };
