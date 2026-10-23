@@ -4,6 +4,11 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Selene settings (menu, and the add-on's settings page): turn off the logo intro, Who's playing? at start, interface sounds, music control, button hints, glow and particles, freezing games on Guide, close to tray or no-prompt launchers.
+- The intro shows only the crescent (no SELENE lettering).
+- Play, Details and the heart are readable in light themes (they took the theme's dark text color).
+- Light themes dim the home behind Playnite's menus with a dark shade instead of a bright one.
+- Power icons in the menu use the theme's color like the rest.
 - Theme and background steps: the preview shows your wallpaper and, on the background step, a game's art when "Game art" is on (borrowed without selecting the game, so no game song plays); with no games yet it says the wallpaper shows until you add some.
 - A Store card next to Library: opens the store apps on your PC (Steam, Epic, Xbox, GOG, Ubisoft, EA, Microsoft Store).
 - After Playnite starts or someone signs in, the home starts on the Library card.

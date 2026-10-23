@@ -62,7 +62,7 @@ namespace Selene
             var tvBackup = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "fullscreenConfig.tv.json");
             RowMode = System.IO.File.Exists(tvBackup) ? "all" : "tv";
             var app = Application.Current;
-            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
+            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); if (Features.On("tray")) CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
         }
 
         private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -1240,6 +1240,15 @@ namespace Selene
             return inner != null ? inner.GetValue(vm, null) : vm;
         }
 
+        // music control switched off: every pause Selene set on the music add-on is let go now
+        public static void ReleaseMusic()
+        {
+            musicPaused = false;
+            SetUpsSetting("ForceDefaultMusicOverride", false);
+            SetUpsSetting("ThemeOverlayActive", false);
+            SetUpsVideoPlaying(false);
+        }
+
         private static void SetUpsSetting(string name, bool value)
         {
             try
@@ -1249,6 +1258,7 @@ namespace Selene
                 {
                     if (plugin.Id != new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")) continue;
                     var settings = UpsSettings(plugin);
+                    if (!Features.On("music")) value = false;   // music control off: every pause Selene set is let go
                     var prop = settings != null ? settings.GetType().GetProperty(name) : null;
                     if (prop != null && prop.CanWrite) prop.SetValue(settings, value, null);
                     Log("UPS " + name + "=" + value + (prop == null ? " (not found)" : ""));
@@ -1267,6 +1277,7 @@ namespace Selene
                     if (plugin.Id != new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")) continue;
                     var settings = UpsSettings(plugin);
                     var prop = settings != null ? settings.GetType().GetProperty("VideoIsPlaying") : null;
+                    if (!Features.On("music")) playing = false;
         
                     if (prop != null && prop.CanWrite) prop.SetValue(settings, playing, null);
                     Log("UPS VideoIsPlaying=" + playing + (prop == null ? " (property not found on " + (settings == null ? "null" : settings.GetType().Name) + ")" : ""));
@@ -3159,7 +3170,8 @@ namespace Selene
                     Log("pause skipped: " + (name == null ? "no game running" : proc));
                     return;
                 }
-                bool online = GamePause.IsOnline((int)pid);
+                // freezing switched off: every game is treated like an online one (only muted)
+                bool online = !Features.On("freeze") || GamePause.IsOnline((int)pid);
                 if (!online) ShowWindow(gameWindow, 7);  // SW_SHOWMINNOACTIVE: parked, so Windows will not ghost it once frozen
                 var target = gameWindow;
                 var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(online ? 1 : 450) };

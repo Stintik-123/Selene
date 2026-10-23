@@ -72,6 +72,14 @@ namespace Selene
                     HomeNav.Log("login: skipped (developer switch)");
                     return;
                 }
+                // no intro and no Who's playing?: the last profile is already signed in, the home shows straight away
+                if (!Features.On("intro") && SignInLast())
+                {
+                    introPlayed = true;
+                    login.Visibility = Visibility.Collapsed;
+                    HomeNav.Log("login: skipped (intro and Who's playing? off)");
+                    return;
+                }
                 if (login.IsVisible) Open();
                 DevKeys();
             }
@@ -173,7 +181,7 @@ namespace Selene
         {
             if (glow == null) return;
             bool wallpaper = Application.Current.Resources["SeleneWallpaper"] != null;
-            glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(wallpaper ? 0 : 1, TimeSpan.FromMilliseconds(300)));
+            glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(wallpaper || !Features.On("glow") ? 0 : 1, TimeSpan.FromMilliseconds(300)));
         }
 
         private static void Open()
@@ -183,8 +191,22 @@ namespace Selene
             var next = pending;
             pending = null;
             if (next != null) Show(next(), 0);
-            else if (!introPlayed) { introPlayed = true; Show(new IntroScreen(), 0); }
+            else if (!introPlayed) { introPlayed = true; Show(Features.On("intro") ? (Screen)new IntroScreen() : Start(), 0); }
             else Show(Start(), 0);
+        }
+
+        // Who's playing? switched off: the last profile (or the only one) signs in by itself. False when it's still needed:
+        // the first start (no profile yet) or profiles that couldn't be read
+        public static bool SignInLast()
+        {
+            if (Features.On("login") || Profiles.LoadError != null || Profiles.FirstRun) return false;
+            if (Profiles.Active == null)
+            {
+                var first = Profiles.All.FirstOrDefault();
+                if (first == null) return false;
+                Profiles.SignIn(first.Id);
+            }
+            return true;
         }
 
         // where the login starts after the intro
@@ -353,10 +375,6 @@ namespace Selene
             UIElement halo;
             col.Children.Add(Ui.Mark(190, out halo));
             glow = halo;
-            var word = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(16, 26, 0, 0) };
-            foreach (var c in "SELENE")
-                word.Children.Add(new TextBlock { Text = c.ToString(), FontSize = 34, FontFamily = Ui.Wordmark, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(0, 0, 18, 0) });
-            col.Children.Add(word);
             content = col;
             Root.Children.Add(col);
         }
@@ -392,7 +410,8 @@ namespace Selene
             if (done) return;
             done = true;
             timer.Stop();
-            LoginScene.Show(LoginScene.Start(), 0);
+            if (LoginScene.SignInLast()) LoginScene.Finish();
+            else LoginScene.Show(LoginScene.Start(), 0);
         }
     }
 

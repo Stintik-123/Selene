@@ -118,6 +118,10 @@ def xaml(theme_id, name, c, wallpaper):
     ink = c.get("ink", bg if light else bright)
     scrim = c.get("scrim", shade(fg, 0.42) if light else darker)
     glass = c.get("glass", shade(fg, 0.55) if light else dark)
+    # the dim behind Playnite's menus and dialogs: a light one turned the whole home bright, so light themes dim with
+    # the dark scrim too
+    if light:
+        colors["OverlayColor"] = argb(scrim, "CC")
     colors.update({
         "SeleneFocusColor": argb(focus),
         "SeleneOnFocusColor": argb(on_focus),

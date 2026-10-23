@@ -39,6 +39,7 @@ namespace Selene
                 new Item { Glyph = "\uE70F", Label = "Edit profile", About = "Your name, avatar, theme and background.", Run = EditProfile },
                 new Item { Glyph = "\uE72C", Label = "Update library", About = "Look for new games in your stores and folders.", Run = () => Later(() => PlayniteMenu.Run("UpdateGamesCommand")) },
                 new Item { Glyph = "\uE8B1", Label = "Random game", About = "Let Selene pick something to play.", Run = () => Later(() => PlayniteMenu.Main("SelectRandomGameCommand")) },
+                new Item { Glyph = "\uE771", Label = "Selene settings", About = "Turn Selene's features on or off: intro, login, sounds and more.", Run = () => LoginScene.Show(new SettingsScreen(), 1) },
                 new Item { Glyph = "\uE90F", Label = "Setup check", About = "Add-ons, save backups and what Selene needs.", Run = () => LoginScene.Show(new SetupScreen(false), 1) },
             });
             rows.Add(new List<Item>
@@ -88,7 +89,7 @@ namespace Selene
                 {
                     var t = new Tile(196, 128, 20, 6) { FocusScale = 1.06 };
                     var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-                    sp.Children.Add(new TextBlock { Text = item.Glyph, FontFamily = Ui.Glyphs, FontSize = 30, Foreground = Ink.Brush(r == 2 ? "SeleneInkColor" : "GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center });
+                    sp.Children.Add(new TextBlock { Text = item.Glyph, FontFamily = Ui.Glyphs, FontSize = 30, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center });
                     sp.Children.Add(new TextBlock { Text = item.Label, FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 12, 0, 0) });
                     t.Face.Child = sp;
                     t.Root.Margin = new Thickness(10, 0, 10, 0);

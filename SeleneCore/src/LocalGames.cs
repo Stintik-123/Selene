@@ -312,7 +312,7 @@ namespace Selene
 
         public static void WatchForAdmin(Game g)
         {
-            if (g == null || ranAsAdmin.Contains(g.Id)) return;
+            if (g == null || ranAsAdmin.Contains(g.Id) || !Features.On("admin")) return;
             var started = DateTime.Now;
             var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             timer.Tick += (s, e) =>

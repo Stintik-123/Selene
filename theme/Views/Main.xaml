@@ -286,14 +286,18 @@
                                                     <Grid.RenderTransform><ScaleTransform x:Name="PillScale" ScaleX="1" ScaleY="1"/></Grid.RenderTransform>
                                                     <Border x:Name="Glow" CornerRadius="26" Background="{DynamicResource SeleneFocusBrush}" Opacity="0"><Border.Effect><DropShadowEffect ShadowDepth="0" BlurRadius="22" Color="{DynamicResource SeleneFocusColor}" Opacity="0.4"/></Border.Effect></Border>
                                                     <Border x:Name="Pill" CornerRadius="26" Height="52" MinWidth="{TemplateBinding MinWidth}" Padding="{TemplateBinding Padding}" Background="{DynamicResource SeleneInk15Brush}" BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1">
-                                                        <ContentPresenter x:Name="Label" HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{DynamicResource SeleneInkBrush}"/>
+                                                        <!-- the label inherits the Button's own Foreground (logical tree), not the presenter's: set it there -->
+                                                        <ContentPresenter x:Name="Label" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                 </Grid>
                                                 <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsKeyboardFocused" Value="False">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SeleneInkBrush}"/>
+                                                    </Trigger>
                                                     <Trigger Property="IsKeyboardFocused" Value="True">
                                                         <Setter TargetName="Pill" Property="Background" Value="{DynamicResource SeleneFocusBrush}"/>
                                                         <Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource SeleneFocusBrush}"/>
-                                                        <Setter TargetName="Label" Property="TextElement.Foreground" Value="{DynamicResource SeleneOnFocusBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource SeleneOnFocusBrush}"/>
                                                         <Setter TargetName="Glow" Property="Opacity" Value="1"/>
                                                         <Trigger.EnterActions><BeginStoryboard><Storyboard>
                                                             <DoubleAnimation Storyboard.TargetName="PillScale" Storyboard.TargetProperty="ScaleX" To="1.06" Duration="0:0:0.15"/>

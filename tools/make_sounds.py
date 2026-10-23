@@ -470,7 +470,40 @@ def signin_chime():
     return normalize(fade_tail(s, 0.4), 0.18)
 
 
-SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime, boot_chime_sparkle, alert_soft, panel_open, signin_boot, success_soft, success_bloom, success_sparkle, confirm_tone, key_tap)}
+def success_harp():
+    # profile made: a warm harp rolling up a major chord, a soft pad under it, calm rather than sparkly
+    total = 1.8
+    notes = ["G4", "B4", "D5", "G5"]
+    s = silence(0)
+    for i, n in enumerate(notes):
+        mix(s, [v * (0.7 + 0.1 * i) for v in pluck(note(n), 1.4, 0.35, seed=i)], i * 0.07)
+    s = add(s, pad([note("G4"), note("D5"), note("B5")], 0.1, 0.3, 0.7, 0.12, total))
+    s = reverb(lowpass(s, 0.5), 0.25, 0.6)
+    return normalize(fade_tail(s[:int(total * RATE)], 0.4), 0.17)
+
+
+def success_warm():
+    # option: two round, low mallet notes a fifth apart, then a soft swell, short and mellow
+    total = 1.3
+    mallet = ((1, 1.0), (4.0, 0.12), (10.0, 0.02))
+    s = add([v * 0.8 for v in bell(note("C5"), 1.0, 0.22, partials=mallet, attack=0.004)],
+            [0.0] * int(0.12 * RATE) + bell(note("G5"), 1.0, 0.35, partials=mallet, attack=0.004),
+            pad([note("C5"), note("E5"), note("G5")], 0.12, 0.25, 0.5, 0.1, total))
+    s = reverb(lowpass(s, 0.6), 0.22, 0.5)
+    return normalize(fade_tail(s[:int(total * RATE)], 0.3), 0.17)
+
+
+def success_chord():
+    # option: one soft bell chord that swells and fades, no run of notes
+    total = 1.6
+    s = silence(0)
+    for n, a in (("E5", 0.8), ("G#5", 0.6), ("B5", 0.7), ("E6", 0.4)):
+        mix(s, [v * a for v in bell(note(n), total, 0.5, partials=((1, 1.0), (2.0, 0.18), (3.0, 0.05)), attack=0.03)], 0.0)
+    s = reverb(lowpass(s, 0.55), 0.3, 0.7)
+    return normalize(fade_tail(s[:int(total * RATE)], 0.4), 0.16)
+
+
+SOUNDS = {f.__name__: f for f in (cursor_a, cursor_b, cursor_c, cursor_glass, confirm_glass, back_glass, boot_a, boot_b, boot_c, boot_chime, boot_chime_long, boot_magic, success_glass, signin_chime, boot_chime_sparkle, alert_soft, panel_open, signin_boot, success_soft, success_bloom, success_sparkle, success_harp, success_warm, success_chord, confirm_tone, key_tap)}
 
 
 def write(path, samples):

@@ -30,6 +30,7 @@ namespace Selene
         public static void Update()
         {
             if (bar == null) return;
+            bar.Visibility = Features.On("hints") ? Visibility.Visible : Visibility.Collapsed;
             var focused = Keyboard.FocusedElement as FrameworkElement;
             string key;
             string[] hints;

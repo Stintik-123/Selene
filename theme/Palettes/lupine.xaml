@@ -10,7 +10,7 @@
     <Color x:Key="GlyphColor">#FF3264EB</Color>
     <Color x:Key="GlyphLightColor">#FF000000</Color>
     <Color x:Key="SelectionLightColor">#FF424242</Color>
-    <Color x:Key="OverlayColor">#CCDEDEDE</Color>
+    <Color x:Key="OverlayColor">#CC0E0E0E</Color>
     <Color x:Key="ControlBackgroundColor">#FFF5F5F5</Color>
     <Color x:Key="ControlBackgroundColorDark">#FFECECEC</Color>
     <Color x:Key="TextColor">#FF212121</Color>
@@ -29,7 +29,7 @@
     <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#FFF5F5F5" />
     <SolidColorBrush x:Key="ControlBackgroundDarkBrush" Color="#FFECECEC" />
     <SolidColorBrush x:Key="SelectionLightBrush" Color="#FF424242" />
-    <SolidColorBrush x:Key="OverlayBrush" Color="#CCDEDEDE" />
+    <SolidColorBrush x:Key="OverlayBrush" Color="#CC0E0E0E" />
     <SolidColorBrush x:Key="CheckBoxCheckMarkBkBrush" Color="#FFECECEC" />
     <SolidColorBrush x:Key="SeleneFocusBrush" Color="#FF3264EB" />
     <SolidColorBrush x:Key="SeleneOnFocusBrush" Color="#FFFAFAFA" />

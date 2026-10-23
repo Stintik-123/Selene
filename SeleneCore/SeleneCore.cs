@@ -21,6 +21,7 @@ namespace Selene
         {
             settings = new SeleneSettingsViewModel(this);
             SelenePaths.Init(this, settings.Settings);
+            Features.Init(settings.Settings, () => SavePluginSettings(settings.Settings));
             Profiles.Init(GetPluginUserDataPath());
             Properties = new GenericPluginProperties { HasSettings = true };
         }
@@ -101,11 +102,13 @@ namespace Selene
         public string StreamCredentialsFile { get; set; }
         public string HelperTask { get; set; }
         public string WallpapersFolder { get; set; }
+        // Selene features switched off (Features.All keys); everything else is on
+        public List<string> TurnedOff { get; set; }
 
         public SeleneSettings()
         {
             MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; AvatarPath = ""; DisplayName = "";
-            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = ""; WallpapersFolder = "";
+            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = ""; WallpapersFolder = ""; TurnedOff = new List<string>();
         }
     }
 
@@ -130,13 +133,14 @@ namespace Selene
             Settings.HelperPath = editing.HelperPath; Settings.StreamLogsFolder = editing.StreamLogsFolder;
             Settings.AvatarPath = editing.AvatarPath; Settings.DisplayName = editing.DisplayName;
             Settings.StreamClientMatch = editing.StreamClientMatch; Settings.StreamCredentialsFile = editing.StreamCredentialsFile; Settings.HelperTask = editing.HelperTask;
-            Settings.WallpapersFolder = editing.WallpapersFolder;
+            Settings.WallpapersFolder = editing.WallpapersFolder; Settings.TurnedOff = editing.TurnedOff;
         }
 
         public void EndEdit()
         {
             plugin.SavePluginSettings(Settings);
             SelenePaths.Init(plugin, Settings);
+            Features.Init(Settings, () => plugin.SavePluginSettings(Settings));
         }
 
         public bool VerifySettings(out List<string> errors) { errors = new List<string>(); return true; }
@@ -149,6 +153,15 @@ namespace Selene
         {
             var s = vm.Settings;
             var panel = new StackPanel { Margin = new Thickness(20) };
+            panel.Children.Add(new TextBlock { Text = "Features (also in Selene's menu under Selene settings):", FontWeight = FontWeights.SemiBold });
+            foreach (var f in Features.All)
+            {
+                var key = f.Key;
+                var box = new CheckBox { Content = f.Label + "  -  " + f.About, IsChecked = s.TurnedOff == null || !s.TurnedOff.Contains(key), Margin = new Thickness(0, 6, 0, 0) };
+                box.Checked += (o, e) => { if (s.TurnedOff != null) s.TurnedOff.Remove(key); };
+                box.Unchecked += (o, e) => { if (s.TurnedOff == null) s.TurnedOff = new List<string>(); if (!s.TurnedOff.Contains(key)) s.TurnedOff.Add(key); };
+                panel.Children.Add(box);
+            }
             Func<string, string, Action<string>, TextBox> field = (label, value, set) =>
             {
                 panel.Children.Add(new TextBlock { Text = label, Margin = new Thickness(0, 12, 0, 4) });
@@ -170,6 +183,45 @@ namespace Selene
             field("Streaming client name to react to (regular expression). Empty = any client:", s.StreamClientMatch, v => s.StreamClientMatch = v);
             field("Streaming host credentials file (disconnect clients before sleep). Empty = off:", s.StreamCredentialsFile, v => s.StreamCredentialsFile = v);
             return new UserControl { Content = panel };
+        }
+    }
+
+    // Every Selene feature someone might not want, each with an on/off switch (add-on settings page and Selene settings
+    // in the menu). A new feature gets a line here and a Features.On("key") check where it starts.
+    public static class Features
+    {
+        public class Option
+        {
+            public string Key, Label, About;
+        }
+
+        public static readonly Option[] All =
+        {
+            new Option { Key = "intro", Label = "Logo intro", About = "The crescent intro when Playnite starts." },
+            new Option { Key = "login", Label = "Who's playing? at start", About = "Off: the last profile signs in by itself (the very first start still sets you up)." },
+            new Option { Key = "sounds", Label = "Interface sounds", About = "Selene's ticks and chimes when you move, select and go back." },
+            new Option { Key = "music", Label = "Music control", About = "Keeps game songs from the music add-on off the cards, login and menus, and quiet under trailers." },
+            new Option { Key = "hints", Label = "Button hints", About = "What each button does, at the bottom right of the home." },
+            new Option { Key = "glow", Label = "Glow and particles", About = "The breathing glow and drifting specks behind the login when there's no wallpaper." },
+            new Option { Key = "freeze", Label = "Freeze games on Guide", About = "Guide pauses offline games completely; off, games are only muted." },
+            new Option { Key = "tray", Label = "Close to tray", About = "Exit hides Playnite in the tray so it comes back instantly (after a restart)." },
+            new Option { Key = "admin", Label = "No-prompt launchers", About = "Games that need administrator rights get a launcher that skips the prompt next time." },
+        };
+
+        private static SeleneSettings settings;
+        private static Action save;
+
+        public static void Init(SeleneSettings s, Action saveAll) { settings = s; save = saveAll; }
+
+        public static bool On(string key) { return settings == null || settings.TurnedOff == null || !settings.TurnedOff.Contains(key); }
+
+        public static void Set(string key, bool on)
+        {
+            if (settings == null) return;
+            if (settings.TurnedOff == null) settings.TurnedOff = new List<string>();
+            settings.TurnedOff.Remove(key);
+            if (!on) settings.TurnedOff.Add(key);
+            if (save != null) save();
         }
     }
 }
