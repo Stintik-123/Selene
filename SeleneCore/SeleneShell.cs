@@ -59,6 +59,7 @@ namespace Selene
             UpdateLastPlayed();
             // no login this start (intro and Who's playing? both off): Collection right away if that's the start screen
             var loginLayer = Part("AcceuilSettings");
+            if (loginLayer != null && !loginLayer.IsVisible) LoginScene.AllowBackdropVideo();
             if (loginLayer != null && !loginLayer.IsVisible && Features.On("startcollection")) ShowLibrary();
             // Playnite's "game is running" screen (switching back to Playnite while a game runs): the home instead
             var status = HomeNav.FindByName(main, "PART_ElemGameStatus") as UIElement;

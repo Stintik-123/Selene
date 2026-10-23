@@ -193,7 +193,7 @@ namespace Selene
             var next = pending;
             pending = null;
             if (next != null) Show(next(), 0);
-            else if (!introPlayed) { introPlayed = true; Show(Features.On("intro") ? (Screen)new IntroScreen() : Start(), 0); }
+            else if (!introPlayed) { introPlayed = true; if (!Features.On("intro")) AllowBackdropVideo(); Show(Features.On("intro") ? (Screen)new IntroScreen() : Start(), 0); }
             else Show(Start(), 0);
         }
 
@@ -320,6 +320,16 @@ namespace Selene
         // beam, haze, drifting dust). Either only on themes without a wallpaper (RefreshBackdrop / RefreshHomeGlow).
         private static readonly List<KeyValuePair<MediaElement, Grid>> backdrops = new List<KeyValuePair<MediaElement, Grid>>();
 
+        // the background video starts once the logo intro is over (decoding it during the intro made the logo stutter)
+        private static bool videoAllowed;
+
+        public static void AllowBackdropVideo()
+        {
+            if (videoAllowed) return;
+            videoAllowed = true;
+            foreach (var pair in backdrops) if (pair.Key != null && pair.Key.IsVisible) pair.Key.Play();
+        }
+
         private static Grid BuildGlow()
         {
             var outer = new Grid { IsHitTestVisible = false };
@@ -330,7 +340,7 @@ namespace Selene
                 video = new MediaElement { Source = new Uri(file), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Manual, IsMuted = true, Stretch = Stretch.UniformToFill };
                 video.MediaEnded += (s, e) => { video.Position = TimeSpan.Zero; video.Play(); };
                 // plays only while it's on screen
-                video.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) video.Play(); else video.Pause(); };
+                video.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue && videoAllowed) video.Play(); else video.Pause(); };
                 outer.Children.Add(video);
             }
             var glow = new Grid { IsHitTestVisible = false };
@@ -490,8 +500,24 @@ namespace Selene
             var breathe = new DoubleAnimationUsingKeyFrames();
             breathe.KeyFrames.Add(new LinearDoubleKeyFrame(0.4, KeyTime.FromTimeSpan(TimeSpan.Zero)));
             breathe.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1300)), new SineEase { EasingMode = EasingMode.EaseInOut }));
-            breathe.KeyFrames.Add(new EasingDoubleKeyFrame(0.7, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2400)), new SineEase { EasingMode = EasingMode.EaseInOut }));
+            breathe.KeyFrames.Add(new EasingDoubleKeyFrame(0.65, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(2100)), new SineEase { EasingMode = EasingMode.EaseInOut }));
+            // then it keeps glowing: a slow breath, and the halo swells a little with it
+            breathe.Completed += (s, e) =>
+            {
+                if (done) return;
+                glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.65, 1, TimeSpan.FromMilliseconds(1100)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
+            };
             glow.BeginAnimation(UIElement.OpacityProperty, breathe);
+            var halo = glow as FrameworkElement;
+            if (halo != null)
+            {
+                halo.RenderTransformOrigin = new Point(0.5, 0.5);
+                var swell = new ScaleTransform(1, 1);
+                halo.RenderTransform = swell;
+                var grow = new DoubleAnimation(0.94, 1.08, TimeSpan.FromMilliseconds(1100)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
+                swell.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+                swell.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+            }
             int ticks = 0;
             timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
             timer.Tick += (s, e) =>
@@ -514,6 +540,7 @@ namespace Selene
         {
             if (done) return;
             done = true;
+            LoginScene.AllowBackdropVideo();
             if (timer != null) timer.Stop();
             if (LoginScene.SignInLast()) LoginScene.Finish();
             else LoginScene.Show(LoginScene.Start(), 0);

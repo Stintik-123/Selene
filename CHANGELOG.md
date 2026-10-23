@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Logo intro: the moon's halo keeps glowing (a slow breath and swell), and the background video waits until the intro is over so the logo stays smooth.
 - Spotlight's row no longer bounces when moving between the Store and Collection cards.
 - Spotlight keeps Playnite's selected game to its own (Collection's hidden list kept picking its first game, flashing its art); Xbox and Microsoft Store logos.
 - Spotlight's cards: the background shows much brighter (the shades for game art are light there).
