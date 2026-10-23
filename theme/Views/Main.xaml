@@ -39,7 +39,7 @@
                                     <RowDefinition Height="104" />
                                     <RowDefinition Height="0" />
                                 </Grid.RowDefinitions>
-                                <Border Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}" Panel.ZIndex="-3"/>
+                                <Border x:Name="SeleneLibraryBase" Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}" Panel.ZIndex="-3"/>
                                 <Image Panel.ZIndex="-3" x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
                                 <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" Panel.ZIndex="-3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="120" Stretch="UniformToFill"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->

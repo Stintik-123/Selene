@@ -175,7 +175,10 @@ namespace Selene
             var library = Part("SeleneLibrary");
             if (home == null) return;
             int mine = ++switchCount;
-            HomeNav.SyncSelectionForHome();   // Spotlight's own selection first: no flash of Collection's game art
+            // Collection goes first: setting Spotlight's "no game" (a card) made its list jump to its first game, whose
+            // art showed for a moment under the fading-in Spotlight (the 007 flash)
+            if (library != null) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Visibility = Visibility.Collapsed; }
+            HomeNav.SyncSelectionForHome();   // Spotlight's own selection
             home.Visibility = Visibility.Visible;
             // Spotlight fades in over Collection, which goes once it's covered
             var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(280)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };

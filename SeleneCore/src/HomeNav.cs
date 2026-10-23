@@ -3045,7 +3045,7 @@ namespace Selene
                 };
                 var tab = new Border
                 {
-                    Child = label, CornerRadius = new CornerRadius(18), Padding = new Thickness(16, 5, 16, 7), Margin = new Thickness(2, 0, 2, 0),
+                    Child = label, CornerRadius = new CornerRadius(18), Padding = new Thickness(18, 5, 20, 7), Margin = new Thickness(2, 0, 2, 0),
                     Background = on ? (Brush)Ink.Brush("SeleneFocusColor", 0.95) : Brushes.Transparent,
                     VerticalAlignment = VerticalAlignment.Center, RenderTransformOrigin = new Point(0.5, 0.5)
                 };

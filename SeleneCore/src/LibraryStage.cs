@@ -16,7 +16,7 @@ namespace Selene
         private static FrameworkElement library;
         private static Grid host;
         private static TextBlock rsHint;
-        private static UIElement art, wallpaper;   // faded away while the trailer plays
+        private static UIElement art, wallpaper, baseLayer;   // faded away while the trailer plays (black behind it)
         private static MediaElement video;
         private static bool videoHasSound, soundOn;
         private static DispatcherTimer arm;
@@ -38,6 +38,7 @@ namespace Selene
                 foreach (UIElement child in grid.Children)
                     if (child.GetType().Name == "FadeImage") { art = child; break; }
             wallpaper = HomeNav.FindByName(library, "SeleneLibraryWallpaper") as UIElement;
+            baseLayer = HomeNav.FindByName(library, "SeleneLibraryBase") as UIElement;
             HomeNav.Log("library stage: art " + (art != null) + ", wallpaper " + (wallpaper != null));
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
             arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(4000) };   // like Aniki: the art first, the trailer about 4 s in
@@ -185,7 +186,7 @@ namespace Selene
         {
             var fade = new DoubleAnimation(on ? 1 : 0, TimeSpan.FromMilliseconds(on ? 700 : 250)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
             // the game's art and the wallpaper step aside while the trailer plays (dark on the left), and come back after
-            foreach (var el in new[] { art, wallpaper })
+            foreach (var el in new[] { art, wallpaper, baseLayer })
             {
                 if (el == null) continue;
                 if (on) el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(700)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
