@@ -993,6 +993,24 @@ namespace Selene
             return true;
         }
 
+        // back from the library: Playnite still has the library's game selected, and the home drew its art for a moment
+        // before the row's own selection caught up; the row's selection (nothing for a card) goes to Playnite first
+        public static void SyncSelectionForHome()
+        {
+            try
+            {
+                var row = LiveRow();
+                var w = Application.Current.MainWindow;
+                var vm = w != null ? w.DataContext : null;
+                var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
+                if (row == null || prop == null || !prop.CanWrite) return;
+                var item = row.SelectedItem;
+                object game = item is string || item is RowPad ? null : item;
+                if (!ReferenceEquals(prop.GetValue(vm, null), game)) prop.SetValue(vm, game, null);
+            }
+            catch (Exception ex) { Log("home selection sync: " + ex.Message); }
+        }
+
         // while the login screens cover the home nothing is selected for Playnite (its music add-ons would play)
         public static void ClearSelectedGame()
         {

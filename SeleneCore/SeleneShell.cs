@@ -127,6 +127,7 @@ namespace Selene
             var home = Part("WelcomeHubOverlay");
             var library = Part("SeleneLibrary");
             if (home == null) return;
+            HomeNav.SyncSelectionForHome();   // the home's own selection first: no flash of the library's game art
             if (library != null) library.Visibility = Visibility.Collapsed;
             home.Visibility = Visibility.Visible;
             home.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));

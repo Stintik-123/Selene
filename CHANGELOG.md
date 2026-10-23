@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Going from the library back to the home no longer flashes the library game's art.
 - Library: the game's playtime, last played, platform, release year and genres under its logo; trailers start after 2 seconds on a game, and are never zoomed while playing.
 - No menu button in the top bar (Start opens the menu).
 - Home filters switch with LB / RB instead of the triggers.
