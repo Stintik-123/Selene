@@ -1,0 +1,299 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
+using Playnite.SDK.Models;
+
+namespace Selene
+{
+    // The game details page's lower half, filled by Selene: the game's screenshots, your captures of it, your activity
+    // with it, and more games like it from your own collection. Down from the Play / Options pills goes into those bands
+    // one at a time (the page glides up), Left / Right move along a band, A opens what's picked, Up / B come back up.
+    public static class DetailsStage
+    {
+        private const double BandTop = 750, BandPitch = 260;
+        private static FrameworkElement details;
+        private static TranslateTransform shift;
+        private static readonly List<Tile>[] tiles = { new List<Tile>(), new List<Tile>(), new List<Tile>() };   // screenshots, captures, more
+        private static readonly List<Action>[] opens = { new List<Action>(), new List<Action>(), new List<Action>() };
+        private static readonly int[] at = new int[3];
+        private static int zone;   // 0: the pills (Playnite's focus), 1..3: the bands
+        private static Guid shownId;
+        private static DispatcherTimer shotsWatch;
+        private static int shotsSeen;
+
+        public static void Attach(Window w)
+        {
+            details = HomeNav.FindByName(w, "PART_ElemGameDetails") as FrameworkElement;
+            if (details == null) { HomeNav.Log("details stage: no details view"); return; }
+            details.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Opened(); else Closed(); };
+            var npc = w.DataContext as System.ComponentModel.INotifyPropertyChanged;
+            if (npc != null) npc.PropertyChanged += (s, e) => { if (e.PropertyName == "SelectedGame" && details.IsVisible) details.Dispatcher.BeginInvoke(new Action(Opened), DispatcherPriority.Background); };
+            if (details.IsVisible) Opened();
+        }
+
+        private static T Part<T>(string name) where T : class { return details != null ? HomeNav.FindByName(details, name) as T : null; }
+
+        private static Game Selected()
+        {
+            try { return HomeNav.Api != null ? HomeNav.Api.MainView.SelectedGames.FirstOrDefault() : null; }
+            catch { return null; }
+        }
+
+        private static void Opened()
+        {
+            var g = Selected();
+            if (g == null) return;
+            // the page's parts are in the template, made once the view shows
+            details.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var page = Part<Grid>("SeleneDetailsPage");
+                shift = page != null ? page.RenderTransform as TranslateTransform : null;
+                if (page == null) { HomeNav.Log("details stage: no page in the template"); return; }
+                if (shownId != g.Id || zone == 0) { zone = 0; if (shift != null) { shift.BeginAnimation(TranslateTransform.YProperty, null); shift.Y = 0; } }
+                shownId = g.Id;
+                Fill(g);
+            }), DispatcherPriority.Loaded);
+        }
+
+        private static void Closed()
+        {
+            zone = 0;
+            if (shotsWatch != null) shotsWatch.Stop();
+            if (shift != null) { shift.BeginAnimation(TranslateTransform.YProperty, null); shift.Y = 0; }
+        }
+
+        // ---- filling ----
+        private static void Fill(Game g)
+        {
+            FillShots();
+            FillCaptures(g);
+            FillActivity(g);
+            FillMore(g);
+            ShowFocus();
+            // the screenshots arrive a moment after the selection: looked at again for a while
+            shotsSeen = GameMedia.Current.Count;
+            if (shotsWatch == null) { shotsWatch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) }; shotsWatch.Tick += (s, e) => { if (details == null || !details.IsVisible) { shotsWatch.Stop(); return; } if (GameMedia.Current.Count != shotsSeen) { shotsSeen = GameMedia.Current.Count; FillShots(); ShowFocus(); } }; }
+            shotsWatch.Stop();
+            shotsWatch.Start();
+        }
+
+        private static void Band(string panelName, string labelName, int zoneIndex, bool any)
+        {
+            var label = Part<TextBlock>(labelName);
+            if (label != null) label.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static void FillShots()
+        {
+            var panel = Part<StackPanel>("SeleneDetailsShots");
+            if (panel == null) return;
+            panel.Children.Clear(); tiles[0].Clear(); opens[0].Clear();
+            var shots = GameMedia.Current.Take(6).ToList();
+            for (int i = 0; i < shots.Count; i++)
+            {
+                var t = new Tile(272, 153, 12, 5) { FocusScale = 1.05 };
+                t.Root.Margin = new Thickness(0, 0, 20, 0);
+                if (shots[i].Thumb != null) t.Face.Child = new Border { CornerRadius = new CornerRadius(11), Background = new ImageBrush(shots[i].Thumb) { Stretch = Stretch.UniformToFill } };
+                panel.Children.Add(t.Root);
+                tiles[0].Add(t);
+                int idx = i;
+                opens[0].Add(() => GameMedia.OpenViewerAt(idx));
+                Ui.Rise(t.Root, i * 40, 10, 240);
+            }
+            Band("SeleneDetailsShots", "SeleneDetailsShotsLabel", 1, shots.Count > 0);
+            if (at[0] >= tiles[0].Count) at[0] = 0;
+        }
+
+        private static void FillCaptures(Game g)
+        {
+            var panel = Part<StackPanel>("SeleneDetailsCaptures");
+            var note = Part<TextBlock>("SeleneDetailsCapturesNote");
+            if (panel == null) return;
+            panel.Children.Clear(); tiles[1].Clear(); opens[1].Clear();
+            var mine = CapturesScreen.Known.Where(c => string.Equals(c.Game, g.Name, StringComparison.OrdinalIgnoreCase)).Take(4).ToList();
+            if (note != null) { note.Text = mine.Count == 0 ? "No screenshots or clips of this game yet." : ""; note.Visibility = mine.Count == 0 ? Visibility.Visible : Visibility.Collapsed; }
+            var files = new List<string>(); var where = new List<int>();
+            for (int i = 0; i < mine.Count; i++)
+            {
+                var c = mine[i];
+                var t = new Tile(272, 153, 12, 5) { FocusScale = 1.05 };
+                t.Root.Margin = new Thickness(0, 0, 20, 0);
+                var still = c.IsVideo ? Thumbnails.Cached(c.Path) : c.Path;
+                if (still != null) { files.Add(still); where.Add(i); }
+                else if (c.IsVideo) t.Face.Child = new TextBlock { Text = "\uE768", FontFamily = Ui.Glyphs, FontSize = 36, Foreground = Ink.Brush("SeleneInkColor", 0.85), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+                if (c.IsVideo)
+                {
+                    var badge = new Border { CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(Color.FromArgb(0xB0, 0, 0, 0)), Padding = new Thickness(7, 3, 7, 4), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 10, 10, 0), Child = new TextBlock { Text = "\uE768", FontFamily = Ui.Glyphs, FontSize = 12, Foreground = Brushes.White } };
+                    Panel.SetZIndex(badge, 2);
+                    t.Root.Children.Insert(1, badge);
+                }
+                panel.Children.Add(t.Root);
+                tiles[1].Add(t);
+                var path = c.Path;
+                opens[1].Add(() => LoginScene.OpenWith(() => new CapturesScreen(path)));
+                Ui.Rise(t.Root, i * 40, 10, 240);
+            }
+            var list = tiles[1];
+            if (files.Count > 0) Ui.LoadInOrder(files, 420, (i, pic) =>
+            {
+                if (where[i] >= list.Count || !ReferenceEquals(list, tiles[1])) return;
+                var fill = new Border { CornerRadius = new CornerRadius(11), Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill }, Opacity = 0 };
+                list[where[i]].Face.Child = fill;
+                Ui.Fade(fill, 1, 240);
+            });
+            if (at[1] >= tiles[1].Count) at[1] = 0;
+        }
+
+        private static void FillActivity(Game g)
+        {
+            var playtime = Part<TextBlock>("SeleneDetailsPlaytime");
+            var last = Part<TextBlock>("SeleneDetailsLast");
+            var week = Part<TextBlock>("SeleneDetailsWeek");
+            var rank = Part<TextBlock>("SeleneDetailsRank");
+            if (playtime == null) return;
+            var secs = GameFacts.Seconds(g);
+            var when = GameFacts.LastPlayed(g);
+            playtime.Text = GameFacts.Hours(secs);
+            last.Text = GameFacts.Ago(when);
+            week.Text = when.HasValue && when.Value > DateTime.Now.AddDays(-7) ? "Yes" : "Not yet";
+            if (secs == 0) rank.Text = "—";
+            else
+            {
+                var order = GameFacts.Games().Where(x => GameFacts.Seconds(x) > 0).OrderByDescending(GameFacts.Seconds).ToList();
+                int n = order.FindIndex(x => x.Id == g.Id) + 1;
+                rank.Text = n > 0 ? "#" + n + " of " + order.Count : "—";
+            }
+        }
+
+        private static void FillMore(Game g)
+        {
+            var panel = Part<StackPanel>("SeleneDetailsMore");
+            if (panel == null) return;
+            panel.Children.Clear(); tiles[2].Clear(); opens[2].Clear();
+            var all = GameFacts.Games().Where(x => x.Id != g.Id).ToList();
+            var devs = new HashSet<Guid>(g.DeveloperIds ?? new List<Guid>());
+            var genres = new HashSet<Guid>(g.GenreIds ?? new List<Guid>());
+            Func<Game, int> score = x =>
+            {
+                int s = 0;
+                if (x.DeveloperIds != null && x.DeveloperIds.Any(devs.Contains)) s += 3;
+                if (x.GenreIds != null) s += x.GenreIds.Count(genres.Contains);
+                if (x.IsInstalled) s += 1;
+                return s;
+            };
+            var like = all.Select(x => new { Game = x, Score = score(x) }).Where(x => x.Score >= 2).OrderByDescending(x => x.Score).ThenByDescending(x => GameFacts.Seconds(x.Game)).Take(9).Select(x => x.Game).ToList();
+            Band("SeleneDetailsMore", "SeleneDetailsMoreLabel", 3, like.Count > 0);
+            for (int i = 0; i < like.Count; i++)
+            {
+                var x = like[i];
+                var t = GameFacts.CoverTile(x, 120, 160);
+                var item = new StackPanel { Width = 120, Margin = new Thickness(0, 0, 18, 0) };
+                item.Children.Add(t.Root);
+                item.Children.Add(new TextBlock { Text = x.Name, FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 8, 0, 0) });
+                panel.Children.Add(item);
+                tiles[2].Add(t);
+                var id = x.Id;
+                opens[2].Add(() =>
+                {
+                    // that game on Spotlight (the details close first)
+                    try { PlayniteMenu.Main("ToggleGameDetailsCommand"); } catch (Exception ex) { HomeNav.Log("details stage: " + ex.Message); }
+                    var later = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                    later.Tick += (s, e) => { later.Stop(); HomeNav.ShowGame(id); };
+                    later.Start();
+                });
+                Ui.Rise(item, i * 35, 10, 240);
+            }
+            GameFacts.FillCovers(like, tiles[2], 240);
+            if (at[2] >= tiles[2].Count) at[2] = 0;
+        }
+
+        // ---- moving ----
+        private static bool Active { get { return details != null && details.IsVisible && !LoginScene.IsActive && !GameMedia.ViewerOpen; } }
+
+        private static int NextBand(int from, int dir)
+        {
+            for (int z = from + dir; z >= 1 && z <= 3; z += dir) if (tiles[z - 1].Count > 0) return z;
+            return -1;
+        }
+
+        private static void ShowFocus()
+        {
+            for (int z = 0; z < 3; z++)
+                for (int i = 0; i < tiles[z].Count; i++) tiles[z][i].Focus(zone == z + 1 && i == at[z]);
+        }
+
+        private static void Glide()
+        {
+            if (shift == null) return;
+            double to = zone <= 1 ? 0 : -(zone - 1) * BandPitch;
+            shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() });
+        }
+
+        private static void FocusPills()
+        {
+            var pill = Part<UIElement>("PART_ButtonContext");
+            if (pill != null) pill.Focus();
+        }
+
+        public static bool Handle(string b)
+        {
+            if (!Active) { zone = 0; return false; }
+            if (zone == 0)
+            {
+                if (b != "DPadDown") return false;
+                int z = NextBand(0, 1);
+                if (z < 0) return false;
+                // only from the pills (the description can take the focus too; Down there scrolls it)
+                var focused = Keyboard.FocusedElement as FrameworkElement;
+                if (focused == null || (focused.Name != "PART_ButtonContext" && focused.Name != "PART_ButtonOptions")) return false;
+                zone = z;
+                Ui.Tick();
+                Glide();
+                ShowFocus();
+                return true;
+            }
+            var list = tiles[zone - 1];
+            switch (b)
+            {
+                case "DPadLeft":
+                case "DPadRight":
+                {
+                    int next = at[zone - 1] + (b == "DPadRight" ? 1 : -1);
+                    if (next < 0 || next >= list.Count) { if (list.Count > 0) Ui.Shake(list[at[zone - 1]].Root); return true; }
+                    at[zone - 1] = next;
+                    Ui.Tick();
+                    ShowFocus();
+                    return true;
+                }
+                case "DPadDown":
+                {
+                    int z = NextBand(zone, 1);
+                    if (z < 0) return true;
+                    zone = z; Ui.Tick(); Glide(); ShowFocus();
+                    return true;
+                }
+                case "DPadUp":
+                case "B":
+                {
+                    int z = b == "DPadUp" ? NextBand(zone, -1) : -1;
+                    if (z < 0) { zone = 0; Ui.Tick(); Glide(); ShowFocus(); FocusPills(); return true; }
+                    zone = z; Ui.Tick(); Glide(); ShowFocus();
+                    return true;
+                }
+                case "A":
+                {
+                    int i = at[zone - 1];
+                    if (i < opens[zone - 1].Count) { Ui.Confirm(); opens[zone - 1][i](); }
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+}

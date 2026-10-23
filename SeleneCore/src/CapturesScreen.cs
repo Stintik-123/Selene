@@ -459,6 +459,9 @@ namespace Selene
         // ---------------- finding them ----------------
         private const string SteamPlugin = "cb91dfc9-b977-43bf-8e70-55f46e410fab";
 
+        // the last full scan (the card's count makes one at start): what the details page shows for a game
+        public static List<Capture> Known = new List<Capture>();
+
         public static List<Capture> Scan(int max)
         {
             var list = new List<Capture>();
@@ -560,6 +563,7 @@ namespace Selene
                 try
                 {
                     var all = Scan(int.MaxValue);
+                    Known = all;
                     int clips = all.Count(c => c.IsVideo), shots = all.Count - clips;
                     text = all.Count == 0 ? "None found yet" : Count(shots, "screenshot") + (clips > 0 ? " · " + Count(clips, "clip") : "");
                     latest = all.Take(4).ToList();

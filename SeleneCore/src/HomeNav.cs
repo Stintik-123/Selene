@@ -77,7 +77,7 @@ namespace Selene
                 if (Ui.KeyIsPadCopy() && (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape)) { e.Handled = true; return; }
                 // the Store card's game pictures (Down from the card goes into them)
                 var asPad = e.Key == Key.Down ? "DPadDown" : e.Key == Key.Up ? "DPadUp" : e.Key == Key.Left ? "DPadLeft" : e.Key == Key.Right ? "DPadRight" : e.Key == Key.Enter ? "A" : e.Key == Key.Escape || e.Key == Key.Back ? "B" : null;
-                if (asPad != null && !e.Handled && (StoreShowcase.Handle(asPad) || CardShowcase.Handle(asPad))) { e.Handled = true; return; }
+                if (asPad != null && !e.Handled && (StoreShowcase.Handle(asPad) || CardShowcase.Handle(asPad) || DetailsStage.Handle(asPad))) { e.Handled = true; return; }
                 // Up/Down never shrink the card; Left/Right only while moving inside the row (not in the bar below)
                 bool dirKey = e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left || e.Key == Key.Right;
                 if (!e.Handled && previewShowing && (!dirKey || ((e.Key == Key.Left || e.Key == Key.Right) && IsInRow(Keyboard.FocusedElement as DependencyObject)))) SmoothClosePreview();
@@ -2412,6 +2412,7 @@ namespace Selene
                 // Start opens Selene's menu (Playnite's own is under More in it)
                 if (pressed == "Start" && mainW != null && FocusOnHome()) { SeleneShell.OpenMenu(); e.Cancel(); return; }   // (home row not visible: other home sections)
                 if (GameMedia.HandleButton(pressed, Keyboard.FocusedElement)) { e.Cancel(); return; }
+                if (DetailsStage.Handle(Ui.Normalize(pressed))) { e.Cancel(); return; }   // the details page's bands
                 if (pressed == "RightStick" && previewShowing) { TogglePreviewSound(); e.Cancel(); return; }
                 // A still launches the game below; Up/Down leave the card playing (only sideways moves shrink it)
                 bool dirPad = pressed.StartsWith("DPad") || (pressed.StartsWith("LeftStick") && pressed != "LeftStick");

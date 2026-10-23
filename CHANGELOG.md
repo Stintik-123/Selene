@@ -4,7 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Game details: the game's screenshots along the bottom (the empty half of the page), and the platform shown as the store's mark and name like Spotlight (a PC game said "PC (Windows)").
+- Game details, filled in below: the game's screenshots (A opens them big), your captures of it (A opens one) with your activity beside them (play time, last played, this week, your rank), and more games like it from your own collection (A shows one on Spotlight). Down from the pills goes into these bands and the page glides up; Up or B comes back. The platform shows the store's mark and name like Spotlight (a PC game said "PC (Windows)").
 - Collection: X opens the details page (it started or installed the game instead); Y opens the game's options as the hint says (it opened Playnite's search box); Left works on the first tile after coming from Spotlight (it sat at the very edge with nothing built to its left).
 - Start-up: the library update Selene asks for 20 s after start (and when Playnite comes back from the tray) has a switch: Start-up, Library update at start.
 - Playnite's progress window (installing an add-on, updating the library) shows Selene's mark with its halo breathing under the words instead of a loading bar; the Playnite settings screen has Playnite's logo beside its title, with a breathing halo like Selene's mark.

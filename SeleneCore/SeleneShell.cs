@@ -97,6 +97,7 @@ namespace Selene
             Wire("SeleneNav_captures", () => new CapturesScreen());
             Wire("SeleneNav_surprise", () => new SurpriseScreen());
             HomeNav.ApplyValueSettings();
+            DetailsStage.Attach(main);         // the details page's lower half
             GameFacts.CardStats();
             CapturesScreen.CountInBackground();
             HomeNav.Log("shell: home/library wired");
