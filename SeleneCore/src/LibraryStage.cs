@@ -165,6 +165,19 @@ namespace Selene
             catch { return 1; }
         }
 
+        // entering Collection: its art fades in on its own, a moment after the screen (Playnite's image pops in without
+        // a fade here, mid-way through the screen's fade-in)
+        public static void FadeArtIn()
+        {
+            if (art == null) return;
+            var keys = new DoubleAnimationUsingKeyFrames();
+            keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(180))));
+            keys.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(620)), new CubicEase { EasingMode = EasingMode.EaseOut }));
+            keys.Completed += (s, e) => { if (video == null) art.BeginAnimation(UIElement.OpacityProperty, null); };
+            art.BeginAnimation(UIElement.OpacityProperty, keys);
+        }
+
         public static void Stop()
         {
             if (arm != null) arm.Stop();

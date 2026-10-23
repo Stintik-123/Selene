@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Entering Collection, the game's art eases in smoothly instead of popping up.
 - Back to Spotlight from Collection: its art is emptied at once (no faint frame of the last game); the start-up background is never black (the video fades in after the intro).
 - Logo intro: the moon's halo keeps glowing (a slow breath and swell), and the background video waits until the intro is over so the logo stays smooth.
 - Spotlight's row no longer bounces when moving between the Store and Collection cards.

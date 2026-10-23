@@ -179,6 +179,7 @@ namespace Selene
                 var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
                 fadeIn.Completed += (s2, e2) => { if (mine == switchCount) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Opacity = 1; } };
                 library.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+                LibraryStage.FadeArtIn();   // the game's art eases in just after
             };
             home.BeginAnimation(UIElement.OpacityProperty, fadeOut);
             HomeNav.Log("shell: library");
