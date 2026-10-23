@@ -77,7 +77,7 @@ namespace Selene
                 if (Ui.KeyIsPadCopy() && (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape)) { e.Handled = true; return; }
                 // the Store card's game pictures (Down from the card goes into them)
                 var asPad = e.Key == Key.Down ? "DPadDown" : e.Key == Key.Up ? "DPadUp" : e.Key == Key.Left ? "DPadLeft" : e.Key == Key.Right ? "DPadRight" : e.Key == Key.Enter ? "A" : e.Key == Key.Escape || e.Key == Key.Back ? "B" : null;
-                if (asPad != null && !e.Handled && StoreShowcase.Handle(asPad)) { e.Handled = true; return; }
+                if (asPad != null && !e.Handled && (StoreShowcase.Handle(asPad) || CardShowcase.Handle(asPad))) { e.Handled = true; return; }
                 // Up/Down never shrink the card; Left/Right only while moving inside the row (not in the bar below)
                 bool dirKey = e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left || e.Key == Key.Right;
                 if (!e.Handled && previewShowing && (!dirKey || ((e.Key == Key.Left || e.Key == Key.Right) && IsInRow(Keyboard.FocusedElement as DependencyObject)))) SmoothClosePreview();
@@ -773,12 +773,14 @@ namespace Selene
         private static void FocusLibraryLater(Window w, bool fromHome)
         {
             int tries = 0;
-            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+            // quick looks first (the list is usually there within a frame or two; a 150 ms first look read as a delay), then slower
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
             timer.Tick += (s, e) =>
             {
                 tries++;
+                if (tries == 6) timer.Interval = TimeSpan.FromMilliseconds(150);
                 var list = FindByName(w, "PART_ListGameItems") as ListBox;
-                if (list == null || !list.IsVisible || list.Items.Count == 0) { if (tries > 15) { timer.Stop(); Log("library open: list not found/visible"); } return; }
+                if (list == null || !list.IsVisible || list.Items.Count == 0) { if (tries > 20) { timer.Stop(); Log("library open: list not found/visible"); } return; }
                 timer.Stop();
                 // the game that was selected on the home row (cards excepted) is the one the library opens on
                 // (the list holds GamesCollectionViewEntry wrappers, not Game objects: match by Id)
@@ -867,6 +869,16 @@ namespace Selene
             var sv0 = FindChild<ScrollViewer>(row);
             if (sv0 != null) sv0.ScrollToHorizontalOffset(Math.Max(0, FirstGameIndex(row) - AnchorSlot));
             row.PreviewGotKeyboardFocus += OnRowPreviewGotFocus;
+            // a mouse click on a card opens it as A does (Playnite's own click handling treated it like a game)
+            row.PreviewMouseLeftButtonDown += (s, a) =>
+            {
+                var item = ItemsControl.ContainerFromElement(row, a.OriginalSource as DependencyObject) as ListBoxItem;
+                var nav = item != null ? item.DataContext as string : null;
+                if (nav == null || !nav.StartsWith("nav:")) return;
+                a.Handled = true;
+                item.Focus();
+                RunCard(row, nav.Substring(4));
+            };
             // Going up to the top bar (or anywhere outside the row) must not scroll the row back to the start.
             row.LostKeyboardFocus += (s, a) =>
             {
@@ -1196,11 +1208,14 @@ namespace Selene
         }
 
         // the Store card's own tile on the row: its highlight steps back while the focus is in the card's pictures
-        public static void DimStoreCard(bool dim)
+        public static void DimStoreCard(bool dim) { DimCard("nav:store", dim); }
+
+        // the card steps back (ring off, no growth) while its pictures below are being gone through
+        public static void DimCard(string card, bool dim)
         {
             var row = LiveRow();
             if (row == null) return;
-            var c = row.ItemContainerGenerator.ContainerFromItem("nav:store") as Control;
+            var c = row.ItemContainerGenerator.ContainerFromItem(card) as Control;
             if (c == null || c.Template == null) return;
             var ring = c.Template.FindName("Ring", c) as UIElement;
             var scale = c.Template.FindName("TileScale", c) as ScaleTransform;
@@ -1221,11 +1236,15 @@ namespace Selene
         }
 
         // the Store card is the one picked on Spotlight's row (its game pictures can be gone into with Down)
-        public static bool StoreCardFocused()
+        public static bool StoreCardFocused() { return FocusedCard() == "nav:store"; }
+
+        // the card ("nav:...") picked on Spotlight's row with the focus in the row, else null
+        public static string FocusedCard()
         {
-            if (SeleneShell.CollectionActive || LoginScene.IsActive) return false;
+            if (SeleneShell.CollectionActive || LoginScene.IsActive) return null;
             var row = LiveRow();
-            return row != null && row.IsVisible && Equals(row.SelectedItem, "nav:store") && IsInRow(Keyboard.FocusedElement as DependencyObject);
+            if (row == null || !row.IsVisible || !IsInRow(Keyboard.FocusedElement as DependencyObject)) return null;
+            return row.SelectedItem as string;
         }
 
         public static void SyncSelectionForHome(Action artReady = null)
@@ -1847,7 +1866,7 @@ namespace Selene
                 try
                 {
                     RebuildGames(row);
-                    int first0 = startOnCards ? 0 : FirstGameIndex(row);
+                    int first0 = startOnCards ? StartCardIndex(row) : FirstGameIndex(row);
                     if (first0 >= 0) { row.SelectedIndex = first0; PushSelected(row); }
                 }
                 catch { }
@@ -2030,7 +2049,7 @@ namespace Selene
                 // would keep its old selection (music, background) while the row shows its first game.
                 ApplyCardOrder(row);
                 RebuildGames(row);
-                int first = startOnCards && row.Items.Count > 0 ? 0 : FirstGameIndex(row);
+                int first = startOnCards && row.Items.Count > 0 ? StartCardIndex(row) : FirstGameIndex(row);
                 startOnCards = false;
                 movingCard = null;
                 movingGame = null;
@@ -2208,6 +2227,13 @@ namespace Selene
         private static readonly string CardOrderFile = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-card-order.txt");
 
+        // where the row starts after Playnite starts or someone signs in: the Store card (the first card without it)
+        private static int StartCardIndex(ListBox row)
+        {
+            int i = row.Items.IndexOf("nav:store");
+            return i >= 0 ? i : 0;
+        }
+
         private static int FirstGameIndex(ListBox row)
         {
             int i = 0;
@@ -2331,13 +2357,14 @@ namespace Selene
                 lastPadButton = same; lastPadRaw = pressed; lastPadAt = now;
                 HideCursorForController();
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
-                if (StoreShowcase.Handle(Ui.Normalize(pressed))) { e.Cancel(); return; }   // the Store card's game pictures
+                if (StoreShowcase.Handle(Ui.Normalize(pressed)) || CardShowcase.Handle(Ui.Normalize(pressed))) { e.Cancel(); return; }   // the cards' pictures
                 EndQuietFocus();   // the user is moving now: their moves tick
                 // View (Playnite calls it Back): home <-> library, like the legacy theme (Playnite opened its settings)
                 // R3 in the library while a trailer plays: its sound (else Playnite's filter, as usual)
                 if (pressed == "RightStick" && LibraryStage.Playing && LibraryStage.ToggleSound()) { e.Cancel(); return; }
-                // LS in Collection opened Playnite's filter-preset list: the tabs (LB / RB) do that now, so it does nothing
-                if (pressed == "LeftStick" && SeleneShell.CollectionActive) { e.Cancel(); return; }
+                // LS (pressing the left stick) opened Playnite's filter-preset list, in Collection and on Spotlight's cards: the
+                // tabs (LB / RB) do that now, so it does nothing on either screen
+                if (pressed == "LeftStick" && OnHomeOrLibrary()) { e.Cancel(); return; }
                 // Start and View on the home or the library: short press or hold (Selene settings / library search)
                 if ((pressed == "Start" || pressed == "Back") && OnHomeOrLibrary())
                 {
@@ -3509,8 +3536,13 @@ namespace Selene
                 foreach (var card in CardFeatures)
                     if (!Features.On(card.Value)) { int at = items.IndexOf(card.Key); if (at >= 0) items.RemoveAt(at); }
                 if (!System.IO.File.Exists(CardOrderFile)) return;
+                // a saved order from before a card existed would push the new cards to the end: it's ignored until the cards
+                // are moved again (the next move saves a complete one)
+                var saved = new System.Collections.Generic.List<string>();
+                foreach (var l in System.IO.File.ReadAllLines(CardOrderFile)) saved.Add(l.Trim());
+                foreach (var o in items) { var card = o as string; if (card != null && !saved.Contains(card)) { Log("card order: saved order predates " + card + ", ignored"); return; } }
                 int slot = 0;
-                foreach (var line in System.IO.File.ReadAllLines(CardOrderFile))
+                foreach (var line in saved)
                 {
                     int i = items.IndexOf(line.Trim());
                     if (i < 0) continue;

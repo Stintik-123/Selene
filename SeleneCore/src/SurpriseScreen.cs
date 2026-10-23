@@ -28,13 +28,15 @@ namespace Selene
         private readonly Random random = new Random();
         private readonly Dictionary<Guid, ImageSource> covers = new Dictionary<Guid, ImageSource>();
         private List<Game> candidates = new List<Game>();
-        private Game pick;
+        private Game pick, preset;   // preset: the game the spin lands on first (picked from the card's pictures)
         private int stepAt;
         private bool spinning, closed;
 
-        public SurpriseScreen()
+        public SurpriseScreen(Game preset = null)
         {
+            this.preset = preset;
             all = GameFacts.Games();
+            if (preset != null && pool == 0 && !preset.IsInstalled) pool = 2;
             if (pool < 0) pool = all.Any(g => g.IsInstalled) ? 0 : 2;
             var dark = new Border();
             dark.SetResourceReference(Border.BackgroundProperty, "SeleneScrimBrush");
@@ -79,6 +81,25 @@ namespace Selene
             ShowTabs();
         }
 
+        // the Surprise me card on Spotlight: a few ideas as pictures (Down goes into them, A spins onto that one)
+        private static readonly Random cardRandom = new Random();
+        public static void FillCard(List<Game> games)
+        {
+            int installed = games.Count(g => g.IsInstalled);
+            int fresh = games.Count(g => GameFacts.Seconds(g) == 0 && !GameFacts.LastPlayed(g).HasValue);
+            var pool = (installed > 0 ? games.Where(g => g.IsInstalled) : games).Where(g => GameFacts.BackgroundPath(g) != null || GameFacts.CoverPath(g) != null).ToList();
+            var ideas = new List<Game>();
+            while (ideas.Count < 4 && pool.Count > 0) { var g = pool[cardRandom.Next(pool.Count)]; pool.Remove(g); ideas.Add(g); }
+            string about = games.Count == 0 ? "Add games and Selene picks one for you." : "Selene picks from your " + (installed > 0 ? installed + " installed games" : games.Count + " games") + (fresh > 0 ? ", or the " + fresh + " you haven't played yet." : ".");
+            if (ideas.Count > 0) about += " Down for a few ideas.";
+            var entries = ideas.Select(g =>
+            {
+                var game = g;
+                return new CardShowcase.Entry { Image = GameFacts.BackgroundPath(g) ?? GameFacts.CoverPath(g), Title = g.Name, Sub = g.IsInstalled ? "Installed" : "", Glyph = "\uE8B1", Open = () => LoginScene.OpenWith(() => new SurpriseScreen(game)) };
+            }).ToList();
+            CardShowcase.Set("nav:surprise", "Surprise", "Not sure what to play?", about, entries);
+        }
+
         private void ShowTabs()
         {
             for (int i = 0; i < tabs.Count; i++)
@@ -110,7 +131,8 @@ namespace Selene
                 return;
             }
             hint.Text = "Not sure what to play? Selene picks one.";
-            pick = candidates[random.Next(candidates.Count)];
+            pick = preset != null && candidates.Contains(preset) ? preset : candidates[random.Next(candidates.Count)];
+            preset = null;   // Y spins for real next time
             // a handful of other covers to flick past (decoded ahead, off the UI thread), the pick's last
             var pass = new List<Game>();
             for (int i = 0; i < Steps.Length - 1 && candidates.Count > 1; i++) pass.Add(candidates[random.Next(candidates.Count)]);

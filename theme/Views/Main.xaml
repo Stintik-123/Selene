@@ -641,11 +641,11 @@
                                                 <ListBoxEx.ItemsSource>
                                                     <CompositeCollection>
                                                         <!-- the section cards (Selene Core drops the ones switched off and keeps the saved order) -->
-                                                        <sys:String>nav:library</sys:String>
-                                                        <sys:String>nav:activity</sys:String>
-                                                        <sys:String>nav:store</sys:String>
                                                         <sys:String>nav:captures</sys:String>
+                                                        <sys:String>nav:activity</sys:String>
                                                         <sys:String>nav:surprise</sys:String>
+                                                        <sys:String>nav:store</sys:String>
+                                                        <sys:String>nav:library</sys:String>
                                                         <CollectionContainer Collection="{Binding Source={StaticResource SeleneGames}}"/>
                                                     </CompositeCollection>
                                                 </ListBoxEx.ItemsSource>
@@ -745,8 +745,8 @@
                                                     <TextBlock Text="Open your collection" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
                                                 </StackPanel>
                                             </StackPanel>
-                                            <!-- the activity card selected: what it is, a few numbers, what A does -->
-                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1000" Opacity="0">
+                                            <!-- the activity card selected: a headline, a few numbers, pictures below (Selene Core fills them; Down goes into them) -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1760" Opacity="0">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -767,9 +767,11 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </StackPanel.Style>
-                                                <TextBlock Text="Activity" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
-                                                <TextBlock Text="What you've been playing: your most played games, the ones you played last, and the numbers." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
-                                                <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
+                                                <StackPanel x:Name="SeleneActivityHead" Width="1000" HorizontalAlignment="Left" Margin="0,40,0,0">
+                                                    <TextBlock Text="{DynamicResource SeleneActivityHeadline}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="60" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{DynamicResource SeleneActivityAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="2,10,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="4,24,0,0">
                                                     <StackPanel Margin="0,0,26,0">
                                                         <TextBlock Text="PLAYED THIS WEEK" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                         <TextBlock Text="{DynamicResource SeleneStatWeek}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
@@ -785,16 +787,10 @@
                                                         <TextBlock Text="{DynamicResource SeleneStatGames}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
-                                                    <Grid Width="32" Height="32">
-                                                        <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
-                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
-                                                    </Grid>
-                                                    <TextBlock Text="See your activity" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
-                                                </StackPanel>
+                                                <StackPanel x:Name="SeleneActivityShowcase" Orientation="Horizontal" Margin="10,28,-80,10" HorizontalAlignment="Left"/>
                                             </StackPanel>
-                                            <!-- the captures card selected: what it is, a few numbers, what A does -->
-                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1000" Opacity="0">
+                                            <!-- the captures card selected: a headline, a few numbers, pictures below (Selene Core fills them; Down goes into them) -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1760" Opacity="0">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -815,24 +811,20 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </StackPanel.Style>
-                                                <TextBlock Text="Captures" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
-                                                <TextBlock Text="Your screenshots and clips, newest first: Steam, Xbox Game Bar, the NVIDIA app and your own folders." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
-                                                <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
+                                                <StackPanel x:Name="SeleneCapturesHead" Width="1000" HorizontalAlignment="Left" Margin="0,40,0,0">
+                                                    <TextBlock Text="{DynamicResource SeleneCapturesHeadline}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="60" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{DynamicResource SeleneCapturesAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="2,10,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="4,24,0,0">
                                                     <StackPanel Margin="0,0,26,0">
                                                         <TextBlock Text="CAPTURES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                         <TextBlock Text="{DynamicResource SeleneStatCaptures}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
-                                                    <Grid Width="32" Height="32">
-                                                        <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
-                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
-                                                    </Grid>
-                                                    <TextBlock Text="Open your captures" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
-                                                </StackPanel>
+                                                <StackPanel x:Name="SeleneCapturesShowcase" Orientation="Horizontal" Margin="10,28,-80,10" HorizontalAlignment="Left"/>
                                             </StackPanel>
-                                            <!-- the surprise me card selected: what it is, a few numbers, what A does -->
-                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1000" Opacity="0">
+                                            <!-- the surprise me card selected: a headline, a few numbers, pictures below (Selene Core fills them; Down goes into them) -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1760" Opacity="0">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -853,9 +845,11 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </StackPanel.Style>
-                                                <TextBlock Text="Surprise me" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
-                                                <TextBlock Text="Not sure what to play? Covers flick past and stop on one of your games. Play it, or spin again." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
-                                                <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
+                                                <StackPanel x:Name="SeleneSurpriseHead" Width="1000" HorizontalAlignment="Left" Margin="0,40,0,0">
+                                                    <TextBlock Text="{DynamicResource SeleneSurpriseHeadline}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="60" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{DynamicResource SeleneSurpriseAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="2,10,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="4,24,0,0">
                                                     <StackPanel Margin="0,0,26,0">
                                                         <TextBlock Text="INSTALLED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                         <TextBlock Text="{DynamicResource SeleneStatInstalled}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
@@ -866,13 +860,7 @@
                                                         <TextBlock Text="{DynamicResource SeleneStatGames}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
-                                                    <Grid Width="32" Height="32">
-                                                        <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
-                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
-                                                    </Grid>
-                                                    <TextBlock Text="Pick a game for me" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
-                                                </StackPanel>
+                                                <StackPanel x:Name="SeleneSurpriseShowcase" Orientation="Horizontal" Margin="10,28,-80,10" HorizontalAlignment="Left"/>
                                             </StackPanel>
                                             <!-- the store card selected: what it is, a few numbers, what A does -->
                                             <!-- (wide: the showcase's big pictures go right across; the text keeps its own width) -->

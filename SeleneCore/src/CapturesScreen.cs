@@ -40,9 +40,11 @@ namespace Selene
         private MediaElement video;
         private int index, firstRow;
         private bool viewing, closed;
+        private readonly string openPath;   // opened from the card's pictures: straight to this one
 
-        public CapturesScreen()
+        public CapturesScreen(string openPath = null)
         {
+            this.openPath = openPath;
             var dark = new Border();
             dark.SetResourceReference(Border.BackgroundProperty, "SeleneScrimBrush");
             Panel.SetZIndex(dark, -10);
@@ -146,7 +148,9 @@ namespace Selene
                 Ui.Fade(fill, 1, 240);
             });
             index = 0;
+            if (openPath != null) { int at0 = items.FindIndex(c => string.Equals(c.Path, openPath, StringComparison.OrdinalIgnoreCase)); if (at0 >= 0) index = at0; }
             ShowFocus(false);
+            if (openPath != null && index < items.Count && string.Equals(items[index].Path, openPath, StringComparison.OrdinalIgnoreCase)) Open(index);
         }
 
         private static string Count(int n, string what) { return n + " " + what + (n == 1 ? "" : "s"); }
@@ -332,21 +336,43 @@ namespace Selene
             return d;
         }
 
-        // the numbers on the Captures card ("128 screenshots · 12 clips"), counted off the UI thread
+        // the Captures card: the numbers ("128 screenshots · 12 clips"), what's newest, and the latest four as pictures
+        // (Down goes into them, A opens one); found off the UI thread
         public static void CountInBackground()
         {
             var dispatcher = Application.Current.Dispatcher;
             System.Threading.Tasks.Task.Factory.StartNew(() =>
             {
-                string text;
+                string text, headline, about;
+                var latest = new List<Capture>();
                 try
                 {
                     var all = Scan(int.MaxValue);
                     int clips = all.Count(c => c.IsVideo), shots = all.Count - clips;
                     text = all.Count == 0 ? "None found yet" : Count(shots, "screenshot") + (clips > 0 ? " · " + Count(clips, "clip") : "");
+                    latest = all.Take(4).ToList();
+                    if (all.Count == 0)
+                    {
+                        headline = "No captures yet";
+                        about = "Screenshots and clips from Steam, Xbox Game Bar, the NVIDIA app and your own folders show here.";
+                    }
+                    else
+                    {
+                        headline = "Latest: " + all[0].Game;
+                        about = text + " from your games, newest first. Down for the latest ones.";
+                    }
                 }
-                catch { text = ""; }
-                dispatcher.BeginInvoke(new Action(() => { Application.Current.Resources["SeleneStatCaptures"] = text; }));
+                catch { text = ""; headline = "Captures"; about = ""; }
+                dispatcher.BeginInvoke(new Action(() =>
+                {
+                    Application.Current.Resources["SeleneStatCaptures"] = text;
+                    var entries = latest.Select(c =>
+                    {
+                        var path = c.Path;
+                        return new CardShowcase.Entry { Image = c.IsVideo ? null : c.Path, Title = c.Game, Sub = GameFacts.Ago(c.When), Glyph = "\uE714", Open = () => LoginScene.OpenWith(() => new CapturesScreen(path)) };
+                    }).ToList();
+                    CardShowcase.Set("nav:captures", "Captures", headline, about, entries);
+                }));
             });
         }
     }

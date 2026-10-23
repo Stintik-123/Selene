@@ -83,6 +83,23 @@ namespace Selene
             heroLater.Tick += (s, e) => { heroLater.Stop(); ShowHero(); };
         }
 
+        // the Activity card on Spotlight: how the week went, and the games played last as pictures (Down goes into them)
+        public static void FillCard(List<Game> games, int week, ulong total)
+        {
+            var recent = games.Where(g => GameFacts.LastPlayed(g).HasValue).OrderByDescending(g => GameFacts.LastPlayed(g).Value).Take(4).ToList();
+            var most = games.Where(g => GameFacts.Seconds(g) > 0).OrderByDescending(GameFacts.Seconds).FirstOrDefault();
+            string headline = week == 0 ? "Nothing played this week" : week == 1 ? "1 game this week" : week + " games this week";
+            string about = total < 3600 ? "Your play time, most played and last played games show here." : (int)TimeSpan.FromSeconds(total).TotalHours + " hours in all";
+            if (most != null && total >= 3600) about += ", most of them in " + most.Name + " (" + GameFacts.Hours(GameFacts.Seconds(most)) + ").";
+            if (recent.Count > 0) about += " Down for the games you played last.";
+            var entries = recent.Select(g =>
+            {
+                var id = g.Id;
+                return new CardShowcase.Entry { Image = GameFacts.BackgroundPath(g) ?? GameFacts.CoverPath(g), Title = g.Name, Sub = GameFacts.Ago(GameFacts.LastPlayed(g)), Glyph = "\uE7FC", Open = () => HomeNav.ShowGame(id) };
+            }).ToList();
+            CardShowcase.Set("nav:activity", "Activity", headline, about, entries);
+        }
+
         private static StackPanel Stat(string label, string value)
         {
             var sp = new StackPanel { Margin = new Thickness(0, 0, 44, 0) };
