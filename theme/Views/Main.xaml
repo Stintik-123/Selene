@@ -191,7 +191,7 @@
                                         <StackPanel Style="{StaticResource HintItem}" Margin="0,0,22,0">
                                             <Border Style="{StaticResource HintBadge}"><TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" Style="{StaticResource HintKey}" FontWeight="Normal"/></Border>
                                             <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="Home" Style="{StaticResource HintLabel}"/>
+                                                <TextBlock Text="Spotlight" Style="{StaticResource HintLabel}"/>
                                                 <TextBlock Text="Hold: Search" Style="{StaticResource HintHold}"/>
                                             </StackPanel>
                                         </StackPanel>
@@ -548,7 +548,7 @@
                                                             <Setter Property="Text" Value="{Binding SelectedItem.DisplayName, ElementName=SeleneGameRow}"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:library">
-                                                                    <Setter Property="Text" Value="{DynamicResource LOCLibrary}"/>
+                                                                    <Setter Property="Text" Value="Collection"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:store">
                                                                     <Setter Property="Text" Value="Store"/>
@@ -591,7 +591,7 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </StackPanel.Style>
-                                                <TextBlock Text="Library" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
+                                                <TextBlock Text="Collection" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
                                                 <TextBlock Text="Every game you have in one place: filter, search and sort the whole collection." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
                                                 <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
                                                     <StackPanel Margin="0,0,26,0">
@@ -614,7 +614,7 @@
                                                         <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
                                                         <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
                                                     </Grid>
-                                                    <TextBlock Text="Open your library" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
+                                                    <TextBlock Text="Open your collection" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
                                                 </StackPanel>
                                             </StackPanel>
                                             <!-- the store card selected: what it is, a few numbers, what A does -->

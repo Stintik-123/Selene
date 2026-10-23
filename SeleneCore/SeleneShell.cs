@@ -46,7 +46,10 @@ namespace Selene
             if (library == null || hub == null) return false;
             library.Command = new Relay(ShowLibrary);
             LoginScene.AttachHomeGlow(main);   // the login's glow behind the home's cards
-            LibraryStage.Attach(main);         // the library's trailer card
+            LibraryStage.Attach(main);         // Collection's background trailer
+            // no login this start (intro and Who's playing? both off): Collection right away if that's the start screen
+            var loginLayer = Part("AcceuilSettings");
+            if (loginLayer != null && !loginLayer.IsVisible && Features.On("startcollection")) ShowLibrary();
             // Playnite's "game is running" screen (switching back to Playnite while a game runs): the home instead
             var status = HomeNav.FindByName(main, "PART_ElemGameStatus") as UIElement;
             if (status != null) status.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) HomeNav.GameStatusShown(); };
@@ -158,7 +161,8 @@ namespace Selene
             var login = Part("AcceuilSettings");
             if (login == null) return;
             HomeNav.QuietFocus(1200);   // focus goes back to the home
-            if (!LoginScene.KeepHome) HomeNav.HoldHomeForIntro();
+            if (!LoginScene.KeepHome && Features.On("startcollection")) { ShowLibrary(); HomeNav.Log("start on Collection"); }
+            else if (!LoginScene.KeepHome) HomeNav.HoldHomeForIntro();
             var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
             fade.Completed += (s, e) => { login.Visibility = Visibility.Collapsed; login.BeginAnimation(UIElement.OpacityProperty, null); login.Opacity = 1; };
             login.BeginAnimation(UIElement.OpacityProperty, fade);

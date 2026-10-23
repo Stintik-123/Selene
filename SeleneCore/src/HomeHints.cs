@@ -24,7 +24,7 @@ namespace Selene
             Grid.SetRowSpan(bar, 99);
             hub.Children.Add(bar);
             always = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(64, 0, 0, 40), IsHitTestVisible = false };
-            always.Children.Add(Hold(Ui.Prompt("⧉", "Library"), "Hold: Search"));
+            always.Children.Add(Hold(Ui.Prompt("⧉", "Collection"), "Hold: Search"));
             always.Children.Add(Hold(Ui.Prompt("≡", "Menu"), "Hold: Settings"));
             Panel.SetZIndex(always, 60);
             Grid.SetRowSpan(always, 99);
