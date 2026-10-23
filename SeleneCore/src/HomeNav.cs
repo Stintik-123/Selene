@@ -1974,6 +1974,8 @@ namespace Selene
                 HideCursorForController();
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
                 EndQuietFocus();   // the user is moving now: their moves tick
+                // View (Playnite calls it Back): home <-> library, like the legacy theme (Playnite opened its settings)
+                if (pressed == "Back" && Features.On("viewswitch") && ToggleHomeLibrary()) { e.Cancel(); return; }
                 // Start opens Selene's menu (Playnite's own is under More in it)
                 if (pressed == "Start" && mainW != null && FocusOnHome()) { SeleneShell.OpenMenu(); e.Cancel(); return; }
                 if (GameMedia.HandleButton(pressed, Keyboard.FocusedElement)) { e.Cancel(); return; }
@@ -4686,6 +4688,20 @@ namespace Selene
                 Log("row focus -> " + row.Items[idx] + " (in row=" + row.IsKeyboardFocusWithin + ")");
             };
             timer.Start();
+        }
+
+        // the View button on the home or the library: switches to the other one (false elsewhere: details, overlays)
+        private static bool ToggleHomeLibrary()
+        {
+            var w = Application.Current.MainWindow;
+            if (w == null || !PlayniteInFront()) return false;
+            var details = FindByName(w, "PART_ElemGameDetails");
+            if (details != null && details.IsVisible) return false;
+            var hub = FindByName(w, "WelcomeHubOverlay");
+            var library = FindByName(w, "SeleneLibrary");
+            if (hub != null && hub.IsVisible) { HidePreview(); Ui.Play("OpenPanel.wav", 0.8); SeleneShell.ShowLibrary(); Log("view button -> library"); return true; }
+            if (library != null && library.IsVisible) { Ui.Play("OpenPanel.wav", 0.8); SeleneShell.ShowHome(); Log("view button -> home"); return true; }
+            return false;
         }
 
         // Playnite brought itself forward while a game runs (taskbar click, Alt+Tab) and put up its "game is running"
