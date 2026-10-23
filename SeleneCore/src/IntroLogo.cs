@@ -19,16 +19,11 @@ namespace Selene
         private readonly Color ink, glyph;
         private Dispatcher logoThread;
 
-        // the mark, and under it the name in the logo's lettering (theme\Images\wordmark.png, painted in the theme's ink)
-        private const double LetterWidth = 0.92, LetterGap = 0.06;   // narrower than the mark: wider, the S fell outside the logo's box and was cut off
-        private const double LetterRatio = 117.0 / 900.0;
-        public static double HeightFor(double size) { return size * (1 + LetterGap + LetterWidth * LetterRatio); }
-
         public IntroLogo(double size)
         {
             this.size = size;
             Width = size;
-            Height = HeightFor(size);
+            Height = size;
             ink = ColorOf("SeleneInkColor", Colors.White);
             glyph = ColorOf("GlyphColor", Color.FromRgb(0x9C, 0xCB, 0xFF));
             AddVisualChild(host);
@@ -55,8 +50,8 @@ namespace Selene
                 {
                     var target = new VisualTarget(host);
                     var root = Build(delayMs);
-                    root.Measure(new Size(size, HeightFor(size)));
-                    root.Arrange(new Rect(0, 0, size, HeightFor(size)));
+                    root.Measure(new Size(size, size));
+                    root.Arrange(new Rect(0, 0, size, size));
                     target.RootVisual = root;
                     logoThread = Dispatcher.CurrentDispatcher;
                     Dispatcher.CurrentDispatcher.UnhandledException += (s, e) => { e.Handled = true; };
@@ -98,9 +93,7 @@ namespace Selene
         // the same drawing as Ui.Mark (72 x 72 units): the halo, the crescent, the ringed full moon
         private Grid Build(int delayMs)
         {
-            var root = new Grid { Width = size, Height = HeightFor(size), Opacity = 0 };
-            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(size) });
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var root = new Grid { Width = size, Height = size, Opacity = 0 };
             rootEl = root;
             var canvas = new Canvas { Width = 72, Height = 72 };
             var view = new Viewbox { Child = canvas, Stretch = Stretch.Uniform };
@@ -121,8 +114,6 @@ namespace Selene
             Canvas.SetLeft(dot, 32.8); Canvas.SetTop(dot, 14.8);
             canvas.Children.Add(dot);
             root.Children.Add(view);
-            var letters = Lettering(inkBrush);
-            if (letters != null) { Grid.SetRow(letters, 1); root.Children.Add(letters); }
 
             // rise in: fade and lift
             var lift = new TranslateTransform(0, 16);
@@ -147,30 +138,6 @@ namespace Selene
             swell.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
             swell.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
             return root;
-        }
-
-        // the name under the mark: the ink through the lettering's picture, so it's the theme's color like the crescent
-        private FrameworkElement Lettering(Brush inkBrush)
-        {
-            try
-            {
-                var file = SelenePaths.ThemeFile("Images", "wordmark.png");
-                if (!System.IO.File.Exists(file)) return null;
-                var pic = new System.Windows.Media.Imaging.BitmapImage();
-                pic.BeginInit();
-                pic.UriSource = new Uri(file);
-                pic.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                pic.EndInit();
-                pic.Freeze();
-                double w = size * LetterWidth;
-                return new Rectangle
-                {
-                    Width = w, Height = w * LetterRatio, Fill = inkBrush, Margin = new Thickness(0, size * LetterGap, 0, 0),
-                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top,
-                    OpacityMask = new ImageBrush(pic) { Stretch = Stretch.Fill }
-                };
-            }
-            catch (Exception ex) { HomeNav.Log("intro lettering: " + ex.Message); return null; }
         }
     }
 }
