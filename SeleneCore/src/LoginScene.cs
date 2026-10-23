@@ -182,7 +182,10 @@ namespace Selene
             ShowBackdropKind();
             if (glow == null) return;
             bool wallpaper = Application.Current.Resources["SeleneWallpaper"] != null;
-            glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(wallpaper || !Features.On("glow") ? 0 : 1, TimeSpan.FromMilliseconds(300)));
+            double to = wallpaper || !Features.On("glow") ? 0 : 1;
+            // not on screen yet (start-up): set as it should be, or the light flashed up and faded out during the fade-in
+            if (backdropHost == null || backdropHost.Opacity < 0.01) { glow.BeginAnimation(UIElement.OpacityProperty, null); glow.Opacity = to; }
+            else glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(300)));
             RefreshHomeGlow();
         }
 

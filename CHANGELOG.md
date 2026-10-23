@@ -5,7 +5,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Back from Collection to a game on Spotlight, its art is there right away (the wallpaper no longer shows for a moment).
-- The start-up backdrop fades in again instead of popping up.
+- The start-up backdrop fades in again instead of popping up, without the light flashing up and dimming during it.
 - Signing in keeps your wallpaper on screen: it no longer goes dark before the home comes in.
 - Switching between Spotlight and Collection is a real crossfade now, with no black gap in between.
 - Opening Theme no longer flickers (the current theme and wallpaper aren't reloaded), and saving a background no longer shows a game's art for a moment before it.
