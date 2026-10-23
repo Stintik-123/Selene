@@ -1094,20 +1094,25 @@ namespace Selene
         private static void PlaceAtLeft(ListBox row, int idx)
         {
             if (idx < 0 || idx >= row.Items.Count) return;
+            // the row holds its place while the focus is outside it (the search layer still has it here): that hold undid the
+            // scroll, so it's let go first. The game lands where a move would put it: the third slot
+            heldOffset = -1;
+            double offset = Math.Max(0, idx - AnchorSlot);
             var sv = FindChild<ScrollViewer>(row);
-            if (sv != null) { sv.ScrollToHorizontalOffset(idx); row.UpdateLayout(); }
+            if (sv != null) { sv.ScrollToHorizontalOffset(offset); row.UpdateLayout(); }
             var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement;
             if (c == null)
             {
                 row.ScrollIntoView(row.Items[idx]);
                 row.UpdateLayout();
-                if (sv != null) { sv.ScrollToHorizontalOffset(idx); row.UpdateLayout(); }
+                if (sv != null) { sv.ScrollToHorizontalOffset(offset); row.UpdateLayout(); }
                 c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement;
             }
             var panel = FindChild<VirtualizingStackPanel>(row);
             var shift = panel != null ? panel.RenderTransform as TranslateTransform : null;
             if (shift != null && !shift.IsFrozen) { shift.BeginAnimation(TranslateTransform.XProperty, null); shift.X = 0; }   // no glide left over
             if (c != null) c.Focus(); else row.SelectedIndex = idx;
+            if (sv != null && Math.Abs(sv.HorizontalOffset - offset) > 0.5) { sv.ScrollToHorizontalOffset(offset); row.UpdateLayout(); }   // once more with the focus in the row
             ScheduleTitle(row, 230);
             EnsureTileCaches(row);
         }
