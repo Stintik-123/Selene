@@ -30,7 +30,7 @@
                                              From="1.06" To="1" Duration="0:0:0.2"/>
                         </Storyboard>
                     </ControlTemplate.Resources>
-                    <Grid Margin="{Settings FullscreenItemSpacingMargin}"
+                    <Grid Margin="7,0,7,0"
                           RenderTransformOrigin="0.5,0.5"
                           d:DataContext="{x:Static DesignMainViewModel.DesignSelectedGameIntance}">
                         <Grid.RenderTransform>

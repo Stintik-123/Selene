@@ -5,8 +5,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Home filters switch with LB / RB instead of the triggers.
-- No notification bell in the top bar; the library shows no button hints, like the home.
-- New library: big game cards in one horizontal row along the bottom, the game's logo and stats above on the left; rest on a game and its trailer plays in a card above the row with the game's song (Selene settings, Library trailers).
+- No notification bell in the top bar. Home hints along the bottom: Library and Menu (with their holds) on the left, what the focused thing does on the right.
+- New library: the game's art behind its big logo, and when you rest on a game its trailer takes over the background (black fade on the left) with the game's song, R3 for the trailer's sound; button hints over one row of big covers close together.
 - The View button switches between the home and the library (it opened Playnite's settings); hold View to search the library, hold Start for Selene settings.
 - Moving in the menu no longer moves the home row behind it.
 - Switching back to Playnite while a game runs (taskbar, Alt+Tab) opens the home on the running game, with Resume and Close Game, instead of Playnite's "is running" screen.

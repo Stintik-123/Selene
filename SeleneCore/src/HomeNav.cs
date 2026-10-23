@@ -1195,14 +1195,18 @@ namespace Selene
         private static bool previewSound;          // stays on for the session once switched on
         private static TimeSpan? pendingSeek;
 
-        // the library's trailer card: the short silent clip when there is one, else the full trailer (played muted)
-        public static bool TrailerFor(object game, out string path, out bool silent)
+        // the library's background trailer: the full trailer when there is one (it has sound for R3), else the silent clip
+        public static bool TrailerFor(object game, out string path, out bool hasSound)
         {
-            path = game is string ? null : TrailerPath(game);
-            silent = path != null;
-            if (path == null && !(game is string)) path = FullTrailerPath(game);
+            path = game is string ? null : FullTrailerPath(game);
+            hasSound = path != null;
+            if (path == null && !(game is string)) path = TrailerPath(game);
             return path != null;
         }
+
+        // the library trailer's own sound is on: the music add-on pauses for it
+        private static bool libraryTrailerSound;
+        public static void TrailerSound(bool on) { libraryTrailerSound = on; ApplyVideoPause(); }
 
         private static string FullTrailerPath(object game)
         {
@@ -1294,7 +1298,7 @@ namespace Selene
 
         private static void ApplyVideoPause()
         {
-            bool want = (previewShowing && previewSound) || musicHeldForLaunch;
+            bool want = (previewShowing && previewSound) || musicHeldForLaunch || libraryTrailerSound;
             if (videoPause == want) return;
             videoPause = want;
             SetUpsVideoPlaying(want);
@@ -2005,6 +2009,8 @@ namespace Selene
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
                 EndQuietFocus();   // the user is moving now: their moves tick
                 // View (Playnite calls it Back): home <-> library, like the legacy theme (Playnite opened its settings)
+                // R3 in the library while a trailer plays: its sound (else Playnite's filter, as usual)
+                if (pressed == "RightStick" && LibraryStage.Playing && LibraryStage.ToggleSound()) { e.Cancel(); return; }
                 // Start and View on the home or the library: short press or hold (Selene settings / library search)
                 if ((pressed == "Start" || pressed == "Back") && OnHomeOrLibrary())
                 {
