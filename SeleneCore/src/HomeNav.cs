@@ -1233,8 +1233,7 @@ namespace Selene
 
         // What the music add-on (UniPlaySong) plays, by where the user is:
         //   "login"   behind the login screens: its default track
-        //   "home"    the home row: nothing (paused through its "a video is playing" pause; its theme-overlay pause
-        //             is ignored while a game is selected)
+        //   "home"    the home row: its default track too (like the legacy theme), never the selected game's song
         //   "trailer" a game's trailer card is open: that game's song
         //   "normal"  the library: UniPlaySong as usual
         private static string musicMode;
@@ -1243,27 +1242,50 @@ namespace Selene
         {
             if (musicMode == mode) return;
             musicMode = mode;
-            SetUpsSetting("ForceDefaultMusicOverride", mode == "login" || mode == "home");
+            SetUpsSetting("ForceDefaultMusicOverride", WantDefault);
             ApplyVideoPause();
+            // UniPlaySong can switch to a game's song on its own when Playnite's selection changes: like the legacy theme,
+            // the wanted state is checked 4x a second and put back
+            if (musicGuard == null)
+            {
+                musicGuard = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                musicGuard.Tick += (s, e) =>
+                {
+                    var live = LiveUps();
+                    var prop = live != null ? live.GetType().GetProperty("ForceDefaultMusicOverride") : null;
+                    if (prop == null || !Features.On("music")) return;
+                    if (!Equals(prop.GetValue(live, null), WantDefault)) { prop.SetValue(live, WantDefault, null); Log("UPS ForceDefaultMusicOverride put back to " + WantDefault); }
+                };
+                musicGuard.Start();
+            }
         }
 
-        // UniPlaySong pauses while its "video is playing" flag is up: on the quiet home, and under a trailer with sound
+        private static System.Windows.Threading.DispatcherTimer musicGuard;
+        private static bool WantDefault { get { return musicMode == "login" || musicMode == "home"; } }
+
+        // UniPlaySong pauses while its "video is playing" flag is up: under a trailer with sound
         private static bool? videoPause;
 
         private static void ApplyVideoPause()
         {
-            bool want = musicMode == "home" || (previewShowing && previewSound);
+            bool want = previewShowing && previewSound;
             if (videoPause == want) return;
             videoPause = want;
             SetUpsVideoPlaying(want);
         }
 
-        // UniPlaySong's live settings: its settings view model holds them in .Settings
-        private static object UpsSettings(Playnite.SDK.Plugins.Plugin plugin)
+        // UniPlaySong's live settings, the object its player reads: found inside the add-on like the legacy theme did
+        // (asking Playnite for the add-on's settings can hand back a copy, so changes never reached the player)
+        private static object LiveUps()
         {
-            var vm = plugin.GetSettings(false);
-            var inner = vm != null ? vm.GetType().GetProperty("Settings") : null;
-            return inner != null ? inner.GetValue(vm, null) : vm;
+            if (upsSettings != null || Api == null) return upsSettings;
+            foreach (var plugin in Api.Addons.Plugins)
+            {
+                if (plugin.Id != UniPlaySongId) continue;
+                upsSettings = FindSettingsWith(plugin, "ForceDefaultMusicOverride", 3);
+                Log("UPS settings " + (upsSettings != null ? "found: " + upsSettings.GetType().FullName : "not found"));
+            }
+            return upsSettings;
         }
 
         // music control switched off: every pause Selene set on the music add-on is let go now
@@ -1281,15 +1303,12 @@ namespace Selene
             try
             {
                 if (Api == null) return;
-                foreach (var plugin in Api.Addons.Plugins)
-                {
-                    if (plugin.Id != new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")) continue;
-                    var settings = UpsSettings(plugin);
-                    if (!Features.On("music")) value = false;   // music control off: every pause Selene set is let go
-                    var prop = settings != null ? settings.GetType().GetProperty(name) : null;
-                    if (prop != null && prop.CanWrite) prop.SetValue(settings, value, null);
-                    Log("UPS " + name + "=" + value + (prop == null ? " (not found)" : ""));
-                }
+                var settings = LiveUps();
+                if (settings == null) return;
+                if (!Features.On("music")) value = false;   // music control off: every pause Selene set is let go
+                var prop = settings.GetType().GetProperty(name);
+                if (prop != null && prop.CanWrite) prop.SetValue(settings, value, null);
+                Log("UPS " + name + "=" + value + (prop == null ? " (not found)" : ""));
             }
             catch (Exception ex) { Log("UPS " + name + ": " + ex.Message); }
         }
@@ -1299,16 +1318,12 @@ namespace Selene
             try
             {
                 if (Api == null) return;
-                foreach (var plugin in Api.Addons.Plugins)
-                {
-                    if (plugin.Id != new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")) continue;
-                    var settings = UpsSettings(plugin);
-                    var prop = settings != null ? settings.GetType().GetProperty("VideoIsPlaying") : null;
-                    if (!Features.On("music")) playing = false;
-        
-                    if (prop != null && prop.CanWrite) prop.SetValue(settings, playing, null);
-                    Log("UPS VideoIsPlaying=" + playing + (prop == null ? " (property not found on " + (settings == null ? "null" : settings.GetType().Name) + ")" : ""));
-                }
+                var settings = LiveUps();
+                if (settings == null) return;
+                var prop = settings.GetType().GetProperty("VideoIsPlaying");
+                if (!Features.On("music")) playing = false;
+                if (prop != null && prop.CanWrite) prop.SetValue(settings, playing, null);
+                Log("UPS VideoIsPlaying=" + playing + (prop == null ? " (property not found on " + settings.GetType().Name + ")" : ""));
             }
             catch (Exception ex) { Log("UPS pause: " + ex.Message); }
         }
