@@ -1,0 +1,295 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
+
+namespace Selene
+{
+    // One game from the Store. Its screenshots fill the screen behind (dimmed on the left), with the store, name, facts,
+    // price and description on the left and the main button: Play / Install when it's in your library, Get it free, or Buy
+    // on its store. A row of screenshots along the bottom (Left / Right show each one behind), the cheapest price in another
+    // store when there is one (Y), and Down: more games from the same store.
+    public class StoreGameScreen : Screen
+    {
+        private readonly StoreItem item;
+        private readonly Playnite.SDK.Models.Game owned;
+        private readonly Image shotA = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 }, shotB = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
+        private readonly TextBlock about, facts, elsewhereText;
+        private readonly FrameworkElement elsewhereLine;
+        private readonly StackPanel shotStrip = new StackPanel { Orientation = Orientation.Horizontal };
+        private readonly List<Tile> shotTiles = new List<Tile>();
+        private readonly List<string> shots = new List<string>();
+        private readonly StackPanel moreRow = new StackPanel { Orientation = Orientation.Horizontal };
+        private readonly TranslateTransform moreShift = new TranslateTransform();
+        private readonly List<Tile> moreTiles = new List<Tile>();
+        private readonly List<StoreItem> more;
+        private readonly TranslateTransform pageShift = new TranslateTransform();
+        private readonly DispatcherTimer slides = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+        private StoreData.Elsewhere elsewhere;
+        private int shot, moreIndex, zone;   // zone 0: the screenshots, 1: more from the store
+        private bool front, closed;
+        private const double MoreW = 380, MoreH = 214, MorePitch = MoreW + 24;
+
+        public StoreGameScreen(StoreItem item)
+        {
+            this.item = item;
+            owned = StoreData.FindOwned(item);
+            more = StoreData.MoreFrom(item);
+            var dark = new Border();
+            dark.SetResourceReference(Border.BackgroundProperty, "SeleneScrimBrush");
+            Root.Children.Add(dark);
+            foreach (var img in new[] { shotA, shotB }) { RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality); Root.Children.Add(img); }
+            Root.Children.Add(new Border
+            {
+                IsHitTestVisible = false,
+                Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0.92, 0), Ink.Stop("SeleneScrimColor", 0.6, 0.45), Ink.Stop("SeleneScrimColor", 0.1, 0.85) }, 0)
+            });
+            Root.Children.Add(new Border
+            {
+                IsHitTestVisible = false,
+                Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0, 0.55), Ink.Stop("SeleneScrimColor", 0.9, 1) }, 90)
+            });
+
+            var page = new Grid { RenderTransform = pageShift };
+            Root.Children.Add(page);
+
+            // left: the store, the name, the facts, the price, the description, the buttons
+            var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(110, 120, 0, 0), MaxWidth = 860 };
+            var storeLine = new StackPanel { Orientation = Orientation.Horizontal };
+            var logo = PlatformIcons.For(item.StoreName);
+            if (logo != null) storeLine.Children.Add(new System.Windows.Shapes.Path { Data = logo, Width = 20, Height = 20, Stretch = Stretch.Uniform, Fill = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
+            storeLine.Children.Add(new TextBlock { Text = item.StoreName.ToUpperInvariant(), FontSize = 16, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center });
+            col.Children.Add(storeLine);
+            col.Children.Add(new TextBlock { Text = item.Title, FontSize = 60, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) });
+            facts = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), Margin = new Thickness(0, 10, 0, 0) };
+            col.Children.Add(facts);
+            var priceLine = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 20, 0, 0) };
+            if (item.Discount > 0)
+                priceLine.Children.Add(new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 3, 10, 4), Margin = new Thickness(0, 0, 14, 0), Background = Ink.Brush("SeleneFocusColor"), VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = item.Free ? "Free to keep" : "-" + item.Discount + "%", FontSize = 20, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneOnFocusColor") } });
+            if (!string.IsNullOrEmpty(item.OldPrice))
+                priceLine.Children.Add(new TextBlock { Text = item.OldPrice, FontSize = 22, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), TextDecorations = TextDecorations.Strikethrough, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) });
+            priceLine.Children.Add(new TextBlock { Text = item.Free ? "Free" : item.Price ?? item.Note ?? "", FontSize = 34, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+            if (owned != null)
+                priceLine.Children.Add(new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 3, 10, 4), Margin = new Thickness(16, 0, 0, 0), Background = Ink.Brush("SeleneInkColor", 0.16), VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "In your library", FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor") } });
+            col.Children.Add(priceLine);
+            if (!string.IsNullOrEmpty(item.Note) && item.Note != item.Price && item.Price != null)
+                col.Children.Add(new TextBlock { Text = item.Note, FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.7), Margin = new Thickness(0, 10, 0, 0) });
+            // the cheapest price in another store (filled in when found)
+            elsewhereText = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), VerticalAlignment = VerticalAlignment.Center };
+            var elsewhereRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0), Visibility = Visibility.Collapsed, Opacity = 0 };
+            elsewhereRow.Children.Add(Ui.Prompt("Y", ""));
+            ((StackPanel)elsewhereRow.Children[0]).Margin = new Thickness(0);
+            elsewhereRow.Children.Add(elsewhereText);
+            elsewhereText.Margin = new Thickness(10, 0, 0, 0);
+            elsewhereLine = elsewhereRow;
+            col.Children.Add(elsewhereRow);
+            about = new TextBlock { Opacity = 0, FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.WordEllipsis, MaxHeight = 120, LineHeight = 30, Margin = new Thickness(0, 22, 0, 0) };
+            col.Children.Add(about);
+            var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 30, 0, 0) };
+            actions.Children.Add(Ui.ActionPill("A", MainLabel(), true));
+            if (item.WebLink != null && item.WebLink != item.Link) actions.Children.Add(Ui.ActionPill("X", "Web page", false));
+            col.Children.Add(actions);
+            page.Children.Add(col);
+
+            // bottom: the screenshots, then more from the same store (Down)
+            var bottom = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(110, 790, 0, 0) };
+            bottom.Children.Add(shotStrip);
+            if (more.Count > 0)
+            {
+                bottom.Children.Add(new TextBlock { Text = "More from " + item.StoreName, FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(2, 64, 0, 14) });
+                moreRow.RenderTransform = moreShift;
+                foreach (var m in more)
+                {
+                    var t = new Tile(MoreW, MoreH, 15, 5) { FocusScale = 1.05 };
+                    t.Root.Margin = new Thickness(0, 0, MorePitch - MoreW, 0);
+                    var fill = new Border { CornerRadius = new CornerRadius(14), Opacity = 0 };
+                    t.Face.Child = fill;
+                    StorePage.LoadFill(fill, StoreData.Sharp(m), 760);
+                    moreRow.Children.Add(t.Root);
+                    moreTiles.Add(t);
+                }
+                bottom.Children.Add(moreRow);
+            }
+            page.Children.Add(bottom);
+
+            var left = Ui.Prompts(false, Ui.Prompt("B", "Back"));
+            var right = Ui.Prompts(true, Ui.Prompt("A", "Select"));
+            left.Margin = new Thickness(46, 0, 0, 30);
+            right.Margin = new Thickness(0, 0, 64, 30);
+            Root.Children.Add(left);
+            Root.Children.Add(right);
+            slides.Tick += (s, e) => { if (zone == 0 && shots.Count > 1) ShowShot((shot + 1) % shots.Count, false); };
+        }
+
+        // the main button: play it if it's yours, get it if it's free, else buy it in its store
+        private string MainLabel()
+        {
+            if (owned != null) return owned.IsInstalled ? "Play" : "Install";
+            if (item.Free) return "Get it free on " + item.StoreName;
+            if (item.Price == null) return "See it on " + item.StoreName;   // coming soon
+            return "Buy on " + item.StoreName;
+        }
+
+        public override void Shown()
+        {
+            if (!string.IsNullOrEmpty(item.Backdrop)) shots.Add(item.Backdrop);
+            StoreData.BigArt(item, url =>
+            {
+                if (closed) return;
+                if (url != null && !shots.Contains(url)) shots.Insert(0, url);
+                FillShots();
+            });
+            StoreData.LoadDetails(item, d =>
+            {
+                if (closed || d == null) return;
+                about.Text = d.About ?? "";
+                Ui.Fade(about, 1, 260);
+                facts.Text = string.Join("   ·   ", new[] { d.Genres, d.Released, d.Score }.Where(x => !string.IsNullOrEmpty(x)));
+                foreach (var u in d.Shots) if (!shots.Contains(u)) shots.Add(u);
+                FillShots();
+            });
+            StoreData.FindElsewhere(item, e =>
+            {
+                if (closed || e == null) return;
+                elsewhere = e;
+                elsewhereText.Text = e.Price + " on " + e.Store;
+                elsewhereLine.Visibility = Visibility.Visible;
+                Ui.Fade(elsewhereLine, 1, 260);
+            });
+            ShowFocus();
+        }
+
+        public override void Hidden() { closed = true; slides.Stop(); }
+
+        // the screenshot thumbnails along the bottom (rebuilt as more come in)
+        private void FillShots()
+        {
+            var list = shots.Take(8).ToList();
+            if (list.Count == shotTiles.Count) return;
+            shotStrip.Children.Clear();
+            shotTiles.Clear();
+            for (int i = 0; i < list.Count; i++)
+            {
+                var t = new Tile(176, 99, 10, 4) { FocusScale = 1.08 };
+                t.Root.Margin = new Thickness(0, 0, 16, 0);
+                var fill = new Border { CornerRadius = new CornerRadius(9), Opacity = 0 };
+                t.Face.Child = fill;
+                StorePage.LoadFill(fill, list[i], 360);
+                shotStrip.Children.Add(t.Root);
+                shotTiles.Add(t);
+            }
+            if (shotA.Source == null && shotB.Source == null && list.Count > 0) ShowShot(0, false);
+            if (list.Count > 1) slides.Start();
+            ShowFocus();
+        }
+
+        private void ShowShot(int i, bool picked)
+        {
+            if (i < 0 || i >= shots.Count) return;
+            shot = i;
+            var a = front ? shotA : shotB;
+            var b = front ? shotB : shotA;
+            front = !front;
+            Panel.SetZIndex(a, -1); Panel.SetZIndex(b, -2);   // under the words
+            a.BeginAnimation(UIElement.OpacityProperty, null);
+            a.Opacity = 0;
+            StorePage.Load(a, shots[i], 1920);
+            b.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(700)) { BeginTime = TimeSpan.FromMilliseconds(300) });
+            if (picked) { slides.Stop(); slides.Start(); }   // a picked one stays a while
+            ShowFocus();
+        }
+
+        private void ShowFocus()
+        {
+            for (int i = 0; i < shotTiles.Count; i++) shotTiles[i].Focus(zone == 0 && i == shot);
+            for (int i = 0; i < moreTiles.Count; i++) moreTiles[i].Focus(zone == 1 && i == moreIndex);
+        }
+
+        private void SetZone(int z)
+        {
+            zone = z;
+            // more from the store: the page glides up to show its row
+            pageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(z == 1 ? -420 : 0, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() });
+            Ui.Tick();
+            ShowFocus();
+        }
+
+        private static void Open(string link)
+        {
+            try { System.Diagnostics.Process.Start(link); }
+            catch (Exception ex) { HomeNav.Log("store: open failed: " + ex.Message); }
+        }
+
+        public override void Handle(string b)
+        {
+            if (b == "B")
+            {
+                if (zone == 1) { SetZone(0); return; }
+                Ui.Back();
+                LoginScene.Show(new StorePage(), -1);
+                return;
+            }
+            switch (b)
+            {
+                case "DPadDown": if (zone == 0 && moreTiles.Count > 0) SetZone(1); return;
+                case "DPadUp": if (zone == 1) SetZone(0); return;
+                case "DPadLeft":
+                case "DPadRight":
+                {
+                    int dir = b == "DPadRight" ? 1 : -1;
+                    if (zone == 0)
+                    {
+                        int next = shot + dir;
+                        if (next < 0 || next >= shotTiles.Count) return;
+                        Ui.Tick();
+                        ShowShot(next, true);
+                    }
+                    else
+                    {
+                        int next = moreIndex + dir;
+                        if (next < 0 || next >= moreTiles.Count) return;
+                        moreIndex = next;
+                        moreShift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-Math.Max(0, next - 1) * MorePitch, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
+                        Ui.Tick();
+                        ShowFocus();
+                    }
+                    return;
+                }
+                case "Y":
+                    if (elsewhere == null) return;
+                    Ui.Confirm();
+                    HomeNav.Log("store: " + item.Title + " elsewhere: " + elsewhere.Store);
+                    Open(elsewhere.Link);
+                    LoginScene.Finish();
+                    return;
+                case "X":
+                    if (item.WebLink == null) return;
+                    Ui.Confirm();
+                    Open(item.WebLink);
+                    LoginScene.Finish();
+                    return;
+                case "A":
+                    if (zone == 1) { Ui.Confirm(); LoginScene.Show(new StoreGameScreen(more[moreIndex]), 1); return; }
+                    Ui.Confirm();
+                    if (owned != null)
+                    {
+                        var id = owned.Id;
+                        bool installed = owned.IsInstalled;
+                        LoginScene.Finish();
+                        if (installed) HomeNav.StartGameNow(id);
+                        else if (HomeNav.Api != null) HomeNav.Api.InstallGame(id);
+                        HomeNav.Log("store: " + (installed ? "play " : "install ") + item.Title);
+                        return;
+                    }
+                    HomeNav.Log("store: opening " + item.Title + " (" + item.Link + ")");
+                    Open(item.Link);
+                    LoginScene.Finish();
+                    return;
+            }
+        }
+    }
+}

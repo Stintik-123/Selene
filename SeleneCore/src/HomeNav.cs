@@ -4207,7 +4207,7 @@ namespace Selene
         private static DateTime earlyCoverAt = DateTime.MinValue;
         private static bool startingSeen;
 
-        private static void StartGameNow(Guid id)
+        internal static void StartGameNow(Guid id)
         {
             if (Api == null) return;
             var g = Api.Database.Games.Get(id);

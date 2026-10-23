@@ -592,6 +592,77 @@ namespace Selene
 
         private static readonly Guid SteamPlugin = new Guid("cb91dfc9-b977-43bf-8e70-55f46e410fab");
 
+        // the game in the Playnite library this store game is (its Steam app, else its name); null when it isn't there
+        public static Playnite.SDK.Models.Game FindOwned(StoreItem item)
+        {
+            if (HomeNav.Api == null || item == null) return null;
+            var key = Key(item.Title ?? "");
+            Playnite.SDK.Models.Game byName = null;
+            foreach (var g in HomeNav.Api.Database.Games)
+            {
+                if (!string.IsNullOrEmpty(item.SteamAppId) && g.PluginId == SteamPlugin && g.GameId == item.SteamAppId) return g;
+                if (byName == null && key.Length > 0 && !string.IsNullOrEmpty(g.Name) && Key(g.Name) == key) byName = g;
+            }
+            return byName;
+        }
+
+        // the cheapest price for this game in another store (CheapShark, dollars); `done` on the UI thread, null when none
+        public class Elsewhere { public string Store, Price, Link; }
+        private static Dictionary<string, string> dealStores;
+
+        public static void FindElsewhere(StoreItem item, Action<Elsewhere> done)
+        {
+            var ui = System.Windows.Application.Current.Dispatcher;
+            Task.Run(() =>
+            {
+                Elsewhere found = null;
+                try
+                {
+                    if (dealStores == null)
+                    {
+                        var names = new Dictionary<string, string>();
+                        foreach (var st in A(Get("https://www.cheapshark.com/api/1.0/stores"))) names[S(At(st, "storeID"))] = S(At(st, "storeName"));
+                        dealStores = names;
+                    }
+                    var lookup = !string.IsNullOrEmpty(item.SteamAppId) && item.SteamAppId != "0"
+                        ? Get("https://www.cheapshark.com/api/1.0/games?steamAppID=" + item.SteamAppId)
+                        : Get("https://www.cheapshark.com/api/1.0/games?exact=1&limit=1&title=" + Uri.EscapeDataString(item.Title ?? ""));
+                    var gameId = S(At(A(lookup).FirstOrDefault(), "gameID"));
+                    if (gameId != null)
+                    {
+                        // the same store as this page's doesn't count (Steam 1, GOG 7, Epic 25)
+                        var own = item.Store == "steam" ? "1" : item.Store == "gog" ? "7" : item.Store == "epic" ? "25" : null;
+                        var best = A(At(Get("https://www.cheapshark.com/api/1.0/games?id=" + gameId), "deals"))
+                            .Where(d => S(At(d, "storeID")) != own && (item.Store != "deals" || S(At(d, "storeID")) != null))
+                            .OrderBy(d => Num(At(d, "price"))).FirstOrDefault();
+                        if (best != null)
+                        {
+                            string name;
+                            found = new Elsewhere
+                            {
+                                Store = dealStores.TryGetValue(S(At(best, "storeID")) ?? "", out name) ? name : "another store",
+                                Price = Money(Num(At(best, "price")), "USD"),
+                                Link = "https://www.cheapshark.com/redirect?dealID=" + Uri.EscapeDataString(WebUtility.UrlDecode(S(At(best, "dealID")) ?? ""))
+                            };
+                            if (found.Store == item.StoreName) found = null;
+                        }
+                    }
+                }
+                catch (Exception ex) { HomeNav.Log("store elsewhere " + item.Title + ": " + ex.Message); }
+                ui.BeginInvoke(new Action(() => done(found)));
+            });
+        }
+
+        // a few more games from the same store (its lists), for the bottom of a game's page
+        public static List<StoreItem> MoreFrom(StoreItem item)
+        {
+            var prefix = item.Store + ":";
+            var self = Key(item.Title ?? "");
+            var seen = new HashSet<string> { self };
+            return lists.Where(p => p.Key.StartsWith(prefix)).SelectMany(p => p.Value)
+                .Where(i => !string.IsNullOrEmpty(i.Image) && seen.Add(Key(i.Title ?? ""))).Take(14).ToList();
+        }
+
         public static string Key(string title)
         {
             var sb = new StringBuilder();
