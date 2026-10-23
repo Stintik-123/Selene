@@ -45,18 +45,7 @@ Playnite 10 or newer, Windows 10 / 11, a controller recommended. Everything Sele
   </tr>
 </table>
 
-## What you get
-
-- **Spotlight**: one row of your games with the art filling the screen, trailer cards, filters, Find a game.
-- **Cards** at the start of the row: your **Captures** (screenshots and clips, played with sound), your **Activity**,
-  **Surprise me**, and the **Store**.
-- **Game details** with scores, genres, screenshots, your captures and activity, and more games like it.
-- **Collection**: Playnite's full grid in Selene's look, art crossfading behind it.
-- **Profiles**: Who's playing? at start, each with their own avatar, theme, wallpaper and favorites.
-- **Play**: a loading screen with the game's art until the game really shows, then a fade into it; Guide brings you
-  home and back; save backups happen quietly.
-- **Menu**: a control-center row, power, and Playnite's settings, dialogs and menus in Selene's look.
-- **Feel**: everything rises, glides and sounds like a console, and every screen follows the color theme.
+## Screens
 
 ![Spotlight](docs/screenshots/home.png)
 
