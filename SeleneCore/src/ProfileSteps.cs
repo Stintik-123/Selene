@@ -24,11 +24,13 @@ namespace Selene
         private readonly TextBlock nextLabel;
         private readonly List<UIElement> chrome = new List<UIElement>();   // prompts and dots, hidden while a picture is framed
         private readonly Step[] steps;
-        private int step;
+        private int step, firstStep;
         private bool saved;
 
-        public ProfileSteps(Profile editing, Func<Screen> back, Action<Profile> done = null)
+        // startAt: the step to open on (2 = theme, for the menu's Theme; B there goes back where it came from)
+        public ProfileSteps(Profile editing, Func<Screen> back, Action<Profile> done = null, int startAt = 0)
         {
+            firstStep = startAt;
             this.editing = editing;
             this.back = back;
             this.done = done ?? (p => LoginScene.Show(new WhoScreen(p.Id), 1));
@@ -65,8 +67,9 @@ namespace Selene
 
         public override void Shown()
         {
-            body.Children.Add(steps[0].Root);
-            steps[0].Shown();
+            step = Math.Max(0, Math.Min(firstStep, steps.Length - 1));
+            body.Children.Add(steps[step].Root);
+            steps[step].Shown();
             ShowDots();
         }
 
@@ -95,7 +98,7 @@ namespace Selene
             {
                 if (s.OnB()) return;
                 Ui.Back();
-                if (step == 0) { if (back == null) LoginScene.Finish(); else LoginScene.Show(back(), -1); return; }
+                if (step <= firstStep) { if (back == null) LoginScene.Finish(); else LoginScene.Show(back(), -1); return; }
                 GoTo(step - 1, -1);
                 return;
             }

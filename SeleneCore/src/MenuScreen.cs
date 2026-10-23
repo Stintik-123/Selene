@@ -67,6 +67,7 @@ namespace Selene
             var profile = Profiles.Active;
             items.Add(new Item { Icon = Ui.Icon(0xe853), Label = profile != null ? profile.Name + " · Switch profile" : "Switch profile", Picture = profile != null ? WhoScreen.Avatar(profile, 52) : null, Run = () => LoginScene.Show(new WhoScreen(null), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe3c9), Label = "Edit profile", Run = EditProfile });
+            items.Add(new Item { Icon = Ui.Icon(0xe40a), Label = "Theme", Run = ChangeTheme });
             items.Add(new Item { Icon = Ui.Icon(0xe627), Label = "Update library", Run = UpdateLibrary });
             items.Add(new Item { Icon = Ui.Icon(0xeb40), Label = "Random game", Run = () => Later(() => PlayniteMenu.Main("SelectRandomGameCommand")) });
             items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Run = () => LoginScene.Show(new SettingsScreen(), 1) });
@@ -247,6 +248,14 @@ namespace Selene
             var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
             t.Tick += (s, e) => { t.Stop(); LoginScene.Finish(); };
             t.Start();
+        }
+
+        // straight to the signed-in profile's theme (then its background), saved at the end
+        private static void ChangeTheme()
+        {
+            var p = Profiles.Active;
+            if (p == null) { LoginScene.Show(new WhoScreen(null), 1); return; }
+            LoginScene.Show(new ProfileSteps(p, null, q => LoginScene.Finish(), 2), 1);
         }
 
         private static void EditProfile()
