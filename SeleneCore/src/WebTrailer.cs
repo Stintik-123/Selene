@@ -72,6 +72,57 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("trailer: " + ex.Message); return null; }
         }
 
+        // a clip of your own (the NVIDIA app records AV1, which Playnite's own player can't decode): the browser plays the
+        // file, with sound when it may, else muted. A small page of its own in the temp folder (a file page may show a file).
+        public static WebTrailer CreateFile(string path, Action playing)
+        {
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return null;
+            try
+            {
+                var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("CefSharp.Wpf.ChromiumWebBrowser", false)).FirstOrDefault(t => t != null);
+                if (type == null) { HomeNav.Log("clip: no browser"); return null; }
+                var t2 = new WebTrailer();
+                var view = (FrameworkElement)Activator.CreateInstance(type);
+                view.IsHitTestVisible = false;
+                view.Focusable = false;
+                view.Opacity = 0;
+                t2.browser = view;
+                var title = DependencyPropertyDescriptor.FromName("Title", type, type);
+                if (title != null)
+                    title.AddValueChanged(view, (s, e) =>
+                    {
+                        var text = view.GetValue(title.DependencyProperty) as string;
+                        if (string.IsNullOrEmpty(text)) return;
+                        if (text.StartsWith("playing") && !t2.shown)
+                        {
+                            t2.shown = true;
+                            view.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(300)));
+                            HomeNav.Log("clip: " + text);
+                            if (playing != null) playing();
+                        }
+                        else if (text.StartsWith("failed")) HomeNav.Log("clip: the browser couldn't play it (" + text + ")");
+                    });
+                var src = new Uri(path).AbsoluteUri;
+                var html = "<!doctype html><html><head><meta charset='utf-8'><style>html,body{margin:0;background:#000;overflow:hidden}"
+                    + "video{position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain}</style></head><body>"
+                    + "<video id='v' src=\"" + src.Replace("\"", "%22") + "\" autoplay playsinline loop></video><script>"
+                    + "var v=document.getElementById('v');"
+                    + "v.addEventListener('playing',function(){document.title=v.muted?'playing muted':'playing';});"
+                    + "v.addEventListener('error',function(){document.title='failed: '+(v.error?v.error.code+' '+v.error.message:'');});"
+                    + "v.muted=false;var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play();});"
+                    + "document.title='loading';</script></body></html>";
+                var page = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-clip-" + DateTime.Now.Ticks + ".html");
+                System.IO.File.WriteAllText(page, html, Encoding.UTF8);
+                t2.pageFile = page;
+                type.GetProperty("Address").SetValue(view, new Uri(page).AbsoluteUri, null);
+                HomeNav.Log("clip: starting " + System.IO.Path.GetFileName(path));
+                return t2;
+            }
+            catch (Exception ex) { HomeNav.Log("clip: " + ex.Message); return null; }
+        }
+
+        private string pageFile;
+
         // fades away (a screenshot was picked); Stop ends it for good
         public void Hide()
         {
@@ -91,6 +142,7 @@ namespace Selene
                 if (d != null) d.Dispose();
             }
             catch (Exception ex) { HomeNav.Log("trailer stop: " + ex.Message); }
+            if (pageFile != null) { try { System.IO.File.Delete(pageFile); } catch { } pageFile = null; }
         }
     }
 }

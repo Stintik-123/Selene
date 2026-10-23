@@ -38,6 +38,7 @@ namespace Selene
         private readonly Image picture = new Image { Stretch = Stretch.Uniform };
         private readonly TextBlock viewerCaption;
         private MediaElement video;
+        private WebTrailer clip;   // the browser playing a clip Playnite's own player couldn't (AV1, VP9)
         private int index, firstRow;
         private bool viewing, closed;
         private readonly string openPath;   // opened from the card's pictures: straight to this one
@@ -184,11 +185,23 @@ namespace Selene
                     try { System.Diagnostics.Process.Start(c.Path); } catch (Exception ex) { HomeNav.Log("captures: open failed: " + ex.Message); }
                     return;
                 }
-                video = new MediaElement { Source = new Uri(c.Path), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close, Stretch = Stretch.Uniform, Volume = 0.8 };
-                video.MediaEnded += (s, e) => { try { video.Position = TimeSpan.Zero; video.Play(); } catch { } };
-                video.MediaFailed += (s, e) => { HomeNav.Log("captures: clip failed: " + e.ErrorException.Message); viewerCaption.Text = "This clip can't be played here."; };
-                viewer.Children.Insert(1, video);
-                video.Play();
+                // Playnite's own player first (H.264 from Xbox Game Bar); a clip it can't decode (AV1 from the NVIDIA app) goes to
+                // the browser Playnite ships with, as the Store trailers do
+                var me = new MediaElement { Source = new Uri(c.Path), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close, Stretch = Stretch.Uniform, Volume = 0.8 };
+                video = me;
+                me.MediaEnded += (s, e) => { try { me.Position = TimeSpan.Zero; me.Play(); } catch { } };
+                me.MediaFailed += (s, e) =>
+                {
+                    HomeNav.Log("captures: clip failed in the player (" + e.ErrorException.Message + "): the browser");
+                    if (!ReferenceEquals(video, me) || !viewing) return;
+                    StopVideo();
+                    var path = c.Path;
+                    clip = WebTrailer.CreateFile(path, null);
+                    if (clip == null) { viewerCaption.Text = "This clip can't be played here."; return; }
+                    viewer.Children.Insert(1, clip.View);
+                };
+                viewer.Children.Insert(1, me);
+                me.Play();
             }
             else
             {
@@ -213,6 +226,7 @@ namespace Selene
 
         private void StopVideo()
         {
+            if (clip != null) { clip.Stop(); clip = null; }
             if (video == null) return;
             try { video.Stop(); video.Close(); } catch { }
             viewer.Children.Remove(video);
@@ -358,8 +372,10 @@ namespace Selene
                     }
                     else
                     {
-                        headline = "Latest: " + all[0].Game;
-                        about = text + " from your games, newest first. Down for the latest ones.";
+                        // the newest capture from a game (desktop recordings and unnamed ones aside)
+                        var fromGame = all.FirstOrDefault(c => !c.Game.Equals("Desktop", StringComparison.OrdinalIgnoreCase) && c.Game != "Capture");
+                        headline = fromGame != null ? "New from " + fromGame.Game : "Your captures";
+                        about = text + ", newest first. Down for the latest ones.";
                     }
                 }
                 catch { text = ""; headline = "Captures"; about = ""; }

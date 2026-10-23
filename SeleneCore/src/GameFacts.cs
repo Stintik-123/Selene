@@ -33,7 +33,14 @@ namespace Selene
             return g.Playtime;
         }
 
-        public static DateTime? LastPlayed(Game g) { return Profiles.LastPlayed(g.Id, g.LastActivity); }
+        // the profile's own last played when it has played the game, else Playnite's (a new profile would show only today)
+        public static DateTime? LastPlayed(Game g)
+        {
+            var p = Profiles.Active;
+            DateTime at;
+            if (p != null && p.LastPlayed != null && p.LastPlayed.TryGetValue(g.Id, out at)) return at;
+            return g.LastActivity;
+        }
 
         public static string Hours(ulong seconds)
         {

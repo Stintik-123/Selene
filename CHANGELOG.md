@@ -8,6 +8,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Collection opens with its focus a little sooner from Spotlight.
 - The Activity, Captures and Surprise me cards show a headline and pictures like the Store card (the latest captures, the games you played last, a few ideas); Down goes into the pictures, A opens one.
 - Spotlight: pressing the left stick on a card no longer opens Playnite's filter list, and a mouse click on a card opens the card.
+- Captures: clips Playnite's own player can't decode (the NVIDIA app's AV1 recordings) play in the browser Playnite ships with, as the Store trailers do. The card's headline names the newest capture from a game.
+- Activity: a new profile sees Playnite's own last-played dates for the games it hasn't played yet (it showed only today's).
 - Find a game: from Spotlight, the picked game is shown on Spotlight's row (on All games when the current tab doesn't have it); from Collection, in Collection as before.
 - Store card: the picked picture no longer gets cut off as it grows (the strip clipped it to its slot).
 - Store page: the last row sits where the next row would peek in, instead of leaving an empty band above the button hints; the row above it ends softly at the top.
