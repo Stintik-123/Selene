@@ -37,6 +37,7 @@ namespace Selene
                     title.AddValueChanged(view, (s, e) =>
                     {
                         var text = view.GetValue(title.DependencyProperty) as string;
+                        if (!string.IsNullOrEmpty(text) && text != "playing") HomeNav.Log("trailer page: " + text);
                         if (text == "playing" && !t2.shown)
                         {
                             t2.shown = true;
@@ -44,7 +45,7 @@ namespace Selene
                             HomeNav.Log("trailer: playing");
                             if (playing != null) playing();
                         }
-                        else if (text == "failed") HomeNav.Log("trailer: the browser couldn't play it");
+                        else if (text != null && text.StartsWith("failed")) HomeNav.Log("trailer: the browser couldn't play it (" + text + ")");
                     });
                 var html = "<!doctype html><html><head><meta charset='utf-8'><style>html,body{margin:0;background:#000;overflow:hidden}"
                     + "video{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover}</style></head><body>"
@@ -55,10 +56,17 @@ namespace Selene
                     + "p.initialize(v,'" + dashUrl.Replace("'", "%27") + "',true);p.setMute(true);"
                     + "v.addEventListener('playing',function(){document.title='playing';});"
                     + "v.addEventListener('ended',function(){v.currentTime=0;v.play();});"
-                    + "p.on(dashjs.MediaPlayer.events.ERROR,function(){document.title='failed';});"
-                    + "}catch(e){document.title='failed';}</script></body></html>";
+                    + "p.on(dashjs.MediaPlayer.events.ERROR,function(e){document.title='failed: '+JSON.stringify(e.error||e).slice(0,160);});"
+                    + "document.title='loading';"
+                    + "}catch(e){document.title='failed: '+e;}</script></body></html>";
                 var address = type.GetProperty("Address");
-                address.SetValue(view, "data:text/html;base64," + Convert.ToBase64String(Encoding.UTF8.GetBytes(html)), null);
+                // a different address each time (the same one twice may not load again)
+                address.SetValue(view, "data:text/html;base64," + Convert.ToBase64String(Encoding.UTF8.GetBytes(html.Replace("<body>", "<body data-n='" + DateTime.Now.Ticks + "'>"))), null);
+                HomeNav.Log("trailer: starting " + dashUrl.Substring(0, Math.Min(90, dashUrl.Length)));
+                // nothing after a while: say so in the log
+                var watch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(12) };
+                watch.Tick += (s, e) => { watch.Stop(); if (!t2.shown && t2.browser != null) HomeNav.Log("trailer: not playing after 12 s (initialized=" + (type.GetProperty("IsBrowserInitialized") != null ? type.GetProperty("IsBrowserInitialized").GetValue(view, null) : "?") + ")"); };
+                watch.Start();
                 return t2;
             }
             catch (Exception ex) { HomeNav.Log("trailer: " + ex.Message); return null; }

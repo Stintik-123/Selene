@@ -70,7 +70,10 @@ namespace Selene
             Panel.SetZIndex(dark, -10);   // under the screenshots (they sit at -1 / -2; at 0 this hid them: a black page)
             Root.Children.Add(dark);
             foreach (var img in new[] { shotA, shotB }) { RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality); Root.Children.Add(img); }
-            trailerHost = new Grid { IsHitTestVisible = false };
+            // the trailer as in Collection: a 16:9 box at the top right, its edges melting into the dark (the trailer mask)
+            trailerHost = new Grid { IsHitTestVisible = false, Width = 1422, Height = 800, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, ClipToBounds = true };
+            var mask = SelenePaths.ThemeFile("Images", "TrailerMask.png");
+            if (System.IO.File.Exists(mask)) trailerHost.OpacityMask = new ImageBrush(new System.Windows.Media.Imaging.BitmapImage(new Uri(mask))) { Stretch = Stretch.Fill };
             Panel.SetZIndex(trailerHost, -1);   // over the screenshots, under the words
             Root.Children.Add(trailerHost);
             Root.Children.Add(new Border
@@ -233,7 +236,12 @@ namespace Selene
             {
                 wait.Stop();
                 if (closed || zone != 0) return;
-                trailer = WebTrailer.Create(url, () => slides.Stop());   // playing: the screenshots stop changing behind it
+                // playing: the screenshots step aside (dark behind it, as in Collection) and stop changing
+                trailer = WebTrailer.Create(url, () =>
+                {
+                    slides.Stop();
+                    foreach (var img in new[] { shotA, shotB }) img.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(700)));
+                });
                 if (trailer != null) trailerHost.Children.Add(trailer.View);
             };
             wait.Start();
