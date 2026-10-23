@@ -198,13 +198,14 @@ namespace Selene
                 Ui.Pop(statuses[i]);
                 if (nowReady) Ui.Tick();
             }
+            missingCache = null;
             UpdateInstallAll();
             ShowFocus();
         }
 
         private void UpdateInstallAll()
         {
-            int missing = SetupCheck.MissingIncluded(HomeNav.Api).Count;
+            int missing = Missing().Count;
             installAll.Text = missing > 0 ? "Install all (" + missing + ")" : "All add-ons installed";
             installAll.Root.Opacity = missing > 0 ? 1 : 0.5;
         }
@@ -222,7 +223,7 @@ namespace Selene
             else if (index == ButtonsStart)
             {
                 // which add-ons the button installs, by name (the button itself is right below)
-                var missing = SetupCheck.MissingIncluded(HomeNav.Api);
+                var missing = Missing();
                 if (missing.Count > 0) info.Show("\uE74C", Tone.Accent, "Install all", missing.Count + " to go", string.Join(" \u00B7 ", missing.Select(m => m.Name)), "Playnite asks for each one. They work after a restart.");
                 else info.Show("\uE74C", Tone.Success, "Install all", "Done", "Every add-on that comes with Selene is installed.", "");
             }
@@ -318,7 +319,7 @@ namespace Selene
             }
             if (index == ButtonsStart)
             {
-                var missing = SetupCheck.MissingIncluded(HomeNav.Api);
+                var missing = Missing();
                 if (missing.Count == 0) { Ui.Shake(installAll.Root); return; }
                 Ui.Confirm();
                 installQueue.Clear();
@@ -333,22 +334,45 @@ namespace Selene
             Ui.Shake(cards[index].Root);   // nothing to do from here; the hint says where
         }
 
+        // which of Selene's add-ons are missing: asked of Playnite once in a while, not on every move (its list of add-ons is
+        // read from disk each time it's asked, which made Left / Right between the buttons lag)
+        private List<AddonInfo> missingCache;
+        private DateTime missingAt;
+        private List<AddonInfo> Missing()
+        {
+            if (missingCache == null || (DateTime.Now - missingAt).TotalSeconds > 4) { missingCache = SetupCheck.MissingIncluded(HomeNav.Api); missingAt = DateTime.Now; }
+            return missingCache;
+        }
+
         // Playnite shows one install prompt at a time: the next add-on is asked for once Playnite is back in front
         private void InstallNext()
         {
             if (installQueue.Count == 0) return;
+            missingCache = null;
             var id = installQueue.Dequeue();
             HomeNav.Log("setup: installing " + id + " (" + installQueue.Count + " more)");
             try { SetupCheck.Install(id); }
             catch (Exception ex) { HomeNav.Log("setup: install " + id + " failed: " + ex.Message); }
         }
 
+        private DispatcherTimer installWait;
+
         private void OnActivated(object sender, EventArgs e)
         {
-            if (installQueue.Count == 0) return;
-            var later = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
-            later.Tick += (s, a) => { later.Stop(); InstallNext(); };
-            later.Start();
+            if (installQueue.Count == 0 || installWait != null) return;
+            // Playnite asks "Restart now?" after each install, a moment after its window comes back: the next add-on is asked
+            // for only once no dialog has been up for a while (the two asked at once, one over the other)
+            int quiet = 0;
+            installWait = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+            installWait.Tick += (s, a) =>
+            {
+                if (HomeNav.DialogUp()) { quiet = 0; return; }
+                if (++quiet < 3) return;
+                installWait.Stop();
+                installWait = null;
+                InstallNext();
+            };
+            installWait.Start();
         }
 
         private void SetUpLudusavi(int at)

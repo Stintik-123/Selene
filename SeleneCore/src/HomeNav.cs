@@ -2723,7 +2723,7 @@ namespace Selene
         private static DateTime lastToolWindowAt = DateTime.MinValue;
 
         // a window of Playnite's other than the main one has the focus (a dialog)
-        private static bool DialogUp()
+        public static bool DialogUp()
         {
             try
             {

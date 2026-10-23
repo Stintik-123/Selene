@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Setup check: Left / Right between Install all and Done answer at once (the missing-add-ons list was read from disk on every move); Install all asks for the next add-on only once Playnite's restart question is out of the way (the two came up one over the other).
 - Collection: a game's trailer starts after the same wait as Spotlight's trailer cards (the Trailer cards after setting), not its own 4 seconds.
 - Save backups: Ludusavi no longer asks "Back up save data?" after every game; it just backs up (switch: Games, Quiet save backups).
 - Play: the loading screen's fade to black plays again as the game's window comes up (handing the game the focus waited on the game's thread, seconds sometimes, and froze the fade; it waits on a thread of its own now).
