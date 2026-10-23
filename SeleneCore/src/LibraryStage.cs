@@ -32,6 +32,11 @@ namespace Selene
             rsHint = HomeNav.FindByName(w, "SeleneLibraryRsHint") as TextBlock;
             // Collection's own (game details has a PART_ImageBackground of its own, which was the one found before)
             art = HomeNav.FindByName(library, "PART_ImageBackground") as UIElement;
+            // Playnite doesn't keep that name on its image: it's the FadeImage sitting right in Collection's own grid
+            var grid = library as Panel;
+            if (art == null && grid != null)
+                foreach (UIElement child in grid.Children)
+                    if (child.GetType().Name == "FadeImage") { art = child; break; }
             wallpaper = HomeNav.FindByName(library, "SeleneLibraryWallpaper") as UIElement;
             HomeNav.Log("library stage: art " + (art != null) + ", wallpaper " + (wallpaper != null));
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
