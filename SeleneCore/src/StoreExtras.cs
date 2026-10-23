@@ -51,7 +51,7 @@ namespace Selene
 
         public override void Handle(string b)
         {
-            if (b == "B") { Ui.Back(); if (first) LoginScene.Finish(); else LoginScene.Show(new StorePage(), -1); return; }
+            if (b == "B") { Ui.Back(); if (first) LoginScene.Finish(); else LoginScene.Show(new StorePage(), 0); return; }
             if (b.StartsWith("DPad"))
             {
                 int next = Ui.GridMove(index, b, tiles.Count, Columns);
@@ -65,7 +65,7 @@ namespace Selene
             {
                 Ui.Confirm();
                 StoreData.SetCountry(StoreData.Currencies[index].Country);
-                LoginScene.Show(new StorePage(), 1);
+                LoginScene.Show(new StorePage(), 0);
             }
         }
     }

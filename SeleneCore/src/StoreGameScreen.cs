@@ -230,7 +230,7 @@ namespace Selene
             {
                 if (zone == 1) { SetZone(0); return; }
                 Ui.Back();
-                LoginScene.Show(new StorePage(), -1);
+                LoginScene.Show(new StorePage(), 0);   // crossfades back
                 return;
             }
             switch (b)
@@ -273,7 +273,7 @@ namespace Selene
                     LoginScene.Finish();
                     return;
                 case "A":
-                    if (zone == 1) { Ui.Confirm(); LoginScene.Show(new StoreGameScreen(more[moreIndex]), 1); return; }
+                    if (zone == 1) { Ui.Confirm(); LoginScene.Show(new StoreGameScreen(more[moreIndex]), 0); return; }
                     Ui.Confirm();
                     if (owned != null)
                     {

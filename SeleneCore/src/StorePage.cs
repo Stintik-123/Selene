@@ -489,7 +489,7 @@ namespace Selene
                     if (item == null) return;
                     Remember();
                     Ui.Confirm();
-                    LoginScene.Show(new StoreGameScreen(item), 1);
+                    LoginScene.Show(new StoreGameScreen(item), 0);   // a crossfade (sliding in sideways looked off)
                     return;
                 }
             }
