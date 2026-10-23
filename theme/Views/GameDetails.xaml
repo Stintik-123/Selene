@@ -210,8 +210,15 @@
                                 </StackPanel>
                                 <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,28,4"/>
                                 <StackPanel>
+                                    <!-- the store's mark and name, as Spotlight shows it (a PC game said "PC (Windows)") -->
                                     <TextBlock Text="PLATFORM" Style="{StaticResource SeleneStatLabel}"/>
-                                    <TextBlock Text="{Binding Platforms, Converter={StaticResource ListToStringConverter}}" Style="{StaticResource SeleneStatValue}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <Grid Width="22" Height="22" Margin="0,0,9,0" VerticalAlignment="Center">
+                                            <Path Data="{DynamicResource SelenePlatformIcon}" Fill="{DynamicResource SeleneInkBrush}" Stretch="Uniform"/>
+                                            <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource SeleneInkBrush}" VerticalAlignment="Center" Visibility="{DynamicResource SelenePlatformFallback}"/>
+                                        </Grid>
+                                        <TextBlock Text="{DynamicResource SelenePlatformName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="Segoe UI Variable Display" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
 
@@ -241,6 +248,31 @@
                                                   HtmlForeground="{DynamicResource SeleneInkColor}" LinkForeground="{DynamicResource GlyphColor}" FocusVisualStyle="{x:Null}"/>
                                 </ScrollViewerEx>
                             </Border>
+                        </StackPanel>
+
+                        <!-- the game's screenshots along the bottom (Selene Core publishes them for the selected game) -->
+                        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="110,0,0,96">
+                            <TextBlock Text="SCREENSHOTS" Style="{StaticResource SeleneStatLabel}" Margin="2,0,0,10" Visibility="{DynamicResource SeleneShot0Vis}"/>
+                            <StackPanel Orientation="Horizontal">
+                            <Border Width="272" Height="153" CornerRadius="12" Margin="0,0,20,0" ClipToBounds="True" Background="{DynamicResource SeleneGlassSolidBrush}" Visibility="{DynamicResource SeleneShot0Vis}">
+                                <Image Source="{DynamicResource SeleneShot0}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+                            <Border Width="272" Height="153" CornerRadius="12" Margin="0,0,20,0" ClipToBounds="True" Background="{DynamicResource SeleneGlassSolidBrush}" Visibility="{DynamicResource SeleneShot1Vis}">
+                                <Image Source="{DynamicResource SeleneShot1}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+                            <Border Width="272" Height="153" CornerRadius="12" Margin="0,0,20,0" ClipToBounds="True" Background="{DynamicResource SeleneGlassSolidBrush}" Visibility="{DynamicResource SeleneShot2Vis}">
+                                <Image Source="{DynamicResource SeleneShot2}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+                            <Border Width="272" Height="153" CornerRadius="12" Margin="0,0,20,0" ClipToBounds="True" Background="{DynamicResource SeleneGlassSolidBrush}" Visibility="{DynamicResource SeleneShot3Vis}">
+                                <Image Source="{DynamicResource SeleneShot3}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+                            <Border Width="272" Height="153" CornerRadius="12" Margin="0,0,20,0" ClipToBounds="True" Background="{DynamicResource SeleneGlassSolidBrush}" Visibility="{DynamicResource SeleneShot4Vis}">
+                                <Image Source="{DynamicResource SeleneShot4}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+                            <Border Width="272" Height="153" CornerRadius="12" Margin="0,0,20,0" ClipToBounds="True" Background="{DynamicResource SeleneGlassSolidBrush}" Visibility="{DynamicResource SeleneShot5Vis}">
+                                <Image Source="{DynamicResource SeleneShot5}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- the hints along the bottom -->
