@@ -1583,6 +1583,14 @@ namespace Selene
             catch (Exception ex) { Log("quiet focus: " + ex.Message); }
         }
 
+        public static void EndQuietFocus()
+        {
+            if (quietUntil == DateTime.MinValue) return;
+            quietUntil = DateTime.MinValue;
+            try { if (navigateSound != null && savedNavigateSound != IntPtr.Zero && (IntPtr)navigateSound.GetValue(null, null) == IntPtr.Zero) navigateSound.SetValue(null, savedNavigateSound, null); }
+            catch (Exception ex) { Log("quiet focus: " + ex.Message); }
+        }
+
         // the login is about to fade off a home that will play its intro. The home's parts are rebuilt while the login
         // fades (new copies, nothing to hide ahead of time), so a dark cover goes over the whole home instead and lifts
         // when the intro starts; if no intro follows it lifts on its own.
@@ -1895,6 +1903,8 @@ namespace Selene
                 {
                     if (FocusOnHome()) { e.Cancel(); return; }
                 }
+                // a real key on the home ends the quiet moment at once (only Selene's own focus moves stay silent)
+                if (ke != null && ke.RoutedEvent == Keyboard.KeyDownEvent && !LoginScene.IsActive) EndQuietFocus();
                 if (ke == null || ke.GetType().Name != "GameControllerInputEventArgs") return;
                 var mainW = Application.Current.MainWindow;
                 if (mainW != null && (mainW.WindowState == WindowState.Minimized || !PlayniteInFront()))
@@ -1919,6 +1929,7 @@ namespace Selene
                 lastPadButton = same; lastPadRaw = pressed; lastPadAt = now;
                 HideCursorForController();
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
+                EndQuietFocus();   // the user is moving now: their moves tick
                 // Start opens Selene's menu (Playnite's own is under More in it)
                 if (pressed == "Start" && mainW != null && FocusOnHome()) { SeleneShell.OpenMenu(); e.Cancel(); return; }
                 if (GameMedia.HandleButton(pressed, Keyboard.FocusedElement)) { e.Cancel(); return; }
