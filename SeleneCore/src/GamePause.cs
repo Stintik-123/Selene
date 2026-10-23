@@ -261,9 +261,44 @@ namespace Selene
             }
         }
 
-        // every turned-down session back to its own volume, and no more watching
+        // the game shows: after `delayMs` (the ready sound) its sound fades from near silent back to its own volume over
+        // `fadeMs` (even steps in loudness, so it swells instead of jumping at the end)
+        private static System.Windows.Threading.DispatcherTimer fadeTimer;
+
+        public static void FadeBack(int delayMs, int fadeMs)
+        {
+            StopWatch();
+            if (fadeTimer != null) fadeTimer.Stop();
+            List<KeyValuePair<object, float>> sessions;
+            lock (hushed) sessions = new List<KeyValuePair<object, float>>(hushed.Values);
+            if (sessions.Count == 0) return;
+            var start = DateTime.Now.AddMilliseconds(delayMs);
+            fadeTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+            fadeTimer.Tick += (s, e) =>
+            {
+                double t = (DateTime.Now - start).TotalMilliseconds / fadeMs;
+                if (t < 0) return;
+                if (t >= 1) { fadeTimer.Stop(); Unhush(); return; }
+                foreach (var kv in sessions)
+                {
+                    try
+                    {
+                        float target = Math.Max(kv.Value, HushLevel);
+                        var level = (float)(HushLevel * Math.Pow(target / HushLevel, t));
+                        var ctx = Guid.Empty;
+                        ((ISimpleAudioVolume)kv.Key).SetMasterVolume(level, ref ctx);
+                    }
+                    catch { }
+                }
+            };
+            fadeTimer.Start();
+            HomeNav.Log("launch: game audio fades in after " + delayMs + " ms");
+        }
+
+        // every turned-down session back to its own volume at once, and no more watching
         public static void Unhush()
         {
+            if (fadeTimer != null) fadeTimer.Stop();
             StopWatch();
             lock (hushed)
             {

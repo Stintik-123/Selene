@@ -3705,6 +3705,7 @@ namespace Selene
                 root.Children.Add(scene);
                 var dimLayer = new Border { Background = dim, Opacity = 0 };
                 root.Children.Add(dimLayer);
+                coverArtLayers = new UIElement[] { scene, dimLayer };
                 FrameworkElement logoEl = null;
                 var logoScale = new ScaleTransform(0.94, 0.94);
                 if (logo != null)
@@ -3834,6 +3835,21 @@ namespace Selene
             var a = new DoubleAnimation(Math.Min(from, 0.0), 1, TimeSpan.FromMilliseconds(380)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
             a.Completed += (s, e) => root.BeginAnimation(UIElement.OpacityProperty, null);
             root.BeginAnimation(UIElement.OpacityProperty, a);
+        }
+
+        private static UIElement[] coverArtLayers;
+        private static bool coverArtGone;
+
+        // the loading screen's art fades away, leaving the game's logo on black; then (once dark) the next step
+        private static void ArtToLogo(Action then)
+        {
+            var art = coverArtLayers;
+            if (art == null) { then(); return; }
+            foreach (var el in art) el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(300)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(320) };
+            t.Tick += (s, e) => { t.Stop(); then(); };
+            t.Start();
+            Log("launch cover: game window up, art fades to the logo on black");
         }
 
         private static void DarkenCover(bool on)
@@ -3984,6 +4000,7 @@ namespace Selene
                 launching = true;
                 launchStart = DateTime.Now;
                 gameWindowSeenAt = DateTime.MinValue;
+                coverArtGone = false;
                 lastGameWindow = IntPtr.Zero;
                 gamePids.Clear();
                 gamePidsAt = DateTime.MinValue;
@@ -4059,7 +4076,16 @@ namespace Selene
                 // as its window shows (the loading screen stays on top)
                 lastGameWindow = found;
                 if (gameWindowSeenAt == DateTime.MinValue) gameWindowSeenAt = now;
-                if (!coverCancelledByGuide) { ForceForeground(found); KeepCoverOnTop(); }   // focus for the game, the art stays in front
+                if (!coverCancelledByGuide)
+                {
+                    // the game's window often switches the display into its own full-screen mode, which blanks the screen
+                    // for a moment (no window can cover that): the art fades out first, the logo stays on black, and the
+                    // game gets the focus once it's dark, so the blank lands on black instead of cutting the art
+                    var gameHwnd = found;
+                    Action focusGame = () => { if (launching && IsWindow(gameHwnd)) { ForceForeground(gameHwnd); KeepCoverOnTop(); } };
+                    if (!coverArtGone) { coverArtGone = true; ArtToLogo(focusGame); }
+                    else focusGame();
+                }
             }
             if (++soundTick % 3 == 0)
             {
@@ -4113,7 +4139,7 @@ namespace Selene
 
         private static void RevealGame(IntPtr game, string why)
         {
-            GamePause.Unhush();   // the game's sound comes in as it shows
+            GamePause.FadeBack(2000, 2000);   // the ready sound first, then the game's sound fades in
             launching = false;
             if (launchTimer != null) launchTimer.Stop();
             var w = Application.Current.MainWindow;
