@@ -46,6 +46,7 @@ namespace Selene
                 logger.Error(ex, "Selene Core: couldn't apply the profile's theme");
                 PlayniteApi.Notifications.Add(new NotificationMessage("selene-theme", "Selene couldn't apply your theme, using the default look: " + ex.Message, NotificationType.Error));
             }
+            CollectionPresets.Ensure(PlayniteApi);   // Collection's LB / RB tabs
             SeleneShell.Start();
             if (string.IsNullOrWhiteSpace(settings.Settings.AvatarPath)) AnimatedAvatar.Fetch(SelenePaths.SteamId);
             HomeNav.Log("Selene Core started");

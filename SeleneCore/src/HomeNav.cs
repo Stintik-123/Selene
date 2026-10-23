@@ -739,7 +739,8 @@ namespace Selene
             try
             {
                 if (Api == null || RowMode != "tv") return;
-                if (Api.MainView.GetActiveFilterPreset() != BigScreenPreset) { Api.MainView.ApplyFilterPreset(BigScreenPreset); Log("library filter -> Big Screen"); }
+                // only when nothing is chosen: a tab picked with LB / RB in Collection stays
+                if (Api.MainView.GetActiveFilterPreset() == Guid.Empty) { Api.MainView.ApplyFilterPreset(BigScreenPreset); Log("library filter -> Big Screen"); }
             }
             catch (Exception ex) { Log("filter: " + ex.Message); }
         }

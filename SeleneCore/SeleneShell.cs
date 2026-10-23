@@ -48,6 +48,10 @@ namespace Selene
             library.Command = new Relay(ShowLibrary);
             LoginScene.AttachHomeGlow(main);   // the login's glow behind the home's cards
             LibraryStage.Attach(main);         // Collection's background trailer
+            // "last played" as people say it (Today, Yesterday, 3 days ago), for Spotlight and Collection
+            var npc = main.DataContext as System.ComponentModel.INotifyPropertyChanged;
+            if (npc != null) npc.PropertyChanged += (s, e) => { if (e.PropertyName == "SelectedGame") UpdateLastPlayed(); };
+            UpdateLastPlayed();
             // no login this start (intro and Who's playing? both off): Collection right away if that's the start screen
             var loginLayer = Part("AcceuilSettings");
             if (loginLayer != null && !loginLayer.IsVisible && Features.On("startcollection")) ShowLibrary();
@@ -103,6 +107,26 @@ namespace Selene
                 catch (Exception ex) { HomeNav.Log("shell: developer view failed " + ex.Message); }
             };
             later.Start();
+        }
+
+        private static void UpdateLastPlayed()
+        {
+            try
+            {
+                var vm = main != null ? main.DataContext : null;
+                var game = vm != null ? vm.GetType().GetProperty("SelectedGame").GetValue(vm, null) : null;
+                var prop = game != null ? game.GetType().GetProperty("LastActivity") : null;
+                var when = prop != null ? prop.GetValue(game, null) as DateTime? : null;
+                string text;
+                if (when == null) text = "Never";
+                else
+                {
+                    int days = (DateTime.Today - when.Value.ToLocalTime().Date).Days;
+                    text = days <= 0 ? "Today" : days == 1 ? "Yesterday" : days < 7 ? days + " days ago" : when.Value.ToLocalTime().ToString("MMM d, yyyy");
+                }
+                Application.Current.Resources["SeleneLastPlayed"] = text;
+            }
+            catch (Exception ex) { HomeNav.Log("last played: " + ex.Message); }
         }
 
         private static UIElement Part(string name) { return main != null ? HomeNav.FindByName(main, name) as UIElement : null; }

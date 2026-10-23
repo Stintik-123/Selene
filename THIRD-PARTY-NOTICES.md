@@ -36,6 +36,9 @@ The profile pictures in `theme/Avatars` are Xbox gamer pictures from Microsoft's
 (`<pack>-<number>.jpg` matches the original file names). They remain the property of Microsoft and the respective
 game publishers and are not covered by Selene's MIT license. Rights holders can ask for removal by opening an issue.
 
+## Collection trailer vignette
+`theme/Images/ShadeTrail.png` comes from the Aniki ReMake theme (its trailer shade), used as is.
+
 ## Wallpapers
 The wallpapers in `theme/Wallpapers` come from the theme collection of [Omarchy](https://github.com/basecamp/omarchy),
 grouped by the theme they shipped with. Each image remains the property of its artist; they are not covered by

@@ -43,59 +43,37 @@
                                 <Image x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
                                 <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="120" Stretch="UniformToFill"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->
-                                <!-- the trailer: the right of the screen from about a quarter in, top edge down to the covers; it melts into
-                                     black on its left (a long fade), darkens toward the top and fades out above the covers -->
-                                <Grid x:Name="SeleneLibraryTrailerHost" Grid.RowSpan="2" Margin="540,0,0,0" Opacity="0" IsHitTestVisible="False" ClipToBounds="True">
-                                    <Grid.OpacityMask>
-                                        <VisualBrush>
-                                            <VisualBrush.Visual>
-                                                <Grid Width="1380" Height="626">
-                                                    <Rectangle>
-                                                        <Rectangle.Fill>
-                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                                <GradientStop Color="#00000000" Offset="0"/>
-                                                                <GradientStop Color="#66000000" Offset="0.22"/>
-                                                                <GradientStop Color="#FF000000" Offset="0.5"/>
-                                                            </LinearGradientBrush>
-                                                        </Rectangle.Fill>
-                                                        <Rectangle.OpacityMask>
-                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                <GradientStop Color="#00000000" Offset="0"/>
-                                                                <GradientStop Color="#FF000000" Offset="0.3"/>
-                                                                <GradientStop Color="#FF000000" Offset="0.72"/>
-                                                                <GradientStop Color="#00000000" Offset="1"/>
-                                                            </LinearGradientBrush>
-                                                        </Rectangle.OpacityMask>
-                                                    </Rectangle>
-                                                </Grid>
-                                            </VisualBrush.Visual>
-                                        </VisualBrush>
-                                    </Grid.OpacityMask>
-                                </Grid>
-                                <!-- black from the left (the logo) and from the bottom (hints and covers) -->
-                                <Border Grid.RowSpan="5" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}">
-                                    <Border.OpacityMask>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                            <GradientStop Color="#F5000000" Offset="0"/>
-                                            <GradientStop Color="#C0000000" Offset="0.25"/>
-                                            <GradientStop Color="#40000000" Offset="0.5"/>
-                                            <GradientStop Color="#00000000" Offset="0.7"/>
-                                        </LinearGradientBrush>
-                                    </Border.OpacityMask>
+                                <!-- the trailer, like the legacy theme: full screen on black, with its vignette picture over it (black over
+                                     the left half and the bottom, clearing toward the top right) -->
+                                <Grid x:Name="SeleneLibraryTrailerHost" Grid.RowSpan="5" Background="Black" Opacity="0" IsHitTestVisible="False" ClipToBounds="True"/>
+                                <Border Grid.RowSpan="5" IsHitTestVisible="False" Opacity="{Binding Opacity, ElementName=SeleneLibraryTrailerHost}">
+                                    <Border.Background>
+                                        <ImageBrush ImageSource="{ThemeFile 'Images/ShadeTrail.png'}" Stretch="Fill"/>
+                                    </Border.Background>
                                 </Border>
-                                <Border Grid.RowSpan="5" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}">
-                                    <Border.OpacityMask>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#55000000" Offset="0"/>
-                                            <GradientStop Color="#00000000" Offset="0.14"/>
-                                            <GradientStop Color="#00000000" Offset="0.5"/>
-                                            <GradientStop Color="#C0000000" Offset="0.72"/>
-                                            <GradientStop Color="#F5000000" Offset="1"/>
+                                <!-- over the art, the legacy theme's two shades: from the bottom, and from the left out to the middle -->
+                                <Border Grid.RowSpan="5" IsHitTestVisible="False">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                                            <GradientStop Color="#F0000000" Offset="0"/>
+                                            <GradientStop Color="#90000000" Offset="0.12"/>
+                                            <GradientStop Color="#500F0C10" Offset="0.26"/>
+                                            <GradientStop Color="#00000000" Offset="0.48"/>
+                                            <GradientStop Color="#00000000" Offset="0.82"/>
+                                            <GradientStop Color="#20000000" Offset="0.94"/>
+                                            <GradientStop Color="#500F0C10" Offset="1"/>
                                         </LinearGradientBrush>
-                                    </Border.OpacityMask>
+                                    </Border.Background>
+                                </Border>
+                                <Border Grid.RowSpan="5" IsHitTestVisible="False">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#F0000000" Offset="0"/>
+                                            <GradientStop Color="#00000000" Offset="0.5"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
                                 </Border>
 
-                                <!-- the game's logo (or name), big, on the left -->
                                 <!-- logo, chips and genres come in together each time the game changes (the logo's binding signals it) -->
                                 <StackPanel Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="150,0,0,0" Width="640">
                                     <StackPanel.RenderTransform><TranslateTransform x:Name="LibraryInfoShift" X="0"/></StackPanel.RenderTransform>
@@ -150,13 +128,13 @@
                                     <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
                                     <StackPanel Margin="0,0,26,0">
                                         <TextBlock Text="LAST PLAYED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
-                                        <TextBlock Text="{Binding SelectedGame.LastActivity, Mode=OneWay, StringFormat='{}{0:MMM d, yyyy}', TargetNullValue=Never}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                        <TextBlock Text="{DynamicResource SeleneLastPlayed}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
                                     <StackPanel Margin="0,0,26,0">
                                         <TextBlock Text="PLATFORM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                            <Image Source="{Binding SelectedGame.LibraryIcon}" Height="22" Width="22" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="Fant"/>
+                                            <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource GlyphBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </StackPanel>
@@ -897,13 +875,13 @@
                                                     <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
                                                     <StackPanel Margin="0,0,26,0">
                                                         <TextBlock Text="LAST PLAYED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
-                                                        <TextBlock Text="{Binding SelectedGame.LastActivity, Mode=OneWay, StringFormat='{}{0:MMM d, yyyy}', TargetNullValue=Never}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                        <TextBlock Text="{DynamicResource SeleneLastPlayed}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
                                                     <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
                                                     <StackPanel>
                                                         <TextBlock Text="PLATFORM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                            <Image Source="{Binding SelectedGame.LibraryIcon}" Height="22" Width="22" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="Fant"/>
+                                                            <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource GlyphBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                             <TextBlock Text="{Binding SelectedGame.Source.Name, Mode=OneWay, TargetNullValue=PC, FallbackValue=PC}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </StackPanel>
