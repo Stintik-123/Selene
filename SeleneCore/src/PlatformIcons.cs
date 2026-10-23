@@ -45,6 +45,16 @@ namespace Selene
             + "M 43.4,18 A 7.4,7.4 0 1 0 28.6,18 A 7.4,7.4 0 1 0 43.4,18 Z "
             + "M 39.2,18 A 3.2,3.2 0 1 0 32.8,18 A 3.2,3.2 0 1 0 39.2,18 Z";
 
+        // a store's logo by its name ("Steam", "Epic Games", "GOG Galaxy"...), null when there's none
+        public static Geometry For(string name)
+        {
+            string key = KeyFor(name), d;
+            if (key == null || !Paths.TryGetValue(key, out d)) return null;
+            var g = Geometry.Parse(d);
+            g.Freeze();
+            return g;
+        }
+
         public static void Publish(string source)
         {
             string key = KeyFor(source), d = null;

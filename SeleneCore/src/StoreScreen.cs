@@ -57,6 +57,8 @@ namespace Selene
         }
 
         // the store apps on this PC, for the Store card ("Steam · Epic Games · Xbox")
+        public static List<string> Installed() { return Known.Where(s => Registered(s.Protocol)).Select(s => s.Name).ToList(); }
+
         public static string InstalledNames()
         {
             var names = Known.Where(s => Registered(s.Protocol)).Select(s => s.Name).ToList();

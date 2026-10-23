@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Store card: the headline says what's on ("2 free games this week", "Up to 90% off") with the free games and the biggest sale under it, your store apps as chips with their logos, and four big game pictures without names under them; the "Open the store" line that ran into the button hints is gone (A Open is in the hints).
 - Up on Spotlight's row, and Up / Down in Collection, no longer move the focus off to hidden parts (the row dropped away).
 - Signing in: the wallpaper stays and the login's dimming just clears to the home; no fly-in.
 - Store page: the Store card opens Selene's store with free games, sales, top sellers, new releases, PC Game Pass and deals from other stores. LB/RB pick the store (All, Steam, Epic Games, GOG, Xbox, More stores); A opens a game's page (screenshots, description, price, "In your library" if you own it) and from there its store app to buy it. The Store card shows this week's free games and the biggest sales as pictures with their discount and price. The first time the Store opens it asks for your currency (X in the Store changes it). Works offline with the last prices. Switch: Selene settings, Games, Store page.

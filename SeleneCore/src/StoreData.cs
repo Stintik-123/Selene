@@ -117,8 +117,8 @@ namespace Selene
         {
             var res = System.Windows.Application.Current.Resources;
             bool page = Features.On("storepage");
-            res["SeleneStoreAction"] = page ? "Open the store" : "Choose a store";
             res["SeleneStoreAbout"] = page ? "Free games, sales and new releases from your stores. You buy in the store's own app." : "Find something new in the store apps on this PC. Selene is here when you come back.";
+            StoreShowcase.FillChips();
             if (!page) return;
             var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
             later.Tick += (s, e) => { later.Stop(); UpdateCard(); };

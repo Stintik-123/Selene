@@ -89,6 +89,7 @@ namespace Selene
                 if (picks.Count >= 4) break;   // four big pictures across the card
                 if (!picks.Any(p => StoreData.Key(p.Title ?? "") == StoreData.Key(s.Title ?? ""))) picks.Add(s);
             }
+            Headline(picks);
             var key = string.Join("|", picks.Select(p => p.Title + p.Price));
             if (key == shownKey) return;
             shownKey = key;
@@ -101,10 +102,61 @@ namespace Selene
             }
         }
 
+        // the card's headline is what's on now (the card's own name already says "Store")
+        private static void Headline(List<StoreItem> picks)
+        {
+            var res = Application.Current.Resources;
+            var free = StoreData.List("epic:free");
+            var best = StoreData.List("steam:sale").Concat(StoreData.List("epic:sale")).Concat(StoreData.List("gog:sale")).Where(i => i.Discount > 0 && !i.Free).OrderByDescending(i => i.Discount).FirstOrDefault();
+            string head, about;
+            if (free.Count > 0)
+            {
+                head = free.Count == 1 ? "Free this week" : free.Count + " free games this week";
+                var names = free.Select(i => i.Title).ToList();
+                var list = names.Count == 1 ? names[0] : string.Join(", ", names.Take(names.Count - 1)) + " and " + names.Last();
+                var until = free[0].Note != null && free[0].Note.StartsWith("Free until ") ? free[0].Note.Substring(11) : null;
+                about = list + (names.Count == 1 ? " is" : " are") + " free to keep on Epic Games" + (until != null ? " until " + until : "") + ".";
+                if (best != null) about += " Up to " + best.Discount + "% off on " + best.StoreName + " right now.";
+            }
+            else if (best != null)
+            {
+                head = "Up to " + best.Discount + "% off";
+                about = "The biggest sales across your stores right now. You buy in the store's own app.";
+            }
+            else return;
+            res["SeleneStoreHeadline"] = head;
+            res["SeleneStoreAbout"] = about;
+        }
+
+        // the store apps on this PC as chips with their logos (instead of the plain list)
+        public static void FillChips()
+        {
+            var w = Application.Current.MainWindow;
+            var panel = w != null ? HomeNav.FindByName(w, "SeleneStoreChips") as StackPanel : null;
+            var names = w != null ? HomeNav.FindByName(w, "SeleneStoreNames") as UIElement : null;
+            if (panel == null) return;
+            panel.Children.Clear();
+            foreach (var store in StoreScreen.Installed())
+            {
+                var line = new StackPanel { Orientation = Orientation.Horizontal };
+                var icon = PlatformIcons.For(store);
+                if (icon != null)
+                    line.Children.Add(new System.Windows.Shapes.Path { Data = icon, Fill = Ink.Brush("SeleneInkColor"), Stretch = Stretch.Uniform, Width = 20, Height = 20, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
+                line.Children.Add(new TextBlock { Text = store, FontSize = 18, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+                panel.Children.Add(new Border
+                {
+                    Child = line, CornerRadius = new CornerRadius(20), Padding = new Thickness(14, 7, 18, 8), Margin = new Thickness(0, 0, 10, 0),
+                    Background = Ink.Brush("SeleneInkColor", 0.1), BorderBrush = Ink.Brush("SeleneInkColor", 0.18), BorderThickness = new Thickness(1)
+                });
+            }
+            if (names != null) names.Visibility = panel.Children.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         private static FrameworkElement Card(StoreItem item)
         {
-            var col = new StackPanel { Width = 404, Margin = new Thickness(0, 0, 22, 0) };
-            var frame = new Grid { Height = 227 };
+            // no name under it: the pictures carry the game's title themselves, so they get the room instead
+            var col = new StackPanel { Width = 420, Margin = new Thickness(0, 0, 22, 0) };
+            var frame = new Grid { Height = 236 };
             var pic = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
             RenderOptions.SetBitmapScalingMode(pic, BitmapScalingMode.HighQuality);
             frame.Children.Add(new Border { CornerRadius = new CornerRadius(14), ClipToBounds = true, Background = Ink.Brush("SeleneInkColor", 0.08), Child = pic });
@@ -118,7 +170,6 @@ namespace Selene
             if (chip.Children.Count > 0)
                 frame.Children.Add(new Border { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10), Padding = new Thickness(5, 4, 10, 4), CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)), Child = chip });
             col.Children.Add(frame);
-            col.Children.Add(new TextBlock { Text = item.Title, FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 6, 0, 0) });
             return col;
         }
     }
