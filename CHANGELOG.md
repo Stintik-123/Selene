@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Button hints follow Playnite's "Button prompts" setting: with PlayStation chosen, the hints show cross, circle, square and triangle and L1 / R1 / L2 / R2 (Playnite settings, General).
+- Your own Playnite filter presets follow the five tabs on Spotlight and in Collection (LB / RB), applied through Playnite so they behave exactly as in Playnite. Switch: Spotlight, Your Playnite filters as tabs.
 - Game details: a game with no captures shows a quiet tile saying so (Down from the screenshots went nowhere and the activity beside it never showed), and More like this fills up with looser matches and your most played games when few are close.
 - Choose your theme / background: smooth again (the preview is a picture of the home, retaken when the choice changes, instead of a live mirror redrawn on every frame); the backdrop crossfades to the new wallpaper; the preview itself crossfades.
 - Game details: the next band sharpens and brightens with the glide again (it switched at once), the covers are crisp again, and Down works right after opening the details from Collection (the focus could sit on nothing).

@@ -282,15 +282,15 @@
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                         <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="A" Style="{StaticResource HintKey}"/></Border>
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="{DynamicResource SelenePromptA}" Style="{StaticResource HintKey}"/></Border>
                                             <TextBlock Text="Play" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="X" Style="{StaticResource HintKey}"/></Border>
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="{DynamicResource SelenePromptX}" Style="{StaticResource HintKey}"/></Border>
                                             <TextBlock Text="Details" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="Y" Style="{StaticResource HintKey}"/></Border>
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="{DynamicResource SelenePromptY}" Style="{StaticResource HintKey}"/></Border>
                                             <TextBlock Text="Game options" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <StackPanel Style="{StaticResource HintItem}">
@@ -741,7 +741,7 @@
                                                 <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
                                                     <Grid Width="32" Height="32">
                                                         <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
-                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                                                        <TextBlock Text="{DynamicResource SelenePromptA}" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
                                                     </Grid>
                                                     <TextBlock Text="Open your collection" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
                                                 </StackPanel>

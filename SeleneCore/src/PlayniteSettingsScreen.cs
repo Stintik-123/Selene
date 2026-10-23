@@ -134,6 +134,7 @@ namespace Selene
                 if (t.IsEnum) v = Enum.Parse(t, value.ToString());
                 else if (t != typeof(string)) v = Convert.ChangeType(Convert.ToDouble(value, CultureInfo.InvariantCulture), t, CultureInfo.InvariantCulture);
                 p.SetValue(fs, v, null);
+                Ui.RefreshPrompts();
                 var save = appSettings.GetType().GetMethod("SaveSettings", System.Type.EmptyTypes);
                 if (save != null) save.Invoke(appSettings, null);
                 HomeNav.Log("playnite settings: " + prop + " = " + v);

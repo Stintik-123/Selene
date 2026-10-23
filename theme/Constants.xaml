@@ -9,6 +9,16 @@
     <!-- Google's Material Icons, for the menus Playnite builds (game options, its settings) -->
     <FontFamily x:Key="FontMaterialIcons">./Fonts/#Material Icons</FontFamily>
 
+    <!-- the button names in the hints: Selene Core swaps them for PlayStation's when Playnite's "Button prompts" says so -->
+    <sys:String x:Key="SelenePromptA">A</sys:String>
+    <sys:String x:Key="SelenePromptB">B</sys:String>
+    <sys:String x:Key="SelenePromptX">X</sys:String>
+    <sys:String x:Key="SelenePromptY">Y</sys:String>
+    <sys:String x:Key="SelenePromptLB">LB</sys:String>
+    <sys:String x:Key="SelenePromptRB">RB</sys:String>
+    <sys:String x:Key="SelenePromptLT">LT</sys:String>
+    <sys:String x:Key="SelenePromptRT">RT</sys:String>
+
     <Color x:Key="BlackColor">#FF000000</Color>
     <Color x:Key="WhiteColor">#FFFFFFFF</Color>
     <Color x:Key="GlyphColor">#FF9CCBFF</Color>  <!-- Selene: moonlight blue -->

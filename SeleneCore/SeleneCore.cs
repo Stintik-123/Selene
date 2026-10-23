@@ -50,6 +50,8 @@ namespace Selene
                 PlayniteApi.Notifications.Add(new NotificationMessage("selene-theme", "Selene couldn't apply your theme, using the default look: " + ex.Message, NotificationType.Error));
             }
             CollectionPresets.Ensure(PlayniteApi);   // Collection's LB / RB tabs
+            HomeNav.RefreshRowFilters();              // the five tabs, then your own filter presets
+            Ui.RefreshPrompts();                      // Xbox or PlayStation names in the hints
             SeleneShell.Start();
             if (string.IsNullOrWhiteSpace(settings.Settings.AvatarPath)) AnimatedAvatar.Fetch(SelenePaths.SteamId);
             HomeNav.Log("Selene Core started");
@@ -256,6 +258,7 @@ namespace Selene
             new Option { Group = "Spotlight", Key = "trailerdelay", Label = "Trailer cards after", About = "How long you rest on a game before its tile grows into its trailer.", Choices = new[] { "1", "2.5", "5", "0" }, Names = new[] { "1 second", "2.5 seconds", "5 seconds", "Never" }, Default = "2.5" },
             new Option { Group = "Spotlight", Key = "trailersound", Label = "Trailer sound", About = "Trailer cards start with their sound on. R3 switches it either way.", Choices = new[] { "off", "on" }, Names = new[] { "Off", "On" }, Default = "off" },
             new Option { Group = "Spotlight", Key = "starttab", Label = "Starting tab", About = "The filter tab Spotlight opens on when Playnite starts.", Choices = new[] { "last", "all", "installed", "recent", "favorites", "unplayed" }, Names = new[] { "Where you left it", "All games", "Installed", "Recently played", "Favorites", "Not played yet" }, Default = "last" },
+            new Option { Group = "Spotlight", Key = "presettabs", Label = "Your Playnite filters as tabs", About = "Your saved Playnite filter presets follow the five tabs (LB / RB), on Spotlight and in Collection." },
             new Option { Group = "Sound & music", Key = "sounds", Label = "Interface sounds", About = "Sounds when you move, select and go back." },
             new Option { Group = "Sound & music", Key = "music", Label = "Music control", About = "Default music while browsing, a game's song with its trailer." },
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },

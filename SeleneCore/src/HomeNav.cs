@@ -3272,8 +3272,67 @@ namespace Selene
         }
 
         // ---- home-row filter (LT / RT): All, Installed, Recently played, Favorites, Not played yet ----
-        private static readonly string[] RowFilters = { "all", "installed", "recent", "favorites", "unplayed" };
-        private static readonly string[] RowFilterLabels = { "All games", "Installed", "Recently played", "Favorites", "Not played yet" };
+        private static readonly string[] BuiltInFilters = { "all", "installed", "recent", "favorites", "unplayed" };
+        private static readonly string[] BuiltInFilterLabels = { "All games", "Installed", "Recently played", "Favorites", "Not played yet" };
+        private static string[] RowFilters = BuiltInFilters;
+        private static string[] RowFilterLabels = BuiltInFilterLabels;
+        private const string PresetKey = "preset:";
+        private static readonly HashSet<Guid> presetGames = new HashSet<Guid>();
+        private static Guid presetGamesFor = Guid.Empty;
+        private static bool presetsWatched;
+
+        // the tabs: the five built in, then the user's own Playnite filter presets (not Selene's, by name), when the switch is on
+        public static void RefreshRowFilters()
+        {
+            var keys = new List<string>(BuiltInFilters);
+            var labels = new List<string>(BuiltInFilterLabels);
+            try
+            {
+                if (Api != null && Features.On("presettabs"))
+                {
+                    var own = new HashSet<Guid>(BuiltInFilters.Select(CollectionPresets.For));
+                    foreach (var fp in Api.Database.FilterPresets.OrderBy(p => p.Name))
+                    {
+                        if (own.Contains(fp.Id) || string.IsNullOrWhiteSpace(fp.Name)) continue;
+                        keys.Add(PresetKey + fp.Id);
+                        labels.Add(fp.Name);
+                    }
+                    if (!presetsWatched)
+                    {
+                        presetsWatched = true;
+                        Api.Database.FilterPresets.ItemCollectionChanged += (s2, e2) => Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            RefreshRowFilters();
+                            var w = Application.Current.MainWindow;
+                            if (w != null) RenderFilterTabs(w, 0);
+                        }));
+                    }
+                }
+            }
+            catch (Exception ex) { Log("filter presets: " + ex.Message); }
+            var current = rowFilter >= 0 && rowFilter < RowFilters.Length ? RowFilters[rowFilter] : null;
+            RowFilters = keys.ToArray();
+            RowFilterLabels = labels.ToArray();
+            if (current != null) rowFilter = Math.Max(0, Array.IndexOf(RowFilters, current));
+        }
+
+        private static bool IsPresetTab(string key) { return key != null && key.StartsWith(PresetKey); }
+        private static Guid PresetOf(string key) { Guid id; return IsPresetTab(key) && Guid.TryParse(key.Substring(PresetKey.Length), out id) ? id : Guid.Empty; }
+
+        // a preset tab: Playnite applies the preset (as Collection does) and the row shows the games it leaves
+        private static void PreparePresetFilter()
+        {
+            var id = PresetOf(RowFilters[RowFilter]);
+            if (id == Guid.Empty || Api == null) { presetGamesFor = Guid.Empty; return; }
+            try
+            {
+                if (Api.MainView.GetActiveFilterPreset() != id) Api.MainView.ApplyFilterPreset(id);
+                presetGames.Clear();
+                foreach (var g in Api.MainView.FilteredGames) presetGames.Add(g.Id);
+                presetGamesFor = id;
+            }
+            catch (Exception ex) { Log("filter preset: " + ex.Message); }
+        }
         private static readonly string RowFilterFile = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-row-filter.txt");
         private static int rowFilter = -1;
@@ -3284,6 +3343,7 @@ namespace Selene
         {
             get
             {
+                if (rowFilter >= RowFilters.Length) rowFilter = 0;   // a preset tab that's gone
                 if (rowFilter < 0)
                 {
                     rowFilter = 0;
@@ -3298,7 +3358,14 @@ namespace Selene
         private static bool PassesRowFilter(object game)
         {
             if (game == null || game is string || game is RowPad) return true;
-            switch (RowFilters[RowFilter])
+            var key = RowFilters[RowFilter];
+            if (IsPresetTab(key))
+            {
+                if (presetGamesFor != PresetOf(key)) PreparePresetFilter();
+                var idObj = Prop(game, "Id");
+                return idObj is Guid && presetGames.Contains((Guid)idObj);
+            }
+            switch (key)
             {
                 case "installed": return Equals(Prop(game, "IsInstalled"), true);
                 case "recent": { var la = LastPlayedOf(game); return la.HasValue && la.Value > DateTime.Now.AddDays(-30); }
@@ -3363,6 +3430,7 @@ namespace Selene
         {
             int dir = filterDir;
             var sw = System.Diagnostics.Stopwatch.StartNew();
+            PreparePresetFilter();
             HidePreview(false, 0);
             ShrinkRowCache(row);
             RebuildGames(row);
@@ -3468,6 +3536,7 @@ namespace Selene
 
         internal static Border FilterBadge(string text)
         {
+            text = Ui.PromptLabel(text);
             return new Border
             {
                 // filled, like the button hints (white with dark letters)
@@ -5409,7 +5478,8 @@ namespace Selene
         {
             try
             {
-                var id = CollectionPresets.For(RowFilters[RowFilter]);
+                var key = RowFilters[RowFilter];
+                var id = IsPresetTab(key) ? PresetOf(key) : CollectionPresets.For(key);
                 if (Api == null || id == Guid.Empty) return;
                 if (Api.MainView.GetActiveFilterPreset() != id) { Api.MainView.ApplyFilterPreset(id); Log("collection filter -> " + RowFilters[RowFilter]); }
             }

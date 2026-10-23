@@ -323,14 +323,14 @@
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="80,0,0,38">
                             <Grid Width="32" Height="32">
                                 <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
-                                <TextBlock Text="B" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                                <TextBlock Text="{DynamicResource SelenePromptB}" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
                             </Grid>
                             <TextBlock Text="Back" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="10,0,0,2"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,80,38">
                             <Grid Width="32" Height="32">
                                 <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
-                                <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                                <TextBlock Text="{DynamicResource SelenePromptA}" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
                             </Grid>
                             <TextBlock Text="Select" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="10,0,0,2"/>
                         </StackPanel>

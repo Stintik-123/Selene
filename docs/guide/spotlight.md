@@ -12,7 +12,8 @@ Favorite** under it. Six of its screenshots sit along the bottom; A on one shows
 plays with it (R3 switches to the trailer's own sound); otherwise your default music keeps playing. *Trailer cards
 after* in Selene settings sets the wait (1 s, 2.5 s, 5 s or never).
 
-**Filters.** LB / RB go through All games, Installed, Recently played, Favorites and Not played yet. LT / RT jump to
+**Filters.** LB / RB go through All games, Installed, Recently played, Favorites and Not played yet, then your own
+Playnite filter presets (switch: *Your Playnite filters as tabs*). LT / RT jump to
 the start and the end of the row. *Starting tab* picks the tab Spotlight opens on.
 
 **Moving things.** Y lifts a tile or a card; Left / Right carry it; A or Y drops it. The order is remembered per

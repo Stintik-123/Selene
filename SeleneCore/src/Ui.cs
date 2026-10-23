@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -54,11 +55,70 @@ namespace Selene
         }
 
         // (A) Next style hint for the bottom corners
+        // ---------------- which controller's buttons the hints name ----------------
+        // Playnite's Fullscreen setting "Button prompts" (Xbox or PlayStation): Selene's hints follow it. The theme's own hints
+        // read the SelenePrompt* strings; code-built ones call PromptLabel.
+        private static bool? playStation;
+        public static bool PlayStationPrompts
+        {
+            get
+            {
+                if (playStation == null) RefreshPrompts();
+                return playStation == true;
+            }
+        }
+
+        public static void RefreshPrompts()
+        {
+            bool ps = false;
+            try
+            {
+                var appType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("Playnite.PlayniteApplication", false)).FirstOrDefault(t => t != null);
+                var current = appType != null ? appType.GetProperty("Current", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) : null;
+                var app = current != null ? current.GetValue(null, null) : null;
+                var settingsProp = app != null ? app.GetType().GetProperty("AppSettings") : null;
+                var appSettings = settingsProp != null ? settingsProp.GetValue(app, null) : null;
+                var fsProp = appSettings != null ? appSettings.GetType().GetProperty("Fullscreen") : null;
+                var fs = fsProp != null ? fsProp.GetValue(appSettings, null) : null;
+                var bp = fs != null ? fs.GetType().GetProperty("ButtonPrompts") : null;
+                var value = bp != null ? bp.GetValue(fs, null) : null;
+                ps = value != null && value.ToString().IndexOf("PlayStation", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            catch (Exception ex) { HomeNav.Log("prompts: " + ex.Message); }
+            bool changed = playStation != ps;
+            playStation = ps;
+            try
+            {
+                var res = Application.Current.Resources;
+                foreach (var b in new[] { "A", "B", "X", "Y", "LB", "RB", "LT", "RT" }) res["SelenePrompt" + b] = PromptLabel(b);
+            }
+            catch { }
+            if (changed) HomeNav.Log("prompts: " + (ps ? "PlayStation" : "Xbox"));
+        }
+
+        public static string PromptLabel(string button)
+        {
+            if (!PlayStationPrompts) return button;
+            switch (button)
+            {
+                case "A": return "\u2715";   // cross
+                case "B": return "\u25CB";   // circle
+                case "X": return "\u25A1";   // square
+                case "Y": return "\u25B3";   // triangle
+                case "LB": return "L1";
+                case "RB": return "R1";
+                case "LT": return "L2";
+                case "RT": return "R2";
+                default: return button;
+            }
+        }
+
         public static StackPanel Prompt(string button, string label)
         {
             var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(18, 0, 0, 0) };
             var dot = new Grid { Width = 32, Height = 32 };
             dot.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor") });
+            button = PromptLabel(button);
             dot.Children.Add(new TextBlock { Text = button, FontSize = button.Length > 1 ? 11 : 16, FontWeight = FontWeights.SemiBold, FontFamily = Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });   // capitals sit low in their box
             sp.Children.Add(dot);
             sp.Children.Add(new TextBlock { Text = label, FontSize = 21, FontFamily = Body, Foreground = Ink.Brush("SeleneInkColor", 0.9), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) });

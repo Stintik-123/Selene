@@ -30,3 +30,6 @@ the rest; you can run it again any time from the menu.
 | **Guide** | – | – | Back to the home while a game runs, and back into it |
 
 The keyboard works too: arrows, Enter, Esc, typing in Find a game.
+
+The hints name Xbox buttons. With **Button prompts: PlayStation** in Playnite's settings (General) they show cross,
+circle, square and triangle instead.
