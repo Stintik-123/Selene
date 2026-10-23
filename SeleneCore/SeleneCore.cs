@@ -199,25 +199,28 @@ namespace Selene
     {
         public class Option
         {
-            public string Key, Label, About;
+            public string Key, Label, About, Group = "Games";
             public bool DefaultOn = true;
         }
 
+        // the groups Selene settings shows, in order (each option names its group)
+        public static readonly string[] Groups = { "Start-up", "Navigation", "Sound & music", "Look", "Games" };
+
         public static readonly Option[] All =
         {
-            new Option { Key = "intro", Label = "Logo intro", About = "The crescent intro when Playnite starts." },
-            new Option { Key = "login", Label = "Who's playing? at start", About = "Off: the last profile signs in by itself (the very first start still sets you up)." },
-            new Option { Key = "viewswitch", Label = "View button: Spotlight and Collection", About = "The View button switches between Spotlight and Collection (hold it to search; hold Start for these settings)." },
-            new Option { Key = "startcollection", Label = "Start on Collection", About = "After signing in, Selene opens on Collection (all your games) instead of Spotlight.", DefaultOn = false },
-            new Option { Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game in Collection and its trailer plays behind it (R3 for its sound)." },
-            new Option { Key = "sounds", Label = "Interface sounds", About = "Selene's ticks and chimes when you move, select and go back." },
-            new Option { Key = "music", Label = "Music control", About = "Keeps game songs from the music add-on off the cards, login and menus, and quiet under trailers." },
-            new Option { Key = "hints", Label = "Button hints", About = "What each button does, along the bottom of the home." },
-            new Option { Key = "glow", Label = "Glow and particles", About = "The breathing glow and drifting specks behind the login when there's no wallpaper." },
-            new Option { Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game's intro sounds stay down until the game shows." },
-            new Option { Key = "freeze", Label = "Freeze games on Guide", About = "Guide pauses offline games completely; off, games are only muted." },
-            new Option { Key = "tray", Label = "Close to tray", About = "Exit hides Playnite in the tray so it comes back instantly (after a restart)." },
-            new Option { Key = "admin", Label = "No-prompt launchers", About = "Games that need administrator rights get a launcher that skips the prompt next time." },
+            new Option { Group = "Start-up", Key = "intro", Label = "Logo intro", About = "The Selene logo when Playnite starts." },
+            new Option { Group = "Start-up", Key = "login", Label = "Who's playing?", About = "Pick a profile at start. Off: the last one signs in by itself." },
+            new Option { Group = "Start-up", Key = "startcollection", Label = "Start on Collection", About = "Open on all your games instead of Spotlight.", DefaultOn = false },
+            new Option { Group = "Navigation", Key = "viewswitch", Label = "View button", About = "Switches Spotlight and Collection. Hold it to search." },
+            new Option { Group = "Navigation", Key = "hints", Label = "Button hints", About = "What each button does, along the bottom." },
+            new Option { Group = "Sound & music", Key = "sounds", Label = "Interface sounds", About = "Sounds when you move, select and go back." },
+            new Option { Group = "Sound & music", Key = "music", Label = "Music control", About = "Default music while browsing, a game's song with its trailer." },
+            new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },
+            new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
+            new Option { Group = "Look", Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game and its trailer plays. R3 for its sound." },
+            new Option { Group = "Games", Key = "freeze", Label = "Freeze on Guide", About = "Guide pauses offline games. Off: they're only muted." },
+            new Option { Group = "Games", Key = "tray", Label = "Close to tray", About = "Exit hides Playnite so it comes back instantly." },
+            new Option { Group = "Games", Key = "admin", Label = "No-prompt launchers", About = "Admin games skip the Windows prompt after their first run." },
         };
 
         private static SeleneSettings settings;
