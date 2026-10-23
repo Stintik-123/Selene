@@ -510,6 +510,7 @@ namespace Selene
                     }
                     var cf = new SeleneCrossfade();
                     string where = Ancestry(fi);
+                    cf.Hub = where.IndexOf("WelcomeHubOverlay", StringComparison.Ordinal) >= 0;
                     if (where.IndexOf("WelcomeHubOverlay", StringComparison.Ordinal) < 0)
                     {
                         libraryFades.Add(new WeakReference(cf));
@@ -1039,25 +1040,15 @@ namespace Selene
                 var w = Application.Current.MainWindow;
                 var vm = w != null ? w.DataContext : null;
                 var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
-                if (row == null || prop == null || !prop.CanWrite) return;
+                if (row == null || prop == null || !prop.CanWrite) { ready(); return; }
                 var item = row.SelectedItem;
                 object game = item is string || item is RowPad ? null : item;
-                // the home's art layer kept following the library's game while hidden: blank it at once and fade it back
-                // in once it has the right picture (none for a card), instead of fading the library game's art out
                 var art = FindByName(w, "SeleneHubArt") as UIElement;
-                // emptied, then loaded again for Spotlight's own game (the same game as Collection's left nothing to reload them)
-                // each picture comes back at once (under the still of Collection, which waits for them: no wallpaper between)
-                var fades = art != null ? FindAll(art, d => d is SeleneCrossfade) : new List<FrameworkElement>();
-                int left = fades.Count;
-                foreach (var cf in fades)
-                {
-                    var x = (SeleneCrossfade)cf;
-                    x.Clear();
-                    if (game == null) continue;
-                    x.Dispatcher.BeginInvoke(new Action(() => x.RefreshNow(() => { if (--left <= 0) ready(); })), System.Windows.Threading.DispatcherPriority.Background);   // after the selection below is set
-                }
-                if (game == null || left == 0) ready();
+                // Spotlight's pictures held still while Collection showed (SeleneCrossfade.Hub): they already show its game,
+                // a check afterwards only loads anything if they don't (e.g. Playnite started on Collection)
+                if (art != null) foreach (var cf in FindAll(art, d => d is SeleneCrossfade)) { var x = (SeleneCrossfade)cf; x.Dispatcher.BeginInvoke(new Action(x.Refresh), System.Windows.Threading.DispatcherPriority.Background); }
                 if (!ReferenceEquals(prop.GetValue(vm, null), game)) prop.SetValue(vm, game, null);
+                ready();
             }
             catch (Exception ex) { Log("home selection sync: " + ex.Message); ready(); }
         }
@@ -5168,6 +5159,9 @@ namespace Selene
         // are created in a row: four 1080p backgrounds per move did that ~1 s after every second move. So: load only
         // what is visible, wait until the selection rests, and reuse recently decoded pictures.
         public Func<bool> CanLoad;
+        // Spotlight's pictures: they stay as they are while Collection shows (Playnite's selected game is Collection's then),
+        // so Spotlight still has its own art when you come back: nothing to reload, nothing stale to fade out
+        public bool Hub;
         public static bool Disabled;  // test harness switch
         private static readonly Dictionary<string, ImageSource> decoded = new Dictionary<string, ImageSource>();
         private static readonly LinkedList<string> decodedOrder = new LinkedList<string>();
@@ -5177,25 +5171,6 @@ namespace Selene
         private object shown = DependencyProperty.UnsetValue;
 
         public void Refresh() { Load(Source); }
-
-        // the next picture appears at once (no fade) and `shown` is called when it's there (or there is none)
-        private Action whenShown;
-
-        public void RefreshNow(Action shown)
-        {
-            whenShown = shown;
-            Load(Source);
-        }
-
-        // drop both pictures at once, no fade (and forget any load on its way)
-        public void Clear()
-        {
-            request++;
-            if (settle != null) settle.Stop();
-            pending = null;
-            shown = null;
-            foreach (var img in new[] { front, back }) { img.BeginAnimation(UIElement.OpacityProperty, null); img.Opacity = 0; img.Source = null; }
-        }
 
         private Image front = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
         private Image back = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
@@ -5223,6 +5198,7 @@ namespace Selene
         private void Load(object value)
         {
             if (Disabled || (CanLoad != null && !CanLoad())) return;
+            if (Hub && SeleneShell.CollectionActive) return;
             if (Equals(value, shown)) return;
             shown = value;
             int id = ++request;
@@ -5263,16 +5239,6 @@ namespace Selene
         private void Show(ImageSource img)
         {
             var ease = new QuadraticEase { EasingMode = EasingMode.EaseInOut };
-            var told = whenShown;
-            whenShown = null;
-            if (told != null)
-            {
-                foreach (var i in new[] { front, back }) { i.BeginAnimation(OpacityProperty, null); i.Opacity = 0; i.Source = null; }
-                front.Source = img;
-                front.Opacity = img != null ? 1 : 0;
-                told();
-                return;
-            }
             if (img == null)
             {
                 // nothing to show (a card is selected): both layers go, the one still fading out included
