@@ -186,8 +186,24 @@ namespace Selene
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(400) });
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             var left = new StackPanel();
-            left.Children.Add(new TextBlock { Text = "Settings", FontSize = 40, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(18, 0, 0, 6) });
-            left.Children.Add(new TextBlock { Text = "Playnite", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(20, 0, 0, 30) });
+            if (Features.On("brand"))
+            {
+                // Selene's mark beside the title, as Selene settings has it
+                var head = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(14, 0, 0, 30) };
+                var mark = Brand.Mark(76, true);
+                mark.Margin = new Thickness(0, 0, 18, 0);
+                head.Children.Add(mark);
+                var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                words.Children.Add(new TextBlock { Text = "Settings", FontSize = 40, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor") });
+                words.Children.Add(new TextBlock { Text = "Playnite", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(2, 2, 0, 0) });
+                head.Children.Add(words);
+                left.Children.Add(head);
+            }
+            else
+            {
+                left.Children.Add(new TextBlock { Text = "Settings", FontSize = 40, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(18, 0, 0, 6) });
+                left.Children.Add(new TextBlock { Text = "Playnite", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(20, 0, 0, 30) });
+            }
             foreach (var s in Sections)
             {
                 var line = new StackPanel { Orientation = Orientation.Horizontal };

@@ -16,8 +16,40 @@
         <Setter Property="BorderBrush" Value="{DynamicResource SelectionLightBrush}" />
     </Style>
 
-    <Style x:Key="ProgressWindowProgressBarStyle" TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
-        <Setter Property="Height" Value="40" />
-        <Setter Property="Margin" Value="0,20,0,0" />
+    <!-- Playnite's progress window (installing an add-on, updating the library): no bar; Selene's mark with its halo breathing
+         under the words instead -->
+    <Style x:Key="ProgressWindowProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Height" Value="150" />
+        <Setter Property="Margin" Value="0,16,0,0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Grid Width="150" Height="150" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse x:Name="Halo" Width="140" Height="140" Opacity="0.45">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop Color="{DynamicResource GlyphColor}" Offset="0" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                            <Ellipse.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.4" To="1" Duration="0:0:2.2" AutoReverse="True" RepeatBehavior="Forever">
+                                                <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut" /></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Ellipse.Triggers>
+                        </Ellipse>
+                        <Image Source="{ThemeFile 'Images/applogo_clean.png'}" Width="76" Height="76" Stretch="Uniform" RenderOptions.BitmapScalingMode="Fant" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>  
