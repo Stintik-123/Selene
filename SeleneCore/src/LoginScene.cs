@@ -422,6 +422,19 @@ namespace Selene
 
         public override void Shown()
         {
+            // Playnite is at its busiest right at startup (library, the home row, pictures): the logo waits for the first
+            // quiet moment so its rise doesn't stutter (at most 1.2 s)
+            content.Opacity = 0;
+            bool started = false;
+            Action go = () => { if (started || done) return; started = true; Begin(); };
+            var fallback = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+            fallback.Tick += (s, e) => { fallback.Stop(); go(); };
+            fallback.Start();
+            Root.Dispatcher.BeginInvoke(new Action(() => { fallback.Stop(); go(); }), DispatcherPriority.ApplicationIdle);
+        }
+
+        private void Begin()
+        {
             Ui.Rise(content, 120, 16, 900);
             var breathe = new DoubleAnimationUsingKeyFrames();
             breathe.KeyFrames.Add(new LinearDoubleKeyFrame(0.4, KeyTime.FromTimeSpan(TimeSpan.Zero)));
@@ -450,7 +463,7 @@ namespace Selene
         {
             if (done) return;
             done = true;
-            timer.Stop();
+            if (timer != null) timer.Stop();
             if (LoginScene.SignInLast()) LoginScene.Finish();
             else LoginScene.Show(LoginScene.Start(), 0);
         }
