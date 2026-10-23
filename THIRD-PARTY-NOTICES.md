@@ -43,7 +43,7 @@ game publishers and are not covered by Selene's MIT license. Rights holders can 
 `theme/Media/selene-background.mp4` is the looping background from the maintainer's legacy setup (origin not recorded); it will be replaced if asked.
 
 ## Store logos
-The flat store logos (Steam, Epic Games, GOG, EA, Ubisoft, Battle.net, itch.io) are shapes from Simple Icons
+The flat store logos (Steam, Epic Games, GOG, EA, Ubisoft, Battle.net, itch.io; Xbox and Microsoft from Simple Icons 9.21) are shapes from Simple Icons
 (https://simpleicons.org), CC0. The brands belong to their owners.
 
 ## Wallpapers

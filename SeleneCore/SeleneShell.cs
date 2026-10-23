@@ -50,7 +50,12 @@ namespace Selene
             LibraryStage.Attach(main);         // Collection's background trailer
             // "last played" as people say it (Today, Yesterday, 3 days ago), for Spotlight and Collection
             var npc = main.DataContext as System.ComponentModel.INotifyPropertyChanged;
-            if (npc != null) npc.PropertyChanged += (s, e) => { if (e.PropertyName == "SelectedGame") UpdateLastPlayed(); };
+            if (npc != null) npc.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName != "SelectedGame") return;
+                HomeNav.GuardSpotlightSelection();   // Spotlight's selection stays Spotlight's (no stray game art)
+                UpdateLastPlayed();
+            };
             UpdateLastPlayed();
             // no login this start (intro and Who's playing? both off): Collection right away if that's the start screen
             var loginLayer = Part("AcceuilSettings");
@@ -140,12 +145,16 @@ namespace Selene
         // its picture, so you never see an empty background. (Spotlight sits above Collection in the theme.)
         private static int switchCount;
 
+        // Collection is showing (or being switched to): Spotlight's selection guard stays out of its way
+        public static bool CollectionActive { get; private set; }
+
         public static void ShowLibrary()
         {
             var home = Part("WelcomeHubOverlay");
             var library = Part("SeleneLibrary");
             if (home == null || library == null) return;
             int mine = ++switchCount;
+            CollectionActive = true;
             library.BeginAnimation(UIElement.OpacityProperty, null);
             library.Visibility = Visibility.Visible;   // under Spotlight, loading its art meanwhile
             HomeNav.SetMusic("home");   // Collection like Spotlight: the default track, a game's song with its trailer
@@ -180,6 +189,7 @@ namespace Selene
             var library = Part("SeleneLibrary");
             if (home == null) return;
             int mine = ++switchCount;
+            CollectionActive = false;
             // Collection goes first: setting Spotlight's "no game" (a card) made its list jump to its first game, whose
             // art showed for a moment under the fading-in Spotlight (the 007 flash)
             if (library != null) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Visibility = Visibility.Collapsed; }

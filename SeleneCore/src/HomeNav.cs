@@ -999,6 +999,30 @@ namespace Selene
             return true;
         }
 
+        // Collection's hidden game list stays tied to Playnite's selected game, and picked its first game (First Light) again
+        // whenever Spotlight set "no game" for a card: Spotlight then loaded that art (the flash). While Spotlight shows,
+        // Playnite's selection is kept to Spotlight's own: nothing on a card, the row's game on a game.
+        private static bool guarding;
+
+        public static void GuardSpotlightSelection()
+        {
+            if (guarding || launching || SeleneShell.CollectionActive) return;
+            var w = Application.Current.MainWindow;
+            var hub = w != null ? FindByName(w, "WelcomeHubOverlay") : null;
+            var row = LiveRow();
+            if (hub == null || !hub.IsVisible || row == null || LoginScene.IsActive) return;
+            var vm = w.DataContext;
+            var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
+            if (prop == null || !prop.CanWrite) return;
+            var item = row.SelectedItem;
+            object want = item is string || item is RowPad ? null : item;
+            var now = prop.GetValue(vm, null);
+            if (ReferenceEquals(now, want) || (want != null && now == null)) return;   // (a game being pushed after its delay is fine)
+            guarding = true;
+            try { prop.SetValue(vm, want, null); Log("spotlight: selection put back (" + (now != null ? Prop(now, "Name") : "null") + " -> " + (want != null ? Prop(want, "Name") : "none") + ")"); }
+            finally { guarding = false; }
+        }
+
         // back from the library: Playnite still has the library's game selected, and the home drew its art for a moment
         // before the row's own selection caught up; the row's selection (nothing for a card) goes to Playnite first
         public static void SyncSelectionForHome()

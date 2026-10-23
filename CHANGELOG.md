@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Spotlight keeps Playnite's selected game to its own (Collection's hidden list kept picking its first game, flashing its art); Xbox and Microsoft Store logos.
 - Spotlight's cards: the background shows much brighter (the shades for game art are light there).
 - The menu has a Theme item: straight to your profile's theme and background.
 - Selene settings redesigned like a console's: groups on the left (Start-up, Navigation, Sound & music, Look, Games), their switches on the right, shorter descriptions.
