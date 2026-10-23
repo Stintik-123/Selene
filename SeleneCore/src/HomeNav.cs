@@ -62,7 +62,7 @@ namespace Selene
             var tvBackup = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "fullscreenConfig.tv.json");
             RowMode = System.IO.File.Exists(tvBackup) ? "all" : "tv";
             var app = Application.Current;
-            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); if (Features.On("tray")) CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
+            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Unhush(); GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); if (Features.On("tray")) CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
         }
 
         private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -4060,7 +4060,10 @@ namespace Selene
             {
                 var listen = new HashSet<int>(gamePids);
                 if (foundPid != 0) listen.Add((int)foundPid);
+                // the game's intro stays quiet behind the loading screen; the check hears it through the lowered volume
+                if (!coverCancelledByGuide && Features.On("launchquiet")) GamePause.Hush(listen);
                 float peak = GamePause.PeakOf(listen);
+                if (GamePause.Hushing) peak /= GamePause.HushLevel;
                 if (peak > 0.01f) { if (soundSince == DateTime.MinValue) { soundSince = now; Log("launch: the game is making sound (" + (now - launchStart).TotalSeconds.ToString("0.0") + " s)"); } lastSoundAt = now; }
                 else if (soundSince != DateTime.MinValue && (now - lastSoundAt).TotalSeconds > 2) soundSince = DateTime.MinValue;  // a blip, not the game
             }
@@ -4083,6 +4086,7 @@ namespace Selene
             {
                 if (coverCancelledByGuide)
                 {
+                    GamePause.Unhush();
                     launching = false;
                     launchTimer.Stop();
                     gameWindow = readyWindow;
@@ -4104,6 +4108,7 @@ namespace Selene
 
         private static void RevealGame(IntPtr game, string why)
         {
+            GamePause.Unhush();   // the game's sound comes in as it shows
             launching = false;
             if (launchTimer != null) launchTimer.Stop();
             var w = Application.Current.MainWindow;
@@ -4173,6 +4178,7 @@ namespace Selene
         // launch failed or Steam wants attention: drop the cover, show Playnite (or the dialog)
         private static void AbortLaunchCover(IntPtr bringForward, string why)
         {
+            GamePause.Unhush();
             launching = false;
             if (launchTimer != null) launchTimer.Stop();
             var w = Application.Current.MainWindow;

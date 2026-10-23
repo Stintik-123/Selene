@@ -210,6 +210,7 @@ namespace Selene
             new Option { Key = "music", Label = "Music control", About = "Keeps game songs from the music add-on off the cards, login and menus, and quiet under trailers." },
             new Option { Key = "hints", Label = "Button hints", About = "What each button does, at the bottom right of the home (off like a console's home).", DefaultOn = false },
             new Option { Key = "glow", Label = "Glow and particles", About = "The breathing glow and drifting specks behind the login when there's no wallpaper." },
+            new Option { Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game's intro sounds stay down until the game shows." },
             new Option { Key = "freeze", Label = "Freeze games on Guide", About = "Guide pauses offline games completely; off, games are only muted." },
             new Option { Key = "tray", Label = "Close to tray", About = "Exit hides Playnite in the tray so it comes back instantly (after a restart)." },
             new Option { Key = "admin", Label = "No-prompt launchers", About = "Games that need administrator rights get a launcher that skips the prompt next time." },

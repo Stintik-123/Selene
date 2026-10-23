@@ -174,6 +174,78 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("mute failed: " + ex.Message); }
         }
 
+        // ---- the launch loading screen keeps the game's own audio down (its intro behind the art) ----
+        // Not muted: the volume goes near zero, so the "is it making sound" check still hears it (PeakOf divides by the
+        // level). Each session's volume is put back exactly as it was when the game shows (Windows remembers app volumes).
+        public const float HushLevel = 0.005f;
+        private static readonly Dictionary<string, KeyValuePair<object, float>> hushed = new Dictionary<string, KeyValuePair<object, float>>();
+
+        public static bool Hushing { get { return hushed.Count > 0; } }
+
+        // turns down every audio session of these processes not already turned down (new sessions appear as the game starts)
+        public static void Hush(ICollection<int> pids)
+        {
+            if (pids == null || pids.Count == 0) return;
+            try
+            {
+                foreach (var session in SessionsOf(pids))
+                {
+                    var ctl2 = (IAudioSessionControl2)session;
+                    IntPtr idPtr;
+                    if (ctl2.GetSessionInstanceIdentifier(out idPtr) != 0 || idPtr == IntPtr.Zero) continue;
+                    var id = Marshal.PtrToStringUni(idPtr);
+                    Marshal.FreeCoTaskMem(idPtr);
+                    if (hushed.ContainsKey(id)) continue;
+                    var vol = session as ISimpleAudioVolume;
+                    float level;
+                    if (vol == null || vol.GetMasterVolume(out level) != 0) continue;
+                    var ctx = Guid.Empty;
+                    vol.SetMasterVolume(HushLevel, ref ctx);
+                    hushed[id] = new KeyValuePair<object, float>(session, level);
+                    HomeNav.Log("launch: game audio turned down (was " + (int)(level * 100) + "%)");
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("hush failed: " + ex.Message); }
+        }
+
+        // every turned-down session back to its own volume
+        public static void Unhush()
+        {
+            if (hushed.Count == 0) return;
+            foreach (var kv in hushed.Values)
+            {
+                try { var ctx = Guid.Empty; ((ISimpleAudioVolume)kv.Key).SetMasterVolume(kv.Value, ref ctx); }
+                catch (Exception ex) { HomeNav.Log("unhush failed: " + ex.Message); }
+            }
+            HomeNav.Log("launch: game audio back (" + hushed.Count + " session(s))");
+            hushed.Clear();
+        }
+
+        private static List<object> SessionsOf(ICollection<int> pids)
+        {
+            var found = new List<object>();
+            var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+            IMMDevice device;
+            if (enumerator.GetDefaultAudioEndpoint(0, 1, out device) != 0) return found;
+            var iid = typeof(IAudioSessionManager2).GUID;
+            object o;
+            if (device.Activate(ref iid, 1, IntPtr.Zero, out o) != 0) return found;
+            IAudioSessionEnumerator sessions;
+            if (((IAudioSessionManager2)o).GetSessionEnumerator(out sessions) != 0) return found;
+            int count;
+            sessions.GetCount(out count);
+            for (int i = 0; i < count; i++)
+            {
+                IAudioSessionControl ctl;
+                if (sessions.GetSession(i, out ctl) != 0) continue;
+                var ctl2 = ctl as IAudioSessionControl2;
+                uint spid;
+                if (ctl2 == null || ctl2.GetProcessId(out spid) != 0 || !pids.Contains((int)spid)) continue;
+                found.Add(ctl);
+            }
+            return found;
+        }
+
         // Loudest audio peak (0..1) of these processes right now on the default output: "the game is making sound"
         // (the launch loading screen uses it to tell when a game is really showing something, e.g. its intro logos)
         public static float PeakOf(ICollection<int> pids)
