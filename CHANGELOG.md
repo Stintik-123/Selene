@@ -8,7 +8,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Moving in the menu no longer moves the home row behind it.
 - Switching back to Playnite while a game runs (taskbar, Alt+Tab) opens the home on the running game, with Resume and Close Game, instead of Playnite's "is running" screen.
 - Quiet loading screen: a starting game's sounds are turned down the moment they start and come back as the game shows (Selene settings, Quiet loading screen).
-- Smoother launch: when the game's window appears the art fades to its logo on black (the game's own screen switch now happens on black), and the game's sound fades in after the ready sound.
+- Smoother launch: when the game's window appears the loading screen fades to black (the game's own screen switch can't be seen), no background music over it, and the game's sound fades in after the ready sound.
 - Down on the Library and Store cards no longer moves focus to nothing.
 - No flash of light the first time the menu opens.
 - Smoother logo intro: it starts at the first quiet moment after Playnite starts.

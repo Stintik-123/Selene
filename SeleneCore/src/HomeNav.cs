@@ -1270,9 +1270,19 @@ namespace Selene
         // UniPlaySong pauses while its "video is playing" flag is up: under a trailer with sound
         private static bool? videoPause;
 
+        // from Play until the game shows: no default music over the loading screen (UniPlaySong pauses for the running game after)
+        private static bool musicHeldForLaunch;
+
+        public static void HoldMusicForLaunch(bool on)
+        {
+            if (musicHeldForLaunch == on) return;
+            musicHeldForLaunch = on;
+            ApplyVideoPause();
+        }
+
         private static void ApplyVideoPause()
         {
-            bool want = previewShowing && previewSound;
+            bool want = (previewShowing && previewSound) || musicHeldForLaunch;
             if (videoPause == want) return;
             videoPause = want;
             SetUpsVideoPlaying(want);
@@ -3856,16 +3866,17 @@ namespace Selene
         private static UIElement[] coverArtLayers;
         private static bool coverArtGone;
 
-        // the loading screen's art fades away, leaving the game's logo on black; then (once dark) the next step
+        // the loading screen fades to black (art and logo), then (once dark) the next step: the game's own screen switch,
+        // whenever it comes, can't be seen on black
         private static void ArtToLogo(Action then)
         {
-            var art = coverArtLayers;
-            if (art == null) { then(); return; }
-            foreach (var el in art) el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(300)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            var black = coverBlack;
+            if (black == null) { then(); return; }
+            black.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(350)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } });
             var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(320) };
             t.Tick += (s, e) => { t.Stop(); then(); };
             t.Start();
-            Log("launch cover: game window up, art fades to the logo on black");
+            Log("launch cover: game window up, fading to black");
         }
 
         private static void DarkenCover(bool on)
@@ -3961,6 +3972,7 @@ namespace Selene
                 {
                     startingSeen = false;
                     QuietFocus(2500);     // the loading screen and the game take focus: not a move
+                    HoldMusicForLaunch(true);
                     PlayStartingSound();  // Playnite played it when IT started the game (~1 s after the press now)
                     var swCover = System.Diagnostics.Stopwatch.StartNew();
                     GameStarting(id);
@@ -4095,8 +4107,8 @@ namespace Selene
                 if (!coverCancelledByGuide)
                 {
                     // the game's window often switches the display into its own full-screen mode, which blanks the screen
-                    // for a moment (no window can cover that): the art fades out first, the logo stays on black, and the
-                    // game gets the focus once it's dark, so the blank lands on black instead of cutting the art
+                    // for a moment (no window can cover that, and it comes on the game's own schedule): the loading screen
+                    // fades to black first and the game gets the focus once it's dark, so the blank can't be seen
                     var gameHwnd = found;
                     Action focusGame = () => { if (launching && IsWindow(gameHwnd)) { ForceForeground(gameHwnd); KeepCoverOnTop(); } };
                     if (!coverArtGone) { coverArtGone = true; ArtToLogo(focusGame); }
@@ -4134,6 +4146,7 @@ namespace Selene
                 if (coverCancelledByGuide)
                 {
                     GamePause.Unhush();
+                    HoldMusicForLaunch(false);
                     launching = false;
                     launchTimer.Stop();
                     gameWindow = readyWindow;
@@ -4156,6 +4169,7 @@ namespace Selene
         private static void RevealGame(IntPtr game, string why)
         {
             GamePause.FadeBack(2000, 2000);   // the ready sound first, then the game's sound fades in
+            HoldMusicForLaunch(false);
             launching = false;
             if (launchTimer != null) launchTimer.Stop();
             var w = Application.Current.MainWindow;
@@ -4226,6 +4240,7 @@ namespace Selene
         private static void AbortLaunchCover(IntPtr bringForward, string why)
         {
             GamePause.Unhush();
+            HoldMusicForLaunch(false);
             launching = false;
             if (launchTimer != null) launchTimer.Stop();
             var w = Application.Current.MainWindow;
