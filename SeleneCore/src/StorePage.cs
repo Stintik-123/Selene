@@ -104,7 +104,7 @@ namespace Selene
             status = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(98, 600, 0, 0) };
             Root.Children.Add(status);
 
-            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Store apps")));
+            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Store apps"), Ui.Prompt("X", "Currency · " + StoreData.CurrencyCode)));
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Details")));
 
             heroLater.Tick += (s, e) => { heroLater.Stop(); ShowHero(); };
@@ -318,6 +318,7 @@ namespace Selene
         {
             if (b == "B") { Remember(); Ui.Back(); LoginScene.Finish(); return; }
             if (b == "Y") { Remember(); Ui.Confirm(); LoginScene.Show(new StoreScreen(), 1); return; }
+            if (b == "X") { Remember(); Ui.Confirm(); LoginScene.Show(new StoreCurrencyScreen(false), 1); return; }
             if (b == "LeftShoulder" || b == "RightShoulder")
             {
                 int next = (tab + (b == "RightShoulder" ? 1 : Tabs.Length - 1)) % Tabs.Length;

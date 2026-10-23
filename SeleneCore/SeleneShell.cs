@@ -90,7 +90,7 @@ namespace Selene
             }
             catch (Exception ex) { HomeNav.Log("shell: couldn't take over the main menu: " + ex.Message); }
             var store = HomeNav.FindByName(main, "SeleneNav_store") as ButtonBase;
-            if (store != null) store.Command = new Relay(() => LoginScene.OpenWith(() => Features.On("storepage") ? (Screen)new StorePage() : new StoreScreen()));
+            if (store != null) store.Command = new Relay(() => LoginScene.OpenWith(() => !Features.On("storepage") ? new StoreScreen() : StoreData.ChosenCountry == null ? (Screen)new StoreCurrencyScreen(true) : new StorePage()));
             HomeNav.Log("shell: home/library wired");
             DevView();
             return true;

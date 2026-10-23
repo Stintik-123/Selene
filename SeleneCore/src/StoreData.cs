@@ -33,7 +33,76 @@ namespace Selene
         private static bool loading;
         private static readonly List<Action<string>> waiting = new List<Action<string>>();
 
-        public static string Country { get { try { return RegionInfo.CurrentRegion.TwoLetterISORegionName; } catch { return "US"; } } }
+        // ---------------- currency ----------------
+        // the stores price by country: picking a currency picks the country whose prices the stores show
+        public class Currency { public string Code, Name, Country; }
+        public static readonly Currency[] Currencies =
+        {
+            new Currency { Code = "USD", Name = "US dollar", Country = "US" },
+            new Currency { Code = "EUR", Name = "Euro", Country = "DE" },
+            new Currency { Code = "GBP", Name = "British pound", Country = "GB" },
+            new Currency { Code = "PHP", Name = "Philippine peso", Country = "PH" },
+            new Currency { Code = "JPY", Name = "Japanese yen", Country = "JP" },
+            new Currency { Code = "CAD", Name = "Canadian dollar", Country = "CA" },
+            new Currency { Code = "AUD", Name = "Australian dollar", Country = "AU" },
+            new Currency { Code = "BRL", Name = "Brazilian real", Country = "BR" },
+            new Currency { Code = "INR", Name = "Indian rupee", Country = "IN" },
+            new Currency { Code = "KRW", Name = "Korean won", Country = "KR" },
+            new Currency { Code = "SGD", Name = "Singapore dollar", Country = "SG" },
+            new Currency { Code = "IDR", Name = "Indonesian rupiah", Country = "ID" },
+            new Currency { Code = "MYR", Name = "Malaysian ringgit", Country = "MY" },
+            new Currency { Code = "THB", Name = "Thai baht", Country = "TH" },
+            new Currency { Code = "MXN", Name = "Mexican peso", Country = "MX" },
+        };
+
+        private static string RegionFile { get { return Path.Combine(SelenePaths.DataFolder, "store-region.txt"); } }
+        private static string chosen;
+
+        // the currency the prices are in (the picked one, or this PC's region's)
+        public static string CurrencyCode
+        {
+            get
+            {
+                var c = Currencies.FirstOrDefault(x => x.Country == Country);
+                if (c != null) return c.Code;
+                try { return new RegionInfo(Country).ISOCurrencySymbol; } catch { return "USD"; }
+            }
+        }
+
+        // the country picked with the currency (null until someone picks one)
+        public static string ChosenCountry
+        {
+            get
+            {
+                if (chosen == null) { try { chosen = File.Exists(RegionFile) ? File.ReadAllText(RegionFile).Trim() : ""; } catch { chosen = ""; } }
+                return chosen.Length == 2 ? chosen : null;
+            }
+        }
+
+        public static string Country
+        {
+            get
+            {
+                var c = ChosenCountry;
+                if (c != null) return c;
+                try { return RegionInfo.CurrentRegion.TwoLetterISORegionName; } catch { return "US"; }
+            }
+        }
+
+        // a new currency: saved, everything loaded again in its prices
+        public static void SetCountry(string country)
+        {
+            try { Directory.CreateDirectory(SelenePaths.DataFolder); File.WriteAllText(RegionFile, country); } catch (Exception ex) { HomeNav.Log("store region: " + ex.Message); }
+            if (chosen == country) return;
+            bool changed = chosen != null && chosen.Length == 2 || country != Country;
+            chosen = country;
+            HomeNav.Log("store: prices for " + country);
+            lists.Clear();
+            loadedAt = DateTime.MinValue;
+            FromDisk = false;
+            try { if (File.Exists(DiskFile)) File.Delete(DiskFile); } catch { }
+            if (changed) UpdateCard();
+        }
 
         public static List<StoreItem> List(string key)
         {
@@ -47,23 +116,19 @@ namespace Selene
         public static void AttachCard()
         {
             var res = System.Windows.Application.Current.Resources;
-            res["SeleneStoreFreeVisibility"] = System.Windows.Visibility.Collapsed;
-            res["SeleneStoreFree"] = "";
             bool page = Features.On("storepage");
             res["SeleneStoreAction"] = page ? "Open the store" : "Choose a store";
             res["SeleneStoreAbout"] = page ? "Free games, sales and new releases from your stores. You buy in the store's own app." : "Find something new in the store apps on this PC. Selene is here when you come back.";
             if (!page) return;
-            var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
-            later.Tick += (s, e) => { later.Stop(); Load(key => { if (key == "epic:free") ShowFree(); }); };
+            var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+            later.Tick += (s, e) => { later.Stop(); UpdateCard(); };
             later.Start();
         }
 
-        private static void ShowFree()
+        // the Store card's showcase: this week's free games, then the biggest sales, as small pictures with their price
+        private static void UpdateCard()
         {
-            var res = System.Windows.Application.Current.Resources;
-            var free = List("epic:free").Select(i => i.Title).ToList();
-            res["SeleneStoreFree"] = string.Join(" · ", free);
-            res["SeleneStoreFreeVisibility"] = free.Count > 0 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            Load(key => { if (key == "epic:free" || key == "steam:sale" || key == "epic:sale") StoreShowcase.Fill(); });
         }
 
         // when the lists shown were saved (offline: from the disk copy), MinValue while nothing is loaded

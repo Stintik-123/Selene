@@ -2010,7 +2010,11 @@ namespace Selene
         {
             var scope = VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row));
             var proxy = scope != null ? FindByName(scope, "SeleneNav_" + name) as System.Windows.Controls.Primitives.ButtonBase : null;
-            if (proxy != null && proxy.Command != null && proxy.Command.CanExecute(proxy.CommandParameter)) proxy.Command.Execute(proxy.CommandParameter);
+            // the proxies sit higher up than the row's own panels: the whole window then
+            if (proxy == null) { var w = Window.GetWindow(row); proxy = w != null ? FindByName(w, "SeleneNav_" + name) as System.Windows.Controls.Primitives.ButtonBase : null; }
+            Log("card " + name + ": " + (proxy == null ? "no proxy" : proxy.Command == null ? "no command" : "run"));
+            try { if (proxy != null && proxy.Command != null && proxy.Command.CanExecute(proxy.CommandParameter)) proxy.Command.Execute(proxy.CommandParameter); }
+            catch (Exception ex) { Log("card " + name + " failed: " + ex); }
         }
 
         private static bool returnToHub;

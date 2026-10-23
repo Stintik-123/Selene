@@ -741,12 +741,9 @@
                                                         <TextBlock Text="STORES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                         <TextBlock Text="{DynamicResource SeleneStatStores}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
-                                                    <!-- this week's free games (Selene Core's Store page data) -->
-                                                    <StackPanel Margin="0,0,26,0" Visibility="{DynamicResource SeleneStoreFreeVisibility}">
-                                                        <TextBlock Text="FREE NOW" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
-                                                        <TextBlock Text="{DynamicResource SeleneStoreFree}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0" MaxWidth="520" TextTrimming="CharacterEllipsis"/>
-                                                    </StackPanel>
                                                 </StackPanel>
+                                                <!-- this week's free games and the biggest sales, as pictures with their price (Selene Core) -->
+                                                <StackPanel x:Name="SeleneStoreShowcase" Orientation="Horizontal" Margin="2,30,0,0" HorizontalAlignment="Left"/>
                                                 <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
                                                     <Grid Width="32" Height="32">
                                                         <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
