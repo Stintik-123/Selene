@@ -72,7 +72,6 @@ namespace Selene
 
         public override void Hidden()
         {
-            HomeNav.ShowGameForPreview(false);
             // left without saving (B out of the first step, or the layer closed): the signed-in profile's look comes back
             if (!saved) Profiles.ApplyLook();
         }
@@ -220,7 +219,8 @@ namespace Selene
             }
         }
 
-        // the real home, mirrored live (its art, row and the top bar), so a theme or background is seen before picking it
+        // the real home, mirrored live (row and top bar over the wallpaper, no game selected: its art would hide the
+        // wallpaper and start its song), so a theme or background is seen before picking it
         internal static FrameworkElement Preview(double width)
         {
             double height = width * 9 / 16;
@@ -679,8 +679,7 @@ namespace Selene
                 catch (FormatException) { return fallback; }
             }
 
-            public override void Shown() { HomeNav.ShowGameForPreview(true); ShowFocus(false); }
-            public override void Left() { HomeNav.ShowGameForPreview(false); }
+            public override void Shown() { ShowFocus(false); }
 
             private void ShowFocus(bool live)
             {
@@ -795,11 +794,8 @@ namespace Selene
                 index = Owner.Wallpaper == null ? 0 : Math.Max(0, files.FindIndex(f => f != null && string.Equals(f, Owner.Wallpaper, StringComparison.OrdinalIgnoreCase)));
             }
 
-            public override void Left() { HomeNav.ShowGameForPreview(false); Profiles.ApplyHomeBackground(Owner.Look); }
-
             public override void Shown()
             {
-                HomeNav.ShowGameForPreview(true);
                 Fill();
                 look.Select(Owner.Look == "wallpaper" ? 1 : 0, false);
                 ShowNote();
@@ -812,8 +808,7 @@ namespace Selene
                 grid.Reveal(index);
                 groupLabel.Text = (index == 0 ? "THEME" : groups[index].ToUpperInvariant());
                 var file = files[index] ?? ThemePalettes.DefaultWallpaper(Owner.Theme);
-                // the game's art steps aside while browsing so the wallpaper itself is seen; X shows the chosen look again
-                Action show = () => { Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(file); LoginScene.RefreshBackdrop(); Profiles.ApplyHomeBackground("wallpaper"); };
+                Action show = () => { Application.Current.Resources["SeleneWallpaper"] = Wallpapers.Load(file); LoginScene.RefreshBackdrop(); };
                 if (live) apply.Run(show); else show();
             }
 

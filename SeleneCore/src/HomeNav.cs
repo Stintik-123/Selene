@@ -931,37 +931,6 @@ namespace Selene
             pushTimer.Start();
         }
 
-        // while the login screens cover the home nothing is selected for Playnite (its music add-ons would play)
-        private static bool previewGame;
-
-        // the theme and background steps show the home in a preview: a game is selected behind it then (music stays off)
-        private static object previewGameObj;
-
-        // the row itself is left alone (it moved behind the preview): only Playnite's selected game is set
-        public static void ShowGameForPreview(bool on)
-        {
-            var row = LiveRow();
-            if (row == null || previewGame == on) return;
-            previewGame = on;
-            // the preview's game must not start its song: UniPlaySong pauses while a theme overlay is up (its own pause
-            // source for themes), the default music comes back after
-            SetUpsSetting("ThemeOverlayActive", on);
-            if (!on) { previewGameObj = null; ClearSelectedGame(); return; }
-            int idx = FirstGameIndex(row);
-            if (idx < 0 || idx >= row.Items.Count || row.Items[idx] is string || row.Items[idx] is RowPad) { previewGame = false; return; }
-            previewGameObj = row.Items[idx];
-            SetSelectedGame(previewGameObj);
-        }
-
-        private static void SetSelectedGame(object game)
-        {
-            PauseMusic(true);
-            var w = Application.Current.MainWindow;
-            var vm = w != null ? w.DataContext : null;
-            var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
-            if (prop != null && prop.CanWrite && !ReferenceEquals(prop.GetValue(vm, null), game)) prop.SetValue(vm, game, null);
-        }
-
         // the home's game art fades in or out when a profile's home background changes
         public static void FadeArt(double to)
         {
@@ -973,9 +942,9 @@ namespace Selene
             art.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
+        // while the login screens cover the home nothing is selected for Playnite (its music add-ons would play)
         public static void ClearSelectedGame()
         {
-            if (previewGame) return;
             PauseMusic(true);
             var w = Application.Current.MainWindow;
             var vm = w != null ? w.DataContext : null;
@@ -985,10 +954,9 @@ namespace Selene
 
         private static void PushSelected(ListBox row)
         {
-            if (LoginScene.CoversHome && !previewGame) { ClearSelectedGame(); return; }
+            if (LoginScene.CoversHome) { ClearSelectedGame(); return; }
             var game = row.SelectedItem;
             if (game == null) return;
-            if (previewGame) { SetSelectedGame(previewGameObj); return; }
             // no game music on the Library / Store cards (Playnite may fall back to its first game when none is selected)
             PauseMusic(game is string);
             var vm = row.DataContext;
