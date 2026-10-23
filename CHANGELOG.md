@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Store page: the Store card opens Selene's store with free games, sales, top sellers, new releases, PC Game Pass and deals from other stores. LB/RB pick the store (All, Steam, Epic Games, GOG, Xbox, More stores); A opens a game's page (screenshots, description, price, "In your library" if you own it) and from there its store app to buy it. The Store card shows this week's free games. Works offline with the last prices. Switch: Selene settings, Games, Store page.
 - The start-up fade from black and the fade into the home after signing in run on their own thread, so they stay smooth while Playnite is busy loading.
 - Spotlight: moving between the Store and Library cards no longer makes the row bounce.
 - Menu: the profile shows its name with "Switch profile" under it. The top bar's profile steps away while the menu is open.

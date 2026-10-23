@@ -735,11 +735,16 @@
                                                     </Style>
                                                 </StackPanel.Style>
                                                 <TextBlock Text="Store" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
-                                                <TextBlock Text="Find something new in the store apps on this PC. Selene is here when you come back." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
+                                                <TextBlock Text="{DynamicResource SeleneStoreAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
                                                 <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
                                                     <StackPanel Margin="0,0,26,0">
                                                         <TextBlock Text="STORES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                         <TextBlock Text="{DynamicResource SeleneStatStores}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <!-- this week's free games (Selene Core's Store page data) -->
+                                                    <StackPanel Margin="0,0,26,0" Visibility="{DynamicResource SeleneStoreFreeVisibility}">
+                                                        <TextBlock Text="FREE NOW" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStoreFree}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0" MaxWidth="520" TextTrimming="CharacterEllipsis"/>
                                                     </StackPanel>
                                                 </StackPanel>
                                                 <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
@@ -747,7 +752,7 @@
                                                         <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
                                                         <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
                                                     </Grid>
-                                                    <TextBlock Text="Choose a store" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
+                                                    <TextBlock Text="{DynamicResource SeleneStoreAction}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
                                                 </StackPanel>
                                             </StackPanel>
                                             <StackPanel Margin="0,30,0,0" HorizontalAlignment="Left" Width="900">

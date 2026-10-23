@@ -220,6 +220,7 @@ namespace Selene
             new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
             new Option { Group = "Look", Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game and its trailer plays. R3 for its sound." },
+            new Option { Group = "Games", Key = "storepage", Label = "Store page", About = "The Store card opens free games, sales and new releases. Off: it picks a store app." },
             new Option { Group = "Games", Key = "freeze", Label = "Freeze on Guide", About = "Guide pauses offline games. Off: they're only muted." },
             new Option { Group = "Games", Key = "tray", Label = "Close to tray", About = "Exit hides Playnite so it comes back instantly." },
             new Option { Group = "Games", Key = "admin", Label = "No-prompt launchers", About = "Admin games skip the Windows prompt after their first run." },

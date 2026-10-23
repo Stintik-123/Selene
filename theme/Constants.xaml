@@ -55,6 +55,11 @@
     <sys:String x:Key="SeleneStatInstalled">-</sys:String>
     <sys:String x:Key="SeleneStatRecent">-</sys:String>
     <sys:String x:Key="SeleneStatStores">-</sys:String>
+    <!-- the Store card (Selene Core sets these when its Store page is on) -->
+    <sys:String x:Key="SeleneStoreAction">Choose a store</sys:String>
+    <sys:String x:Key="SeleneStoreAbout">Find something new in the store apps on this PC. Selene is here when you come back.</sys:String>
+    <sys:String x:Key="SeleneStoreFree"></sys:String>
+    <Visibility x:Key="SeleneStoreFreeVisibility">Collapsed</Visibility>
     <sys:String x:Key="SeleneHeartGlyph">&#xE006;</sys:String>
     <!-- home background: the game's art over the wallpaper (Selene Core sets 0 for a profile that wants the wallpaper only) -->
     <sys:Double x:Key="SeleneArtOpacity">1</sys:Double>

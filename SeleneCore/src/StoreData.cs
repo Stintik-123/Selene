@@ -1,0 +1,446 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web.Script.Serialization;
+
+namespace Selene
+{
+    // One game offered in the Store page
+    public class StoreItem
+    {
+        public string Store, StoreName, Id, Title, Image;   // Store: steam, epic, gog, xbox, deals; Image: a wide picture
+        public string Price, OldPrice;                       // formatted ("₱779.70"); OldPrice only when discounted
+        public int Discount;                                 // percent off
+        public bool Free;                                    // free to keep right now
+        public string Note;                                  // "Free until Oct 29", "Free from Nov 1", "Game Pass"
+        public string Link, WebLink;                         // the store app's link and the web page (fallback)
+        public string SteamAppId;
+        public bool Owned;
+    }
+
+    // The Store page's data: free public sources, no account or key. Each list arrives on its own (the page fills in
+    // as they come); the last good copy is kept on disk so the page shows something offline.
+    public static class StoreData
+    {
+        private const string Agent = "Selene/1.0 (Playnite theme; github.com/mattxslv/Selene)";
+        private static readonly Dictionary<string, List<StoreItem>> lists = new Dictionary<string, List<StoreItem>>();
+        private static DateTime loadedAt = DateTime.MinValue;
+        private static bool loading;
+        private static readonly List<Action<string>> waiting = new List<Action<string>>();
+
+        public static string Country { get { try { return RegionInfo.CurrentRegion.TwoLetterISORegionName; } catch { return "US"; } } }
+
+        public static List<StoreItem> List(string key)
+        {
+            List<StoreItem> l;
+            return lists.TryGetValue(key, out l) ? l : new List<StoreItem>();
+        }
+
+        public static bool Has(string key) { return lists.ContainsKey(key); }
+
+        // the Store card on Spotlight: what it opens, and this week's free games (loaded a little after start)
+        public static void AttachCard()
+        {
+            var res = System.Windows.Application.Current.Resources;
+            res["SeleneStoreFreeVisibility"] = System.Windows.Visibility.Collapsed;
+            res["SeleneStoreFree"] = "";
+            bool page = Features.On("storepage");
+            res["SeleneStoreAction"] = page ? "Open the store" : "Choose a store";
+            res["SeleneStoreAbout"] = page ? "Free games, sales and new releases from your stores. You buy in the store's own app." : "Find something new in the store apps on this PC. Selene is here when you come back.";
+            if (!page) return;
+            var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
+            later.Tick += (s, e) => { later.Stop(); Load(key => { if (key == "epic:free") ShowFree(); }); };
+            later.Start();
+        }
+
+        private static void ShowFree()
+        {
+            var res = System.Windows.Application.Current.Resources;
+            var free = List("epic:free").Select(i => i.Title).ToList();
+            res["SeleneStoreFree"] = string.Join(" · ", free);
+            res["SeleneStoreFreeVisibility"] = free.Count > 0 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        }
+
+        // when the lists shown were saved (offline: from the disk copy), MinValue while nothing is loaded
+        public static DateTime LoadedAt { get { return loadedAt; } }
+        public static bool FromDisk { get; private set; }
+
+        // loads (or refreshes after 30 minutes) every list; `arrived(key)` runs on the UI thread as each one comes in
+        public static void Load(Action<string> arrived)
+        {
+            var ui = System.Windows.Application.Current.Dispatcher;
+            if (lists.Count == 0) ReadDisk();
+            foreach (var k in lists.Keys.ToList()) arrived(k);
+            if (loading) { waiting.Add(arrived); return; }
+            if ((DateTime.Now - loadedAt).TotalMinutes < 30 && !FromDisk) return;
+            loading = true;
+            waiting.Clear();
+            waiting.Add(arrived);
+            System.Net.ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            var owned = OwnedIndex();
+            var jobs = new List<Task>();
+            Action<string, Func<List<StoreItem>>> fetch = (key, get) => jobs.Add(Task.Run(() =>
+            {
+                List<StoreItem> got = null;
+                try { got = get(); }
+                catch (Exception ex) { HomeNav.Log("store data " + key + ": " + ex.Message); }
+                if (got == null) return;
+                foreach (var i in got) i.Owned = owned.Has(i);
+                ui.BeginInvoke(new Action(() =>
+                {
+                    lists[key] = got;
+                    FromDisk = false;
+                    loadedAt = DateTime.Now;
+                    foreach (var w in waiting.ToList()) w(key);
+                }));
+            }));
+            fetch("steam", Steam);   // fills steam:* itself (one request for four lists)
+            fetch("epic", Epic);
+            fetch("gog:sale", () => Gog("order=desc:discount&discounted=eq:true"));
+            fetch("gog:best", () => Gog("order=desc:bestselling"));
+            fetch("xbox:gamepass", GamePass);
+            fetch("deals:best", Deals);
+            Task.WhenAll(jobs).ContinueWith(t => ui.BeginInvoke(new Action(() => { loading = false; WriteDisk(); })));
+        }
+
+        // ---------------- sources ----------------
+        private static object Get(string url)
+        {
+            using (var web = new WebClient { Encoding = Encoding.UTF8 })
+            {
+                web.Headers[HttpRequestHeader.UserAgent] = Agent;
+                var text = web.DownloadString(url);
+                return new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.DeserializeObject(text);
+            }
+        }
+
+        private static Dictionary<string, object> D(object o) { return o as Dictionary<string, object>; }
+        private static object[] A(object o) { return o as object[] ?? new object[0]; }
+        private static string S(object o) { return o == null ? null : Convert.ToString(o, CultureInfo.InvariantCulture); }
+        private static object At(object o, params string[] path)
+        {
+            foreach (var p in path) { var d = D(o); if (d == null || !d.TryGetValue(p, out o)) return null; }
+            return o;
+        }
+        private static double Num(object o) { double v; return o != null && double.TryParse(S(o), NumberStyles.Any, CultureInfo.InvariantCulture, out v) ? v : 0; }
+
+        private static readonly Dictionary<string, string> Symbols = new Dictionary<string, string>
+        {
+            { "USD", "$" }, { "PHP", "₱" }, { "EUR", "€" }, { "GBP", "£" }, { "JPY", "¥" }, { "INR", "₹" }, { "KRW", "₩" }, { "BRL", "R$" },
+            { "AUD", "A$" }, { "CAD", "C$" }, { "SGD", "S$" }, { "MYR", "RM " }, { "IDR", "Rp " }, { "THB", "฿" }, { "VND", "₫" }
+        };
+        public static string Money(double amount, string currency)
+        {
+            string sym;
+            if (!Symbols.TryGetValue(currency ?? "", out sym)) sym = (currency ?? "") + " ";
+            return sym + amount.ToString(amount == Math.Floor(amount) && amount >= 1000 ? "N0" : "N2", CultureInfo.InvariantCulture);
+        }
+
+        private static string Open(string protocol, string appLink, string web)
+        {
+            try { using (var key = Microsoft.Win32.Registry.ClassesRoot.OpenSubKey(protocol)) if (key != null) return appLink; }
+            catch { }
+            return web;
+        }
+
+        // Steam's featured lists in this region's prices: on sale, top sellers, new releases, coming soon
+        private static List<StoreItem> Steam()
+        {
+            var data = Get("https://store.steampowered.com/api/featuredcategories?l=english&cc=" + Country);
+            var ui = System.Windows.Application.Current.Dispatcher;
+            var owned = OwnedIndex();
+            foreach (var pair in new[] { new[] { "specials", "steam:sale" }, new[] { "top_sellers", "steam:top" }, new[] { "new_releases", "steam:new" }, new[] { "coming_soon", "steam:soon" } })
+            {
+                var items = new List<StoreItem>();
+                var seen = new HashSet<string>();
+                foreach (var o in A(At(data, pair[0], "items")))
+                {
+                    var id = S(At(o, "id"));
+                    if (id == null || !seen.Add(id)) continue;
+                    var item = new StoreItem { Store = "steam", StoreName = "Steam", Id = id, SteamAppId = id, Title = S(At(o, "name")) };
+                    item.Image = S(At(o, "large_capsule_image")) ?? S(At(o, "header_image"));
+                    var cur = S(At(o, "currency")) ?? "USD";
+                    double final = Num(At(o, "final_price")) / 100, initial = Num(At(o, "original_price")) / 100;
+                    item.Discount = (int)Num(At(o, "discount_percent"));
+                    if (pair[0] == "coming_soon" && final == 0) item.Note = "Coming soon";
+                    else item.Price = final == 0 ? "Free" : Money(final, cur);
+                    if (item.Discount > 0 && initial > final) item.OldPrice = Money(initial, cur);
+                    item.Link = Open("steam", "steam://store/" + id, "https://store.steampowered.com/app/" + id);
+                    item.WebLink = "https://store.steampowered.com/app/" + id;
+                    item.Owned = owned.Has(item);
+                    items.Add(item);
+                }
+                var key = pair[1];
+                ui.BeginInvoke(new Action(() => { lists[key] = items; FromDisk = false; loadedAt = DateTime.Now; foreach (var w in waiting.ToList()) w(key); }));
+            }
+            return null;   // (each list was handed over above)
+        }
+
+        // Epic's promotions: the free games (now and next) and the games on sale this week
+        private static List<StoreItem> Epic()
+        {
+            var c = Country;
+            var data = Get("https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=en-US&country=" + c + "&allowCountries=" + c);
+            List<StoreItem> free = new List<StoreItem>(), next = new List<StoreItem>(), sale = new List<StoreItem>();
+            foreach (var e in A(At(data, "data", "Catalog", "searchStore", "elements")))
+            {
+                var now = A(At(e, "promotions", "promotionalOffers"));
+                var soon = A(At(e, "promotions", "upcomingPromotionalOffers"));
+                var offer = now.Length > 0 ? A(At(now[0], "promotionalOffers")).FirstOrDefault() : soon.Length > 0 ? A(At(soon[0], "promotionalOffers")).FirstOrDefault() : null;
+                if (offer == null) continue;
+                var slug = S(At(e, "productSlug"));
+                var map = A(At(e, "catalogNs", "mappings")).FirstOrDefault();
+                if (map != null && S(At(map, "pageSlug")) != null) slug = S(At(map, "pageSlug"));
+                if (string.IsNullOrEmpty(slug) || slug == "[]") continue;
+                var item = new StoreItem { Store = "epic", StoreName = "Epic Games", Id = slug, Title = S(At(e, "title")) };
+                foreach (var k in A(At(e, "keyImages")))
+                    if (S(At(k, "type")) == "OfferImageWide" || (item.Image == null && S(At(k, "type")) == "Thumbnail")) item.Image = S(At(k, "url"));
+                var pct = (int)Num(At(offer, "discountSetting", "discountPercentage"));   // 0 = free
+                string orig = S(At(e, "price", "totalPrice", "fmtPrice", "originalPrice")), disc = S(At(e, "price", "totalPrice", "fmtPrice", "discountPrice"));
+                DateTime end, start;
+                bool hasEnd = DateTime.TryParse(S(At(offer, "endDate")), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out end);
+                bool hasStart = DateTime.TryParse(S(At(offer, "startDate")), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out start);
+                item.Link = Open("com.epicgames.launcher", "com.epicgames.launcher://store/p/" + slug, "https://store.epicgames.com/p/" + slug);
+                item.WebLink = "https://store.epicgames.com/p/" + slug;
+                if (pct == 0 && now.Length > 0)
+                {
+                    item.Free = true; item.Price = "Free"; item.OldPrice = orig; item.Discount = 100;
+                    if (hasEnd) item.Note = "Free until " + end.ToLocalTime().ToString("MMM d", CultureInfo.InvariantCulture);
+                    free.Add(item);
+                }
+                else if (pct == 0)
+                {
+                    item.Price = orig;
+                    if (hasStart) item.Note = "Free from " + start.ToLocalTime().ToString("MMM d", CultureInfo.InvariantCulture);
+                    next.Add(item);
+                }
+                else if (now.Length > 0)
+                {
+                    item.Price = disc; item.OldPrice = orig; item.Discount = 100 - pct;   // Epic gives the share you pay
+                    if (hasEnd) item.Note = "Sale ends " + end.ToLocalTime().ToString("MMM d", CultureInfo.InvariantCulture);
+                    sale.Add(item);
+                }
+            }
+            var ui = System.Windows.Application.Current.Dispatcher;
+            var owned = OwnedIndex();
+            foreach (var l in new[] { free, next, sale }) foreach (var i in l) i.Owned = owned.Has(i);
+            ui.BeginInvoke(new Action(() =>
+            {
+                lists["epic:free"] = free; lists["epic:next"] = next; lists["epic:sale"] = sale;
+                FromDisk = false; loadedAt = DateTime.Now;
+                foreach (var w in waiting.ToList()) { w("epic:free"); w("epic:next"); w("epic:sale"); }
+            }));
+            return null;
+        }
+
+        // GOG's catalog (prices in dollars outside its own regions)
+        private static List<StoreItem> Gog(string query)
+        {
+            var data = Get("https://catalog.gog.com/v1/catalog?limit=30&productType=in:game,pack&locale=en-US&countryCode=" + Country + "&" + query);
+            var items = new List<StoreItem>();
+            foreach (var p in A(At(data, "products")))
+            {
+                var slug = S(At(p, "slug"));
+                var link = S(At(p, "storeLink")) ?? ("https://www.gog.com/en/game/" + slug);
+                var item = new StoreItem { Store = "gog", StoreName = "GOG", Id = S(At(p, "id")), Title = S(At(p, "title")), Image = S(At(p, "coverHorizontal")) };
+                item.Price = S(At(p, "price", "final"));
+                var disc = S(At(p, "price", "discount"));
+                int pct;
+                if (!string.IsNullOrEmpty(disc) && int.TryParse(disc.Trim('-', '%'), out pct) && pct > 0) { item.Discount = pct; item.OldPrice = S(At(p, "price", "base")); }
+                if (item.Price == "$0.00") { item.Price = "Free"; }
+                item.Link = Open("goggalaxy", "goggalaxy://openStoreUrl/" + link.Replace("https://", ""), link);
+                item.WebLink = link;
+                items.Add(item);
+            }
+            return items;
+        }
+
+        // PC Game Pass: Microsoft's list, then its catalog for names, pictures and prices
+        private static List<StoreItem> GamePass()
+        {
+            var ids = A(Get("https://catalog.gamepass.com/sigls/v2?id=fdd9e2a7-0fee-49f6-ad69-4354098401ff&language=en-us&market=" + Country))
+                .Select(o => S(At(o, "id"))).Where(id => id != null).Take(40).ToList();
+            var items = new List<StoreItem>();
+            for (int at = 0; at < ids.Count; at += 20)
+            {
+                var data = Get("https://displaycatalog.mp.microsoft.com/v7.0/products?languages=en-us&market=" + Country + "&bigIds=" + string.Join(",", ids.Skip(at).Take(20)));
+                foreach (var p in A(At(data, "Products")))
+                {
+                    var lp = A(At(p, "LocalizedProperties")).FirstOrDefault();
+                    if (lp == null) continue;
+                    var id = S(At(p, "ProductId"));
+                    var item = new StoreItem { Store = "xbox", StoreName = "Xbox", Id = id, Title = S(At(lp, "ProductTitle")), Note = "Game Pass" };
+                    string hero = null, box = null;
+                    foreach (var img in A(At(lp, "Images")))
+                    {
+                        var purpose = S(At(img, "ImagePurpose"));
+                        var uri = S(At(img, "Uri"));
+                        if (uri != null && uri.StartsWith("//")) uri = "https:" + uri;
+                        if (purpose == "TitledHeroArt" && hero == null) hero = uri;
+                        if ((purpose == "SuperHeroArt" || purpose == "BoxArt") && box == null) box = uri;
+                    }
+                    item.Image = (hero ?? box) != null ? (hero ?? box) + "?w=960" : null;
+                    var price = At(A(At(p, "DisplaySkuAvailabilities")).Select(s => A(At(s, "Availabilities")).FirstOrDefault()).FirstOrDefault(a => a != null), "OrderManagementData", "Price");
+                    if (price != null)
+                    {
+                        double list = Num(At(price, "ListPrice")), msrp = Num(At(price, "MSRP"));
+                        var cur = S(At(price, "CurrencyCode"));
+                        if (list > 0) item.Price = Money(list, cur);
+                        if (msrp > list && list > 0) { item.OldPrice = Money(msrp, cur); item.Discount = (int)Math.Round(100 - list * 100 / msrp); }
+                    }
+                    item.Link = Open("msxbox", "msxbox://game/?productId=" + id, "ms-windows-store://pdp/?productid=" + id);
+                    item.WebLink = "https://www.xbox.com/games/store/p/" + id;
+                    items.Add(item);
+                }
+            }
+            return items;
+        }
+
+        // the best deals from the other stores (CheapShark; dollar prices)
+        private static List<StoreItem> Deals()
+        {
+            var stores = new Dictionary<string, string>();
+            foreach (var s in A(Get("https://www.cheapshark.com/api/1.0/stores"))) stores[S(At(s, "storeID"))] = S(At(s, "storeName"));
+            var items = new List<StoreItem>();
+            var seen = new HashSet<string>();
+            foreach (var d in A(Get("https://www.cheapshark.com/api/1.0/deals?pageSize=60&sortBy=Deal%20Rating&onSale=1")))
+            {
+                var store = S(At(d, "storeID"));
+                if (store == "1" || store == "7" || store == "25") continue;   // Steam, GOG and Epic have their own tabs
+                var game = S(At(d, "gameID"));
+                if (game == null || !seen.Add(game)) continue;
+                var steam = S(At(d, "steamAppID"));
+                string name;
+                var item = new StoreItem { Store = "deals", StoreName = stores.TryGetValue(store ?? "", out name) ? name : "Store", Id = S(At(d, "dealID")), Title = S(At(d, "title")), SteamAppId = steam };
+                item.Image = !string.IsNullOrEmpty(steam) && steam != "0" ? "https://cdn.akamai.steamstatic.com/steam/apps/" + steam + "/header.jpg" : S(At(d, "thumb"));
+                double sale = Num(At(d, "salePrice")), normal = Num(At(d, "normalPrice"));
+                item.Price = sale == 0 ? "Free" : Money(sale, "USD");
+                if (normal > sale) { item.OldPrice = Money(normal, "USD"); item.Discount = (int)Math.Round(Num(At(d, "savings"))); }
+                item.Link = item.WebLink = "https://www.cheapshark.com/redirect?dealID=" + Uri.EscapeDataString(WebUtility.UrlDecode(item.Id));
+                items.Add(item);
+                if (items.Count >= 30) break;
+            }
+            return items;
+        }
+
+        // ---------------- a game's page ----------------
+        public class Details
+        {
+            public string About, Released, Genres, Score;
+            public List<string> Shots = new List<string>();
+        }
+
+        // more about one game (description, screenshots); `done` on the UI thread (null when there's nothing more)
+        public static void LoadDetails(StoreItem item, Action<Details> done)
+        {
+            var ui = System.Windows.Application.Current.Dispatcher;
+            Task.Run(() =>
+            {
+                Details d = null;
+                try { d = FetchDetails(item); }
+                catch (Exception ex) { HomeNav.Log("store details " + item.Title + ": " + ex.Message); }
+                ui.BeginInvoke(new Action(() => done(d)));
+            });
+        }
+
+        private static Details FetchDetails(StoreItem item)
+        {
+            var d = new Details();
+            if (!string.IsNullOrEmpty(item.SteamAppId) && item.SteamAppId != "0")
+            {
+                var data = At(Get("https://store.steampowered.com/api/appdetails?l=english&cc=" + Country + "&appids=" + item.SteamAppId), item.SteamAppId, "data");
+                if (data == null) return null;
+                d.About = WebUtility.HtmlDecode(S(At(data, "short_description")));
+                d.Released = S(At(data, "release_date", "date"));
+                d.Genres = string.Join(" · ", A(At(data, "genres")).Select(g => S(At(g, "description"))).Take(3));
+                var score = S(At(data, "metacritic", "score"));
+                if (score != null) d.Score = "Metacritic " + score;
+                d.Shots = A(At(data, "screenshots")).Select(s => S(At(s, "path_full"))).Where(s => s != null).Take(8).ToList();
+                return d;
+            }
+            if (item.Store == "xbox")
+            {
+                var p = A(At(Get("https://displaycatalog.mp.microsoft.com/v7.0/products?languages=en-us&market=" + Country + "&bigIds=" + item.Id), "Products")).FirstOrDefault();
+                var lp = A(At(p, "LocalizedProperties")).FirstOrDefault();
+                if (lp == null) return null;
+                d.About = S(At(lp, "ShortDescription"));
+                if (string.IsNullOrEmpty(d.About)) d.About = S(At(lp, "ProductDescription"));
+                if (d.About != null && d.About.Length > 420) d.About = d.About.Substring(0, 420).TrimEnd() + "…";
+                d.Shots = A(At(lp, "Images")).Where(i => S(At(i, "ImagePurpose")) == "Screenshot").Select(i => { var u = S(At(i, "Uri")); return (u != null && u.StartsWith("//") ? "https:" + u : u) + "?w=1920"; }).Take(8).ToList();
+                return d;
+            }
+            return null;
+        }
+
+        // ---------------- owned games ----------------
+        private class Owned
+        {
+            public HashSet<string> Steam = new HashSet<string>(), Names = new HashSet<string>();
+            public bool Has(StoreItem i)
+            {
+                if (!string.IsNullOrEmpty(i.SteamAppId) && Steam.Contains(i.SteamAppId)) return true;
+                return i.Title != null && Names.Contains(Key(i.Title));
+            }
+        }
+
+        private static readonly Guid SteamPlugin = new Guid("cb91dfc9-b977-43bf-8e70-55f46e410fab");
+
+        public static string Key(string title)
+        {
+            var sb = new StringBuilder();
+            foreach (var ch in title.ToLowerInvariant()) if (char.IsLetterOrDigit(ch)) sb.Append(ch);
+            return sb.ToString();
+        }
+
+        private static Owned OwnedIndex()
+        {
+            var o = new Owned();
+            try
+            {
+                if (HomeNav.Api == null) return o;
+                foreach (var g in HomeNav.Api.Database.Games)
+                {
+                    if (g.PluginId == SteamPlugin && !string.IsNullOrEmpty(g.GameId)) o.Steam.Add(g.GameId);
+                    if (!string.IsNullOrEmpty(g.Name)) o.Names.Add(Key(g.Name));
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("store owned: " + ex.Message); }
+            return o;
+        }
+
+        // ---------------- offline copy ----------------
+        private static string DiskFile { get { return Path.Combine(SelenePaths.DataFolder, "store-cache.json"); } }
+
+        private class Saved { public DateTime At; public Dictionary<string, List<StoreItem>> Lists; }
+
+        private static void WriteDisk()
+        {
+            try
+            {
+                if (lists.Count == 0 || FromDisk) return;
+                Directory.CreateDirectory(SelenePaths.DataFolder);
+                File.WriteAllText(DiskFile, new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(new Saved { At = loadedAt, Lists = lists }));
+            }
+            catch (Exception ex) { HomeNav.Log("store cache write: " + ex.Message); }
+        }
+
+        private static void ReadDisk()
+        {
+            try
+            {
+                if (!File.Exists(DiskFile)) return;
+                var saved = new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Deserialize<Saved>(File.ReadAllText(DiskFile));
+                if (saved == null || saved.Lists == null) return;
+                foreach (var pair in saved.Lists) lists[pair.Key] = pair.Value;
+                loadedAt = saved.At.ToLocalTime();
+                FromDisk = true;
+            }
+            catch (Exception ex) { HomeNav.Log("store cache read: " + ex.Message); }
+        }
+    }
+}

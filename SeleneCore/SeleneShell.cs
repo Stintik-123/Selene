@@ -50,7 +50,8 @@ namespace Selene
             library.Command = new Relay(ShowLibrary);
             LoginScene.AttachHomeGlow(main);   // the login's glow behind the home's cards
             LibraryStage.Attach(main);         // Collection's background trailer
-            TopProfile.Attach(main);           // the signed-in profile beside the clock
+            TopProfile.Attach(main);
+            StoreData.AttachCard();            // the Store card's free games           // the signed-in profile beside the clock
             Brand.Attach(main);                // Selene's mark on empty screens
             // "last played" as people say it (Today, Yesterday, 3 days ago), for Spotlight and Collection
             var npc = main.DataContext as System.ComponentModel.INotifyPropertyChanged;
@@ -89,7 +90,7 @@ namespace Selene
             }
             catch (Exception ex) { HomeNav.Log("shell: couldn't take over the main menu: " + ex.Message); }
             var store = HomeNav.FindByName(main, "SeleneNav_store") as ButtonBase;
-            if (store != null) store.Command = new Relay(() => LoginScene.OpenWith(() => new StoreScreen()));
+            if (store != null) store.Command = new Relay(() => LoginScene.OpenWith(() => Features.On("storepage") ? (Screen)new StorePage() : new StoreScreen()));
             HomeNav.Log("shell: home/library wired");
             DevView();
             return true;
