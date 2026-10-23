@@ -262,7 +262,9 @@ namespace Selene
         private static void ApplyOverlay(bool on, Brush shade = null)
         {
             if (on) HomeNav.PauseForOverlay();
-            foreach (var el in backdrop) el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(on ? 0 : 1, TimeSpan.FromMilliseconds(220)));
+            // the layer just opening (still invisible): no fade, or the login's backdrop flashed up under the first menu
+            var ms = loginRoot != null && loginRoot.Opacity < 0.05 ? 0 : 220;
+            foreach (var el in backdrop) el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(on ? 0 : 1, TimeSpan.FromMilliseconds(ms)));
             if (!on) RefreshBackdrop();
             scene.Background = on ? shade ?? Ink.Brush("SeleneScrimColor", 0.88) : null;
             var layer = loginRoot as Panel;
