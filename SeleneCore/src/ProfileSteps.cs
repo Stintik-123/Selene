@@ -389,8 +389,8 @@ namespace Selene
             public override void Move(string dir)
             {
                 int r = row, c = col;
-                if (dir == "DPadLeft") c--;
-                else if (dir == "DPadRight") c++;
+                if (dir == "DPadLeft") c = c > 0 ? c - 1 : keys[r].Count - 1;   // past an end, round to the other (faster typing)
+                else if (dir == "DPadRight") c = c < keys[r].Count - 1 ? c + 1 : 0;
                 else
                 {
                     r += dir == "DPadUp" ? -1 : 1;
