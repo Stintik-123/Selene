@@ -73,12 +73,15 @@
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     </Style>
 
-    <RadialGradientBrush x:Key="MainBackgourndBrush" GradientOrigin="0.5,0.1" Center="0.5,0.2" RadiusX="0.5" RadiusY="0.7">
-        <RadialGradientBrush.GradientStops>
-            <GradientStop Color="#FF102A5C" Offset="0" />
-            <GradientStop Color="#FF03081A" Offset="1.0" />
-        </RadialGradientBrush.GradientStops>
-    </RadialGradientBrush>
+    <!-- Selene's own backdrop: deep navy, a little lighter top-left where the light comes in (Selene Core adds the beam
+         and the drifting particles over it) -->
+    <LinearGradientBrush x:Key="MainBackgourndBrush" StartPoint="0,0" EndPoint="1,1">
+        <LinearGradientBrush.GradientStops>
+            <GradientStop Color="#FF17244A" Offset="0" />
+            <GradientStop Color="#FF0C142C" Offset="0.45" />
+            <GradientStop Color="#FF05080F" Offset="1.0" />
+        </LinearGradientBrush.GradientStops>
+    </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="TopBarBackgroundBrush" StartPoint="-0.5,0.5" EndPoint="1,0.5" >
         <GradientStop Color="#FF091F51" Offset="0"/>

@@ -317,11 +317,16 @@ namespace Selene
         private static Grid BuildGlow()
         {
             var glow = new Grid { IsHitTestVisible = false };
-            // soft spotlight in the theme's accent from the top left, slowly breathing
-            var spot = new RadialGradientBrush { Center = new Point(0.16, -0.12), GradientOrigin = new Point(0.16, -0.12), RadiusX = 0.62, RadiusY = 1.15 };
-            spot.GradientStops.Add(Ink.Stop("GlyphColor", 0.36, 0));
-            spot.GradientStops.Add(Ink.Stop("GlyphColor", 0.12, 0.45));
+            // a beam of light in the theme's accent falling from the top left, slowly breathing
+            var spot = new RadialGradientBrush { Center = new Point(0.14, -0.08), GradientOrigin = new Point(0.14, -0.08), RadiusX = 0.2, RadiusY = 0.85 };
+            spot.GradientStops.Add(Ink.Stop("GlyphColor", 0.42, 0));
+            spot.GradientStops.Add(Ink.Stop("GlyphColor", 0.14, 0.5));
             spot.GradientStops.Add(Ink.Stop("GlyphColor", 0, 1));
+            // and a wider, fainter wash around it
+            var wash = new RadialGradientBrush { Center = new Point(0.16, -0.12), GradientOrigin = new Point(0.16, -0.12), RadiusX = 0.6, RadiusY = 1.1 };
+            wash.GradientStops.Add(Ink.Stop("GlyphColor", 0.16, 0));
+            wash.GradientStops.Add(Ink.Stop("GlyphColor", 0, 1));
+            glow.Children.Add(new Border { Background = wash });
             var spotLayer = new Border { Background = spot };
             spotLayer.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.75, 1, TimeSpan.FromSeconds(9)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase() });
             glow.Children.Add(spotLayer);
@@ -374,17 +379,21 @@ namespace Selene
 
         private static void FillParticles(Canvas canvas, Size size)
         {
-            for (int i = 0; i < 80; i++)
+            // a band of fine dust rising from the lower left to the right (denser on the right), a few soft bokeh dots
+            for (int i = 0; i < 170; i++)
             {
-                bool bokeh = i < 10;
-                double d = bokeh ? 14 + rnd.NextDouble() * 34 : 2 + rnd.NextDouble() * 5;
+                bool bokeh = i < 14;
+                double d = bokeh ? 10 + rnd.NextDouble() * 26 : 1.5 + rnd.NextDouble() * 3;
                 var key = rnd.NextDouble() < 0.72 ? "GlyphColor" : "SeleneInkColor";
                 var fill = new RadialGradientBrush();
                 fill.GradientStops.Add(Ink.Stop(key, bokeh ? 0.33 : 0.94, 0));
                 fill.GradientStops.Add(Ink.Stop(key, 0, 1));
                 var dot = new Ellipse { Width = d, Height = d, Fill = fill };
-                Canvas.SetLeft(dot, rnd.NextDouble() * size.Width);
-                Canvas.SetTop(dot, size.Height * (0.25 + rnd.NextDouble() * 0.75));
+                double fx = Math.Sqrt(rnd.NextDouble());                       // more of them to the right
+                double band = 0.74 - 0.32 * fx;                                 // the band climbs to the right
+                double spread = (rnd.NextDouble() + rnd.NextDouble() - 1) * (bokeh ? 0.3 : 0.14);
+                Canvas.SetLeft(dot, fx * size.Width);
+                Canvas.SetTop(dot, size.Height * Math.Max(0.1, Math.Min(0.98, band + spread)));
                 var tr = new TranslateTransform();
                 dot.RenderTransform = tr;
                 double dur = 16 + rnd.NextDouble() * 18;

@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Selene's own backdrop: deep navy with a beam of light from the top left and a band of fine drifting dust and bokeh (login, menus and Spotlight's cards).
 - Spotlight and Collection crossfade into each other (the screen you leave stays up until the other has its picture).
 - Moving and confirming sound the same everywhere: Selene's screens play them through Playnite's own player (one volume).
 - Switching between Spotlight and Collection: no old game art fading out on Spotlight, and Collection's art arrives sooner.
