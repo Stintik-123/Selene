@@ -10,7 +10,7 @@ using System.Windows.Shapes;
 namespace Selene
 {
     // Building blocks of Selene's own screens (login, setup check, profile steps): theme-colored text and tiles, the
-    // focus look, motion and sounds, so every screen moves and sounds the same (see CLAUDE.md "Feel").
+    // focus look, motion and sounds, so every screen moves and sounds the same (see docs/guide/building.md).
     public static class Ui
     {
         public static readonly FontFamily Display = new FontFamily("Segoe UI Variable Display");

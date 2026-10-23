@@ -4,7 +4,7 @@
 Turns the "## Unreleased" notes in CHANGELOG.md into this version, writes the version into theme/theme.yaml,
 SeleneCore/extension.yaml and the README badge, and adds the version to both Playnite installer manifests
 (manifests/*.yaml, which Playnite reads to offer installs and updates). Then, on Windows: tools\\package.ps1 and
-publish the release (see CLAUDE.md "Releasing").
+publish the release (see docs/guide/building.md, "Releasing").
 """
 import datetime
 import re
