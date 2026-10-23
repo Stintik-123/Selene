@@ -43,22 +43,26 @@
                                 <Image x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
                                 <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="120"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->
-                                <Grid x:Name="SeleneLibraryTrailerHost" Grid.RowSpan="2" Margin="760,0,0,0" Opacity="0" IsHitTestVisible="False" ClipToBounds="True">
+                                <!-- the trailer: the right of the screen from about a quarter in, top edge down to the covers; it melts into
+                                     black on its left (a long fade), darkens toward the top and fades out above the covers -->
+                                <Grid x:Name="SeleneLibraryTrailerHost" Grid.RowSpan="2" Margin="540,0,0,0" Opacity="0" IsHitTestVisible="False" ClipToBounds="True">
                                     <Grid.OpacityMask>
-                                        <!-- fades into the dark on its left (the logo side) and at its bottom (the covers) -->
                                         <VisualBrush>
                                             <VisualBrush.Visual>
-                                                <Grid Width="1160" Height="660">
+                                                <Grid Width="1380" Height="626">
                                                     <Rectangle>
                                                         <Rectangle.Fill>
                                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                                                 <GradientStop Color="#00000000" Offset="0"/>
-                                                                <GradientStop Color="#FF000000" Offset="0.35"/>
+                                                                <GradientStop Color="#66000000" Offset="0.22"/>
+                                                                <GradientStop Color="#FF000000" Offset="0.5"/>
                                                             </LinearGradientBrush>
                                                         </Rectangle.Fill>
                                                         <Rectangle.OpacityMask>
                                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                <GradientStop Color="#FF000000" Offset="0.7"/>
+                                                                <GradientStop Color="#99000000" Offset="0"/>
+                                                                <GradientStop Color="#FF000000" Offset="0.22"/>
+                                                                <GradientStop Color="#FF000000" Offset="0.72"/>
                                                                 <GradientStop Color="#00000000" Offset="1"/>
                                                             </LinearGradientBrush>
                                                         </Rectangle.OpacityMask>

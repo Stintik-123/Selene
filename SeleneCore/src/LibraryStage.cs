@@ -33,7 +33,7 @@ namespace Selene
             art = HomeNav.FindByName(w, "PART_ImageBackground") as UIElement;
             wallpaper = HomeNav.FindByName(w, "SeleneLibraryWallpaper") as UIElement;
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
-            arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) };   // 3 s on a game before its trailer
+            arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(4000) };   // like Aniki: the art first, the trailer about 4 s in
             arm.Tick += (s, e) => { arm.Stop(); Play(); };
             list.SelectionChanged += (s, e) => Rearm();
             library.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Rearm(); else Stop(); };
