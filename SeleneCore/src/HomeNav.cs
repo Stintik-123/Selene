@@ -1081,6 +1081,8 @@ namespace Selene
                     }
                     if ((c == null || !c.IsVisible) && tries < 25) return;
                     t.Stop();
+                    if (c != null) SnapToWholeCovers(list, hit);
+                    c = list.ItemContainerGenerator.ContainerFromItem(hit) as UIElement ?? c;
                     if (c != null) { c.Focus(); Log("find a game: focused " + Prop(hit, "Name")); }
                     else Log("find a game: its tile never appeared");
                 };
@@ -1110,6 +1112,34 @@ namespace Selene
                 t.Effect = textHalo;
             }
             catch { }
+        }
+
+        // after jumping to a game, Collection's row sits on whole covers again (the jump left it part of a cover off, and the
+        // next move cut a cover's ring at the left edge), the game one cover in from the left
+        private static void SnapToWholeCovers(ListBox list, object item)
+        {
+            try
+            {
+                var sv = FindChild<ScrollViewer>(list);
+                int idx = list.Items.IndexOf(item);
+                if (sv == null || idx < 0) return;
+                int first = Math.Max(0, idx - 1);
+                bool itemUnits = Math.Abs(sv.ExtentWidth - list.Items.Count) < 2;   // item scrolling counts in covers
+                double offset = first;
+                if (!itemUnits)
+                {
+                    var a = list.ItemContainerGenerator.ContainerFromIndex(idx) as FrameworkElement;
+                    var b = list.ItemContainerGenerator.ContainerFromIndex(idx > 0 ? idx - 1 : idx + 1) as FrameworkElement;
+                    if (a == null || b == null) return;
+                    double pitch = Math.Abs(a.TranslatePoint(new Point(0, 0), list).X - b.TranslatePoint(new Point(0, 0), list).X);
+                    if (pitch < 1) return;
+                    offset = first * pitch;
+                }
+                sv.ScrollToHorizontalOffset(offset);
+                list.UpdateLayout();
+                Log("find a game: snapped to cover " + first + (itemUnits ? " (items)" : " (pixels " + offset.ToString("0") + ")"));
+            }
+            catch (Exception ex) { Log("find a game snap: " + ex.Message); }
         }
 
         // the Store card's own tile on the row: its highlight steps back while the focus is in the card's pictures
