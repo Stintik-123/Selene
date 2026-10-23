@@ -4007,6 +4007,8 @@ namespace Selene
                     launchTimer.Tick += (s, e) => CheckGameReady();
                 }
                 launchTimer.Start();
+                WatchForeground();
+                if (Features.On("launchquiet")) GamePause.WatchLaunch();   // the game's first notes are turned down as they start
                 Log("game starting: loading screen kept on top");
             }));
         }
@@ -4057,7 +4059,7 @@ namespace Selene
                 // as its window shows (the loading screen stays on top)
                 lastGameWindow = found;
                 if (gameWindowSeenAt == DateTime.MinValue) gameWindowSeenAt = now;
-                if (!coverCancelledByGuide) ForceForeground(found);
+                if (!coverCancelledByGuide) { ForceForeground(found); KeepCoverOnTop(); }   // focus for the game, the art stays in front
             }
             if (++soundTick % 3 == 0)
             {
@@ -4320,6 +4322,27 @@ namespace Selene
         }
 
         private static bool CanReturnToGame() { return gameWindow != IntPtr.Zero && IsWindow(gameWindow) && AnyGameRunning(); }
+
+        // While the loading screen is up, any window coming to the front (the game's first window, its launcher) is put back
+        // under the art at once; the 100 ms check alone let a black game window show for a moment.
+        private delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int obj, int child, uint thread, uint time);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr SetWinEventHook(uint min, uint max, IntPtr module, WinEventProc proc, uint pid, uint thread, uint flags);
+        private static WinEventProc foregroundProc;   // kept alive: Windows calls it
+        private static IntPtr foregroundHook;
+
+        private static void WatchForeground()
+        {
+            if (foregroundHook != IntPtr.Zero) return;
+            foregroundProc = (h, evt, hwnd, o, c, t, time) => { if (launching) KeepCoverOnTop(); };
+            foregroundHook = SetWinEventHook(3, 3, IntPtr.Zero, foregroundProc, 0, 0, 0);   // EVENT_SYSTEM_FOREGROUND, out of context
+        }
+
+        private static void KeepCoverOnTop()
+        {
+            if (coverWindow == null || coverDark) return;   // once dark, the game may come over it
+            var coverHwnd = new System.Windows.Interop.WindowInteropHelper(coverWindow).Handle;
+            if (coverHwnd != IntPtr.Zero) SetWindowPos(coverHwnd, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);   // TOPMOST, NOSIZE | NOMOVE | NOACTIVATE
+        }
 
         private static void ForceForeground(IntPtr hwnd)
         {

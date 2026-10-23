@@ -180,7 +180,54 @@ namespace Selene
         public const float HushLevel = 0.005f;
         private static readonly Dictionary<string, KeyValuePair<object, float>> hushed = new Dictionary<string, KeyValuePair<object, float>>();
 
-        public static bool Hushing { get { return hushed.Count > 0; } }
+        public static bool Hushing { get { lock (hushed) return hushed.Count > 0; } }
+
+        // from Play until the game shows: every new audio stream of a program started by this launch is turned down the
+        // moment it opens (the intro's first notes used to get through before the 100 ms check found the game)
+        private static object watchManager;
+        private static SessionWatcher watcher;
+        private static DateTime launchSince;
+        private static int playnitePid;
+
+        public static void WatchLaunch()
+        {
+            try
+            {
+                StopWatch();
+                launchSince = DateTime.Now.AddSeconds(-2);
+                playnitePid = System.Diagnostics.Process.GetCurrentProcess().Id;
+                var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+                IMMDevice device;
+                if (enumerator.GetDefaultAudioEndpoint(0, 1, out device) != 0) return;
+                var iid = typeof(IAudioSessionManager2).GUID;
+                object o;
+                if (device.Activate(ref iid, 1, IntPtr.Zero, out o) != 0) return;
+                var manager = (IAudioSessionManager2)o;
+                IAudioSessionEnumerator unused;
+                manager.GetSessionEnumerator(out unused);   // Windows only sends new-session news after a first look
+                watcher = new SessionWatcher();
+                if (manager.RegisterSessionNotification(watcher) == 0) watchManager = manager;
+            }
+            catch (Exception ex) { HomeNav.Log("launch audio watch failed: " + ex.Message); }
+        }
+
+        public static void StopWatch()
+        {
+            try { if (watchManager != null && watcher != null) ((IAudioSessionManager2)watchManager).UnregisterSessionNotification(watcher); }
+            catch { }
+            watchManager = null;
+            watcher = null;
+        }
+
+        private static void OnNewSession(IAudioSessionControl session)
+        {
+            var ctl2 = session as IAudioSessionControl2;
+            uint pid;
+            if (ctl2 == null || ctl2.GetProcessId(out pid) != 0 || pid == 0 || pid == playnitePid) return;
+            try { if (System.Diagnostics.Process.GetProcessById((int)pid).StartTime < launchSince) return; }   // not from this launch
+            catch { return; }
+            HushSession(session);
+        }
 
         // turns down every audio session of these processes not already turned down (new sessions appear as the game starts)
         public static void Hush(ICollection<int> pids)
@@ -188,37 +235,47 @@ namespace Selene
             if (pids == null || pids.Count == 0) return;
             try
             {
-                foreach (var session in SessionsOf(pids))
-                {
-                    var ctl2 = (IAudioSessionControl2)session;
-                    IntPtr idPtr;
-                    if (ctl2.GetSessionInstanceIdentifier(out idPtr) != 0 || idPtr == IntPtr.Zero) continue;
-                    var id = Marshal.PtrToStringUni(idPtr);
-                    Marshal.FreeCoTaskMem(idPtr);
-                    if (hushed.ContainsKey(id)) continue;
-                    var vol = session as ISimpleAudioVolume;
-                    float level;
-                    if (vol == null || vol.GetMasterVolume(out level) != 0) continue;
-                    var ctx = Guid.Empty;
-                    vol.SetMasterVolume(HushLevel, ref ctx);
-                    hushed[id] = new KeyValuePair<object, float>(session, level);
-                    HomeNav.Log("launch: game audio turned down (was " + (int)(level * 100) + "%)");
-                }
+                foreach (var session in SessionsOf(pids)) HushSession(session);
             }
             catch (Exception ex) { HomeNav.Log("hush failed: " + ex.Message); }
         }
 
-        // every turned-down session back to its own volume
+        private static void HushSession(object session)
+        {
+            var ctl2 = session as IAudioSessionControl2;
+            if (ctl2 == null) return;
+            IntPtr idPtr;
+            if (ctl2.GetSessionInstanceIdentifier(out idPtr) != 0 || idPtr == IntPtr.Zero) return;
+            var id = Marshal.PtrToStringUni(idPtr);
+            Marshal.FreeCoTaskMem(idPtr);
+            lock (hushed)
+            {
+                if (hushed.ContainsKey(id)) return;
+                var vol = session as ISimpleAudioVolume;
+                float level;
+                if (vol == null || vol.GetMasterVolume(out level) != 0) return;
+                var ctx = Guid.Empty;
+                vol.SetMasterVolume(HushLevel, ref ctx);
+                hushed[id] = new KeyValuePair<object, float>(session, level);
+                HomeNav.Log("launch: game audio turned down (was " + (int)(level * 100) + "%)");
+            }
+        }
+
+        // every turned-down session back to its own volume, and no more watching
         public static void Unhush()
         {
-            if (hushed.Count == 0) return;
-            foreach (var kv in hushed.Values)
+            StopWatch();
+            lock (hushed)
             {
-                try { var ctx = Guid.Empty; ((ISimpleAudioVolume)kv.Key).SetMasterVolume(kv.Value, ref ctx); }
-                catch (Exception ex) { HomeNav.Log("unhush failed: " + ex.Message); }
+                if (hushed.Count == 0) return;
+                foreach (var kv in hushed.Values)
+                {
+                    try { var ctx = Guid.Empty; ((ISimpleAudioVolume)kv.Key).SetMasterVolume(kv.Value, ref ctx); }
+                    catch (Exception ex) { HomeNav.Log("unhush failed: " + ex.Message); }
+                }
+                HomeNav.Log("launch: game audio back (" + hushed.Count + " session(s))");
+                hushed.Clear();
             }
-            HomeNav.Log("launch: game audio back (" + hushed.Count + " session(s))");
-            hushed.Clear();
         }
 
         private static List<object> SessionsOf(ICollection<int> pids)
@@ -307,6 +364,25 @@ namespace Selene
             int GetAudioSessionControl(IntPtr sessionGuid, int flags, out IntPtr control);
             int GetSimpleAudioVolume(IntPtr sessionGuid, int flags, out IntPtr volume);
             int GetSessionEnumerator(out IAudioSessionEnumerator sessions);
+            int RegisterSessionNotification(IAudioSessionNotification client);
+            int UnregisterSessionNotification(IAudioSessionNotification client);
+        }
+
+        [ComImport, Guid("641DD20B-4D41-49CC-ABA3-174B9477BB08"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IAudioSessionNotification
+        {
+            [PreserveSig] int OnSessionCreated(IAudioSessionControl session);
+        }
+
+        // Windows calls this the moment a program opens a new audio stream (on its own thread)
+        [ComVisible(true)]
+        private class SessionWatcher : IAudioSessionNotification
+        {
+            public int OnSessionCreated(IAudioSessionControl session)
+            {
+                try { OnNewSession(session); } catch { }
+                return 0;
+            }
         }
 
         [ComImport, Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
