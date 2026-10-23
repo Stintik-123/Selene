@@ -141,16 +141,9 @@
                         <!-- (tall on purpose: a child placed below the window's height got a slot a few pixels high and was clipped to it) -->
                         <!-- on a canvas: in the screen's own grid the page (taller than the screen) was clipped to the screen in its own
                              coordinates, and the glide couldn't bring the lower bands into view -->
-                        <!-- clipped to the screen and faded at its foot: the next band peeks in there, cut off, blurred (Selene Core) -->
+                        <!-- clipped to the screen: the next band peeks in at its foot, cut off, blurred and faded (Selene Core fades the
+                             band itself: a mask over this whole grid redrew the entire page on every frame of the glide and made it stutter) -->
                         <Grid ClipToBounds="True">
-                            <Grid.OpacityMask>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                    <GradientStop Color="#00000000" Offset="0"/>
-                                    <GradientStop Color="#FF000000" Offset="0.04"/>
-                                    <GradientStop Color="#FF000000" Offset="0.87"/>
-                                    <GradientStop Color="#00000000" Offset="0.985"/>
-                                </LinearGradientBrush>
-                            </Grid.OpacityMask>
                         <Canvas>
                         <Grid x:Name="SeleneDetailsPage" Height="1800" Width="{Binding ActualWidth, ElementName=PART_ViewHost}">
                             <Grid.RenderTransform><TranslateTransform x:Name="SeleneDetailsShift" Y="0"/></Grid.RenderTransform>

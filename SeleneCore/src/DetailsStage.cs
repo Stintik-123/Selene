@@ -235,7 +235,9 @@ namespace Selene
             if (shift == null) return;
             // the last band (tall covers) rises further, so the whole covers sit above the hints
             double to = zone <= 1 ? 0 : -(zone - 1) * BandPitch - (zone == 3 ? 100 : 0);
-            shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() });
+            var glide = new DoubleAnimation(to, TimeSpan.FromMilliseconds(320)) { EasingFunction = Ui.Out() };
+            Timeline.SetDesiredFrameRate(glide, 144);   // the page is big: at WPF's 60 steps a second the move looked choppy on a fast screen
+            shift.BeginAnimation(TranslateTransform.YProperty, glide);
             Blur(true);
         }
 
@@ -249,10 +251,34 @@ namespace Selene
                 var band = Part<FrameworkElement>(name);
                 if (band == null) continue;
                 int z = name.EndsWith("b") ? 2 : name[name.Length - 1] - 48;
+                bool below = z > shown;
                 var blur = band.Effect as System.Windows.Media.Effects.BlurEffect;
                 if (blur == null) { blur = new System.Windows.Media.Effects.BlurEffect { Radius = 0, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance }; band.Effect = blur; }
-                blur.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, new DoubleAnimation(z <= shown ? 0 : 5, ms));
+                blur.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, new DoubleAnimation(below ? 5 : 0, ms));
+                Fade(band, below, ms);
             }
+        }
+
+        // a band below the one in view fades out towards its foot (it peeks in at the foot of the screen); a band in view has no mask
+        // at all, so the glide only moves finished pictures
+        private static void Fade(FrameworkElement band, bool on, TimeSpan ms)
+        {
+            var mask = band.OpacityMask as LinearGradientBrush;
+            if (!on && mask == null) return;
+            if (mask == null)
+            {
+                mask = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 118), MappingMode = BrushMappingMode.Absolute };
+                mask.GradientStops.Add(new GradientStop(Colors.Black, 0));
+                mask.GradientStops.Add(new GradientStop(Colors.Black, 1));
+                band.OpacityMask = mask;
+            }
+            var top = on ? Color.FromArgb(0xE0, 0, 0, 0) : Colors.Black;
+            var foot = on ? Color.FromArgb(0, 0, 0, 0) : Colors.Black;
+            var a1 = new ColorAnimation(top, ms);
+            var a2 = new ColorAnimation(foot, ms);
+            if (!on) a2.Completed += (s, e) => { if (ReferenceEquals(band.OpacityMask, mask)) { mask.GradientStops[0].BeginAnimation(GradientStop.ColorProperty, null); mask.GradientStops[1].BeginAnimation(GradientStop.ColorProperty, null); band.OpacityMask = null; } };
+            mask.GradientStops[0].BeginAnimation(GradientStop.ColorProperty, a1);
+            mask.GradientStops[1].BeginAnimation(GradientStop.ColorProperty, a2);
         }
 
         private static void FocusPills()
