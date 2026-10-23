@@ -735,19 +735,12 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </StackPanel.Style>
-                                                <!-- what's on now, taking turns (free games, the biggest sale, new, ending soon...; Selene Core), with that
-                                                     game's picture beside it; "Store" is the card's own name -->
-                                                <Grid Margin="0,14,0,0" HorizontalAlignment="Left">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel x:Name="SeleneStoreHead" Width="1000" VerticalAlignment="Center">
-                                                        <TextBlock Text="{DynamicResource SeleneStoreHeadline}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="60" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{DynamicResource SeleneStoreAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="2,10,0,0"/>
-                                                    </StackPanel>
-                                                    <Grid x:Name="SeleneStoreFeature" Grid.Column="1" Width="340" Height="191" Margin="60,0,0,0" VerticalAlignment="Center" Visibility="Collapsed"/>
-                                                </Grid>
+                                                <!-- what's on now, taking turns (free games, the biggest sale, new, ending soon...; Selene Core shows that
+                                                     game's art behind the card); "Store" is the card's own name -->
+                                                <StackPanel x:Name="SeleneStoreHead" Width="1000" HorizontalAlignment="Left" Margin="0,40,0,0">
+                                                    <TextBlock Text="{DynamicResource SeleneStoreHeadline}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="60" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{DynamicResource SeleneStoreAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="2,10,0,0"/>
+                                                </StackPanel>
                                                 <!-- the store apps on this PC as chips with their logos (Selene Core; the plain list without it) -->
                                                 <TextBlock x:Name="SeleneStoreNames" Text="{DynamicResource SeleneStatStores}" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="18" FontFamily="{DynamicResource FontMain}" Margin="2,20,0,0"/>
                                                 <StackPanel x:Name="SeleneStoreChips" Orientation="Horizontal" Margin="0,20,0,0" HorizontalAlignment="Left"/>

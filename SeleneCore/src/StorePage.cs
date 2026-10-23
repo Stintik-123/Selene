@@ -21,6 +21,7 @@ namespace Selene
             public List<StoreItem> Items;
             public StackPanel Panel;
             public List<Tile> Tiles = new List<Tile>();
+            public List<Action> Loaders = new List<Action>();   // each tile's picture, fetched once it's near the screen
             public TranslateTransform Shift = new TranslateTransform();
             public int Index;
         }
@@ -187,7 +188,7 @@ namespace Selene
                 var block = new StackPanel { Height = RowH };
                 block.Children.Add(new TextBlock { Text = row.Title, FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(2, 0, 0, 14) });
                 row.Panel = new StackPanel { Orientation = Orientation.Horizontal, RenderTransform = row.Shift };
-                foreach (var item in items) { var tile = MakeTile(item); row.Tiles.Add(tile); row.Panel.Children.Add(tile.Root); }
+                foreach (var item in items) { Action load; var tile = MakeTile(item, out load); row.Tiles.Add(tile); row.Loaders.Add(load); row.Panel.Children.Add(tile.Root); }
                 block.Children.Add(row.Panel);
                 rowStack.Children.Add(block);
                 rows.Add(row);
@@ -196,11 +197,28 @@ namespace Selene
             rowIndex = Math.Max(0, Math.Min(rowIndex, rows.Count - 1));
             foreach (var r in rows) r.Shift.X = -Math.Max(0, r.Index - 1) * Pitch;
             rowShift.Y = -rowIndex * RowH;
+            LoadNearby();
             ShowFocus(false);
             ShowStatus();
         }
 
-        private Tile MakeTile(StoreItem item)
+        // the pictures of the tiles on or near the screen (a row above and two below, a few tiles around the focused one)
+        private void LoadNearby()
+        {
+            for (int r = Math.Max(0, rowIndex - 1); r < Math.Min(rows.Count, rowIndex + 3); r++)
+            {
+                var row = rows[r];
+                for (int i = Math.Max(0, row.Index - 2); i < Math.Min(row.Loaders.Count, row.Index + 6); i++)
+                {
+                    var load = row.Loaders[i];
+                    if (load == null) continue;
+                    row.Loaders[i] = null;
+                    load();
+                }
+            }
+        }
+
+        private Tile MakeTile(StoreItem item, out Action load)
         {
             var tile = new Tile(TileW, TileH, 14, 5) { FocusScale = 1.06 };
             tile.Root.Margin = new Thickness(0, 0, Pitch - TileW, 0);
@@ -208,7 +226,8 @@ namespace Selene
             var pic = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
             RenderOptions.SetBitmapScalingMode(pic, BitmapScalingMode.HighQuality);
             g.Children.Add(new Border { CornerRadius = new CornerRadius(13), ClipToBounds = true, Child = pic });
-            Load(pic, StoreData.Sharp(item), 760);
+            var url = StoreData.Sharp(item);
+            load = () => Load(pic, url, 660);
             // price chip, bottom right
             var chip = new StackPanel { Orientation = Orientation.Horizontal };
             if (item.Discount > 0 && !item.Free)
@@ -223,24 +242,19 @@ namespace Selene
             return tile;
         }
 
-        // a picture from the web, fading in once it's there
+        // a picture from the web (StoreImages: a few at a time, kept on disk), fading in once it's there. A newer request
+        // for the same Image wins (the tag).
         internal static void Load(Image target, string url, int width)
         {
             if (string.IsNullOrEmpty(url)) return;
-            try
+            var mine = new object();
+            target.Tag = mine;
+            StoreImages.Get(url, width, img =>
             {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.UriSource = new Uri(url);
-                bmp.DecodePixelWidth = width;
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-                Action show = () => target.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(260)) { EasingFunction = Ui.Out() });
-                if (bmp.IsDownloading) bmp.DownloadCompleted += (s, e) => show(); else show();
-                bmp.DownloadFailed += (s, e) => HomeNav.Log("store picture failed: " + url);
-                target.Source = bmp;
-            }
-            catch (Exception ex) { HomeNav.Log("store picture: " + ex.Message); }
+                if (img == null || target.Tag != mine) return;
+                target.Source = img;
+                target.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(260)) { EasingFunction = Ui.Out() });
+            });
         }
 
         private StoreItem Focused { get { return rows.Count > 0 && rowIndex < rows.Count && rows[rowIndex].Items.Count > 0 ? rows[rowIndex].Items[rows[rowIndex].Index] : null; } }
@@ -345,6 +359,7 @@ namespace Selene
                     row.Index = next;
                     row.Shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-Math.Max(0, next - 1) * Pitch, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
                     Ui.Tick();
+                    LoadNearby();
                     ShowFocus(true);
                     return;
                 }
@@ -356,6 +371,7 @@ namespace Selene
                     rowIndex = next;
                     rowShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-rowIndex * RowH, TimeSpan.FromMilliseconds(260)) { EasingFunction = Ui.Out() });
                     Ui.Tick();
+                    LoadNearby();
                     ShowFocus(true);
                     return;
                 }

@@ -1110,6 +1110,8 @@ namespace Selene
         // LB/RB back to page 1: row and game info glide in from the side we came from (LB = from the left).
         private static void PlayPageEnter(ListBox row)
         {
+            // signing in rebuilds the row too: nothing slides then, the home is simply there as the login clears
+            if (coveredForSignIn || profileRebuild) return;
             var host = VisualTreeHelper.GetParent(row) as UIElement;
             var inf = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "SeleneInfoIntro");
             if (host != null) host.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
@@ -1819,7 +1821,7 @@ namespace Selene
             if (cover == null || !(VisualTreeHelper.GetParent(cover) is Panel)) return;
             // right after the rebuilt home has been drawn under it: the login's dimmed wallpaper clears slowly to the home
             // (on its own thread, smooth however busy)
-            cover.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(600)), System.Windows.Threading.DispatcherPriority.Background);
+            cover.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(600, 400)), System.Windows.Threading.DispatcherPriority.Background);   // (held: the card's own slide-in finishes under it)
         }
 
         private static bool introDone;
@@ -2573,11 +2575,15 @@ namespace Selene
         }
 
         // another profile signed in: its favorites, recently played and order
+        private static bool profileRebuild;
+
         public static void ProfileChanged()
         {
             startOnCards = true;
             var row = LiveRow();
-            if (row != null) { ApplyRowFilter(row); ShowHeart(row.SelectedItem); }
+            profileRebuild = true;
+            try { if (row != null) { ApplyRowFilter(row); ShowHeart(row.SelectedItem); } }
+            finally { profileRebuild = false; }
         }
 
         // Favourite pill: the signed-in profile's favorite (Playnite's Favorite flag when nobody is signed in)

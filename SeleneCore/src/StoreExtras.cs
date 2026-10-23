@@ -144,15 +144,18 @@ namespace Selene
             var w = Application.Current.MainWindow;
             var panel = w != null ? HomeNav.FindByName(w, "SeleneStoreShowcase") as StackPanel : null;
             if (panel == null) return;
-            var picks = StoreData.List("epic:free").Take(2).ToList();
-            var sales = StoreData.List("steam:sale").Concat(StoreData.List("epic:sale"))
-                .Where(i => i.Discount > 0 && !i.Owned && !string.IsNullOrEmpty(i.Image)).OrderByDescending(i => i.Discount);
-            foreach (var s in sales)
+            // the headline's games are up top already: the pictures below are the next best things
+            Headline();
+            var featured = new HashSet<string>(messages.Where(m => m.Item != null).Select(m => StoreData.Key(m.Item.Title ?? "")));
+            var picks = new List<StoreItem>();
+            var pool = StoreData.List("epic:free").Concat(StoreData.List("steam:sale").Concat(StoreData.List("epic:sale")).Where(i => i.Discount > 0).OrderByDescending(i => i.Discount))
+                .Where(i => !i.Owned && !string.IsNullOrEmpty(i.Image));
+            foreach (var s in pool)
             {
                 if (picks.Count >= 4) break;   // four big pictures across the card
-                if (!picks.Any(p => StoreData.Key(p.Title ?? "") == StoreData.Key(s.Title ?? ""))) picks.Add(s);
+                var k = StoreData.Key(s.Title ?? "");
+                if (!featured.Contains(k) && !picks.Any(p => StoreData.Key(p.Title ?? "") == k)) picks.Add(s);
             }
-            Headline(picks);
             var key = string.Join("|", picks.Select(p => p.Title + p.Price));
             if (key == shownKey) return;
             shownKey = key;
@@ -183,7 +186,7 @@ namespace Selene
             return names.Count == 1 ? names[0] : string.Join(", ", names.Take(names.Count - 1)) + " and " + names.Last();
         }
 
-        private static void Headline(List<StoreItem> picks)
+        private static void Headline()
         {
             var list = new List<Message>();
             var free = StoreData.List("epic:free");
@@ -224,13 +227,12 @@ namespace Selene
             if (first || shown >= messages.Count) { shown = -1; Turn(); }
         }
 
-        // the next message: the words fade out and back with the new ones, the picture crossfades
+        // the next message: the words fade out and back with the new ones; that game's art crossfades in behind the card
         private static void Turn()
         {
             if (messages.Count == 0) return;
             var w = Application.Current.MainWindow;
             var head = w != null ? HomeNav.FindByName(w, "SeleneStoreHead") as FrameworkElement : null;
-            var slot = w != null ? HomeNav.FindByName(w, "SeleneStoreFeature") as Grid : null;
             if (head == null) return;
             if (shown >= 0 && !head.IsVisible) return;   // the card isn't showing: it waits on the same message
             shown = (shown + 1) % messages.Count;
@@ -243,20 +245,28 @@ namespace Selene
                 res["SeleneStoreAbout"] = m.About;
                 Ui.Rise(head, 0, 8, 280);
             });
-            if (slot == null || m.Item == null || string.IsNullOrEmpty(m.Item.Image)) return;
+            ShowArt(head, m.Item);
+        }
+
+        // the featured game's art fills the home behind the Store card (like a game's does), and goes when the card does
+        private static void ShowArt(FrameworkElement head, StoreItem item)
+        {
+            var w = Application.Current.MainWindow;
+            var art = w != null ? HomeNav.FindByName(w, "SeleneHubArt") as Panel : null;
+            if (art == null || item == null || string.IsNullOrEmpty(item.Image)) return;
             if (feature[0] == null)
             {
                 for (int i = 0; i < 2; i++)
                 {
-                    feature[i] = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
+                    feature[i] = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
                     RenderOptions.SetBitmapScalingMode(feature[i], BitmapScalingMode.HighQuality);
+                    art.Children.Add(feature[i]);
                 }
-                var frame = new Grid();
-                frame.Children.Add(feature[0]);
-                frame.Children.Add(feature[1]);
-                slot.Children.Add(new Border { CornerRadius = new CornerRadius(14), ClipToBounds = true, Background = Ink.Brush("SeleneInkColor", 0.08), Child = frame,
-                    Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.5, Color = Colors.Black } });
-                slot.Visibility = Visibility.Visible;
+                head.IsVisibleChanged += (s, e) =>
+                {
+                    if ((bool)e.NewValue) { shown--; Turn(); return; }   // back on the card: its art again (the same message)
+                    foreach (var img in feature) img.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, TimeSpan.FromMilliseconds(300)));
+                };
             }
             var front = feature[featureFront];
             var back = feature[1 - featureFront];
@@ -264,8 +274,15 @@ namespace Selene
             Panel.SetZIndex(front, 1); Panel.SetZIndex(back, 0);
             front.BeginAnimation(UIElement.OpacityProperty, null);
             front.Opacity = 0;
-            StorePage.Load(front, StoreData.Sharp(m.Item), 900);
-            back.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, TimeSpan.FromMilliseconds(500)) { BeginTime = TimeSpan.FromMilliseconds(250) });
+            var mine = new object();
+            front.Tag = mine;
+            StoreImages.Get(StoreData.Sharp(item), 1600, img =>
+            {
+                if (img == null || front.Tag != mine || !head.IsVisible) return;
+                front.Source = img;
+                front.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(1, TimeSpan.FromMilliseconds(700)) { EasingFunction = Ui.Out() });
+                back.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, TimeSpan.FromMilliseconds(700)) { BeginTime = TimeSpan.FromMilliseconds(200) });
+            });
         }
 
         // the store apps on this PC as chips with their logos (instead of the plain list)
@@ -300,7 +317,7 @@ namespace Selene
             var pic = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
             RenderOptions.SetBitmapScalingMode(pic, BitmapScalingMode.HighQuality);
             frame.Children.Add(new Border { CornerRadius = new CornerRadius(14), ClipToBounds = true, Background = Ink.Brush("SeleneInkColor", 0.08), Child = pic });
-            StorePage.Load(pic, StoreData.Sharp(item), 1000);   // sharp at high-DPI too
+            StorePage.Load(pic, StoreData.Sharp(item), 900);   // sharp at high-DPI too
             var chip = new StackPanel { Orientation = Orientation.Horizontal };
             var badge = item.Free ? "FREE" : item.Discount > 0 ? "-" + item.Discount + "%" : null;
             if (badge != null)
