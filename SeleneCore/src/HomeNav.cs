@@ -1802,9 +1802,9 @@ namespace Selene
         {
             var cover = introCover;
             if (cover == null || !(VisualTreeHelper.GetParent(cover) is Panel)) return;
-            // as the home's intro starts, right after the rebuilt home has been drawn under it (it melts away on its own
-            // thread, smooth however busy); the tiles start flying in just as it's gone
-            cover.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(300)), System.Windows.Threading.DispatcherPriority.Background);
+            // right after the rebuilt home has been drawn under it: the login's dimmed wallpaper clears slowly to the home
+            // (on its own thread, smooth however busy)
+            cover.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(600)), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private static bool introDone;
@@ -1816,7 +1816,8 @@ namespace Selene
             if ((DateTime.Now - lastIntro).TotalMilliseconds < 800) return;  // several watchers fire for one hub open
             lastIntro = DateTime.Now;
             LiftIntroCover();
-            bool animate = !introDone && !Lite;  // full intro only the first time the hub is seen after Playnite starts (never in a streamed session)
+            // signing in: no fly-in, the home is simply there as the login's dimmed wallpaper clears (the cover fading)
+            bool animate = !introDone && !Lite && !coveredForSignIn;  // full intro only the first time the hub is seen after Playnite starts (never in a streamed session)
             introDone = true;
             try
             {
@@ -1854,6 +1855,9 @@ namespace Selene
                 if (!animate)
                 {
                     coveredForSignIn = false;
+                    // the game info was held hidden for a fly-in that isn't coming
+                    var heldInfo = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "SeleneInfoIntro");
+                    if (heldInfo != null) heldInfo.BeginAnimation(UIElement.OpacityProperty, null);
                     Log("hub reopened: default view, no intro");
                     return;
                 }
