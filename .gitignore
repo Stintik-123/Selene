@@ -7,3 +7,5 @@ obj/
 dist/
 .superpowers/
 theme/Audio/*.old
+__pycache__/
+*.pyc
