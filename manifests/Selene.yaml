@@ -1,5 +1,14 @@
 AddonId: Selene_a98e0027-fa6a-4f5e-a087-bad8d69f2443
 Packages:
+  - Version: 1.0.0
+    RequiredApiVersion: 2.10.0
+    ReleaseDate: 2026-10-23
+    PackageUrl: https://github.com/mattxslv/Selene/releases/download/v1.0.0/Selene.pthm
+    Changelog:
+      - >-
+        Choose your avatar / theme / background: the soft fade at the grid's edges is back, over the cached grid (0.10.0 faded whole rows flatly).
+      - >-
+        1.0.0: Selene's first full release; the theme and Selene Core share this version.
   - Version: 0.10.0
     RequiredApiVersion: 2.10.0
     ReleaseDate: 2026-10-23

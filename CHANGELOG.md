@@ -4,6 +4,10 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+## 1.0.0 - 2026-10-23
+
+- Choose your avatar / theme / background: the soft fade at the grid's edges is back, over the cached grid (0.10.0 faded whole rows flatly).
+- 1.0.0: Selene's first full release; the theme and Selene Core share this version.
 ## 0.10.0 - 2026-10-23
 
 - Smooth big screens: tiles are drawn once into textures and their focus glow exists only while focused (every tile blurred an invisible ring on each repaint), and the game details page and the profile editor's grids glide as one texture.
