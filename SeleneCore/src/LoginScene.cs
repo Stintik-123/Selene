@@ -292,18 +292,18 @@ namespace Selene
         // ---------------- backdrop ----------------
         private static Grid backdropHost;
 
-        // the backdrop fades in once Playnite's busy start-up lets it be drawn (a fade run while it was busy was never seen:
-        // the wallpaper just popped up)
+        // the backdrop fades in from the layer's dark color: a cover over it melts away on its own thread (ThreadedFade), so
+        // Playnite's busy start-up can't make it freeze and jump. It starts once the backdrop has been drawn underneath.
         private static void FadeInBackdrop()
         {
             var host = backdropHost;
-            if (host == null || host.Opacity > 0.99) return;
-            host.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                var fade = new DoubleAnimation(1, TimeSpan.FromMilliseconds(900)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-                fade.Completed += (s, e) => { host.BeginAnimation(UIElement.OpacityProperty, null); host.Opacity = 1; };
-                host.BeginAnimation(UIElement.OpacityProperty, fade);
-            }), DispatcherPriority.ApplicationIdle);
+            var scenePanel = host != null ? host.Parent as Panel : null;
+            if (host == null || scenePanel == null || host.Opacity > 0.99) return;
+            var dark = Application.Current.TryFindResource("SeleneScrimBrush") as Brush ?? Brushes.Black;
+            var cover = new ThreadedFade(dark);
+            scenePanel.Children.Insert(scenePanel.Children.IndexOf(host) + 1, cover);   // over the backdrop, under the logo
+            host.Opacity = 1;
+            host.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(900)), DispatcherPriority.ApplicationIdle);
         }
         private static Grid BuildScene()
         {

@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- The start-up fade from black and the fade into the home after signing in run on their own thread, so they stay smooth while Playnite is busy loading.
 - Spotlight: moving between the Store and Library cards no longer makes the row bounce.
 - Menu: the profile shows its name with "Switch profile" under it. The top bar's profile steps away while the menu is open.
 - The signed-in profile's avatar in the top bar beside the clock. Switch: Selene settings, Look, Profile in the top bar.
