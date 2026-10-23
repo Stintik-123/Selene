@@ -36,6 +36,7 @@ namespace Selene
         }
 
         // the user's own wallpapers (searched with subfolders); empty = only the ones Selene ships
+        public static System.Collections.Generic.List<string> CapturesFolders { get { return settings != null && settings.CapturesFolders != null ? settings.CapturesFolders : new System.Collections.Generic.List<string>(); } }
         public static string WallpapersFolder { get { return settings != null ? settings.WallpapersFolder ?? "" : ""; } }
 
         // optional companion program (TV/controller helper with admin rights); empty = those features are off

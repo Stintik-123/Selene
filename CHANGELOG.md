@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Spotlight: three new cards. **Activity**: what you've been playing (this week's and all-time numbers, your most played and last played games; A shows one on Spotlight, X plays it). **Captures**: your screenshots and clips newest first, from Steam, Xbox Game Bar's Videos\Captures, the NVIDIA app's Videos\NVIDIA and folders you add in Selene Core's settings; A opens one full screen and clips play. **Surprise me**: covers flick past and stop on a game to play (LB / RB: installed, not played yet, all). Each card has its switch under Spotlight in Selene settings. The Collection card is off by default now (the View button opens Collection); switch it back on under Spotlight.
 - Find a game: from Spotlight, the picked game is shown on Spotlight's row (on All games when the current tab doesn't have it); from Collection, in Collection as before.
 - Store card: the picked picture no longer gets cut off as it grows (the strip clipped it to its slot).
 - Store page: the last row sits where the next row would peek in, instead of leaving an empty band above the button hints; the row above it ends softly at the top.

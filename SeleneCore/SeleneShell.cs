@@ -92,9 +92,21 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("shell: couldn't take over the main menu: " + ex.Message); }
             var store = HomeNav.FindByName(main, "SeleneNav_store") as ButtonBase;
             if (store != null) store.Command = new Relay(() => LoginScene.OpenWith(() => !Features.On("storepage") ? new StoreScreen() : StoreData.ChosenCountry == null ? (Screen)new StoreCurrencyScreen(true) : new StorePage()));
+            // the other cards: their own screens over the home
+            Wire("SeleneNav_activity", () => new ActivityScreen());
+            Wire("SeleneNav_captures", () => new CapturesScreen());
+            Wire("SeleneNav_surprise", () => new SurpriseScreen());
+            GameFacts.CardStats();
+            CapturesScreen.CountInBackground();
             HomeNav.Log("shell: home/library wired");
             DevView();
             return true;
+        }
+
+        private static void Wire(string proxy, Func<Screen> make)
+        {
+            var b = HomeNav.FindByName(main, proxy) as ButtonBase;
+            if (b != null) b.Command = new Relay(() => LoginScene.OpenWith(make));
         }
 
         // developer switch: %TEMP%\selene-dev-view holding "details", "library" or "menu" opens that screen a few seconds

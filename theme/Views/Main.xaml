@@ -422,6 +422,9 @@
                                 <ButtonEx x:Name="SeleneNav_library" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
                                 <ButtonEx x:Name="SeleneNav_hub" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
                                 <ButtonEx x:Name="SeleneNav_store" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
+                                <ButtonEx x:Name="SeleneNav_activity" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
+                                <ButtonEx x:Name="SeleneNav_captures" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
+                                <ButtonEx x:Name="SeleneNav_surprise" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
 
                                 <Grid Margin="0,120,0,0">
                                     <Grid.RowDefinitions>
@@ -565,6 +568,18 @@
                                                                     <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
                                                                     <Setter TargetName="CardGlyph" Property="Text" Value="&#xE719;"/>
                                                                 </DataTrigger>
+                                                                <DataTrigger Binding="{Binding}" Value="nav:activity">
+                                                                    <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
+                                                                    <Setter TargetName="CardGlyph" Property="Text" Value="&#xE9D9;"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding}" Value="nav:captures">
+                                                                    <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
+                                                                    <Setter TargetName="CardGlyph" Property="Text" Value="&#xEB9F;"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding}" Value="nav:surprise">
+                                                                    <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
+                                                                    <Setter TargetName="CardGlyph" Property="Text" Value="&#xE8B1;"/>
+                                                                </DataTrigger>
                                                             </ControlTemplate.Triggers>
                                                         </ControlTemplate>
                                                     </Setter.Value>
@@ -625,8 +640,12 @@
                                                        KeyboardNavigation.DirectionalNavigation="Continue">
                                                 <ListBoxEx.ItemsSource>
                                                     <CompositeCollection>
+                                                        <!-- the section cards (Selene Core drops the ones switched off and keeps the saved order) -->
                                                         <sys:String>nav:library</sys:String>
+                                                        <sys:String>nav:activity</sys:String>
                                                         <sys:String>nav:store</sys:String>
+                                                        <sys:String>nav:captures</sys:String>
+                                                        <sys:String>nav:surprise</sys:String>
                                                         <CollectionContainer Collection="{Binding Source={StaticResource SeleneGames}}"/>
                                                     </CompositeCollection>
                                                 </ListBoxEx.ItemsSource>
@@ -651,6 +670,15 @@
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:store">
                                                                     <Setter Property="Text" Value="Store"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:activity">
+                                                                    <Setter Property="Text" Value="Activity"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:captures">
+                                                                    <Setter Property="Text" Value="Captures"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:surprise">
+                                                                    <Setter Property="Text" Value="Surprise me"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -717,6 +745,135 @@
                                                     <TextBlock Text="Open your collection" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
                                                 </StackPanel>
                                             </StackPanel>
+                                            <!-- the activity card selected: what it is, a few numbers, what A does -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1000" Opacity="0">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:activity">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/></Storyboard></BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <TextBlock Text="Activity" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
+                                                <TextBlock Text="What you've been playing: your most played games, the ones you played last, and the numbers." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
+                                                <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="PLAYED THIS WEEK" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatWeek}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="ALL PLAY TIME" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatHours}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="GAMES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatGames}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
+                                                    <Grid Width="32" Height="32">
+                                                        <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
+                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                                                    </Grid>
+                                                    <TextBlock Text="See your activity" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <!-- the captures card selected: what it is, a few numbers, what A does -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1000" Opacity="0">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:captures">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/></Storyboard></BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <TextBlock Text="Captures" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
+                                                <TextBlock Text="Your screenshots and clips, newest first: Steam, Xbox Game Bar, the NVIDIA app and your own folders." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
+                                                <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="CAPTURES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatCaptures}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
+                                                    <Grid Width="32" Height="32">
+                                                        <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
+                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                                                    </Grid>
+                                                    <TextBlock Text="Open your captures" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <!-- the surprise me card selected: what it is, a few numbers, what A does -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1000" Opacity="0">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:surprise">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/></Storyboard></BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <TextBlock Text="Surprise me" Foreground="{DynamicResource SeleneInkBrush}" FontSize="64" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,60,0,0"/>
+                                                <TextBlock Text="Not sure what to play? Covers flick past and stop on one of your games. Play it, or spin again." Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" Margin="2,10,0,0"/>
+                                                <StackPanel Orientation="Horizontal" Margin="4,30,0,0">
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="INSTALLED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatInstalled}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="GAMES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatGames}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="2,34,0,0">
+                                                    <Grid Width="32" Height="32">
+                                                        <Ellipse Fill="{DynamicResource SeleneInkBrush}"/>
+                                                        <TextBlock Text="A" FontSize="16" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneScrimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                                                    </Grid>
+                                                    <TextBlock Text="Pick a game for me" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center" Margin="10,0,0,2"/>
+                                                </StackPanel>
+                                            </StackPanel>
                                             <!-- the store card selected: what it is, a few numbers, what A does -->
                                             <!-- (wide: the showcase's big pictures go right across; the text keeps its own width) -->
                                             <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1760" Opacity="0">
@@ -762,6 +919,15 @@
                                                                 <Setter Property="Visibility" Value="Hidden"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:store">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:activity">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:captures">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:surprise">
                                                                 <Setter Property="Visibility" Value="Hidden"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>

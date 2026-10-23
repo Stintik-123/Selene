@@ -107,6 +107,8 @@ namespace Selene
         public string StreamCredentialsFile { get; set; }
         public string HelperTask { get; set; }
         public string WallpapersFolder { get; set; }
+        // more folders with screenshots and clips, for the Captures card
+        public List<string> CapturesFolders { get; set; }
         // Selene features switched off (Features.All keys); everything else is on
         public List<string> TurnedOff { get; set; }
         // features that start off (Features.All with DefaultOn = false) and were switched on
@@ -115,7 +117,7 @@ namespace Selene
         public SeleneSettings()
         {
             MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; AvatarPath = ""; DisplayName = "";
-            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = ""; WallpapersFolder = ""; TurnedOff = new List<string>(); TurnedOn = new List<string>();
+            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = ""; WallpapersFolder = ""; CapturesFolders = new List<string>(); TurnedOff = new List<string>(); TurnedOn = new List<string>();
         }
     }
 
@@ -140,7 +142,7 @@ namespace Selene
             Settings.HelperPath = editing.HelperPath; Settings.StreamLogsFolder = editing.StreamLogsFolder;
             Settings.AvatarPath = editing.AvatarPath; Settings.DisplayName = editing.DisplayName;
             Settings.StreamClientMatch = editing.StreamClientMatch; Settings.StreamCredentialsFile = editing.StreamCredentialsFile; Settings.HelperTask = editing.HelperTask;
-            Settings.WallpapersFolder = editing.WallpapersFolder; Settings.TurnedOff = editing.TurnedOff; Settings.TurnedOn = editing.TurnedOn;
+            Settings.WallpapersFolder = editing.WallpapersFolder; Settings.CapturesFolders = editing.CapturesFolders; Settings.TurnedOff = editing.TurnedOff; Settings.TurnedOn = editing.TurnedOn;
         }
 
         public void EndEdit()
@@ -181,6 +183,9 @@ namespace Selene
             var games = field("Folders with games no store knows about (one per line):", string.Join(Environment.NewLine, s.GameFolders ?? new List<string>()),
                 v => s.GameFolders = new List<string>(v.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)));
             games.AcceptsReturn = true; games.MinHeight = 60;
+            var caps = field("Folders with your screenshots and clips, for the Captures card (one per line; Steam, Videos\\Captures and Videos\\NVIDIA are looked at anyway):", string.Join(Environment.NewLine, s.CapturesFolders ?? new List<string>()),
+                v => s.CapturesFolders = new List<string>(v.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)));
+            caps.AcceptsReturn = true; caps.MinHeight = 60;
             field("Your wallpapers folder (images in it and its subfolders show up in the background picker). Empty = only Selene's wallpapers:", s.WallpapersFolder, v => s.WallpapersFolder = v);
             field("Login name. Empty = your Steam name:", s.DisplayName, v => s.DisplayName = v);
             field("Login picture (image file). Empty = your Steam avatar:", s.AvatarPath, v => s.AvatarPath = v);
@@ -204,7 +209,7 @@ namespace Selene
         }
 
         // the groups Selene settings shows, in order (each option names its group)
-        public static readonly string[] Groups = { "Start-up", "Navigation", "Sound & music", "Look", "Games" };
+        public static readonly string[] Groups = { "Start-up", "Navigation", "Spotlight", "Sound & music", "Look", "Games" };
 
         public static readonly Option[] All =
         {
@@ -213,6 +218,10 @@ namespace Selene
             new Option { Group = "Start-up", Key = "startcollection", Label = "Start on Collection", About = "Open on all your games instead of Spotlight.", DefaultOn = false },
             new Option { Group = "Navigation", Key = "viewswitch", Label = "View button", About = "Switches Spotlight and Collection. Hold it to search." },
             new Option { Group = "Navigation", Key = "hints", Label = "Button hints", About = "What each button does, along the bottom." },
+            new Option { Group = "Spotlight", Key = "cardactivity", Label = "Activity card", About = "What you've been playing: most played, last played and the numbers." },
+            new Option { Group = "Spotlight", Key = "cardcaptures", Label = "Captures card", About = "Your screenshots and clips from Steam, Xbox Game Bar and the NVIDIA app." },
+            new Option { Group = "Spotlight", Key = "cardsurprise", Label = "Surprise me card", About = "Covers flick past and stop on a game to play." },
+            new Option { Group = "Spotlight", Key = "cardcollection", Label = "Collection card", About = "A card that opens Collection (the View button does too).", DefaultOn = false },
             new Option { Group = "Sound & music", Key = "sounds", Label = "Interface sounds", About = "Sounds when you move, select and go back." },
             new Option { Group = "Sound & music", Key = "music", Label = "Music control", About = "Default music while browsing, a game's song with its trailer." },
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },

@@ -3416,6 +3416,7 @@ namespace Selene
             res["SeleneStatGames"] = all.ToString();
             res["SeleneStatInstalled"] = installed.ToString();
             res["SeleneStatRecent"] = recent.ToString();
+            GameFacts.CardStats();
             if (!res.Contains("SeleneStatStoresSet")) { res["SeleneStatStores"] = StoreScreen.InstalledNames(); res["SeleneStatStoresSet"] = true; }
         }
 
@@ -3489,12 +3490,25 @@ namespace Selene
             catch (Exception ex) { Log("save card order: " + ex.Message); }
         }
 
+        // the row's cards and the switch each one answers to (the Store card is always there)
+        private static readonly System.Collections.Generic.KeyValuePair<string, string>[] CardFeatures =
+        {
+            new System.Collections.Generic.KeyValuePair<string, string>("nav:library", "cardcollection"),
+            new System.Collections.Generic.KeyValuePair<string, string>("nav:activity", "cardactivity"),
+            new System.Collections.Generic.KeyValuePair<string, string>("nav:captures", "cardcaptures"),
+            new System.Collections.Generic.KeyValuePair<string, string>("nav:surprise", "cardsurprise"),
+        };
+
         private static void ApplyCardOrder(ListBox row)
         {
             try
             {
                 var items = row.ItemsSource as System.Windows.Data.CompositeCollection;
-                if (items == null || !System.IO.File.Exists(CardOrderFile)) return;
+                if (items == null) return;
+                // cards switched off in Selene settings leave the row
+                foreach (var card in CardFeatures)
+                    if (!Features.On(card.Value)) { int at = items.IndexOf(card.Key); if (at >= 0) items.RemoveAt(at); }
+                if (!System.IO.File.Exists(CardOrderFile)) return;
                 int slot = 0;
                 foreach (var line in System.IO.File.ReadAllLines(CardOrderFile))
                 {
