@@ -72,9 +72,7 @@ namespace Selene
             items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Run = () => LoginScene.Show(new SettingsScreen(), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xf0c5), Label = "Setup check", Run = () => LoginScene.Show(new SetupScreen(false), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe8b8), Label = "Playnite settings", Run = () => Later(PlayniteMenu.OpenSettings) });
-            items.Add(new Item { Icon = Ui.Icon(0xe87b), Label = "Extensions", Run = () => Later(PlayniteMenu.OpenExtensions) });
             items.Add(new Item { Icon = Ui.Icon(0xe30c), Label = "Desktop mode", Run = () => Later(() => PlayniteMenu.Main("SwitchToDesktopCommand")) });
-            items.Add(new Item { Icon = Ui.Icon(0xe5d3), Label = "More", Run = () => Later(PlayniteMenu.OpenOriginal) });
             items.Add(new Item { Icon = Ui.Icon(0xe8ac), Label = "Power", Run = OpenPower });
 
             foreach (var item in items)
@@ -263,14 +261,8 @@ namespace Selene
     public static class PlayniteMenu
     {
         private static object menuModel;
-        // Playnite's own "open main menu" (Selene's menu took its place)
+        // Playnite's own "open main menu", kept when Selene's menu takes its place (Selene doesn't open it)
         public static ICommand Original;
-
-        public static void OpenOriginal()
-        {
-            if (Original != null) Original.Execute(null);
-            else Main("OpenMainMenuCommand");
-        }
 
         private static object MainModel { get { return Application.Current.MainWindow != null ? Application.Current.MainWindow.DataContext : null; } }
 
@@ -305,14 +297,6 @@ namespace Selene
             var factory = Activator.CreateInstance(App.GetType("Playnite.FullscreenApp.Windows.SettingsWindowFactory"));
             var settings = Activator.CreateInstance(vmType, factory, MainModel);
             vmType.GetMethod("OpenView").Invoke(settings, null);
-        }
-
-        public static void OpenExtensions()
-        {
-            var vmType = App.GetType("Playnite.FullscreenApp.ViewModels.ExtensionsMenuViewModels");
-            var factory = Activator.CreateInstance(App.GetType("Playnite.FullscreenApp.Windows.ExtensionsMenuWindowFactory"));
-            var menu = Activator.CreateInstance(vmType, factory, MainModel);
-            vmType.GetMethod("OpenView").Invoke(menu, null);
         }
     }
 

@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- The menu no longer has More (Playnite's own menu) or Extensions (other add-ons' menus): only Selene, Playnite settings, desktop mode and power.
 - Every sound is leveled to sit together (tools/level_sounds.py); the moving tick is no longer louder than the rest.
 - The home is quiet: a game's own song plays only while its trailer card is open (the login keeps its music, the library behaves as before).
 - The menu is a row of solid icons along the bottom (like a console control center): a ring and the name on the focused one, Power opens sleep, restart, shut down and exit; the home stays in view above.
