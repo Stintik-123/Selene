@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RATE = 44100
-CHOSEN = {"navigation.wav": "cursor_glass", "Key.wav": "key_tap", "Boot.wav": "boot_chime_sparkle", "Success.wav": "success_soft", "LoginSelect.wav": "signin_boot", "OpenPanel.wav": "panel_open", "GameStarting.wav": "launch_rise", "GameReady.wav": "ready_harp"}
+CHOSEN = {"Key.wav": "key_tap", "Boot.wav": "boot_chime_sparkle", "Success.wav": "success_soft", "LoginSelect.wav": "signin_boot", "OpenPanel.wav": "panel_open", "GameStarting.wav": "launch_rise", "GameReady.wav": "ready_harp"}
 
 
 def note(name):
