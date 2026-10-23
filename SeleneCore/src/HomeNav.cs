@@ -1043,6 +1043,7 @@ namespace Selene
                 // the home's art layer kept following the library's game while hidden: blank it at once and fade it back
                 // in once it has the right picture (none for a card), instead of fading the library game's art out
                 var art = FindByName(w, "SeleneHubArt") as UIElement;
+                if (art != null) foreach (var cf in FindAll(art, d => d is SeleneCrossfade)) ((SeleneCrossfade)cf).Clear();
                 if (art != null)
                 {
                     var keys = new DoubleAnimationUsingKeyFrames();
@@ -5153,6 +5154,16 @@ namespace Selene
         private object shown = DependencyProperty.UnsetValue;
 
         public void Refresh() { Load(Source); }
+
+        // drop both pictures at once, no fade (and forget any load on its way)
+        public void Clear()
+        {
+            request++;
+            if (settle != null) settle.Stop();
+            pending = null;
+            shown = null;
+            foreach (var img in new[] { front, back }) { img.BeginAnimation(UIElement.OpacityProperty, null); img.Opacity = 0; img.Source = null; }
+        }
 
         private Image front = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };
         private Image back = new Image { Stretch = Stretch.UniformToFill, Opacity = 0 };

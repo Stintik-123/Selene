@@ -327,6 +327,7 @@ namespace Selene
         {
             if (videoAllowed) return;
             videoAllowed = true;
+            ShowBackdropKind();
             foreach (var pair in backdrops) if (pair.Key != null && pair.Key.IsVisible) pair.Key.Play();
         }
 
@@ -337,7 +338,10 @@ namespace Selene
             var file = SelenePaths.ThemeFile("Media", "selene-background.mp4");
             if (System.IO.File.Exists(file))
             {
-                video = new MediaElement { Source = new Uri(file), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Manual, IsMuted = true, Stretch = Stretch.UniformToFill };
+                video = new MediaElement { Source = new Uri(file), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Manual, IsMuted = true, Stretch = Stretch.UniformToFill, Opacity = 0 };
+                // fades in over the navy once its first frame is there (it was black until then)
+                var v = video;
+                video.MediaOpened += (s, e) => v.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(700)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
                 video.MediaEnded += (s, e) => { video.Position = TimeSpan.Zero; video.Play(); };
                 // plays only while it's on screen
                 video.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue && videoAllowed) video.Play(); else video.Pause(); };
@@ -380,7 +384,7 @@ namespace Selene
             bool seleneTheme = string.IsNullOrEmpty(id) || id == ThemePalettes.DefaultId;
             foreach (var pair in backdrops)
             {
-                bool useVideo = seleneTheme && pair.Key != null;
+                bool useVideo = seleneTheme && pair.Key != null && videoAllowed;   // the drawn one until the intro is over
                 if (pair.Key != null) pair.Key.Visibility = useVideo ? Visibility.Visible : Visibility.Collapsed;
                 pair.Value.Visibility = useVideo ? Visibility.Collapsed : Visibility.Visible;
             }
