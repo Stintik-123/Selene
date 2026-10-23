@@ -331,7 +331,10 @@ namespace Selene
                         int next = shot + dir;
                         if (next < 0 || next >= shotTiles.Count) return;
                         Ui.Tick();
-                        ShowShot(next, true);   // behind the trailer, which keeps playing
+                        // the trailer playing: only the focus moves along the strip (the dark stays behind the trailer, as in
+                        // Collection); without it, the picked screenshot shows behind
+                        if (trailer != null) { shot = next; ShowFocus(); return; }
+                        ShowShot(next, true);
                     }
                     else
                     {

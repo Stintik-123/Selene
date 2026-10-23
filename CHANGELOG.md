@@ -9,6 +9,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Store page: the last row sits where the next row would peek in, instead of leaving an empty band above the button hints; the row above it ends softly at the top.
 - Store game page: the trailer keeps playing as you go through the screenshots (it stopped on the first move), and the "More from" row melts in and out together with the page's glide (it switched at once).
 - Spotlight: the Store card shrinks back after a visit to its pictures (it stayed big).
+- Find a game: the first pick after a while on Spotlight no longer gets undone by the home's reopen (a timing race as the search closed).
+- Store game page: while the trailer plays, Left / Right only move along the screenshot strip (the picked screenshot no longer comes up behind the trailer).
+- Animated GIF avatars no longer show a flat see-through edge inside the circle.
 - Store game page: the game's trailer plays behind it (muted, looping) where Playnite's built-in browser can play it; the screenshots stay until it does. Switch: Selene settings, Games, Store trailers.
 - Keyboards (profile name, Find a game): Y types a space, Start is Done.
 - Find a game: the picked game keeps the focus in Collection (the old tile took it back half a second later).

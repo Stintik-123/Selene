@@ -51,9 +51,19 @@ namespace Selene
             try
             {
                 var decoder = new GifBitmapDecoder(new Uri(file), BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
-                int w = decoder.Frames[0].PixelWidth, h = decoder.Frames[0].PixelHeight;
+                // the canvas is what the frames paint (their union): a logical screen bigger than that left a see-through band
+                // at the side, a flat edge inside the round avatar
+                int w = 0, h = 0;
+                foreach (var f in decoder.Frames)
+                {
+                    var m = f.Metadata as BitmapMetadata;
+                    w = Math.Max(w, Query(m, "/imgdesc/Left") + f.PixelWidth);
+                    h = Math.Max(h, Query(m, "/imgdesc/Top") + f.PixelHeight);
+                }
+                int screenW = 0, screenH = 0;
                 var meta = decoder.Metadata as BitmapMetadata;
-                try { w = Convert.ToInt32(meta.GetQuery("/logscrdesc/Width")); h = Convert.ToInt32(meta.GetQuery("/logscrdesc/Height")); } catch { }
+                try { screenW = Convert.ToInt32(meta.GetQuery("/logscrdesc/Width")); screenH = Convert.ToInt32(meta.GetQuery("/logscrdesc/Height")); } catch { }
+                if (screenW != w || screenH != h) HomeNav.Log("avatar gif " + Path.GetFileName(file) + ": screen " + screenW + "x" + screenH + ", frames paint " + w + "x" + h);
                 list = new List<KeyValuePair<BitmapSource, TimeSpan>>();
                 BitmapSource canvas = null;
                 foreach (var frame in decoder.Frames)

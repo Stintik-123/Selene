@@ -248,10 +248,14 @@ namespace Selene
         {
             SeleneShell.HideLogin();
             if (!keepHome) return;
-            // back to where the home was
-            var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(460) };
+            // back to where the home was, once the layer has really gone: the home's watchers read KeepHome as the layer
+            // collapses, and a fixed wait ran out first when the home was busy (a Find a game pick on Spotlight), so they
+            // played the hub's reopen and undid the pick
+            int waited = 0;
+            var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
             t.Tick += (s, e) =>
             {
+                if (loginRoot != null && loginRoot.IsVisible && ++waited < 30) return;
                 t.Stop();
                 var el = returnFocus as UIElement;
                 if (el != null && el.IsVisible) el.Focus();
