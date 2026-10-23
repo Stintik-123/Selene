@@ -2381,6 +2381,9 @@ namespace Selene
                 }
                 lastPadButton = same; lastPadRaw = pressed; lastPadAt = now;
                 HideCursorForController();
+                // one of Playnite's dialogs is up (a yes / no box, an add-on install): the press is the dialog's alone (it moved
+                // the screen behind too)
+                if (DialogUp()) return;
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
                 if (StoreShowcase.Handle(Ui.Normalize(pressed)) || CardShowcase.Handle(Ui.Normalize(pressed))) { e.Cancel(); return; }   // the cards' pictures
                 EndQuietFocus();   // the user is moving now: their moves tick
@@ -2691,6 +2694,19 @@ namespace Selene
         private static readonly HashSet<Window> ccClosing = new HashSet<Window>();
 
         private static DateTime lastToolWindowAt = DateTime.MinValue;
+
+        // a window of Playnite's other than the main one has the focus (a dialog)
+        private static bool DialogUp()
+        {
+            try
+            {
+                var main = Application.Current.MainWindow;
+                foreach (Window w in Application.Current.Windows)
+                    if (!ReferenceEquals(w, main) && w.IsVisible && w.IsActive) return true;
+            }
+            catch { }
+            return false;
+        }
 
         private static bool PlayniteInFront()
         {

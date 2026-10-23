@@ -584,7 +584,7 @@ namespace Selene
 
             // power button, bottom centre (Down from the profiles): Sleep / Restart / Shut down
             power = new Tile(64, 64, 32, 5);
-            power.Face.Child = new TextBlock { Text = "\uE7E8", FontSize = 24, FontFamily = Ui.Glyphs, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            power.Face.Child = new TextBlock { Text = "\uE7E8", FontSize = 24, FontFamily = Ui.Glyphs, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 3, 0, 0) };
             power.Root.HorizontalAlignment = HorizontalAlignment.Center;
             power.Root.VerticalAlignment = VerticalAlignment.Bottom;
             power.Root.Margin = new Thickness(0, 0, 0, 56);
