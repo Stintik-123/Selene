@@ -109,6 +109,8 @@ namespace Selene
         public string WallpapersFolder { get; set; }
         // more folders with screenshots and clips, for the Captures card
         public List<string> CapturesFolders { get; set; }
+        // the settings that are a choice of values (Features.All with Choices), by key
+        public Dictionary<string, string> Values { get; set; }
         // Selene features switched off (Features.All keys); everything else is on
         public List<string> TurnedOff { get; set; }
         // features that start off (Features.All with DefaultOn = false) and were switched on
@@ -117,7 +119,7 @@ namespace Selene
         public SeleneSettings()
         {
             MediaFolder = ""; GameFolders = new List<string>(); HelperPath = ""; StreamLogsFolder = ""; AvatarPath = ""; DisplayName = "";
-            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = ""; WallpapersFolder = ""; CapturesFolders = new List<string>(); TurnedOff = new List<string>(); TurnedOn = new List<string>();
+            StreamClientMatch = ""; StreamCredentialsFile = ""; HelperTask = ""; WallpapersFolder = ""; CapturesFolders = new List<string>(); Values = new Dictionary<string, string>(); TurnedOff = new List<string>(); TurnedOn = new List<string>();
         }
     }
 
@@ -142,7 +144,7 @@ namespace Selene
             Settings.HelperPath = editing.HelperPath; Settings.StreamLogsFolder = editing.StreamLogsFolder;
             Settings.AvatarPath = editing.AvatarPath; Settings.DisplayName = editing.DisplayName;
             Settings.StreamClientMatch = editing.StreamClientMatch; Settings.StreamCredentialsFile = editing.StreamCredentialsFile; Settings.HelperTask = editing.HelperTask;
-            Settings.WallpapersFolder = editing.WallpapersFolder; Settings.CapturesFolders = editing.CapturesFolders; Settings.TurnedOff = editing.TurnedOff; Settings.TurnedOn = editing.TurnedOn;
+            Settings.WallpapersFolder = editing.WallpapersFolder; Settings.CapturesFolders = editing.CapturesFolders; Settings.Values = editing.Values; Settings.TurnedOff = editing.TurnedOff; Settings.TurnedOn = editing.TurnedOn;
         }
 
         public void EndEdit()
@@ -165,11 +167,28 @@ namespace Selene
             panel.Children.Add(new TextBlock { Text = "Features (also in Selene's menu under Selene settings):", FontWeight = FontWeights.SemiBold });
             foreach (var f in Features.All)
             {
+                if (f.IsChoice) continue;
                 var key = f.Key;
                 var box = new CheckBox { Content = f.Label + "  -  " + f.About, IsChecked = Features.On(key), Margin = new Thickness(0, 6, 0, 0) };
                 box.Checked += (o, e) => Features.Mark(s, key, true);
                 box.Unchecked += (o, e) => Features.Mark(s, key, false);
                 panel.Children.Add(box);
+            }
+            foreach (var f in Features.All)
+            {
+                if (!f.IsChoice) continue;
+                var key = f.Key; var opt = f;
+                var line = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
+                var combo = new ComboBox { ItemsSource = f.Names ?? f.Choices, SelectedIndex = Math.Max(0, Array.IndexOf(f.Choices, Features.Value(key))), Width = 190, Margin = new Thickness(0, 0, 10, 0) };
+                combo.SelectionChanged += (o, e) =>
+                {
+                    if (combo.SelectedIndex < 0) return;
+                    if (s.Values == null) s.Values = new Dictionary<string, string>();
+                    s.Values[key] = opt.Choices[combo.SelectedIndex];
+                };
+                line.Children.Add(combo);
+                line.Children.Add(new TextBlock { Text = f.Label + "  -  " + f.About, VerticalAlignment = VerticalAlignment.Center });
+                panel.Children.Add(line);
             }
             Func<string, string, Action<string>, TextBox> field = (label, value, set) =>
             {
@@ -206,6 +225,10 @@ namespace Selene
         {
             public string Key, Label, About, Group = "Games";
             public bool DefaultOn = true;
+            // a choice instead of a switch: the values, how they read, and the one it starts on
+            public string[] Choices, Names;
+            public string Default;
+            public bool IsChoice { get { return Choices != null; } }
         }
 
         // the groups Selene settings shows, in order (each option names its group)
@@ -222,16 +245,24 @@ namespace Selene
             new Option { Group = "Spotlight", Key = "cardcaptures", Label = "Captures card", About = "Your screenshots and clips from Steam, Xbox Game Bar and the NVIDIA app." },
             new Option { Group = "Spotlight", Key = "cardsurprise", Label = "Surprise me card", About = "Covers flick past and stop on a game to play." },
             new Option { Group = "Spotlight", Key = "cardcollection", Label = "Collection card", About = "A card that opens Collection (the View button does too).", DefaultOn = false },
+            new Option { Group = "Spotlight", Key = "cardpictures", Label = "Pictures under the cards", About = "The latest captures, the games you played last and a few ideas under their cards. Down goes into them." },
+            new Option { Group = "Spotlight", Key = "trailerdelay", Label = "Trailer cards after", About = "How long you rest on a game before its tile grows into its trailer.", Choices = new[] { "1", "2.5", "5", "0" }, Names = new[] { "1 second", "2.5 seconds", "5 seconds", "Never" }, Default = "2.5" },
+            new Option { Group = "Spotlight", Key = "trailersound", Label = "Trailer sound", About = "Trailer cards start with their sound on. R3 switches it either way.", Choices = new[] { "off", "on" }, Names = new[] { "Off", "On" }, Default = "off" },
+            new Option { Group = "Spotlight", Key = "starttab", Label = "Starting tab", About = "The filter tab Spotlight opens on when Playnite starts.", Choices = new[] { "last", "all", "installed", "recent", "favorites", "unplayed" }, Names = new[] { "Where you left it", "All games", "Installed", "Recently played", "Favorites", "Not played yet" }, Default = "last" },
             new Option { Group = "Sound & music", Key = "sounds", Label = "Interface sounds", About = "Sounds when you move, select and go back." },
             new Option { Group = "Sound & music", Key = "music", Label = "Music control", About = "Default music while browsing, a game's song with its trailer." },
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },
+            new Option { Group = "Sound & music", Key = "soundvolume", Label = "Sound volume", About = "How loud Selene's own sounds are.", Choices = new[] { "25", "50", "75", "100" }, Names = new[] { "25%", "50%", "75%", "100%" }, Default = "100" },
             new Option { Group = "Look", Key = "brand", Label = "Selene logo", About = "The logo in Selene settings and on empty screens." },
             new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
             new Option { Group = "Look", Key = "textshadow", Label = "Readable text", About = "A soft halo behind text so it reads over bright pictures." },
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
             new Option { Group = "Look", Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game and its trailer plays. R3 for its sound." },
+            new Option { Group = "Look", Key = "shade", Label = "Shade over the art", About = "How much the home darkens the picture behind its words.", Choices = new[] { "0.7", "1", "1.3" }, Names = new[] { "Lighter", "As needed", "Deeper" }, Default = "1" },
             new Option { Group = "Games", Key = "storepage", Label = "Store page", About = "The Store card opens free games, sales and new releases. Off: it picks a store app." },
             new Option { Group = "Games", Key = "storetrailers", Label = "Store trailers", About = "A game's trailer plays behind its Store page." },
+            new Option { Group = "Games", Key = "storetab", Label = "Store opens on", About = "The tab the Store page starts on.", Choices = new[] { "All", "Steam", "Epic Games", "GOG", "Xbox", "More stores" }, Default = "All" },
+            new Option { Group = "Games", Key = "surprisepool", Label = "Surprise me picks from", About = "Where Surprise me draws its game from. LB / RB change it there too.", Choices = new[] { "installed", "fresh", "all" }, Names = new[] { "Installed games", "Games not played yet", "All games" }, Default = "installed" },
             new Option { Group = "Games", Key = "freeze", Label = "Freeze on Guide", About = "Guide pauses offline games. Off: they're only muted." },
             new Option { Group = "Games", Key = "tray", Label = "Close to tray", About = "Exit hides Playnite so it comes back instantly." },
             new Option { Group = "Games", Key = "admin", Label = "No-prompt launchers", About = "Admin games skip the Windows prompt after their first run." },
@@ -266,6 +297,52 @@ namespace Selene
             if (settings == null) return;
             Mark(settings, key, on);
             if (save != null) save();
+        }
+
+        // ---- choices ----
+        public static Option Find(string key) { return All.FirstOrDefault(f => f.Key == key); }
+
+        // the chosen value (its default until it's changed; a value no longer offered falls back too)
+        public static string Value(string key)
+        {
+            var o = Find(key);
+            if (o == null || !o.IsChoice) return "";
+            string v;
+            if (settings != null && settings.Values != null && settings.Values.TryGetValue(key, out v) && o.Choices.Contains(v)) return v;
+            return o.Default ?? o.Choices[0];
+        }
+
+        // the chosen value as a number (0 when it isn't one)
+        public static double Number(string key)
+        {
+            double d;
+            return double.TryParse(Value(key), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out d) ? d : 0;
+        }
+
+        // how the chosen value reads
+        public static string ValueName(string key)
+        {
+            var o = Find(key);
+            if (o == null || !o.IsChoice) return "";
+            int i = Array.IndexOf(o.Choices, Value(key));
+            return o.Names != null && i >= 0 && i < o.Names.Length ? o.Names[i] : Value(key);
+        }
+
+        public static void SetValue(string key, string value)
+        {
+            if (settings == null) return;
+            if (settings.Values == null) settings.Values = new Dictionary<string, string>();
+            settings.Values[key] = value;
+            if (save != null) save();
+        }
+
+        // the next (or previous) value round
+        public static void Cycle(string key, int dir)
+        {
+            var o = Find(key);
+            if (o == null || !o.IsChoice) return;
+            int i = Array.IndexOf(o.Choices, Value(key));
+            SetValue(key, o.Choices[((i < 0 ? 0 : i) + dir + o.Choices.Length) % o.Choices.Length]);
         }
     }
 }

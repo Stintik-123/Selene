@@ -33,7 +33,7 @@ namespace Selene
         private GradientStop fadeAbove, fadeTop, fadeMid;   // the rows' fade: the top edge, where it starts (under the focused row) and its first step
 
         // where you were, so coming back from a game's page puts you there again
-        private static int savedTab, savedRow;
+        private static int savedTab = -1, savedRow;   // -1: not opened yet (the Store opens on setting decides)
         private static readonly Dictionary<string, int> savedIndex = new Dictionary<string, int>();
 
         private int tab, rowIndex;
@@ -54,7 +54,7 @@ namespace Selene
 
         public StorePage()
         {
-            tab = savedTab;
+            tab = savedTab >= 0 ? savedTab : Math.Max(0, Array.IndexOf(Tabs, Features.Value("storetab")));
             rowIndex = savedRow;
 
             // a dark base like Collection's (no wallpaper in the Store: the games' art is the picture here)

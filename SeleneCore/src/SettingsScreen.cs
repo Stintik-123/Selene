@@ -21,6 +21,7 @@ namespace Selene
         private readonly List<Border> rows = new List<Border>();
         private readonly List<Border> knobs = new List<Border>();
         private readonly List<Border> tracks = new List<Border>();
+        private readonly List<TextBlock> values = new List<TextBlock>();   // a choice row's current value (null on switch rows)
         private List<Features.Option> options = new List<Features.Option>();
         private int group, index;
         private bool inOptions;
@@ -97,7 +98,7 @@ namespace Selene
         {
             options = Features.All.Where(o => o.Group == Features.Groups[group]).ToList();
             groupTitle.Text = Features.Groups[group].ToUpperInvariant();
-            optionList.Children.Clear(); rows.Clear(); knobs.Clear(); tracks.Clear();
+            optionList.Children.Clear(); rows.Clear(); knobs.Clear(); tracks.Clear(); values.Clear();
             for (int i = 0; i < options.Count; i++)
             {
                 var f = options[i];
@@ -106,13 +107,25 @@ namespace Selene
                 text.Children.Add(new TextBlock { Text = f.About, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) });
                 var knob = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(11), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(4, 0, 0, 0), Background = Brushes.White, RenderTransform = new TranslateTransform() };
                 var track = new Border { Width = 56, Height = 30, CornerRadius = new CornerRadius(15), VerticalAlignment = VerticalAlignment.Center, Child = knob, Margin = new Thickness(24, 0, 0, 0) };
+                TextBlock value = null;
+                if (f.IsChoice)
+                {
+                    // a choice: its value in a pill with arrows (Left / Right go round the values)
+                    var pill = new StackPanel { Orientation = Orientation.Horizontal };
+                    pill.Children.Add(new TextBlock { Text = "\u2039", FontSize = 22, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 3) });
+                    value = new TextBlock { FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, MinWidth = 120, TextAlignment = TextAlignment.Center };
+                    pill.Children.Add(value);
+                    pill.Children.Add(new TextBlock { Text = "\u203A", FontSize = 22, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 3) });
+                    track = new Border { CornerRadius = new CornerRadius(17), Padding = new Thickness(12, 4, 12, 5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24, 0, 0, 0), Background = Ink.Brush("SeleneInkColor", 0.12), Child = pill };
+                    knob = null;
+                }
                 var line = new DockPanel();
                 DockPanel.SetDock(track, Dock.Right);
                 line.Children.Add(track);
                 line.Children.Add(text);
                 var row = new Border { Child = line, CornerRadius = new CornerRadius(16), Padding = new Thickness(26, 18, 24, 18), Margin = new Thickness(0, 0, 0, 8), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Ink.Brush("SeleneGlassColor", 0.7) };
                 optionList.Children.Add(row);
-                rows.Add(row); knobs.Add(knob); tracks.Add(track);
+                rows.Add(row); knobs.Add(knob); tracks.Add(track); values.Add(value);
                 ShowSwitch(i, false);
                 if (animate) Ui.Rise(row, i * 40, 10, 220);
             }
@@ -120,6 +133,12 @@ namespace Selene
 
         private void ShowSwitch(int i, bool animate)
         {
+            if (options[i].IsChoice)
+            {
+                values[i].Text = Features.ValueName(options[i].Key);
+                if (animate) Ui.Pop(tracks[i]);
+                return;
+            }
             bool on = Features.On(options[i].Key);
             var slide = new DoubleAnimation(on ? 26 : 0, TimeSpan.FromMilliseconds(animate ? 200 : 0)) { EasingFunction = Ui.Out() };
             ((TranslateTransform)knobs[i].RenderTransform).BeginAnimation(TranslateTransform.XProperty, slide);
@@ -153,7 +172,18 @@ namespace Selene
                 ShowFocus();
                 return;
             }
-            if (b == "B" || b == "DPadLeft") { inOptions = false; Ui.Back(); ShowFocus(); return; }
+            var opt = options[index];
+            if (b == "B" || (b == "DPadLeft" && !opt.IsChoice)) { inOptions = false; Ui.Back(); ShowFocus(); return; }
+            if (opt.IsChoice && (b == "A" || b == "DPadLeft" || b == "DPadRight"))
+            {
+                Features.Cycle(opt.Key, b == "DPadLeft" ? -1 : 1);
+                Ui.Key();
+                ShowSwitch(index, true);
+                if (opt.Key == "trailersound") HomeNav.ApplyValueSettings();
+                if (opt.Key == "shade") Contrast.Apply();
+                HomeNav.Log("settings: " + opt.Key + " = " + Features.Value(opt.Key));
+                return;
+            }
             if (b == "A")
             {
                 var key = options[index].Key;
@@ -165,6 +195,7 @@ namespace Selene
                 if (key == "hints") HomeHints.Update();
                 if (key == "glow") LoginScene.RefreshBackdrop();
                 if (key == "music" && !Features.On(key)) HomeNav.ReleaseMusic();
+                if (key == "cardpictures") { GameFacts.CardStats(); CapturesScreen.CountInBackground(); }
                 HomeNav.Log("settings: " + key + " " + (Features.On(key) ? "on" : "off"));
                 return;
             }

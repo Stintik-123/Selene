@@ -37,7 +37,11 @@ namespace Selene
             this.preset = preset;
             all = GameFacts.Games();
             if (preset != null && pool == 0 && !preset.IsInstalled) pool = 2;
-            if (pool < 0) pool = all.Any(g => g.IsInstalled) ? 0 : 2;
+            if (pool < 0)
+            {
+                var from = Features.Value("surprisepool");   // the Surprise me picks from setting
+                pool = from == "fresh" ? 1 : from == "all" ? 2 : all.Any(g => g.IsInstalled) ? 0 : 2;
+            }
             var dark = new Border();
             dark.SetResourceReference(Border.BackgroundProperty, "SeleneScrimBrush");
             Panel.SetZIndex(dark, -10);

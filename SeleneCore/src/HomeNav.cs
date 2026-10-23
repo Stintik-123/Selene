@@ -1384,6 +1384,9 @@ namespace Selene
             }
             previewArm.Stop();
             previewArm.Tag = row;
+            double after = Features.Number("trailerdelay");   // the Trailer cards after setting (0: never)
+            if (after <= 0) return;
+            previewArm.Interval = TimeSpan.FromSeconds(after);
             if (row.SelectedItem != null && !(row.SelectedItem is string)) previewArm.Start();
         }
 
@@ -1475,6 +1478,9 @@ namespace Selene
 
         // ---- trailer sound (R3) ----
         private static bool previewSound;          // stays on for the session once switched on
+
+        // the settings that are a choice of values, read once (the rest are read where they're used)
+        public static void ApplyValueSettings() { previewSound = Features.Value("trailersound") == "on"; }
         private static TimeSpan? pendingSeek;
 
         // the library's background trailer: the full trailer when there is one (it has sound for R3), else the silent clip
@@ -3177,7 +3183,9 @@ namespace Selene
                 if (rowFilter < 0)
                 {
                     rowFilter = 0;
-                    try { if (System.IO.File.Exists(RowFilterFile)) rowFilter = Math.Max(0, Array.IndexOf(RowFilters, System.IO.File.ReadAllText(RowFilterFile).Trim())); } catch { }
+                    var start = Features.Value("starttab");   // the Starting tab setting, else where it was left
+                    if (start != "last" && start != "") rowFilter = Math.Max(0, Array.IndexOf(RowFilters, start));
+                    else try { if (System.IO.File.Exists(RowFilterFile)) rowFilter = Math.Max(0, Array.IndexOf(RowFilters, System.IO.File.ReadAllText(RowFilterFile).Trim())); } catch { }
                 }
                 return rowFilter;
             }

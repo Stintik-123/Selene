@@ -74,7 +74,10 @@ namespace Selene
             var artOpacity = Application.Current.Resources["SeleneArtOpacity"];
             bool artShown = art.Count > 0 && !(artOpacity is double && (double)artOpacity < 0.05);   // a profile that keeps the wallpaper
             double need = artShown ? art.Values.Max(i => Need(i)) : wallpaperNeed;
-            double strength = Math.Max(Base, Math.Min(Max, Base + (need - 0.35) * 1.5));
+            // the Shade over the art setting scales it (Lighter / As needed / Deeper)
+            double scale = Features.Number("shade");
+            if (scale <= 0) scale = 1;
+            double strength = Math.Max(Base * scale, Math.Min(Max, (Base + (need - 0.35) * 1.5) * scale));
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             foreach (var name in new[] { "SeleneHubShadeLeft", "SeleneHubShadeBottom", "SeleneHubShadeTop" })
             {
