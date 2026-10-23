@@ -1510,7 +1510,7 @@ namespace Selene
                 var login = window != null ? FindByName(window, "AcceuilSettings") : null;
                 Log("intro queued, login visible=" + (login != null && login.IsVisible));
                 if (login != null && login.IsVisible) return;  // still behind the login screen
-                if (introDone) { PlayIntro(row); return; }
+                if (introDone) { var held = FindByName(window, "SeleneRowIntro") as UIElement; if (held != null) held.BeginAnimation(UIElement.OpacityProperty, null); PlayIntro(row); return; }
                 // first intro after start: tile art is still decoding; wait for an idle moment so the fly-in is smooth
                 var holder = FindByName(window, "SeleneRowIntro") as UIElement;
                 if (holder != null) holder.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
@@ -1540,6 +1540,32 @@ namespace Selene
         }
 
         private static DateTime lastIntro;
+
+        // the login is about to fade off a home that will play its intro: hide the row, game info and art now, or the old
+        // home shows through the fade for a moment before the intro starts. If no intro follows, they come back on their own.
+        public static void HoldHomeForIntro()
+        {
+            var w = Application.Current.MainWindow;
+            if (w == null) return;
+            var held = new List<UIElement>();
+            foreach (var n in new[] { "SeleneRowIntro", "SeleneInfoIntro", "SeleneHubGameBackground" })
+            {
+                var el = FindByName(w, n) as UIElement;
+                if (el == null) continue;
+                el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+                held.Add(el);
+            }
+            var since = DateTime.Now;
+            var check = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2500) };
+            check.Tick += (s, e) =>
+            {
+                check.Stop();
+                if (lastIntro >= since) return;
+                Log("intro: none followed the login, showing the home as it is");
+                foreach (var el in held) el.BeginAnimation(UIElement.OpacityProperty, null);
+            };
+            check.Start();
+        }
         private static bool introDone;
         // right after Playnite starts or someone signs in, the row starts on the first card (Library), not a game
         private static bool startOnCards = true;
@@ -1583,7 +1609,14 @@ namespace Selene
                 row.UpdateLayout();
                 ScheduleTitle(row, animate ? 1300 : 250);
 
-                if (!animate) { Log("hub reopened: default view, no intro"); return; }
+                if (!animate)
+                {
+                    // no fly-in: anything HoldHomeForIntro hid simply shows again
+                    var w0 = Window.GetWindow(row);
+                    if (w0 != null) foreach (var n in new[] { "SeleneRowIntro", "SeleneInfoIntro", "SeleneHubGameBackground" }) { var el = FindByName(w0, n) as UIElement; if (el != null) el.BeginAnimation(UIElement.OpacityProperty, null); }
+                    Log("hub reopened: default view, no intro");
+                    return;
+                }
 
                 // Background fades up first, game info rises in after the tiles.
                 var window = Window.GetWindow(row);

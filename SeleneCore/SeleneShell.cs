@@ -149,6 +149,7 @@ namespace Selene
         {
             var login = Part("AcceuilSettings");
             if (login == null) return;
+            if (!LoginScene.KeepHome) HomeNav.HoldHomeForIntro();
             var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
             fade.Completed += (s, e) => { login.Visibility = Visibility.Collapsed; login.BeginAnimation(UIElement.OpacityProperty, null); login.Opacity = 1; };
             login.BeginAnimation(UIElement.OpacityProperty, fade);
