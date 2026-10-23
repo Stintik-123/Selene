@@ -41,7 +41,7 @@
                                 </Grid.RowDefinitions>
                                 <Border Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}"/>
                                 <Image x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
-                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="220"/>
+                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="120"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->
                                 <Grid x:Name="SeleneLibraryTrailerHost" Grid.RowSpan="2" Margin="760,0,0,0" Opacity="0" IsHitTestVisible="False" ClipToBounds="True">
                                     <Grid.OpacityMask>

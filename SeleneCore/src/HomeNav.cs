@@ -1006,6 +1006,18 @@ namespace Selene
                 if (row == null || prop == null || !prop.CanWrite) return;
                 var item = row.SelectedItem;
                 object game = item is string || item is RowPad ? null : item;
+                // the home's art layer kept following the library's game while hidden: blank it at once and fade it back
+                // in once it has the right picture (none for a card), instead of fading the library game's art out
+                var art = FindByName(w, "SeleneHubArt") as UIElement;
+                if (art != null)
+                {
+                    var keys = new DoubleAnimationUsingKeyFrames();
+                    keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+                    keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(320))));
+                    keys.KeyFrames.Add(new EasingDoubleKeyFrame(art.Opacity, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(620)), new CubicEase { EasingMode = EasingMode.EaseOut }));
+                    keys.Completed += (s, e) => art.BeginAnimation(UIElement.OpacityProperty, null);
+                    art.BeginAnimation(UIElement.OpacityProperty, keys);
+                }
                 if (!ReferenceEquals(prop.GetValue(vm, null), game)) prop.SetValue(vm, game, null);
             }
             catch (Exception ex) { Log("home selection sync: " + ex.Message); }
