@@ -221,6 +221,13 @@ namespace Selene
             return button == lastDirection && (DateTime.Now - lastDirectionAt).TotalMilliseconds < 300;
         }
 
+        // A controller press reaches Selene twice: as the pad button and as the keyboard key Playnite makes from it. A pad
+        // press Selene handled marks the moment; the key copy arriving right after is dropped (it moved things twice: a
+        // selection skipped one). Every keyboard handler checks KeyIsPadCopy first.
+        private static DateTime padHandledAt = DateTime.MinValue;
+        public static void PadHandled() { padHandledAt = DateTime.Now; }
+        public static bool KeyIsPadCopy() { return (DateTime.Now - padHandledAt).TotalMilliseconds < 120; }
+
         public static void Pressed(string button)
         {
             if (button.StartsWith("DPad")) { lastDirection = button; lastDirectionAt = DateTime.Now; }

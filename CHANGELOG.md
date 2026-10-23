@@ -4,6 +4,11 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Find a game (hold View): Selene's own search with its keyboard and sounds, matching games shown as you type; A opens the game in Collection.
+- The cards fly in again after you sign in, as the login's dimming clears.
+- A controller press is never handled twice (the Store card's pictures skipped one); one gate for every screen.
+- Store card: the picked picture glows and grows like the Store page's, and the Store card in the row steps back meanwhile.
+- Store page: the next row peeks in below, blurred and fading to dark.
 - Selene settings opened by holding Menu goes back to the home with B; opened from the menu (like Setup check, Theme and Edit profile), B goes back to the menu with that item still picked.
 - Store: tabs look like the home's filter tabs, the Xbox tab shows its games (it stayed empty after scrolling down another tab), rounded pictures that fit the focus ring, sharper pictures (Steam's double-size art, GOG's big screenshots behind its games), deals without a sharp picture left out, only the focused row shows, and "Currency" without the code. The Store card's focus ring no longer gets cut off. Signing in no longer brings up the screenshot strip, and the empty-tab message on Spotlight has no logo.
 - The Library and Store cards' details no longer slide in from the left (signing in showed it).

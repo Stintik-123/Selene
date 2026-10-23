@@ -77,7 +77,7 @@ namespace Selene
         private static string shownKey;
         private static readonly List<StoreItem> cardItems = new List<StoreItem>();
         private static readonly List<FrameworkElement> cards = new List<FrameworkElement>();
-        private static readonly List<Border> rings = new List<Border>();
+        private static readonly List<Tile> tiles = new List<Tile>();
         private static bool active;
         private static int focus;
 
@@ -91,6 +91,7 @@ namespace Selene
                 active = true;
                 focus = 0;
                 Ui.Tick();
+                HomeNav.DimStoreCard(true);
                 ShowFocus();
                 return true;
             }
@@ -126,16 +127,13 @@ namespace Selene
         private static void Leave()
         {
             active = false;
+            HomeNav.DimStoreCard(false);
             ShowFocus();
         }
 
         private static void ShowFocus()
         {
-            for (int i = 0; i < cards.Count; i++)
-            {
-                bool on = active && i == focus;
-                Ui.Fade(rings[i], on ? 1 : 0, on ? 180 : 140);
-            }
+            for (int i = 0; i < tiles.Count; i++) tiles[i].Focus(active && i == focus);
         }
 
         public static void Fill()
@@ -159,7 +157,7 @@ namespace Selene
             if (key == shownKey) return;
             shownKey = key;
             panel.Children.Clear();
-            cards.Clear(); rings.Clear(); cardItems.Clear();
+            cards.Clear(); tiles.Clear(); cardItems.Clear();
             active = false;
             for (int i = 0; i < picks.Count; i++)
             {
@@ -270,11 +268,12 @@ namespace Selene
 
         private static FrameworkElement Card(StoreItem item)
         {
-            // no name under it: the pictures carry the game's title themselves, so they get the room instead
-            var col = new StackPanel { Width = 420, Margin = new Thickness(0, 0, 22, 0) };
-            var frame = new Grid { Height = 236 };
-            frame.Children.Add(new Border { CornerRadius = new CornerRadius(14), Background = Ink.Brush("SeleneInkColor", 0.08) });
-            var pic = new Border { CornerRadius = new CornerRadius(14), Opacity = 0 };   // the picture as a rounded fill
+            // Selene's tile (as on the Store page): the picture as its rounded fill, the focus ring glowing and the tile
+            // growing a little when it's picked
+            var tile = new Tile(420, 236, 14, 5) { FocusScale = 1.04 };
+            tile.Root.Margin = new Thickness(0, 0, 22, 0);
+            var frame = new Grid();
+            var pic = new Border { CornerRadius = new CornerRadius(14), Opacity = 0 };
             frame.Children.Add(pic);
             StorePage.LoadFill(pic, StoreData.Sharp(item), 900);   // sharp at high-DPI too
             var chip = new StackPanel { Orientation = Orientation.Horizontal };
@@ -285,17 +284,9 @@ namespace Selene
             if (price.Length > 0) chip.Children.Add(new TextBlock { Text = price, FontSize = 18, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(badge != null ? 8 : 0, 0, 0, 0) });
             if (chip.Children.Count > 0)
                 frame.Children.Add(new Border { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10), Padding = new Thickness(5, 4, 10, 4), CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)), Child = chip });
-            // the focus ring (Down from the Store card picks the pictures)
-            var ring = new Border
-            {
-                CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(4), BorderBrush = Ink.Brush("SeleneFocusColor"), Opacity = 0, IsHitTestVisible = false,
-                Effect = Ink.Track(new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 22, Opacity = 0.55 }, System.Windows.Media.Effects.DropShadowEffect.ColorProperty, "SeleneFocusColor")
-            };
-            frame.Children.Add(ring);
-            rings.Add(ring);
-            col.Children.Add(frame);
-            col.RenderTransformOrigin = new Point(0.5, 0.5);
-            return col;
+            tile.Face.Child = frame;
+            tiles.Add(tile);
+            return tile.Root;
         }
     }
 }

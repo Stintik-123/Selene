@@ -20,6 +20,7 @@ namespace Selene
             public string Title;
             public List<StoreItem> Items;
             public StackPanel Panel;
+            public FrameworkElement Block;   // the row with its name (blurred when it isn't the focused one)
             public List<Tile> Tiles = new List<Tile>();
             public List<Action> Loaders = new List<Action>();   // each tile's picture, fetched once it's near the screen
             public TranslateTransform Shift = new TranslateTransform();
@@ -113,7 +114,15 @@ namespace Selene
             Root.Children.Add(info);
 
             // rows of games; the focused row glides to the top of this area
-            var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 600, 0, 0), Height = RowH, ClipToBounds = true };
+            // the focused row, and below it the top of the next one, blurred and fading to dark: there's more down there
+            const double peek = 120;
+            var rowsArea = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 600, 0, 0), Height = RowH + peek, ClipToBounds = true };
+            var fade = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+            fade.GradientStops.Add(new GradientStop(Colors.Black, 0));
+            fade.GradientStops.Add(new GradientStop(Colors.Black, (RowH - 10) / (RowH + peek)));
+            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0x55, 0, 0, 0), (RowH + peek * 0.5) / (RowH + peek)));
+            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
+            rowsArea.OpacityMask = fade;
             rowStack.RenderTransform = rowShift;
             rowStack.Margin = new Thickness(96, 0, 0, 0);
             rowsArea.Children.Add(new Canvas { Children = { rowStack } });
@@ -209,6 +218,7 @@ namespace Selene
                 row.Panel = new StackPanel { Orientation = Orientation.Horizontal, RenderTransform = row.Shift };
                 foreach (var item in items) { Action load; var tile = MakeTile(item, out load); row.Tiles.Add(tile); row.Loaders.Add(load); row.Panel.Children.Add(tile.Root); }
                 block.Children.Add(row.Panel);
+                row.Block = block;
                 rowStack.Children.Add(block);
                 rows.Add(row);
             }
@@ -310,6 +320,14 @@ namespace Selene
 
         private void ShowFocus(bool animate)
         {
+            // the rows other than the focused one are softly blurred (the next one peeks in below)
+            for (int r = 0; r < rows.Count; r++)
+            {
+                if (rows[r].Block == null) continue;
+                var blur = rows[r].Block.Effect as System.Windows.Media.Effects.BlurEffect;
+                if (blur == null) { blur = new System.Windows.Media.Effects.BlurEffect { Radius = r == rowIndex ? 0 : 12, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance }; rows[r].Block.Effect = blur; }
+                blur.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, new DoubleAnimation(r == rowIndex ? 0 : 12, TimeSpan.FromMilliseconds(animate ? 240 : 0)));
+            }
             for (int r = 0; r < rows.Count; r++)
                 for (int i = 0; i < rows[r].Tiles.Count; i++) rows[r].Tiles[i].Focus(r == rowIndex && i == rows[r].Index);
             var item = Focused;

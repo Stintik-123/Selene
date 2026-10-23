@@ -72,6 +72,8 @@ namespace Selene
                 // the login layer (menu, profiles...) is up: its keys are its own (this class handler runs before the
                 // layer's, and moved the home row behind the menu)
                 if (LoginScene.IsActive) return;
+                // the keyboard copy of a pad press Selene already handled (it moved things a second time)
+                if (Ui.KeyIsPadCopy() && (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape)) { e.Handled = true; return; }
                 // the Store card's game pictures (Down from the card goes into them)
                 var asPad = e.Key == Key.Down ? "DPadDown" : e.Key == Key.Up ? "DPadUp" : e.Key == Key.Left ? "DPadLeft" : e.Key == Key.Right ? "DPadRight" : e.Key == Key.Enter ? "A" : e.Key == Key.Escape || e.Key == Key.Back ? "B" : null;
                 if (asPad != null && !e.Handled && StoreShowcase.Handle(asPad)) { e.Handled = true; return; }
@@ -1037,6 +1039,53 @@ namespace Selene
 
         // back from the library: Playnite still has the library's game selected, and the home drew its art for a moment
         // before the row's own selection caught up; the row's selection (nothing for a card) goes to Playnite first
+        // Collection with this game picked (Find a game): Collection on "All games" so the game is surely in it
+        public static void ShowInCollection(Guid id)
+        {
+            var w = Application.Current.MainWindow;
+            if (w == null) return;
+            HidePreview();
+            if (RowFilters[RowFilter] != "all") { rowFilter = Array.IndexOf(RowFilters, "all"); RenderFilterTabs(w, 0); var r = LiveRow(); if (r != null) ApplyRowFilter(r); }
+            SeleneShell.ShowLibrary();
+            w.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var list = FindByName(w, "PART_ListGameItems") as ListBox;
+                if (list == null) return;
+                object hit = null;
+                foreach (var item in list.Items) { var gid = Prop(item, "Id"); if (gid is Guid && (Guid)gid == id) { hit = item; break; } }
+                Log("find a game: " + (hit != null ? "picked in Collection" : "not in Collection's list"));
+                if (hit == null) return;
+                list.SelectedItem = hit;
+                list.ScrollIntoView(hit);
+                list.UpdateLayout();
+                var c = list.ItemContainerGenerator.ContainerFromItem(hit) as UIElement;
+                if (c != null) c.Focus();
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        // the Store card's own tile on the row: its highlight steps back while the focus is in the card's pictures
+        public static void DimStoreCard(bool dim)
+        {
+            var row = LiveRow();
+            if (row == null) return;
+            var c = row.ItemContainerGenerator.ContainerFromItem("nav:store") as Control;
+            if (c == null || c.Template == null) return;
+            var ring = c.Template.FindName("Ring", c) as UIElement;
+            var scale = c.Template.FindName("TileScale", c) as ScaleTransform;
+            var ms = TimeSpan.FromMilliseconds(180);
+            if (ring != null)
+            {
+                if (dim) ring.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, ms));
+                else ring.BeginAnimation(UIElement.OpacityProperty, null);
+            }
+            if (scale != null)
+            {
+                var to = new DoubleAnimation(dim ? 1 : 1.3, ms) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, to);
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, to);
+            }
+        }
+
         // the Store card is the one picked on Spotlight's row (its game pictures can be gone into with Down)
         public static bool StoreCardFocused()
         {
@@ -1821,7 +1870,7 @@ namespace Selene
             if (cover == null || !(VisualTreeHelper.GetParent(cover) is Panel)) return;
             // right after the rebuilt home has been drawn under it: the login's dimmed wallpaper clears slowly to the home
             // (on its own thread, smooth however busy)
-            cover.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(600, 400)), System.Windows.Threading.DispatcherPriority.Background);   // (held: the card's own slide-in finishes under it)
+            cover.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(450)), System.Windows.Threading.DispatcherPriority.Background);   // the cards fly in as it clears
         }
 
         private static bool introDone;
@@ -1833,8 +1882,8 @@ namespace Selene
             if ((DateTime.Now - lastIntro).TotalMilliseconds < 800) return;  // several watchers fire for one hub open
             lastIntro = DateTime.Now;
             LiftIntroCover();
-            // signing in: no fly-in, the home is simply there as the login's dimmed wallpaper clears (the cover fading)
-            bool animate = !introDone && !Lite && !coveredForSignIn;  // full intro only the first time the hub is seen after Playnite starts (never in a streamed session)
+            // the cards' fly-in: the first time the home shows, and after every sign-in (as the login's dimmed wallpaper clears)
+            bool animate = (!introDone || coveredForSignIn) && !Lite;  // full intro only the first time the hub is seen after Playnite starts (never in a streamed session)
             introDone = true;
             try
             {
@@ -2096,6 +2145,7 @@ namespace Selene
 
         private static void OnPreProcessInput(object sender, PreProcessInputEventArgs e)
         {
+            bool fromPad = false;
             try
             {
                 var ke = e.StagingItem.Input as KeyEventArgs;
@@ -2127,6 +2177,7 @@ namespace Selene
                 var button = ke.GetType().GetProperty("Button");
                 if (button == null) return;
                 var pressed = button.GetValue(ke, null).ToString();
+                fromPad = true;
                 // the same press arriving twice (one pad seen as two devices, or stick and d-pad together) moved two
                 // items at a time: a second identical direction within a moment is dropped
                 var same = Ui.Normalize(pressed);
@@ -2275,6 +2326,7 @@ namespace Selene
                 e.Cancel();
             }
             catch (Exception ex) { Log("Y: " + ex.Message); }
+            finally { if (fromPad && e.Canceled) Ui.PadHandled(); }   // handled here: its keyboard copy is dropped
         }
 
         // ---- Play / Details pills under the logo (SelenePlayBtn / SeleneDetailsBtn in the home block) ----
@@ -4933,13 +4985,22 @@ namespace Selene
             else if (Features.On("viewswitch")) ToggleHomeLibrary();
         }
 
-        // hold View: the library with Playnite's search open, to find a game fast
+        // hold View: Selene's Find a game (its keyboard, the matching games as you type)
         private static void OpenLibrarySearch()
         {
             var w = Application.Current.MainWindow;
             if (w == null) return;
             HidePreview();
             Ui.Play("OpenPanel.wav", 0.8);
+            LoginScene.OpenWith(() => new SearchScreen());
+            Log("hold view -> find a game");
+        }
+
+        // (Playnite's own search in the library, no longer used)
+        private static void OpenPlayniteSearch()
+        {
+            var w = Application.Current.MainWindow;
+            if (w == null) return;
             SeleneShell.ShowLibrary();
             w.Dispatcher.BeginInvoke(new Action(() =>
             {
