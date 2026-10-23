@@ -1541,6 +1541,48 @@ namespace Selene
 
         private static DateTime lastIntro;
 
+        // Playnite plays its move sound whenever anything gets keyboard focus, so focus Selene moves itself (signing in,
+        // the home's intro, Play) sounded like moving. For a moment its move sound is emptied (Playnite skips an empty
+        // one), then put back; the user's own moves outside that moment tick as usual.
+        private static PropertyInfo navigateSound;
+        private static IntPtr savedNavigateSound;
+        private static DateTime quietUntil;
+        private static System.Windows.Threading.DispatcherTimer quietTimer;
+
+        public static void QuietFocus(int ms)
+        {
+            try
+            {
+                if (navigateSound == null)
+                {
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        var t = asm.GetType("Playnite.FullscreenApp.FullscreenApplication", false);
+                        if (t == null) continue;
+                        navigateSound = t.GetProperty("NavigateSound", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                        break;
+                    }
+                    if (navigateSound == null) { Log("quiet focus: Playnite's move sound not found"); return; }
+                }
+                var until = DateTime.Now.AddMilliseconds(ms);
+                if (until > quietUntil) quietUntil = until;
+                var current = (IntPtr)navigateSound.GetValue(null, null);
+                if (current != IntPtr.Zero) { savedNavigateSound = current; navigateSound.SetValue(null, IntPtr.Zero, null); }
+                if (quietTimer == null)
+                {
+                    quietTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                    quietTimer.Tick += (s, e) =>
+                    {
+                        if (DateTime.Now < quietUntil) return;
+                        quietTimer.Stop();
+                        if (savedNavigateSound != IntPtr.Zero && (IntPtr)navigateSound.GetValue(null, null) == IntPtr.Zero) navigateSound.SetValue(null, savedNavigateSound, null);
+                    };
+                }
+                quietTimer.Start();
+            }
+            catch (Exception ex) { Log("quiet focus: " + ex.Message); }
+        }
+
         // the login is about to fade off a home that will play its intro. The home's parts are rebuilt while the login
         // fades (new copies, nothing to hide ahead of time), so a dark cover goes over the whole home instead and lifts
         // when the intro starts; if no intro follows it lifts on its own.
@@ -1548,6 +1590,7 @@ namespace Selene
 
         public static void HoldHomeForIntro()
         {
+            QuietFocus(3000);   // the intro puts focus on the row (twice): not a move
             var w = Application.Current.MainWindow;
             var hub = w != null ? FindByName(w, "WelcomeHubOverlay") as Grid : null;
             if (hub == null) { Log("intro: no home to cover"); return; }
@@ -3807,6 +3850,7 @@ namespace Selene
                 try
                 {
                     startingSeen = false;
+                    QuietFocus(2500);     // the loading screen and the game take focus: not a move
                     PlayStartingSound();  // Playnite played it when IT started the game (~1 s after the press now)
                     var swCover = System.Diagnostics.Stopwatch.StartNew();
                     GameStarting(id);
@@ -3840,6 +3884,7 @@ namespace Selene
         {
             var app = Application.Current;
             if (app == null) return;
+            QuietFocus(2500);
             app.Dispatcher.Invoke(new Action(() =>
             {
                 var w = app.MainWindow;

@@ -138,6 +138,7 @@ namespace Selene
         {
             var login = Part("AcceuilSettings");
             if (login == null) return;
+            HomeNav.QuietFocus(800);   // focus moves into the login layer: not a move
             login.BeginAnimation(UIElement.OpacityProperty, null);
             login.Opacity = 0;
             login.Visibility = Visibility.Visible;
@@ -149,6 +150,7 @@ namespace Selene
         {
             var login = Part("AcceuilSettings");
             if (login == null) return;
+            HomeNav.QuietFocus(1200);   // focus goes back to the home
             if (!LoginScene.KeepHome) HomeNav.HoldHomeForIntro();
             var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
             fade.Completed += (s, e) => { login.Visibility = Visibility.Collapsed; login.BeginAnimation(UIElement.OpacityProperty, null); login.Opacity = 1; };
