@@ -401,6 +401,13 @@ namespace Selene
         private static void RefreshHomeGlow()
         {
             if (homeGlow == null) return;
+            // the shades that keep text readable over game art are much lighter over the background on a card
+            var w = Window.GetWindow(homeGlow);
+            foreach (var name in new[] { "SeleneHubShadeLeft", "SeleneHubShadeBottom" })
+            {
+                var shade = w != null ? HomeNav.FindByName(w, name) as UIElement : null;
+                if (shade != null) shade.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(homeOnCard ? 0.3 : 1, TimeSpan.FromMilliseconds(350)) { EasingFunction = Ui.Out() });
+            }
             var res = Application.Current.Resources;
             bool artHidden = res["SeleneArtOpacity"] is double && (double)res["SeleneArtOpacity"] < 0.01;
             bool on = res["SeleneWallpaper"] == null && Features.On("glow") && (homeOnCard || artHidden);
