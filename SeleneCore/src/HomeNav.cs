@@ -1641,7 +1641,7 @@ namespace Selene
                 var infoHold = FindByName(window, "SeleneInfoIntro") as UIElement;
                 var bgHold = FindByName(window, "SeleneHubGameBackground") as UIElement;
                 if (infoHold != null) infoHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
-                if (bgHold != null) bgHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+                if (bgHold != null && !coveredForSignIn) bgHold.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
                 try
                 {
                     RebuildGames(row);
@@ -1760,9 +1760,10 @@ namespace Selene
         }
 
         // the login is about to fade off a home that will play its intro. The home's parts are rebuilt while the login
-        // fades (new copies, nothing to hide ahead of time), so a dark cover goes over the whole home instead and lifts
+        // fades (new copies, nothing to hide ahead of time), so a cover (the wallpaper) goes over the whole home instead and lifts
         // when the intro starts; if no intro follows it lifts on its own.
-        private static Border introCover;
+        private static ThreadedFade introCover;
+        private static bool coveredForSignIn;   // the intro then keeps the wallpaper up instead of fading it in from dark
 
         public static void HoldHomeForIntro()
         {
@@ -1770,18 +1771,20 @@ namespace Selene
             var w = Application.Current.MainWindow;
             var hub = w != null ? FindByName(w, "WelcomeHubOverlay") as Grid : null;
             if (hub == null) { Log("intro: no home to cover"); return; }
-            if (introCover == null)
-            {
-                introCover = new Border { IsHitTestVisible = false };
-                introCover.SetResourceReference(Border.BackgroundProperty, "SeleneScrimBrush");
-                Panel.SetZIndex(introCover, 1000);
-                Grid.SetRowSpan(introCover, 100);
-                Grid.SetColumnSpan(introCover, 100);
-            }
-            var parent = VisualTreeHelper.GetParent(introCover) as Panel;
-            if (parent != hub) { if (parent != null) parent.Children.Remove(introCover); hub.Children.Add(introCover); }
-            introCover.BeginAnimation(UIElement.OpacityProperty, null);
-            introCover.Opacity = 1;
+            // the wallpaper itself (as the home draws it, under the login's veil), so it stays up through signing in instead
+            // of going dark; drawn and faded on its own thread (ThreadedFade): the home's busy rebuild made a fade jump
+            if (introCover != null) introCover.Remove();
+            var res = Application.Current.Resources;
+            var pic = res["SeleneWallpaper"] as ImageSource;
+            introCover = new ThreadedFade(
+                Application.Current.TryFindResource("MainBackgourndBrush") as Brush,
+                pic != null ? new ImageBrush(pic) { Stretch = Stretch.UniformToFill } : null,
+                Ink.Brush("SeleneScrimColor", 0.45));
+            Panel.SetZIndex(introCover, 1000);
+            Grid.SetRowSpan(introCover, 100);
+            Grid.SetColumnSpan(introCover, 100);
+            hub.Children.Add(introCover);
+            coveredForSignIn = true;
             Log("intro: home covered for the login fade");
             var since = DateTime.Now;
             var check = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2500) };
@@ -1799,9 +1802,9 @@ namespace Selene
         {
             var cover = introCover;
             if (cover == null || !(VisualTreeHelper.GetParent(cover) is Panel)) return;
-            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-            fade.Completed += (s, e) => { var p = VisualTreeHelper.GetParent(cover) as Panel; if (p != null && cover.Opacity < 0.01) p.Children.Remove(cover); };
-            cover.BeginAnimation(UIElement.OpacityProperty, fade);
+            // as the home's intro starts, right after the rebuilt home has been drawn under it (it melts away on its own
+            // thread, smooth however busy); the tiles start flying in just as it's gone
+            cover.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(300)), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private static bool introDone;
@@ -1848,12 +1851,19 @@ namespace Selene
                 row.UpdateLayout();
                 ScheduleTitle(row, animate ? 1300 : 250);
 
-                if (!animate) { Log("hub reopened: default view, no intro"); return; }
+                if (!animate)
+                {
+                    coveredForSignIn = false;
+                    Log("hub reopened: default view, no intro");
+                    return;
+                }
 
                 // Background fades up first, game info rises in after the tiles.
                 var window = Window.GetWindow(row);
                 var bg = window != null ? FindByName(window, "SeleneHubGameBackground") : null;
-                if (bg != null) bg.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, 0, 0.9, new CubicEase { EasingMode = EasingMode.EaseOut }));
+                if (bg != null && !coveredForSignIn) bg.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, 0, 0.9, new CubicEase { EasingMode = EasingMode.EaseOut }));
+                else if (bg != null) bg.BeginAnimation(UIElement.OpacityProperty, null);   // signed in: the wallpaper just stays
+                coveredForSignIn = false;
                 var info = FindByName(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(row)), "SeleneInfoIntro");
                 if (info != null)
                 {
