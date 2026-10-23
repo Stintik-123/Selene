@@ -4480,7 +4480,9 @@ namespace Selene
             };
             if (launching && launchGameId == id)
             {
-                var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(950) };
+                // after the loading screen's own fade and the logo's rise (about 1.2 s): Playnite's start blocks the UI thread
+                // for a few hundred ms, which froze the animation mid-way at 950 ms
+                var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
                 later.Tick += (s, e) => { later.Stop(); if (launching && launchGameId == id) start(); else Log("play: cancelled before the game was started"); };
                 later.Start();
             }
@@ -4529,8 +4531,10 @@ namespace Selene
                 long tSnap = phase.ElapsedMilliseconds;
                 ShowCoverWindow(w, gameId);
                 long tCover = phase.ElapsedMilliseconds;
-                MinimizeSteamMainWindow();
-                Log("game starting: timings windows=" + tSnap + " ms, loading screen=" + (tCover - tSnap) + " ms, steam=" + (phase.ElapsedMilliseconds - tCover) + " ms");
+                // Steam's window is found and minimised on a thread of its own: on the UI thread it froze the loading screen's
+                // first frames (about 180 ms of looking through every window)
+                System.Threading.Tasks.Task.Factory.StartNew(MinimizeSteamMainWindow);
+                Log("game starting: timings windows=" + tSnap + " ms, loading screen=" + (tCover - tSnap) + " ms");
                 if (launchTimer == null)
                 {
                     launchTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };

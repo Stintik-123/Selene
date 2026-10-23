@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Play: the loading screen no longer freezes for a moment as it comes up and again a second in (Steam's window is minimised off the UI thread; Playnite's own start waits for the loading screen's animation to finish).
 - Game details open again (the redone page set a style twice, and Playnite fell over opening it).
 - Collection: A plays the game the way Spotlight's A does (Selene's loading screen at once, the same way through; installs it when it isn't), X opens its details.
 - Play: no music under the loading screen (the selected game's trailer card still fired under it and switched the music to that game's song).
