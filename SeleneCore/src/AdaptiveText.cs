@@ -18,6 +18,8 @@ namespace Selene
     public static class AdaptiveText
     {
         private static readonly List<WeakReference> texts = new List<WeakReference>();
+        // the dark halo behind bright-backed text: off for now (the user found it too much); grey text still brightens
+        private const bool HaloOn = false;
         private static bool hooked;
         private static DispatcherTimer batch;
 
@@ -88,7 +90,7 @@ namespace Selene
                 var q = quiet.GetValue(t, x => { var b = x.Foreground as SolidColorBrush; return new Quiet { Opacity = b != null && b.Opacity < 0.8 ? b.Opacity : -1 }; });
                 double was = q.Opacity;
                 if (was >= 0) t.Foreground = Ink.Brush("SeleneInkColor", was + (0.95 - was) * k);
-                if (k < 0.08) { Plain(t); return; }   // readable as it is: nothing added
+                if (k < 0.08 || !HaloOn) { Plain(t); return; }   // readable as it is (or the halo off): nothing added
                 Halo(t, 10 + 26 * k, 0.55 + 0.45 * k);   // as the earlier halo: wider and darker over brighter spots
             }
             catch (Exception ex) { HomeNav.Log("readable: " + ex.Message); }

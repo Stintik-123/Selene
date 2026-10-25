@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Readable text: the dark halo behind text on the home and in Collection is off for now; grey text still brightens over bright pictures.
+- Choose your theme: the preview shows the home (it stayed empty; the background step had taken the only preview).
 - Progress notifications stay with Playnite: after Alt+Tab to another program the card goes behind it with Playnite (it stayed on top of everything).
 - Readable text: the soft halo around the letters is drawn behind the words as a picture, so the text itself stays sharp (as an effect on the letters it made them look blurry).
 - No games at all: the filter tabs are hidden on Spotlight and in Collection.

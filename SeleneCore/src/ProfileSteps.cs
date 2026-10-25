@@ -241,20 +241,24 @@ namespace Selene
         // the real home (row and top bar; no game is selected, its song would start) as a picture, so a theme or background is
         // seen before picking it. A snapshot, retaken when the choice changes: a live mirror redrew the whole home on every
         // frame (its dust never stops moving) and the steps crawled.
-        private static Image previewBack, previewFront;
-        private static double previewWidth;
+        // every preview box (the theme step and the background step have one each: a single shared one left the theme step's
+        // box empty, since the steps are all built up front and the last one took it)
+        private sealed class PreviewBox { public Image Back, Front; public double Width; }
+        private static readonly List<PreviewBox> previews = new List<PreviewBox>();
 
         internal static FrameworkElement Preview(double width)
         {
             double height = width * 9 / 16;
-            previewWidth = width;
+            var box = new PreviewBox { Width = width };
             var host = new Grid { Width = width, Height = height, Clip = new RectangleGeometry(new Rect(0, 0, width, height), 15, 15) };
             host.Children.Add(new Border { Background = Ink.Brush("SeleneGlassColor", 0.7) });
             host.Children.Add(Ui.Text("The home shows here once it has loaded", 18, 0.6));
-            previewBack = new Image { Stretch = Stretch.Fill };
-            previewFront = new Image { Stretch = Stretch.Fill };
-            host.Children.Add(previewBack);
-            host.Children.Add(previewFront);
+            box.Back = new Image { Stretch = Stretch.Fill };
+            box.Front = new Image { Stretch = Stretch.Fill };
+            host.Children.Add(box.Back);
+            host.Children.Add(box.Front);
+            previews.Add(box);
+            box.Front.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) RefreshPreviewLater(); };   // a step coming up gets a fresh picture
             var frame = new Border
             {
                 Child = host, CornerRadius = new CornerRadius(16), BorderBrush = Ink.Brush("SeleneInkColor", 0.25), BorderThickness = new Thickness(1),
@@ -270,8 +274,8 @@ namespace Selene
         // a new picture of the home, once the change has been drawn, and again a moment later for anything that fades in
         internal static void RefreshPreviewLater()
         {
-            if (previewFront == null) return;
-            previewFront.Dispatcher.BeginInvoke(new Action(() => RefreshPreview()), DispatcherPriority.Loaded);
+            if (previews.Count == 0) return;
+            Application.Current.Dispatcher.BeginInvoke(new Action(() => RefreshPreview()), DispatcherPriority.Loaded);
             // again a moment later (anything fading in), and up to a few more times while no picture could be taken
             int tries = 0;
             var again = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(520) };
@@ -288,7 +292,9 @@ namespace Selene
         {
             try
             {
-                if (previewFront == null || !previewFront.IsLoaded) return false;
+                previews.RemoveAll(b => b.Front == null || PresentationSource.FromVisual(b.Front) == null && !b.Front.IsLoaded && b.Front.Parent == null);
+                var shown = previews.Where(b => b.Front.IsLoaded && b.Front.IsVisible).ToList();
+                if (shown.Count == 0) return false;
                 var main = Application.Current.MainWindow;
                 var viewHost = main != null ? HomeNav.FindByName(main, "PART_ViewHost") : null;
                 if (viewHost == null || viewHost.ActualWidth < 1) { HomeNav.Log("preview: no view host yet"); return false; }
@@ -296,7 +302,6 @@ namespace Selene
                 var hubNow = HomeNav.FindByName(main, "WelcomeHubOverlay") as UIElement;
                 if (hubNow != null && !hubNow.IsVisible) { HomeNav.Log("preview: the home is hidden -> shown under the profile screen"); SeleneShell.ShowHome(true); viewHost.UpdateLayout(); }
                 if (hubNow != null && hubNow.Opacity < 0.05) { HomeNav.Log("preview: the home is faded out"); return false; }
-                double scale = previewWidth / viewHost.ActualWidth;
                 var dv = new DrawingVisual();
                 using (var dc = dv.RenderOpen())
                 {
@@ -309,17 +314,21 @@ namespace Selene
                                          null, new Rect(at.X, at.Y, el.ActualWidth, el.ActualHeight));
                     }
                 }
-                int w = (int)Math.Round(viewHost.ActualWidth * scale), h = (int)Math.Round(viewHost.ActualHeight * scale);
-                if (w < 2 || h < 2) return false;
-                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96 * scale, 96 * scale, PixelFormats.Pbgra32);
-                rtb.Render(dv);
-                rtb.Freeze();
-                // the old picture stays under the new one as it fades in: a soft change, not a cut
-                if (previewFront.Source != null) { previewBack.Source = previewFront.Source; previewBack.Opacity = 1; }
-                previewFront.Source = rtb;
-                previewFront.BeginAnimation(UIElement.OpacityProperty, null);
-                previewFront.Opacity = 0;
-                Ui.Fade(previewFront, 1, 260);
+                foreach (var box in shown)
+                {
+                    double scale = box.Width / viewHost.ActualWidth;
+                    int w = (int)Math.Round(viewHost.ActualWidth * scale), h = (int)Math.Round(viewHost.ActualHeight * scale);
+                    if (w < 2 || h < 2) continue;
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96 * scale, 96 * scale, PixelFormats.Pbgra32);
+                    rtb.Render(dv);
+                    rtb.Freeze();
+                    // the old picture stays under the new one as it fades in: a soft change, not a cut
+                    if (box.Front.Source != null) { box.Back.Source = box.Front.Source; box.Back.Opacity = 1; }
+                    box.Front.Source = rtb;
+                    box.Front.BeginAnimation(UIElement.OpacityProperty, null);
+                    box.Front.Opacity = 0;
+                    Ui.Fade(box.Front, 1, 260);
+                }
                 return true;
             }
             catch (Exception ex) { HomeNav.Log("preview: " + ex.Message); return false; }
