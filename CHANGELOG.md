@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Profile steps: no lag opening Change theme or going back and forth between the theme and background steps (every avatar picture loaded as the screen opened, the background grid was rebuilt and reloaded on each return, the theme re-applied, and quick moves stacked slides).
 - The glint that sweeps over the focused card shows in every color theme (it took the focus color and vanished in themes where that is dark or colored).
 - Store: no flash the first time it opens (choosing the currency it already used emptied and refetched every list, and each list coming back rebuilt the page); moves glide at the screen's own frame rate.
 - Smoother motion overall: Selene's slides, fades and rises run at the screen's speed (they were held near 60 fps).

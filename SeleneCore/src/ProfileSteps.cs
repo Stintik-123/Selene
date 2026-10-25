@@ -119,6 +119,14 @@ namespace Selene
         // during the slide, the work made the slide stutter (choosing a theme, on to the background)
         private void GoTo(int i, int dir)
         {
+            // a slide still running: done at once, only the page being left stays
+            foreach (var page in body.Children.OfType<FrameworkElement>().ToList())
+            {
+                if (ReferenceEquals(page, steps[step].Root)) continue;
+                page.BeginAnimation(UIElement.OpacityProperty, null);
+                page.CacheMode = null;
+                body.Children.Remove(page);
+            }
             var old = steps[step].Root;
             steps[step].Left();
             old.IsHitTestVisible = false;
@@ -573,8 +581,7 @@ namespace Selene
                 grid.Viewport.HorizontalAlignment = HorizontalAlignment.Center;
                 grid.Viewport.VerticalAlignment = VerticalAlignment.Top;
                 grid.Viewport.Margin = new Thickness(0, 290, 0, 0);
-                foreach (var f in files) AddTile(f, grid.Panel.Children.Count);
-                Root.Children.Add(grid.Viewport);
+                Root.Children.Add(grid.Viewport);   // its tiles are made the first time the step shows
                 var hint = Ui.Prompts(false, Ui.Prompt("X", "Remove picture"));
                 hint.Margin = new Thickness(200, 0, 0, 48);
                 hint.Visibility = Visibility.Collapsed;
@@ -585,15 +592,26 @@ namespace Selene
                 index = current != null ? files.FindIndex(f => f != null && string.Equals(f, current, StringComparison.OrdinalIgnoreCase)) : -1;
                 if (index < 0 && current != null && steamPrint != null && System.IO.File.Exists(current) && Profiles.Fingerprint(current) == steamPrint) index = files.IndexOf(steam);
                 if (index < 0) index = Math.Min(1, files.Count - 1);   // the Steam avatar when there is one, else the first of ours
+            }
+
+            // the pictures come in the first time this step shows (loading all of them as soon as the profile screen opened
+            // kept the other steps busy: Change theme lagged)
+            private bool picturesLoading;
+            private void LoadPictures()
+            {
+                if (picturesLoading) return;
+                picturesLoading = true;
+                foreach (var f in files) AddTile(f, grid.Panel.Children.Count);
                 Ui.LoadInOrder(files.Select(f => f ?? "").ToList(), 192, (i, pic) =>
                 {
                     var f = i < files.Count ? files[i] : null;
+                    if (i >= tiles.Count) return;
                     tiles[i].Face.Background = f != null && f.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)
                         ? AnimatedAvatar.Brush(f, 192) : new ImageBrush(pic) { Stretch = Stretch.UniformToFill };
                 });
             }
 
-            public override void Shown() { ShowFocus(); }
+            public override void Shown() { LoadPictures(); ShowFocus(); }
 
             // one avatar tile at position `at` (null = the "add your own picture" tile)
             private Tile AddTile(string f, int at)
@@ -806,7 +824,12 @@ namespace Selene
             }
 
             // the whole of Selene recolors, the home's wallpaper too (the theme's own, unless one was picked)
-            private void Show(string id) { Ui.AfterHold(() => ShowNow(id)); }
+            private static string shownTheme;
+            private void Show(string id)
+            {
+                if (string.Equals(id, shownTheme, StringComparison.OrdinalIgnoreCase)) { RefreshPreviewLater(); return; }
+                Ui.AfterHold(() => { shownTheme = id; ShowNow(id); });
+            }
 
             private void ShowNow(string id)
             {
@@ -874,9 +897,16 @@ namespace Selene
                 Root.Children.Add(row);
             }
 
-            // built when shown: the list starts with the theme picked a step ago
+            // built when shown: the list starts with the theme picked a step ago; kept as it is when that theme hasn't changed
+            private string filledFor;
             private void Fill()
             {
+                if (filledFor == Owner.Theme && tiles.Count > 0)
+                {
+                    index = Owner.Wallpaper == null ? 0 : Math.Max(0, files.FindIndex(f => f != null && string.Equals(f, Owner.Wallpaper, StringComparison.OrdinalIgnoreCase)));
+                    return;
+                }
+                filledFor = Owner.Theme;
                 files.Clear(); tiles.Clear(); groups.Clear(); grid.Panel.Children.Clear();
                 var theme = ThemePalettes.Find(Owner.Theme);
                 var themeName = theme != null ? theme.Name : "";
