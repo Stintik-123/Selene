@@ -1812,6 +1812,64 @@ namespace Selene
         // from Play until the game shows: no default music over the loading screen (UniPlaySong pauses for the running game after)
         private static bool musicHeldForLaunch;
 
+        // start-up stays quiet but for Selene's chime: UniPlaySong starts its default music on its own as Playnite opens, past
+        // the VideoIsPlaying hold, so its player gets a pause source of its own, and is paused again if it starts anyway
+        private static object upsPlayer;
+        private static System.Windows.Threading.DispatcherTimer quietWatch;
+
+        public static void QuietStartup(bool on)
+        {
+            try
+            {
+                if (upsPlayer == null && Api != null)
+                {
+                    var plugin = Api.Addons.Plugins.FirstOrDefault(pl => pl.Id == UniPlaySongId);
+                    for (var t = plugin != null ? plugin.GetType() : null; t != null && upsPlayer == null; t = t.BaseType)
+                    {
+                        var f = t.GetField("_playbackService", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                        if (f != null) upsPlayer = f.GetValue(plugin);
+                    }
+                }
+                if (upsPlayer == null) return;
+                var type = upsPlayer.GetType();
+                var add = type.GetMethod("AddPauseSourceImmediate");
+                var remove = type.GetMethod("RemovePauseSource");
+                if (add == null || remove == null) return;
+                var source = Enum.Parse(add.GetParameters()[0].ParameterType, "Settings");
+                if (on)
+                {
+                    add.Invoke(upsPlayer, new[] { source });
+                    if (quietWatch == null)
+                    {
+                        quietWatch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                        quietWatch.Tick += (s, e) =>
+                        {
+                            try
+                            {
+                                var paused = type.GetProperty("IsPaused");
+                                var loaded = type.GetProperty("IsLoaded");
+                                if (paused != null && loaded != null && (bool)loaded.GetValue(upsPlayer, null) && !(bool)paused.GetValue(upsPlayer, null))
+                                {
+                                    type.GetMethod("PauseImmediate").Invoke(upsPlayer, null);
+                                    Log("start-up: UniPlaySong started its music, paused it");
+                                }
+                            }
+                            catch (Exception ex) { quietWatch.Stop(); Log("start-up quiet: " + ex.Message); }
+                        };
+                    }
+                    quietWatch.Start();
+                    Log("start-up: music held (UniPlaySong pause source)");
+                }
+                else
+                {
+                    if (quietWatch != null) quietWatch.Stop();
+                    remove.Invoke(upsPlayer, new[] { source });
+                    Log("start-up: music released");
+                }
+            }
+            catch (Exception ex) { Log("start-up quiet: " + ex.Message); }
+        }
+
         public static void HoldMusicForLaunch(bool on)
         {
             if (musicHeldForLaunch == on) return;

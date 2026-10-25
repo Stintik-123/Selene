@@ -60,14 +60,14 @@ namespace Selene
                     Panel.SetZIndex(scene, -100);
                     shell.Children.Insert(0, scene);
                     HomeNav.Log("login: scene attached");
-                    if (!introPlayed) { startupQuiet = true; HomeNav.HoldMusicForLaunch(true); }   // no music at start-up but the chime: it starts with the home
+                    if (!introPlayed) { startupQuiet = true; HomeNav.HoldMusicForLaunch(true); HomeNav.QuietStartup(true); }   // no music at start-up but the chime: it starts with the home
                 }
                 login.IsVisibleChanged += (s, e) =>
                 {
                     if ((bool)e.NewValue) Open();
                     else
                     {
-                        if (startupQuiet) { startupQuiet = false; HomeNav.HoldMusicForLaunch(false); }   // (the layer gone some other way)
+                        if (startupQuiet) { startupQuiet = false; HomeNav.QuietStartup(false); HomeNav.HoldMusicForLaunch(false); }   // (the layer gone some other way)
                         if (current != null) { current.Hidden(); stage.Children.Clear(); current = null; }
                     }
                 };
@@ -304,7 +304,7 @@ namespace Selene
         // signed in (or carrying on without profiles): the layer fades away to the home
         public static void Finish()
         {
-            if (startupQuiet) { startupQuiet = false; HomeNav.HoldMusicForLaunch(false); }
+            if (startupQuiet) { startupQuiet = false; HomeNav.QuietStartup(false); HomeNav.HoldMusicForLaunch(false); }
             SeleneShell.HideLogin();
             if (!keepHome) return;
             // back to where the home was, once the layer has really gone: the home's watchers read KeepHome as the layer
