@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Choose your theme: moving through the themes changes only the preview; Selene takes the theme when you press A.
 - Dark wallpapers with bright detail (a dotted map, stars): the console gradient and the readable-text halo now notice the detail behind the words (it was averaged away), and the gradient is always at least a little there.
 - Profile preview: the row shows real games' covers around the sample game (fetched from Steam once), and the sample's cover shows its logo; Change theme from the menu has no step dots.
 - Choose your theme / background: the preview is a sample home drawn in the theme's colors (Expedition 33 picked, its logo, Play / Details, the tabs and hints over the art or your wallpaper), not a picture of the real home; it changes at once with the theme, the wallpaper and the look.

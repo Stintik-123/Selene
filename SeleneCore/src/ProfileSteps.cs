@@ -40,6 +40,7 @@ namespace Selene
             Theme = editing != null && !string.IsNullOrEmpty(editing.Theme) ? editing.Theme : ThemePalettes.DefaultId;
             Wallpaper = editing != null ? editing.Wallpaper : null;
             Look = editing != null && editing.HomeBackground == "wallpaper" ? "wallpaper" : "art";
+            previewTheme = null;
             steps = new Step[] { new NameStep(this), new AvatarStep(this), new ThemeStep(this), new BackgroundStep(this) };
             Root.Children.Add(body);
             for (int i = 0; i < steps.Length; i++)
@@ -312,26 +313,37 @@ namespace Selene
 
         // ---- the default preview: a sample home drawn in the current theme (not a picture of the real home, which with no games
         // was mostly empty cards). Clair Obscur: Expedition 33 is the sample game; its art, logo and cover come from Steam once. ----
+        // the theme the preview is drawn in: the one picked on the theme step (not applied until A), null = Selene's own now
+        private static string previewTheme, previewWallpaper;
+        private static Color PC(string key, double alpha = 1)
+        {
+            var v = previewTheme != null ? ThemePalettes.Peek(previewTheme, key) : Application.Current.TryFindResource(key);
+            var c = v is Color ? (Color)v : Colors.White;
+            c.A = (byte)Math.Round(c.A * alpha);
+            return c;
+        }
+        private static SolidColorBrush PB(string key, double alpha = 1) { return new SolidColorBrush(PC(key, alpha)); }
+
         private static FrameworkElement SampleHome()
         {
             var res = Application.Current.Resources;
             var root = new Grid { Width = 1920, Height = 1080, ClipToBounds = true };
             var baseFill = new Border();
-            baseFill.Background = res["SeleneBaseBrush"] as Brush ?? Ink.Brush("SeleneScrimColor");
+            baseFill.Background = (previewTheme != null ? ThemePalettes.Peek(previewTheme, "SeleneBaseBrush") : res["SeleneBaseBrush"]) as Brush ?? PB("SeleneScrimColor");
             root.Children.Add(baseFill);
-            var wall = res["SeleneWallpaper"] as ImageSource;
+            var wall = previewTheme != null ? Wallpapers.Decoded(previewWallpaper) : res["SeleneWallpaper"] as ImageSource;
             if (wall != null) root.Children.Add(new Image { Source = wall, Stretch = Stretch.UniformToFill });
             var artOff = res["SeleneArtOpacity"] is double && (double)res["SeleneArtOpacity"] < 0.05;
             var art = HomeNav.SamplePicture;
             if (art != null && !artOff) root.Children.Add(new Image { Source = art, Stretch = Stretch.UniformToFill });
             // the home's shading: from the left, the top and the bottom
-            var scrim = Ink.Of("SeleneScrimColor");
+            var scrim = PC("SeleneScrimColor");
             Func<double, Color> sa = a => { var c = scrim; c.A = (byte)(255 * a); return c; };
             root.Children.Add(new Border { Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(sa(0.8), 0), new GradientStop(sa(0.45), 0.5), new GradientStop(sa(0.1), 1) }, new Point(0, 0), new Point(1, 0)) });
             root.Children.Add(new Border { Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(sa(0.75), 0), new GradientStop(sa(0), 0.26) }, new Point(0, 0), new Point(0, 1)) });
             root.Children.Add(new Border { Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(sa(0), 0.55), new GradientStop(sa(0.8), 1) }, new Point(0, 0), new Point(0, 1)) });
 
-            Func<string, double, double, TextBlock> text = (t, size, alpha) => new TextBlock { Text = t, FontSize = size, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor", alpha), VerticalAlignment = VerticalAlignment.Center };
+            Func<string, double, double, TextBlock> text = (t, size, alpha) => new TextBlock { Text = t, FontSize = size, FontFamily = Ui.Display, Foreground = PB("SeleneInkColor", alpha), VerticalAlignment = VerticalAlignment.Center };
             // the top bar: the tabs (the first one picked) and the clock
             var tabs = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 34, 0, 0) };
             tabs.Children.Add(Badge("LB"));
@@ -339,8 +351,8 @@ namespace Selene
             for (int i = 0; i < names.Length; i++)
             {
                 var t = text(names[i], 21, i == 0 ? 1 : 0.75);
-                if (i == 0) { t.Foreground = Ink.Brush("SeleneOnFocusColor"); t.FontWeight = FontWeights.SemiBold; }
-                tabs.Children.Add(new Border { Child = t, Padding = new Thickness(20, 8, 20, 10), CornerRadius = new CornerRadius(22), Margin = new Thickness(4, 0, 4, 0), Background = i == 0 ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent });
+                if (i == 0) { t.Foreground = PB("SeleneOnFocusColor"); t.FontWeight = FontWeights.SemiBold; }
+                tabs.Children.Add(new Border { Child = t, Padding = new Thickness(20, 8, 20, 10), CornerRadius = new CornerRadius(22), Margin = new Thickness(4, 0, 4, 0), Background = i == 0 ? PB("SeleneFocusColor") : Brushes.Transparent });
             }
             tabs.Children.Add(Badge("RB"));
             root.Children.Add(tabs);
@@ -362,9 +374,9 @@ namespace Selene
             if (logo != null) info.Children.Add(new Image { Source = logo, MaxWidth = 620, MaxHeight = 230, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left });
             else info.Children.Add(text("Clair Obscur: Expedition 33", 64, 1));
             var pills = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 34, 0, 0) };
-            var play = text("Play", 24, 1); play.Foreground = Ink.Brush("SeleneOnFocusColor"); play.FontWeight = FontWeights.SemiBold;
-            pills.Children.Add(new Border { Child = play, Padding = new Thickness(54, 12, 54, 14), CornerRadius = new CornerRadius(30), Background = Ink.Brush("SeleneFocusColor"), Margin = new Thickness(0, 0, 16, 0) });
-            pills.Children.Add(new Border { Child = text("Details", 24, 1), Padding = new Thickness(44, 12, 44, 14), CornerRadius = new CornerRadius(30), Background = Ink.Brush("SeleneGlassColor", 0.72), BorderBrush = Ink.Brush("SeleneInkColor", 0.22), BorderThickness = new Thickness(1) });
+            var play = text("Play", 24, 1); play.Foreground = PB("SeleneOnFocusColor"); play.FontWeight = FontWeights.SemiBold;
+            pills.Children.Add(new Border { Child = play, Padding = new Thickness(54, 12, 54, 14), CornerRadius = new CornerRadius(30), Background = PB("SeleneFocusColor"), Margin = new Thickness(0, 0, 16, 0) });
+            pills.Children.Add(new Border { Child = text("Details", 24, 1), Padding = new Thickness(44, 12, 44, 14), CornerRadius = new CornerRadius(30), Background = PB("SeleneGlassColor", 0.72), BorderBrush = PB("SeleneInkColor", 0.22), BorderThickness = new Thickness(1) });
             info.Children.Add(pills);
             var line = text("Playtime 45 h   ·   Last played Today", 22, 0.85);
             line.Margin = new Thickness(4, 26, 0, 0);
@@ -387,11 +399,11 @@ namespace Selene
             {
                 Width = size, Height = size, CornerRadius = new CornerRadius(14), Margin = new Thickness(0, 0, 18, 0), VerticalAlignment = VerticalAlignment.Top,
                 // a tall cover in a square tile: its top (where the logo is), not its middle (the logo was cut off)
-                Background = cover != null ? (Brush)new ImageBrush(cover) { Stretch = Stretch.UniformToFill, AlignmentY = AlignmentY.Top } : Ink.Brush("SeleneGlassColor", 0.72),
-                BorderBrush = picked ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(picked ? 4 : 1)
+                Background = cover != null ? (Brush)new ImageBrush(cover) { Stretch = Stretch.UniformToFill, AlignmentY = AlignmentY.Top } : PB("SeleneGlassColor", 0.72),
+                BorderBrush = picked ? PB("SeleneFocusColor") : PB("SeleneInkColor", 0.12), BorderThickness = new Thickness(picked ? 4 : 1)
             };
-            if (picked) face.Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.9, Color = Ink.Of("SeleneFocusColor") };
-            if (icon != 0) face.Child = new TextBlock { Text = Ui.Icon(icon), FontFamily = Ui.Icons, FontSize = 64, Foreground = Ink.Brush("SeleneInkColor", 0.9), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            if (picked) face.Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.9, Color = PC("SeleneFocusColor") };
+            if (icon != 0) face.Child = new TextBlock { Text = Ui.Icon(icon), FontFamily = Ui.Icons, FontSize = 64, Foreground = PB("SeleneInkColor", 0.9), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             return face;
         }
 
@@ -399,8 +411,8 @@ namespace Selene
         {
             return new Border
             {
-                Width = 44, Height = 30, CornerRadius = new CornerRadius(9), Margin = new Thickness(10, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center, Background = Ink.Brush("SeleneInkColor"),
-                Child = new TextBlock { Text = label, FontSize = 14, FontWeight = FontWeights.Bold, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+                Width = 44, Height = 30, CornerRadius = new CornerRadius(9), Margin = new Thickness(10, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center, Background = PB("SeleneInkColor"),
+                Child = new TextBlock { Text = label, FontSize = 14, FontWeight = FontWeights.Bold, Foreground = PB("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
             };
         }
 
@@ -409,10 +421,10 @@ namespace Selene
             var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 34, 0) };
             sp.Children.Add(new Border
             {
-                Width = 40, Height = 40, CornerRadius = new CornerRadius(20), Background = Ink.Brush("SeleneInkColor"), Margin = new Thickness(0, 0, 12, 0),
-                Child = new TextBlock { Text = key, FontSize = 18, FontWeight = FontWeights.Bold, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+                Width = 40, Height = 40, CornerRadius = new CornerRadius(20), Background = PB("SeleneInkColor"), Margin = new Thickness(0, 0, 12, 0),
+                Child = new TextBlock { Text = key, FontSize = 18, FontWeight = FontWeights.Bold, Foreground = PB("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
             });
-            sp.Children.Add(new TextBlock { Text = label, FontSize = 24, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+            sp.Children.Add(new TextBlock { Text = label, FontSize = 24, FontFamily = Ui.Display, Foreground = PB("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
             return sp;
         }
 
@@ -804,12 +816,12 @@ namespace Selene
             private readonly List<Tile> tiles = new List<Tile>();
             private readonly TextBlock nameLabel;
             private readonly StackPanel colors = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 18, 0, 0) };
-            private readonly Later apply = new Later(250);   // after the 220 ms glide (a theme change repaints everything)
+            private readonly Later apply = new Later(120);   // moving quickly redraws the preview only for the one stopped on
             private int index;
 
             public ThemeStep(ProfileSteps owner) : base(owner)
             {
-                Header("Choose your theme", "Colors for all of Selene. Move through them to see each one live.");
+                Header("Choose your theme", "Colors for all of Selene. Move through them to see each one in the preview.");
                 themes = ThemePalettes.All();
                 var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 290, 0, 0) };
                 var grid = new UniformGrid { Columns = Columns, VerticalAlignment = VerticalAlignment.Top };
@@ -896,15 +908,21 @@ namespace Selene
                 }
             }
 
-            // the whole of Selene recolors, the home's wallpaper too (the theme's own, unless one was picked)
-            private static string shownTheme;
+            // only the preview shows the theme (and its wallpaper, unless one was picked); Selene itself changes on A
             private void Show(string id)
             {
-                if (string.Equals(id, shownTheme, StringComparison.OrdinalIgnoreCase)) { RefreshPreviewLater(); return; }
-                Ui.AfterHold(() => { shownTheme = id; ShowNow(id); });
+                var wallpaper = Owner.Wallpaper ?? ThemePalettes.DefaultWallpaper(id);
+                Wallpapers.Prepare(wallpaper, () =>
+                {
+                    if (!string.Equals(id, previewTheme, StringComparison.OrdinalIgnoreCase) || wallpaper != previewWallpaper) HomeNav.PreviewChanged();
+                    previewTheme = id;
+                    previewWallpaper = wallpaper;
+                    RefreshPreviewLater();
+                });
             }
 
-            private void ShowNow(string id)
+            // the whole of Selene recolors, the home's wallpaper too; after the slide to the next step
+            private void ApplyNow(string id)
             {
                 LoginScene.CrossfadeBackdrop(() =>
                 {
@@ -914,6 +932,8 @@ namespace Selene
                     LoginScene.RefreshBackdrop();
                     Profiles.ApplyHomeBackground(Owner.Look);
                 });
+                previewTheme = null;
+                HomeNav.PreviewChanged();
                 RefreshPreviewLater();
             }
 
@@ -928,7 +948,12 @@ namespace Selene
 
             public override bool Accept()
             {
-                if (themes.Count > 0) Owner.Theme = themes[index].Id;
+                if (themes.Count > 0)
+                {
+                    var id = themes[index].Id;
+                    Owner.Theme = id;
+                    Application.Current.Dispatcher.BeginInvoke(new Action(() => Ui.AfterHold(() => ApplyNow(id))), DispatcherPriority.Background);
+                }
                 return true;
             }
         }

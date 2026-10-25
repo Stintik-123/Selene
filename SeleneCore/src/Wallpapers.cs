@@ -61,6 +61,9 @@ namespace Selene
         // the last few wallpapers decoded, so browsing back to one is instant (a 4K picture took ~50-100 ms to decode)
         private static readonly List<KeyValuePair<string, System.Windows.Media.ImageSource>> recent = new List<KeyValuePair<string, System.Windows.Media.ImageSource>>();
 
+        // a wallpaper decoded already (Prepare first), else null
+        public static System.Windows.Media.ImageSource Decoded(string file) { return Cached(file); }
+
         private static System.Windows.Media.ImageSource Cached(string file)
         {
             if (string.IsNullOrEmpty(file)) return null;
