@@ -399,9 +399,24 @@ namespace Selene
             if (System.IO.File.Exists(file))
             {
                 video = new MediaElement { Source = new Uri(file), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Manual, IsMuted = true, Stretch = Stretch.UniformToFill, Opacity = 0 };
-                // fades in over the navy once its first frame is there (it was black until then)
+                // fades in once its first frame is there (it was black until then), over the drawn backdrop, which melts away under
+                // it: hiding the drawn one first left the plain navy up for a moment after the logo intro (a dark flicker)
                 var v = video;
-                video.MediaOpened += (s, e) => v.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(700)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+                video.MediaOpened += (s, e) =>
+                {
+                    var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                    v.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(700)) { EasingFunction = ease });
+                    var drawn = v.Tag as Grid;
+                    if (drawn == null || drawn.Visibility != Visibility.Visible) return;
+                    var melt = new DoubleAnimation(0, TimeSpan.FromMilliseconds(700)) { EasingFunction = ease };
+                    melt.Completed += (s2, e2) =>
+                    {
+                        if (v.Visibility == Visibility.Visible) drawn.Visibility = Visibility.Collapsed;
+                        drawn.BeginAnimation(UIElement.OpacityProperty, null);
+                        drawn.Opacity = 1;
+                    };
+                    drawn.BeginAnimation(UIElement.OpacityProperty, melt);
+                };
                 video.MediaEnded += (s, e) => { video.Position = TimeSpan.Zero; video.Play(); };
                 // plays only while it's on screen
                 video.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue && videoAllowed) video.Play(); else video.Pause(); };
@@ -409,6 +424,7 @@ namespace Selene
             }
             var glow = new Grid { IsHitTestVisible = false };
             outer.Children.Add(glow);
+            if (video != null) video.Tag = glow;   // the drawn backdrop the video fades in over
             backdrops.Add(new KeyValuePair<MediaElement, Grid>(video, glow));
             ShowBackdropKind();
             // a beam of light in the theme's accent falling from the top left, slowly breathing
@@ -485,7 +501,9 @@ namespace Selene
             {
                 bool useVideo = seleneTheme && pair.Key != null && videoAllowed;   // the drawn one until the intro is over
                 if (pair.Key != null) pair.Key.Visibility = useVideo ? Visibility.Visible : Visibility.Collapsed;
-                pair.Value.Visibility = useVideo ? Visibility.Collapsed : Visibility.Visible;
+                // switching to the video: the drawn backdrop stays until the video has faded in over it (MediaOpened)
+                bool videoUp = useVideo && pair.Key.Opacity > 0.99;
+                pair.Value.Visibility = useVideo && videoUp ? Visibility.Collapsed : Visibility.Visible;
             }
         }
 

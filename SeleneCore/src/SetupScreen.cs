@@ -67,7 +67,6 @@ namespace Selene
             buttons.Children.Add(carryOn.Root);
             col.Children.Add(buttons);
             Root.Children.Add(col);
-            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Select")));
             if (!firstRun) Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             UpdateInstallAll();
             // the first card that needs something, else Continue
