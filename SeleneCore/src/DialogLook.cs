@@ -22,7 +22,9 @@ namespace Selene
         private static void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
             var w = sender as Window;
-            if (w == null || w.GetType().Name != "MessageBoxWindow" || !Features.On("dialogs")) return;
+            if (w == null || !Features.On("dialogs")) return;
+            if (w.GetType().Name == "ProgressWindow") { try { DressProgress(w); } catch (Exception ex) { HomeNav.Log("progress look: " + ex.Message); } return; }
+            if (w.GetType().Name != "MessageBoxWindow") return;
             try { Dress(w); }
             catch (Exception ex) { HomeNav.Log("dialog look: " + ex.Message); }
         }
@@ -152,6 +154,22 @@ namespace Selene
             };
             w.PreviewKeyDown += (s, e) => { if (e.Key == System.Windows.Input.Key.Escape && Back(w)) e.Handled = true; };
             open = w;
+        }
+
+        // Playnite's progress window (downloading an add-on, updating the library): Selene's moving background behind the
+        // breathing logo instead of Playnite's plain gradient, fading in
+        private static void DressProgress(Window w)
+        {
+            var grid = w.FindName("GridMain") as Grid;
+            if (grid == null) return;
+            var backdrop = LoginScene.BackdropFor(w);
+            Grid.SetRowSpan(backdrop, Math.Max(1, grid.RowDefinitions.Count));
+            Grid.SetColumnSpan(backdrop, Math.Max(1, grid.ColumnDefinitions.Count));
+            backdrop.Margin = new Thickness(0);
+            grid.Children.Insert(0, backdrop);
+            backdrop.Opacity = 0;
+            backdrop.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(400)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            HomeNav.Log("progress look: Selene background");
         }
 
         // the dialog up now (one at a time), for B from the pad

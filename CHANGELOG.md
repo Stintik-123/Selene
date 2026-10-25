@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Playnite's progress screen (downloading an add-on, updating the library) has the same moving background as the setup check (switch: Look, Selene dialogs).
 - Start: the logo intro rises from the dark straight into the moving background (the plainer drawn one showed for half a second first).
 - Playnite's dialogs: B (or Escape) answers No / Cancel (it did nothing); they close with a short sink-and-fade, and the dim behind them fades in and out; the card is a touch see-through over a dimmed screen, like Selene's own dialogs.
 - Add-on installs: Playnite's "Restart now?" says how many add-ons are left, with Restart now / Keep installing, so you restart once at the end; add-ons you said yes to show "Restart to finish" in the setup check, and Install all skips them.

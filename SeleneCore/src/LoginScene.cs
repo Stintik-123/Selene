@@ -392,6 +392,21 @@ namespace Selene
             foreach (var pair in backdrops) if (pair.Key != null && pair.Key.IsVisible) pair.Key.Play();
         }
 
+        // the same moving background for a window of its own (Playnite's progress window); gone again with the window
+        public static Grid BackdropFor(Window w)
+        {
+            int pairs = backdrops.Count, dustCount = dusts.Count;
+            var g = BuildGlow();
+            var mine = backdrops.Skip(pairs).ToList();
+            var myDust = dusts.Skip(dustCount).ToList();
+            w.Closed += (s, e) =>
+            {
+                foreach (var p in mine) { backdrops.Remove(p); if (p.Key != null) { p.Key.Stop(); p.Key.Close(); } }
+                foreach (var d in myDust) { dusts.Remove(d); d.Stop(); }
+            };
+            return g;
+        }
+
         private static Grid BuildGlow()
         {
             var outer = new Grid { IsHitTestVisible = false };
