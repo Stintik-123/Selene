@@ -32,6 +32,7 @@ namespace Selene
         // the login screens cover the home (not a menu over it): nothing behind them should play (music, trailers)
         public static bool CoversHome { get { return IsActive && !current.Overlay; } }
         private static Screen current;
+        private static bool startupQuiet;   // from launch until the home first shows
         private static bool keysHooked, introPlayed;
         // what to show the next time the layer opens (set by the menu), instead of Who's playing?
         private static Func<Screen> pending;
@@ -59,12 +60,16 @@ namespace Selene
                     Panel.SetZIndex(scene, -100);
                     shell.Children.Insert(0, scene);
                     HomeNav.Log("login: scene attached");
-                    if (!introPlayed) HomeNav.HoldMusicForLaunch(true);   // the music waits for the intro (it started over the dark wait before it)
+                    if (!introPlayed) { startupQuiet = true; HomeNav.HoldMusicForLaunch(true); }   // no music at start-up but the chime: it starts with the home
                 }
                 login.IsVisibleChanged += (s, e) =>
                 {
                     if ((bool)e.NewValue) Open();
-                    else if (current != null) { current.Hidden(); stage.Children.Clear(); current = null; }
+                    else
+                    {
+                        if (startupQuiet) { startupQuiet = false; HomeNav.HoldMusicForLaunch(false); }   // (the layer gone some other way)
+                        if (current != null) { current.Hidden(); stage.Children.Clear(); current = null; }
+                    }
                 };
                 // developer switch: %TEMP%\selene-skip-login skips the login (to look at the home while building Selene)
                 if (System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-skip-login")))
@@ -245,9 +250,9 @@ namespace Selene
             FadeInBackdrop();
             var next = pending;
             pending = null;
-            if (next != null) { HomeNav.HoldMusicForLaunch(false); Show(next(), 0); }
-            else if (!introPlayed) { introPlayed = true; AllowBackdropVideo(); WhenCalm(scene, () => { bool intro = Features.On("intro"); if (!intro) HomeNav.HoldMusicForLaunch(false); Show(intro ? (Screen)new IntroScreen() : Start(), 0); /* with the intro, the music waits for its chime to finish */ }); }
-            else { HomeNav.HoldMusicForLaunch(false); Show(Start(), 0); }
+            if (next != null) { if (!startupQuiet) HomeNav.HoldMusicForLaunch(false); Show(next(), 0); }
+            else if (!introPlayed) { introPlayed = true; AllowBackdropVideo(); WhenCalm(scene, () => { Show(Features.On("intro") ? (Screen)new IntroScreen() : Start(), 0); }); }
+            else { if (!startupQuiet) HomeNav.HoldMusicForLaunch(false); Show(Start(), 0); }
         }
 
         // Who's playing? switched off: the last profile (or the only one) signs in by itself. False when it's still needed:
@@ -299,6 +304,7 @@ namespace Selene
         // signed in (or carrying on without profiles): the layer fades away to the home
         public static void Finish()
         {
+            if (startupQuiet) { startupQuiet = false; HomeNav.HoldMusicForLaunch(false); }
             SeleneShell.HideLogin();
             if (!keepHome) return;
             // back to where the home was, once the layer has really gone: the home's watchers read KeepHome as the layer
@@ -718,7 +724,6 @@ namespace Selene
         {
             if (done) return;
             done = true;
-            HomeNav.HoldMusicForLaunch(false);
             LoginScene.AllowBackdropVideo();
             if (timer != null) timer.Stop();
             // the logo fades out as it lifts, then the next screen
