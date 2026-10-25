@@ -59,6 +59,9 @@ namespace Selene
         private readonly DispatcherTimer heroLater = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
         private string heroShown;
 
+        // opened on one capture from a game's details page: over the page (no backdrop), the capture fading in over it
+        public override bool Overlay { get { return openPath != null; } }
+
         public CapturesScreen(string openPath = null)
         {
             this.openPath = openPath;

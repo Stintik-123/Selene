@@ -246,7 +246,7 @@ namespace Selene
             var next = pending;
             pending = null;
             if (next != null) { HomeNav.HoldMusicForLaunch(false); Show(next(), 0); }
-            else if (!introPlayed) { introPlayed = true; AllowBackdropVideo(); WhenCalm(scene, () => { HomeNav.HoldMusicForLaunch(false); Show(Features.On("intro") ? (Screen)new IntroScreen() : Start(), 0); }); }
+            else if (!introPlayed) { introPlayed = true; AllowBackdropVideo(); WhenCalm(scene, () => { bool intro = Features.On("intro"); if (!intro) HomeNav.HoldMusicForLaunch(false); Show(intro ? (Screen)new IntroScreen() : Start(), 0); /* with the intro, the music waits for its chime to finish */ }); }
             else { HomeNav.HoldMusicForLaunch(false); Show(Start(), 0); }
         }
 
@@ -718,6 +718,7 @@ namespace Selene
         {
             if (done) return;
             done = true;
+            HomeNav.HoldMusicForLaunch(false);
             LoginScene.AllowBackdropVideo();
             if (timer != null) timer.Stop();
             // the logo fades out as it lifts, then the next screen
