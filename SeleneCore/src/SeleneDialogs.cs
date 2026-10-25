@@ -12,7 +12,7 @@ namespace Selene
     // downloading logos, trailers...) runs behind Selene's notification card instead of Playnite's progress window. That
     // window was built and shown for every task and then hidden by Selene; building it froze everything moving for a moment
     // (the stutter just before each card). Everything else goes to Playnite's own dialogs unchanged; when the card can't be
-    // used (switched off, Playnite minimised, called off the UI thread) the task goes to Playnite too.
+    // used (switched off, Playnite minimised) the task goes to Playnite too.
     public class SeleneDialogs : IDialogsFactory
     {
         private readonly IDialogsFactory inner;
@@ -21,11 +21,26 @@ namespace Selene
         // the task's progress, read by the card the way it reads Playnite's window (a ProgressArgs property)
         public class ProgressHolder { public GlobalProgressActionArgs ProgressArgs { get; set; } }
 
+        // every add-on's own copy of the API (Playnite hands each its own: Extra Metadata's went straight to Playnite's window)
         public static void Install(IPlayniteAPI api)
+        {
+            int done = InstallOn(api) ? 1 : 0;
+            try
+            {
+                foreach (var plugin in api.Addons.Plugins)
+                    for (var t = plugin.GetType(); t != null; t = t.BaseType)
+                        foreach (var f in t.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly))
+                            if (typeof(IPlayniteAPI).IsAssignableFrom(f.FieldType) && InstallOn(f.GetValue(plugin) as IPlayniteAPI)) done++;
+            }
+            catch (Exception ex) { HomeNav.Log("dialogs: add-ons: " + ex.Message); }
+            HomeNav.Log("dialogs: progress tasks run behind Selene's card (" + done + " API copies)");
+        }
+
+        private static bool InstallOn(IPlayniteAPI api)
         {
             try
             {
-                if (api == null || api.Dialogs is SeleneDialogs) return;
+                if (api == null || api.Dialogs is SeleneDialogs) return false;
                 for (var t = api.GetType(); t != null; t = t.BaseType)
                 {
                     foreach (var f in t.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public))
@@ -34,31 +49,35 @@ namespace Selene
                         var current = f.GetValue(api) as IDialogsFactory;
                         if (current == null || current is SeleneDialogs) continue;
                         f.SetValue(api, new SeleneDialogs(current));
-                        HomeNav.Log("dialogs: progress tasks run behind Selene's card");
-                        return;
+                        return true;
                     }
                 }
-                HomeNav.Log("dialogs: Playnite's dialogs not found, progress tasks keep Playnite's window");
             }
             catch (Exception ex) { HomeNav.Log("dialogs: " + ex.Message); }
+            return false;
         }
 
         private static bool Mine()
         {
+            return Features.On("dialogs") && Features.On("progresstoast") && ProgressToast.Usable();
+        }
+
+        // asked from another thread (an add-on reacting to a library update): on the UI thread, as Playnite's own does it
+        private static GlobalProgressResult OnUi(Func<GlobalProgressResult> run)
+        {
             var app = Application.Current;
-            return app != null && app.Dispatcher.CheckAccess() && Features.On("dialogs") && Features.On("progresstoast") && ProgressToast.Usable();
+            if (app == null || app.Dispatcher.CheckAccess()) return run();
+            return app.Dispatcher.Invoke(run);
         }
 
         public GlobalProgressResult ActivateGlobalProgress(Action<GlobalProgressActionArgs> progresAction, GlobalProgressOptions progressOptions)
         {
-            if (!Mine()) return inner.ActivateGlobalProgress(progresAction, progressOptions);
-            return Run(args => Task.Run(() => progresAction(args)), progressOptions);
+            return OnUi(() => Mine() ? Run(args => Task.Run(() => progresAction(args)), progressOptions) : inner.ActivateGlobalProgress(progresAction, progressOptions));
         }
 
         public GlobalProgressResult ActivateGlobalProgress(Func<GlobalProgressActionArgs, Task> progresAction, GlobalProgressOptions progressOptions)
         {
-            if (!Mine()) return inner.ActivateGlobalProgress(progresAction, progressOptions);
-            return Run(args => Task.Run(() => progresAction(args)), progressOptions);
+            return OnUi(() => Mine() ? Run(args => Task.Run(() => progresAction(args)), progressOptions) : inner.ActivateGlobalProgress(progresAction, progressOptions));
         }
 
         // the task on a worker thread; meanwhile the UI keeps running (a nested message loop, as Playnite's own modal window

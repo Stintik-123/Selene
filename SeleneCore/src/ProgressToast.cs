@@ -143,6 +143,7 @@ namespace Selene
         }
 
         // false: leave it as Playnite's full screen (no main window to sit on yet, at start-up)
+        private static bool devStackOnce = true;   // the first of Playnite's own progress windows says who asked for it (log)
         public static bool Make(Window w)
         {
             var main = Application.Current.MainWindow;
@@ -188,6 +189,12 @@ namespace Selene
             Show(main, w.DataContext);
             if (timing.ElapsedMilliseconds > 60) HomeNav.Log("notification: made in " + before + " + " + (timing.ElapsedMilliseconds - before) + " ms (" + steps + ")");
             HomeNav.Log("progress look: notification card");
+            if (devStackOnce)
+            {
+                devStackOnce = false;
+                var frames = new System.Diagnostics.StackTrace().GetFrames() ?? new System.Diagnostics.StackFrame[0];
+                HomeNav.Log("progress window asked for by: " + string.Join(" < ", frames.Select(f => f.GetMethod()).Where(m => m != null && m.DeclaringType != null && !(m.DeclaringType.Namespace ?? "").StartsWith("System") && !(m.DeclaringType.Namespace ?? "").StartsWith("MS.")).Skip(12).Take(20).Select(m => m.DeclaringType.FullName + "." + m.Name)));
+            }
             return true;
         }
 
