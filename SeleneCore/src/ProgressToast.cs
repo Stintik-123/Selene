@@ -352,7 +352,12 @@ namespace Selene
             Show(main, vm);
             HomeNav.Log("progress look: notification card (Selene's own task)");
         }
-        public static void EndTask(object vm) { TaskDone(vm); }
+        public static void EndTask(object vm)
+        {
+            // (Playnite closing while the task ran: the app is going away, nothing to tidy up)
+            if (Application.Current == null || Application.Current.Dispatcher.HasShutdownStarted) return;
+            try { TaskDone(vm); } catch (Exception ex) { HomeNav.Log("notification end: " + ex.Message); }
+        }
 
         private static void TaskDone(object vm)
         {

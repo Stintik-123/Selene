@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -33,7 +34,54 @@ namespace Selene
                             if (typeof(IPlayniteAPI).IsAssignableFrom(f.FieldType) && InstallOn(f.GetValue(plugin) as IPlayniteAPI)) done++;
             }
             catch (Exception ex) { HomeNav.Log("dialogs: add-ons: " + ex.Message); }
-            HomeNav.Log("dialogs: progress tasks run behind Selene's card (" + done + " API copies)");
+            // and Playnite's own tasks (add-on updates, backups, imports from its menus): the app, its parts, the main view,
+            // and the handler its dialogs go through
+            int own = 0;
+            try
+            {
+                var appType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("Playnite.PlayniteApplication", false)).FirstOrDefault(t => t != null);
+                var appProp = appType != null ? appType.GetProperty("Current", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic) : null;
+                var app = appProp != null ? appProp.GetValue(null, null) : null;
+                if (app != null)
+                {
+                    own += ReplaceIn(app);
+                    foreach (var part in FieldsOf(app))
+                        if (part != null && (part.GetType().Namespace ?? "").StartsWith("Playnite")) own += ReplaceIn(part);
+                }
+                var main = Application.Current != null ? Application.Current.MainWindow : null;
+                if (main != null && main.DataContext != null) own += ReplaceIn(main.DataContext);
+                var handlerType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("Playnite.Dialogs", false)).FirstOrDefault(t => t != null);
+                var handler = handlerType != null ? handlerType.GetProperty("DialogsHandler", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public) : null;
+                var setHandler = handlerType != null ? handlerType.GetMethod("SetHandler", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public) : null;
+                var current = handler != null ? handler.GetValue(null, null) as IDialogsFactory : null;
+                if (current != null && !(current is SeleneDialogs) && setHandler != null) { setHandler.Invoke(null, new object[] { new SeleneDialogs(current) }); own++; }
+            }
+            catch (Exception ex) { HomeNav.Log("dialogs: Playnite's own: " + ex.Message); }
+            HomeNav.Log("dialogs: progress tasks run behind Selene's card (" + done + " API copies, " + own + " of Playnite's own)");
+        }
+
+        private static IEnumerable<object> FieldsOf(object target)
+        {
+            var list = new List<object>();
+            for (var t = target.GetType(); t != null; t = t.BaseType)
+                foreach (var f in t.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly))
+                    if (!f.FieldType.IsValueType) { try { list.Add(f.GetValue(target)); } catch { } }
+            return list;
+        }
+
+        // every dialogs field of this object wrapped (once); how many
+        private static int ReplaceIn(object target)
+        {
+            int n = 0;
+            for (var t = target.GetType(); t != null; t = t.BaseType)
+                foreach (var f in t.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    if (!typeof(IDialogsFactory).IsAssignableFrom(f.FieldType)) continue;
+                    var current = f.GetValue(target) as IDialogsFactory;
+                    if (current == null || current is SeleneDialogs) continue;
+                    try { f.SetValue(target, new SeleneDialogs(current)); n++; } catch { }
+                }
+            return n;
         }
 
         private static bool InstallOn(IPlayniteAPI api)
@@ -90,7 +138,7 @@ namespace Selene
             if (options != null) { args.Text = options.Text; args.IsIndeterminate = options.IsIndeterminate; }
             var holder = new ProgressHolder { ProgressArgs = args };
             Exception error = null;
-            ProgressToast.ShowTask(holder);
+            try { ProgressToast.ShowTask(holder); } catch (Exception ex) { HomeNav.Log("notification: " + ex.Message); }
             var frame = new DispatcherFrame();
             Task task = null;
             try { task = start(args); }
