@@ -67,6 +67,7 @@ namespace Selene
             // the same theme again does nothing (re-adding its colors redrew every screen: a flicker)
             if (string.Equals(id, current, StringComparison.OrdinalIgnoreCase)) return;
             current = id;
+            HomeNav.PreviewChanged();
             var merged = Application.Current.Resources.MergedDictionaries;
             if (string.Equals(id, DefaultId, StringComparison.OrdinalIgnoreCase))
             {

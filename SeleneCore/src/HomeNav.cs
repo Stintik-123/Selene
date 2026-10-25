@@ -1015,9 +1015,15 @@ namespace Selene
         // Playnite's selected game, so no song starts). False when the library has no game with art to borrow.
         private static Image previewArt;
 
+        // something the profile steps' preview shows changed (it is pictured again only then)
+        public static int PreviewVersion { get; private set; }
+        public static void PreviewChanged() { PreviewVersion++; }
+
         public static bool ShowArtForPreview(bool on)
         {
+            if (on && previewLayer != null && previewLayer.Parent != null) return lastHasArt;   // already there: nothing to redo
             previewWanted = on;
+            PreviewChanged();
             var w = Application.Current.MainWindow;
             var art = w != null ? FindByName(w, "SeleneHubArt") as Panel : null;
             if (previewLayer != null)
@@ -1050,14 +1056,15 @@ namespace Selene
             // always the example game (the same picture for everyone, whatever the library holds); the row's own game only
             // tells the note below whether the library has art of its own
             SampleArtForPreview(art);
-            return pic != null;
+            lastHasArt = pic != null;
+            return lastHasArt;
         }
 
         private static void PutPreviewArt(Panel art, ImageSource pic, bool sample)
         {
             var img = new Image { Source = pic, Stretch = Stretch.UniformToFill };
             RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
-            var layer = new Grid { Opacity = 0, IsHitTestVisible = false };
+            var layer = new Grid { Opacity = 1, IsHitTestVisible = false };
             layer.Children.Add(img);
             if (sample)
                 layer.Children.Add(new Border
@@ -1069,7 +1076,7 @@ namespace Selene
             previewArt = new Image();   // a marker for removal: the layer is what's shown
             art.Children.Add(layer);
             previewLayer = layer;
-            layer.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(250)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            PreviewChanged();
         }
 
         // no game in the library yet: an example game's art (Steam's library art for it, fetched once and kept in Selene's media
@@ -1105,7 +1112,7 @@ namespace Selene
             });
             return true;   // it comes in a moment
         }
-        private static bool previewWanted;
+        private static bool previewWanted, lastHasArt;
 
         // Collection's hidden game list stays tied to Playnite's selected game, and picked its first game (First Light) again
         // whenever Spotlight set "no game" for a card: Spotlight then loaded that art (the flash). While Spotlight shows,
@@ -3812,6 +3819,16 @@ namespace Selene
             catch { }
         }
 
+        // Collection with no games at all: its filter tabs have nothing to filter and hide (Spotlight keeps them; so does a
+        // Collection tab that's only empty because of its filter)
+        private static int libraryGames = -1;
+        public static void UpdateFilterTabs()
+        {
+            var mw = Application.Current.MainWindow;
+            var tabs = mw != null ? FindByName(mw, "SeleneFilterTabs") as UIElement : null;
+            if (tabs != null) tabs.Visibility = SeleneShell.CollectionActive && libraryGames == 0 ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         // the numbers on the Library and Store cards
         private static void UpdateCardStats()
         {
@@ -3825,10 +3842,8 @@ namespace Selene
                 if (la.HasValue && la.Value > DateTime.Now.AddDays(-30)) recent++;
             }
             var res = Application.Current.Resources;
-            // no games at all: the filter tabs have nothing to filter (an empty tab with games elsewhere keeps them)
-            var mwTabs = Application.Current.MainWindow;
-            var tabs = mwTabs != null ? FindByName(mwTabs, "SeleneFilterTabs") as UIElement : null;
-            if (tabs != null) tabs.Visibility = all == 0 ? Visibility.Collapsed : Visibility.Visible;
+            libraryGames = all;
+            UpdateFilterTabs();
             res["SeleneStatGames"] = all.ToString();
             res["SeleneStatInstalled"] = installed.ToString();
             res["SeleneStatRecent"] = recent.ToString();

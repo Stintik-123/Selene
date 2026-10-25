@@ -50,6 +50,7 @@ namespace Selene
             var res = System.Windows.Application.Current.Resources;
             if (shown != null && string.Equals(shown, file ?? "", StringComparison.OrdinalIgnoreCase)) return;
             shown = file ?? "";
+            HomeNav.PreviewChanged();
             res["SeleneWallpaperPath"] = file;
             var pic = Cached(file) ?? Load(file);
             Remember(file, pic);

@@ -348,10 +348,25 @@ namespace Selene
         }
 
         // ---- a game just closed: its cover, its logo (or name) and how long it was played, like a console's "you played" card ----
-        public static void ShowSession(Playnite.SDK.Models.Game game, ulong seconds)
+        public static void ShowSession(Playnite.SDK.Models.Game game, ulong seconds) { ShowSession(game, seconds, false); }
+
+        private static void ShowSession(Playnite.SDK.Models.Game game, ulong seconds, bool fetched)
         {
             var main = Application.Current.MainWindow;
             if (main == null || game == null) return;
+            // a Steam game without its logo or cover here: Steam's are fetched first (kept for next time), then the card shows
+            var appId = SteamAppId(game);
+            if (!fetched && appId != null && (!System.IO.File.Exists(SteamFile(appId, "logo.png")) || !System.IO.File.Exists(SteamFile(appId, "library_600x900.jpg"))))
+            {
+                var ui = main.Dispatcher;
+                System.Threading.Tasks.Task.Factory.StartNew(() =>
+                {
+                    Fetch(appId, "logo.png");
+                    Fetch(appId, "library_600x900.jpg");
+                    ui.BeginInvoke(new Action(() => ShowSession(game, seconds, true)));
+                });
+                return;
+            }
             // a progress card up now: this one waits its turn
             if (source != null) { Later(1500, () => ShowSession(game, seconds)); return; }
             if (layer == null) Build();
@@ -363,6 +378,7 @@ namespace Selene
             {
                 var file = !string.IsNullOrEmpty(game.CoverImage) ? api.Database.GetFullFilePath(game.CoverImage) : !string.IsNullOrEmpty(game.Icon) ? api.Database.GetFullFilePath(game.Icon) : null;
                 if (file != null && System.IO.File.Exists(file)) cover = Wallpapers.Load(file, 160);
+                if (cover == null && appId != null && System.IO.File.Exists(SteamFile(appId, "library_600x900.jpg"))) cover = Wallpapers.Load(SteamFile(appId, "library_600x900.jpg"), 160);
             }
             catch { }
             icon.Child = null;
@@ -373,8 +389,9 @@ namespace Selene
             try
             {
                 var logo = System.IO.Path.Combine(api.Paths.ConfigurationPath, "ExtraMetadata", "games", game.Id.ToString(), "logo.png");
+                if (!System.IO.File.Exists(logo) && appId != null) logo = SteamFile(appId, "logo.png");
                 var pic = System.IO.File.Exists(logo) ? Wallpapers.Load(logo, 400) : null;
-                if (pic != null) title = new Image { Source = pic, MaxHeight = 30, MaxWidth = 300, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left };
+                if (pic != null) title = new Image { Source = pic, MaxHeight = 44, MaxWidth = 240, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left };
             }
             catch { }
             if (title == null) title = new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 19, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 110 };
@@ -395,6 +412,31 @@ namespace Selene
             leaveTimer.Tick += (s, e) => { leaveTimer.Stop(); Leave(); };
             leaveTimer.Start();
             HomeNav.Log("session card: " + game.Name + ", " + seconds + " s");
+        }
+
+        // the game's Steam app id: a Steam game's own, or the stand-in's (Expedition 33); null for anything else
+        private const string SteamPlugin = "cb91dfc9-b977-43bf-8e70-55f46e410fab";
+        private static string SteamAppId(Playnite.SDK.Models.Game game)
+        {
+            if (game.PluginId.ToString().Equals(SteamPlugin, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(game.GameId)) return game.GameId;
+            if (game.Id == Guid.Empty || game.Name == "Clair Obscur: Expedition 33") return game.PluginId == Guid.Empty ? (game.GameId ?? "1903340") : null;
+            return null;
+        }
+
+        private static string SteamFile(string appId, string name) { return System.IO.Path.Combine(SelenePaths.Media("Steam"), appId + "-" + name); }
+
+        private static void Fetch(string appId, string name)
+        {
+            var file = SteamFile(appId, name);
+            if (System.IO.File.Exists(file)) return;
+            try
+            {
+                try { System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12; } catch { }
+                using (var web = new System.Net.WebClient()) web.DownloadFile("https://cdn.akamai.steamstatic.com/steam/apps/" + appId + "/" + name, file + ".part");
+                if (System.IO.File.Exists(file)) System.IO.File.Delete(file);
+                System.IO.File.Move(file + ".part", file);
+            }
+            catch (Exception ex) { HomeNav.Log("session card: no " + name + " for " + appId + " (" + ex.Message + ")"); try { System.IO.File.Delete(file + ".part"); } catch { } }
         }
 
         private static string Duration(ulong seconds)
@@ -424,7 +466,7 @@ namespace Selene
                 var api = HomeNav.Api;
                 Playnite.SDK.Models.Game game = null;
                 try { game = api != null ? api.Database.Games.OrderByDescending(g => g.Playtime).FirstOrDefault() : null; } catch { }
-                if (game == null) game = new Playnite.SDK.Models.Game("Clair Obscur: Expedition 33") { Playtime = 45 * 3600 + 20 * 60 };
+                if (game == null) game = new Playnite.SDK.Models.Game("Clair Obscur: Expedition 33") { Playtime = 45 * 3600 + 20 * 60, GameId = "1903340" };
                 HomeNav.Log("dev: session card preview");
                 ShowSession(game, 5040);   // 1 h 24 min
             });

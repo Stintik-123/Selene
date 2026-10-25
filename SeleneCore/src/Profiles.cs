@@ -288,6 +288,7 @@ namespace Selene
         // anything but "wallpaper" (including the old "blend") is the game's art: theme\Constants.xaml's value
         public static void ApplyHomeBackground(string look)
         {
+            HomeNav.PreviewChanged();
             var res = Application.Current.Resources;
             HomeNav.FadeArt(look == "wallpaper" ? 0 : 1);   // a smooth change instead of a jump
             res.Remove("SeleneArtOpacity");

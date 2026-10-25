@@ -4,7 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Session card: back from a game, a card with its cover and logo says how long you played this time and in total (switch: Games, Session card).
+- Profile steps keep up when you go back and forth quickly (the preview was pictured again on every step change, and the sample art faded in and out under the screen; both only happen now when something changed).
+- Readable text: dark text gets no halo.
+- Session card: back from a game, a card with its cover and logo says how long you played this time and in total; Steam games without a logo here get Steam's (fetched once, kept) (switch: Games, Session card).
 - Progress notifications are drawn inside Playnite's window: no black box flashing as the card appears, and no stutter while it shows (as a window of its own over the full-screen one, it slowed every frame).
 - Screens in the menu and profile steps slide smoothly: each new screen is set up before its slide starts, and the sliding pages are no longer drawn as one big picture (their own little animations redrew it every frame).
 - Profile steps: no lag opening Change theme or going back and forth between the theme and background steps (every avatar picture loaded as the screen opened, the background grid was rebuilt and reloaded on each return, the theme re-applied, and quick moves stacked slides).
@@ -16,7 +18,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Choose your theme: the preview shows the home (it stayed empty; the background step had taken the only preview).
 - Progress notifications stay with Playnite: after Alt+Tab to another program the card goes behind it with Playnite (it stayed on top of everything).
 - Readable text: the soft halo around the letters is drawn behind the words as a picture, so the text itself stays sharp (as an effect on the letters it made them look blurry).
-- No games at all: the filter tabs are hidden on Spotlight and in Collection.
+- No games at all: Collection hides its filter tabs (Spotlight keeps them).
 - Progress notifications: no flicker before the card (Playnite's own dim layer is held off while it shows).
 - Profile steps: the slide to the next page is smooth (the next page is built first, then both slide as one picture each), and the theme / background preview is never empty (opened from the menu in Collection, the home wasn't there to be pictured).
 - Readable text everywhere on the home and in Collection: each piece of text is measured against the picture right behind it; where it reads fine nothing is added, where the picture is bright it gets a soft dark halo hugging its letters (no box, no hard edges) and grey text comes up toward white (switch: Look, Readable text).

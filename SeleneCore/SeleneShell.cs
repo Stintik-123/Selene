@@ -200,6 +200,7 @@ namespace Selene
             int mine = ++switchCount;
             CollectionActive = true;
             RememberScreen("collection");
+            HomeNav.UpdateFilterTabs();
             library.BeginAnimation(UIElement.OpacityProperty, null);
             library.Visibility = Visibility.Visible;   // under Spotlight, loading its art meanwhile
             HomeNav.SetMusic("home");   // Collection like Spotlight: the default track, a game's song with its trailer
@@ -274,6 +275,7 @@ namespace Selene
             int mine = ++switchCount;
             CollectionActive = false;
             RememberScreen("spotlight");
+            HomeNav.UpdateFilterTabs();
             if (instant)
             {
                 if (library != null) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Visibility = Visibility.Collapsed; }

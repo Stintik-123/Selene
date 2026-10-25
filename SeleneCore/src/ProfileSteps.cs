@@ -251,7 +251,7 @@ namespace Selene
         // frame (its dust never stops moving) and the steps crawled.
         // every preview box (the theme step and the background step have one each: a single shared one left the theme step's
         // box empty, since the steps are all built up front and the last one took it)
-        private sealed class PreviewBox { public Image Back, Front; public double Width; }
+        private sealed class PreviewBox { public Image Back, Front; public double Width; public int Version = -1; }
         private static readonly List<PreviewBox> previews = new List<PreviewBox>();
 
         internal static FrameworkElement Preview(double width)
@@ -304,6 +304,10 @@ namespace Selene
                 previews.RemoveAll(b => b.Front == null || PresentationSource.FromVisual(b.Front) == null && !b.Front.IsLoaded && b.Front.Parent == null);
                 var shown = previews.Where(b => b.Front.IsLoaded && b.Front.IsVisible).ToList();
                 if (shown.Count == 0) return false;
+                // a picture of this very state already: nothing to take (each one cost a frame or more, and quick moves between the
+                // steps stacked them into the next slide)
+                shown = shown.Where(b => b.Version != HomeNav.PreviewVersion || b.Front.Source == null).ToList();
+                if (shown.Count == 0) return true;
                 var main = Application.Current.MainWindow;
                 var viewHost = main != null ? HomeNav.FindByName(main, "PART_ViewHost") : null;
                 if (viewHost == null || viewHost.ActualWidth < 1) { HomeNav.Log("preview: no view host yet"); return false; }
@@ -334,6 +338,7 @@ namespace Selene
                     // the old picture stays under the new one as it fades in: a soft change, not a cut
                     if (box.Front.Source != null) { box.Back.Source = box.Front.Source; box.Back.Opacity = 1; }
                     box.Front.Source = rtb;
+                    box.Version = HomeNav.PreviewVersion;
                     box.Front.BeginAnimation(UIElement.OpacityProperty, null);
                     box.Front.Opacity = 0;
                     Ui.Fade(box.Front, 1, 260);
@@ -976,7 +981,7 @@ namespace Selene
                 Profiles.ApplyHomeBackground(Owner.Look);
             }
 
-            public override void Left() { HomeNav.ShowArtForPreview(false); }
+            public override void Left() { }   // the sample art stays until the profile screen closes
 
             private void ShowNote()
             {

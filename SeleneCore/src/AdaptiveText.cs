@@ -83,6 +83,8 @@ namespace Selene
             try
             {
                 if (t.Effect is DropShadowEffect) t.Effect = null;   // (the earlier halo made the text itself soft)
+                var fg = t.Foreground as SolidColorBrush;
+                if (fg != null && (0.2126 * fg.Color.R + 0.7152 * fg.Color.G + 0.0722 * fg.Color.B) / 255.0 < 0.5) { Plain(t); return; }   // dark text: no dark halo
                 if (!Features.On("textshadow")) { Plain(t); return; }
                 double bright = BrightnessBehind(t, PictureBehind(t)) * (1 - ShadingBehind(t));   // as it shows, under the home's shading
                 // 0 = reads fine .. 1 = bright behind it
