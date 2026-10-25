@@ -228,7 +228,7 @@ namespace Selene
             var next = pending;
             pending = null;
             if (next != null) Show(next(), 0);
-            else if (!introPlayed) { introPlayed = true; if (!Features.On("intro")) AllowBackdropVideo(); Show(Features.On("intro") ? (Screen)new IntroScreen() : Start(), 0); }
+            else if (!introPlayed) { introPlayed = true; AllowBackdropVideo(); Show(Features.On("intro") ? (Screen)new IntroScreen() : Start(), 0); }
             else Show(Start(), 0);
         }
 
@@ -380,7 +380,8 @@ namespace Selene
         // beam, haze, drifting dust). Either only on themes without a wallpaper (RefreshBackdrop / RefreshHomeGlow).
         private static readonly List<KeyValuePair<MediaElement, Grid>> backdrops = new List<KeyValuePair<MediaElement, Grid>>();
 
-        // the background video starts once the logo intro is over (decoding it during the intro made the logo stutter)
+        // the background video starts with the logo intro, so the intro and the screens after it share one background (the
+        // logo draws on its own thread, IntroLogo, so decoding the video no longer makes it stutter)
         private static bool videoAllowed;
 
         public static void AllowBackdropVideo()
@@ -499,7 +500,7 @@ namespace Selene
             bool seleneTheme = string.IsNullOrEmpty(id) || id == ThemePalettes.DefaultId;
             foreach (var pair in backdrops)
             {
-                bool useVideo = seleneTheme && pair.Key != null && videoAllowed;   // the drawn one until the intro is over
+                bool useVideo = seleneTheme && pair.Key != null && videoAllowed;   // the drawn one until the login layer is up
                 if (pair.Key != null) pair.Key.Visibility = useVideo ? Visibility.Visible : Visibility.Collapsed;
                 // switching to the video: the drawn backdrop stays until the video has faded in over it (MediaOpened)
                 bool videoUp = useVideo && pair.Key.Opacity > 0.99;
