@@ -37,9 +37,10 @@ namespace Selene
         // opened from the menu: B goes back to it (on this item); held Start from the home: B goes back to the home
         private readonly bool fromMenu;
 
-        public SettingsScreen(bool fromMenu = false)
+        public SettingsScreen(bool fromMenu = false, string startGroup = null)
         {
             this.fromMenu = fromMenu;
+            group = Math.Max(0, Array.IndexOf(Features.Groups, startGroup ?? ""));
             var layout = new Grid { Margin = new Thickness(120, 110, 120, 110) };
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(400) });
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -74,8 +75,8 @@ namespace Selene
             groupTitle = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(8, 14, 0, 16) };
             right.Children.Add(groupTitle);
             // the rows scroll (a long group ran off the screen, and the focus went on into rows you couldn't see)
-            scroller = new ScrollViewer { Content = optionList, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, MaxHeight = 780, Focusable = false, CanContentScroll = false };
-            right.Children.Add(scroller);
+            scroller = new ScrollViewer { Content = optionList, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, MaxHeight = 715, Focusable = false, CanContentScroll = false };
+            right.Children.Add(PeekScroller.Wrap(scroller, optionList));   // the rows past the edge peek in, blurred, fading into the dark
             Grid.SetColumn(right, 1);
             layout.Children.Add(right);
 
@@ -179,8 +180,10 @@ namespace Selene
                     var row = rows[index];
                     var top = row.TranslatePoint(new Point(0, 0), optionList).Y;
                     double want = scroller.VerticalOffset;
-                    if (top < scroller.VerticalOffset) want = top;
-                    else if (top + row.ActualHeight > scroller.VerticalOffset + scroller.ViewportHeight) want = top + row.ActualHeight - scroller.ViewportHeight;
+                    // the focused row clear of the peek bands (it sat half faded at the edge)
+                    double pad = PeekScroller.Band;
+                    if (top - pad * 0.6 < scroller.VerticalOffset) want = Math.Max(0, top - pad * 0.6);
+                    else if (top + row.ActualHeight > scroller.VerticalOffset + scroller.ViewportHeight - pad) want = top + row.ActualHeight - (scroller.ViewportHeight - pad);
                     if (Math.Abs(want - scroller.VerticalOffset) > 0.5) scroller.ScrollToVerticalOffset(want);
                 }
                 catch { }
@@ -234,7 +237,7 @@ namespace Selene
             {
                 if (b != "A") { MoveRow(b); return; }
                 Ui.Confirm();
-                if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false), 1);
+                if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false, () => new SettingsScreen(true, "Games")), 1);
                 else if (opt.Key == "reset")
                 {
                     ask = new Dialog("\uE5D5", "Reset Selene settings?", "Every switch and choice goes back to how Selene ships. Your profiles, theme and wallpaper stay.",

@@ -47,6 +47,7 @@ namespace Selene
             try
             {
                 double minutes = Features.Number("idle");
+                if (System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-idle"))) minutes = 10 / 60.0;   // developer switch: after 10 s
                 if (Showing || minutes <= 0 || (DateTime.Now - lastTouch).TotalMinutes < minutes) return;
                 if (LoginScene.IsActive || HomeNav.Launching || HomeNav.GameRunning() || ProgressToast.Busy) return;
                 var main = Application.Current.MainWindow;

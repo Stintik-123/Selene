@@ -135,6 +135,18 @@ namespace Selene
 
             status = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(98, 640, 0, 0) };
             Root.Children.Add(status);
+            // nothing to show yet (first open, or the currency just changed): a loading card in the middle, not a bare dark page
+            var ring = new System.Windows.Shapes.Ellipse { Width = 54, Height = 54, StrokeThickness = 4, Stroke = Ink.Brush("GlyphColor"), StrokeDashArray = new DoubleCollection { 22, 14 }, StrokeDashCap = PenLineCap.Round, RenderTransformOrigin = new Point(0.5, 0.5), HorizontalAlignment = HorizontalAlignment.Center };
+            var spin = new RotateTransform();
+            ring.RenderTransform = spin;
+            spin.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1.6)) { RepeatBehavior = RepeatBehavior.Forever });
+            var loadingWords = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            loadingWords.Children.Add(ring);
+            loadingWords.Children.Add(new TextBlock { Text = "Loading the store…", FontSize = 26, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 0) });
+            loadingWords.Children.Add(new TextBlock { Text = "Fetching prices and deals.", FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) });
+            loading = new Grid { Visibility = Visibility.Collapsed, IsHitTestVisible = false };
+            loading.Children.Add(loadingWords);
+            Root.Children.Add(loading);
 
             var leftHints = Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Store apps"), Ui.Prompt("X", "Currency"));
             var rightHints = Ui.Prompts(true, Ui.Prompt("A", "Details"));
@@ -447,10 +459,14 @@ namespace Selene
             });
         }
 
+        private Grid loading;   // the centred loading card while nothing has arrived
+
         private void ShowStatus()
         {
             bool any = rows.Count > 0;
-            if (!any) status.Text = StoreData.LoadedAt == DateTime.MinValue ? "Loading the store…" : "Nothing here right now.";
+            bool fetching = StoreData.LoadedAt == DateTime.MinValue;
+            if (!any) status.Text = fetching ? "" : "Nothing here right now.";
+            if (loading != null) loading.Visibility = !any && fetching ? Visibility.Visible : Visibility.Collapsed;
             else if (StoreData.FromDisk)
             {
                 var ago = DateTime.Now - StoreData.LoadedAt;

@@ -215,8 +215,8 @@ namespace Selene
             var right = new StackPanel { Margin = new Thickness(24, 0, 0, 0) };
             groupTitle = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(8, 14, 0, 16) };
             right.Children.Add(groupTitle);
-            var scroller = new ScrollViewer { Content = optionList, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, MaxHeight = 780, Focusable = false };
-            right.Children.Add(scroller);
+            var scroller = new ScrollViewer { Content = optionList, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, MaxHeight = 715, Focusable = false };
+            right.Children.Add(PeekScroller.Wrap(scroller, optionList));   // the rows past the edge peek in, blurred, fading into the dark
             Grid.SetColumn(right, 1);
             layout.Children.Add(right);
             Root.Children.Add(layout);
@@ -341,8 +341,10 @@ namespace Selene
                     var row = rows[index];
                     var top = row.TranslatePoint(new Point(0, 0), optionList).Y;
                     double want = scroller.VerticalOffset;
-                    if (top < scroller.VerticalOffset) want = top;
-                    else if (top + row.ActualHeight > scroller.VerticalOffset + scroller.ViewportHeight) want = top + row.ActualHeight - scroller.ViewportHeight;
+                    // the focused row clear of the peek bands (it sat half faded at the edge)
+                    double pad = PeekScroller.Band;
+                    if (top - pad * 0.6 < scroller.VerticalOffset) want = Math.Max(0, top - pad * 0.6);
+                    else if (top + row.ActualHeight > scroller.VerticalOffset + scroller.ViewportHeight - pad) want = top + row.ActualHeight - (scroller.ViewportHeight - pad);
                     if (Math.Abs(want - scroller.VerticalOffset) > 0.5) scroller.ScrollToVerticalOffset(want);
                 }
                 catch { }
