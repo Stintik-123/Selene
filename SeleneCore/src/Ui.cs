@@ -312,7 +312,7 @@ namespace Selene
                 if (!started.TryGetValue(e.Operation, out t0)) return;
                 started.Remove(e.Operation);
                 double took = sw.Elapsed.TotalMilliseconds - t0;
-                if (took < 40) return;
+                if (took < 14) return;   // (dev log only)
                 string name = "?";
                 try
                 {
