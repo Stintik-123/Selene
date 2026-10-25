@@ -23,7 +23,12 @@ namespace Selene
         {
             var w = sender as Window;
             if (w == null || !Features.On("dialogs")) return;
-            if (w.GetType().Name == "ProgressWindow") { try { DressProgress(w); } catch (Exception ex) { HomeNav.Log("progress look: " + ex.Message); } return; }
+            if (w.GetType().Name == "ProgressWindow")
+            {
+                try { if (!(Features.On("progresstoast") && ProgressToast.Make(w))) DressProgress(w); }
+                catch (Exception ex) { HomeNav.Log("progress look: " + ex.Message); }
+                return;
+            }
             if (w.GetType().Name != "MessageBoxWindow") return;
             try { Dress(w); }
             catch (Exception ex) { HomeNav.Log("dialog look: " + ex.Message); }

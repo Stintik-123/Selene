@@ -249,6 +249,7 @@ namespace Selene
                 host.Children.Add(pill);
                 notice = pill;
                 Rise(pill, 0, 12, 260);
+                NotifySound();
                 var gone = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
                 gone.Tick += (s2, e2) =>
                 {
@@ -293,7 +294,12 @@ namespace Selene
         public static void Back() { Play("CloseAdditionalView.wav", 0.8); }
         public static void Chime() { Play("Success.wav", 0.85); }   // something finished: a profile made, a setup step done
         public static void Boot() { Play("Boot.wav", 0.9); }
-        public static void Alert() { Play("Alert.wav", 0.85); }   // asking before something can't be undone
+        public static void Alert() { Play("Alert.wav", 0.85); }
+        // a notification shows (Selene's notices, a progress card): theme\Audio\Notification.wav, else the panel sound
+        public static void NotifySound()
+        {
+            if (System.IO.File.Exists(SelenePaths.ThemeAudio("Notification.wav"))) Play("Notification.wav", 0.8); else Play("OpenPanel.wav", 0.55);
+        }   // asking before something can't be undone
 
         // decodes pictures one after another off the UI thread and hands each over on it (avatar and wallpaper grids)
         public static void LoadInOrder(IList<string> files, int width, Action<int, ImageSource> loaded)

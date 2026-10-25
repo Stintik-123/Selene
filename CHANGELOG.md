@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Progress as a notification: add-ons downloading logos, trailers and the like show a small Selene card at the top right (the task's words and a filling bar) instead of covering the whole screen, and you keep browsing meanwhile (switch: Look, Progress as a notification).
+- Notifications have a sound (theme\Audio\Notification.wav when there is one, else the panel sound).
 - Start-up library update waits until you are signed in: add-ons answer it with progress screens of their own (downloading logos, trailers...), which came up in the middle of the login and profile setup.
 - Progress screen: a slim bar in the theme's color that fills as the work goes, under the words (it showed a second, smaller Selene mark).
 - Choose your background / theme: smooth moves through the grid (each move decoded a full-size wallpaper on the screen's thread mid-glide; it is decoded in the background now, the last few kept, and the change lands once the glide is done).
