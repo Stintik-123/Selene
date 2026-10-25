@@ -290,6 +290,12 @@ namespace Selene
                 HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
                 Width = CardWidth + ShadowRoom + Edge, Margin = new Thickness(0, 112 - ShadowRoom, 0, 0)
             };
+            // on whole pixels, with text drawn for the screen (as wide as its words, the card's edges fell between pixels and its
+            // text went soft)
+            layer.UseLayoutRounding = true;
+            layer.SnapsToDevicePixels = true;
+            TextOptions.SetTextFormattingMode(layer, TextFormattingMode.Display);
+            TextOptions.SetTextHintingMode(layer, TextHintingMode.Fixed);
             layer.Children.Add(card);
             poll = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
             poll.Tick += (s, e) =>
@@ -532,6 +538,10 @@ namespace Selene
             if (layer == null) Build();
             Place(main);
             Shape(false);
+            // as wide as its words (the task cards' fixed width left a gap on the right of a short note)
+            card.Width = double.NaN;
+            card.Padding = new Thickness(16, 0, 28, 0);
+            layer.Width = double.NaN;
             icon.Background = Ink.Brush("GlyphColor", 0.18);
             icon.Child = new TextBlock { Text = Ui.Icon(glyph), FontFamily = Ui.Icons, FontSize = 28, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             icon.Visibility = Visibility.Visible;

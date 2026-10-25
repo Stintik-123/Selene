@@ -7,7 +7,7 @@ using System.Windows.Threading;
 namespace Selene
 {
     // Once a day, a moment after start: is there a newer Selene on GitHub than the one installed? If so, a notification says
-    // so and how to get it (Playnite installs add-on and theme updates itself). Each version is told about once. Nothing is
+    // so and where to get it (GitHub: Playnite's add-on updates don't list Selene yet). Each version is told about once. Nothing is
     // downloaded or installed here. Switch: "updatecheck". Developer switch: %TEMP%\selene-dev-update pretends 9.9.9 is out.
     public static class UpdateCheck
     {
@@ -67,7 +67,7 @@ namespace Selene
             if (newest == null) return;
             HomeNav.Log("update check: newest " + newest + ", this is " + Brand.Version);
             if (!IsNewer(newest) || (!pretend && newest == told)) return;
-            ProgressToast.ShowNote("Selene " + newest + " is available", "Desktop mode  ›  Add-ons  ›  Updates", 0xE923 /* update */);
+            ProgressToast.ShowNote("Selene " + newest + " is available", "Get it at github.com/mattxslv/Selene", 0xE923 /* update */);
         }
 
         private static bool IsNewer(string newest)
