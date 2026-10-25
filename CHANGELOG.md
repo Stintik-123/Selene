@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+## 1.1.0 - 2026-10-25
+
 - Start-up: the background music waits for the intro to show (it started over the dark moment before it). Avatar step: moving along a row of GIF avatars no longer vibrates.
 - Setup check warns when Aniki Helper is still on: it belongs to the Aniki ReMake theme and, with Selene, adds start-up work, plays its own alert sounds and fights over the music.
 - Avatars: your own GIF keeps moving (it went through the framing step and became one still).
