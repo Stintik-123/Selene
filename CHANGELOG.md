@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Start-up: the backdrop fades in on a big library too (its fade thread came late on a busy start and the cover was dropped at once, so the wallpaper snapped in).
 - Selene settings reworked: eight groups (Start-up, Spotlight, Collection, Notifications, Sound & music, Look, Games, Advanced), shorter descriptions, and new settings: Start-up sound, Idle screen after (Spotlight dims and drifts through your games' art), Notification sound, Clip volume, Spotlight background (Game art / Wallpaper only), Loading screen on/off, After a game (Spotlight on that game / where you were), Ask before power actions, Surprise me without repeats, Store currency (change it again), and Reset Selene settings. Gone: the Copy log switch (Y in settings always copies it), the Selene logo switch; Trailer sound is a plain switch.
 - Clip player: after holding Left / Right, the spot waits 5 s with "Y Jump here" before the clip goes there (Y at once, B leaves it, a tap moves it 10 s, holding again glides on).
 - Settings (Selene's and Playnite's): a choice opens a list over its value (A, Up / Down, A to pick, B to leave it as it was) instead of Left / Right going round the values; numbers (text size, rows, columns, volumes) are sliders: a line with a knob, Left / Right move it.
