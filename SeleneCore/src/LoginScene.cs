@@ -385,19 +385,22 @@ namespace Selene
             if (el == null) { act(); return; }
             Action whenSized = () =>
             {
-                int frames = 0, calm = 0;
+                // calm = 700 ms without a long frame (the start-up work comes in waves: eight even frames came between two of
+                // them and the fade stuttered); 3.5 s at most
+                int frames = 0;
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                double last = 0;
+                double last = 0, calmSince = 0;
                 EventHandler tick = null;
                 tick = (s, e) =>
                 {
                     double t = sw.Elapsed.TotalMilliseconds;
                     double gap = t - last; last = t;
                     frames++;
-                    calm = frames > 1 && gap < 24 ? calm + 1 : 0;
-                    if (frames < 2 || (calm < 8 && t < 2500)) return;
+                    if (frames > 1 && gap > 30) calmSince = t;
+                    bool calm = t - calmSince >= 700;
+                    if (frames < 2 || (!calm && t < 3500)) return;
                     CompositionTarget.Rendering -= tick;
-                    HomeNav.Log("intro: frames calm after " + (int)t + " ms" + (calm < 8 ? " (gave up waiting)" : ""));
+                    HomeNav.Log("intro: frames calm after " + (int)t + " ms" + (calm ? "" : " (gave up waiting)"));
                     act();
                 };
                 CompositionTarget.Rendering += tick;
