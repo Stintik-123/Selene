@@ -39,7 +39,7 @@
                                     <RowDefinition Height="104" />
                                     <RowDefinition Height="0" />
                                 </Grid.RowDefinitions>
-                                <Border x:Name="SeleneLibraryBase" Grid.RowSpan="5" Background="{DynamicResource MainBackgourndBrush}" Panel.ZIndex="-3"/>
+                                <Border x:Name="SeleneLibraryBase" Grid.RowSpan="5" Background="{DynamicResource SeleneBaseBrush}" Panel.ZIndex="-3"/>
                                 <Image Panel.ZIndex="-3" x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
                                 <!-- (AnimationEnabled: the art crossfades from game to game instead of cutting; the small wait lets a held stick settle) -->
                                 <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" Panel.ZIndex="-3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="150" AnimationEnabled="True" Stretch="UniformToFill"/>
@@ -400,7 +400,7 @@
                                 <!-- selected game's art: Selene's hero art (media folder) over Playnite's background -->
                                 <Grid x:Name="SeleneHubGameBackground" IsHitTestVisible="False">
                                     <!-- fallback for when no game is selected (empty library): the theme's gradient and the profile's wallpaper -->
-                                    <Border Background="{DynamicResource MainBackgourndBrush}"/>
+                                    <Border Background="{DynamicResource SeleneBaseBrush}"/>
                                     <Image Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant"/>
                                     <!-- the game's art; the wallpaper shows where there is none (or always, for a profile that wants that) -->
                                     <Grid x:Name="SeleneHubArt" Opacity="{DynamicResource SeleneArtOpacity}">

@@ -2132,7 +2132,7 @@ namespace Selene
             var res = Application.Current.Resources;
             var pic = res["SeleneWallpaper"] as ImageSource;
             introCover = new ThreadedFade(
-                Application.Current.TryFindResource("MainBackgourndBrush") as Brush,
+                Application.Current.TryFindResource("SeleneBaseBrush") as Brush,
                 pic != null ? new ImageBrush(pic) { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top } : null,   // as the home's Image places it (centered, it sat off and the wallpaper jumped)
                 Ink.Brush("SeleneScrimColor", 0.45));
             Panel.SetZIndex(introCover, 1000);

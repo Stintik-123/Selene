@@ -863,7 +863,7 @@ namespace Selene
                     {
                         // the theme's own: its default wallpaper (or Selene's gradient) with a label
                         var g = new Grid();
-                        if (defaultFile == "") { var b = new Border { CornerRadius = new CornerRadius(12) }; b.SetResourceReference(Border.BackgroundProperty, "MainBackgourndBrush"); g.Children.Add(b); }
+                        if (defaultFile == "") { var b = new Border { CornerRadius = new CornerRadius(12) }; b.SetResourceReference(Border.BackgroundProperty, "SeleneBaseBrush"); g.Children.Add(b); }
                         g.Children.Add(new Border
                         {
                             VerticalAlignment = VerticalAlignment.Bottom, CornerRadius = new CornerRadius(0, 0, 12, 12), Background = new SolidColorBrush(Color.FromArgb(0x99, 0, 0, 0)), Padding = new Thickness(10, 5, 10, 6),

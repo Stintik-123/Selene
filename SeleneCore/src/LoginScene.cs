@@ -350,7 +350,7 @@ namespace Selene
             backdropHost = new Grid { Opacity = 0 };   // faded in by FadeInBackdrop
             g.Children.Add(backdropHost);
             var gradient = new Border();
-            gradient.SetResourceReference(Border.BackgroundProperty, "MainBackgourndBrush");
+            gradient.SetResourceReference(Border.BackgroundProperty, "SeleneBaseBrush");
             backdropHost.Children.Add(gradient);
             backdrop.Add(gradient);
             var wallpaper = new Image { Stretch = Stretch.UniformToFill };

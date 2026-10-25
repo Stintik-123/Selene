@@ -24,7 +24,7 @@ namespace Selene
         [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int cmd);
         [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
 
-        private const double CardWidth = 440, Edge = 28, ShadowRoom = 24, Drift = 26;
+        private const double CardWidth = 500, CardHeight = 96, Edge = 28, ShadowRoom = 24, Drift = 26;   // one size for every card
         private const int MinShownMs = 2600, AfterDoneMs = 1100, InMs = 260, OutMs = 220;
         private static Window hiddenProgress;   // Playnite's own window, kept out of sight
         private static DateTime busyUntil = DateTime.MinValue;
@@ -192,7 +192,7 @@ namespace Selene
             slideIn = new TranslateTransform();
             card = new Border
             {
-                Width = CardWidth, CornerRadius = new CornerRadius(10), Padding = new Thickness(14, 14, 20, 14), MinHeight = 76,
+                Width = CardWidth, CornerRadius = new CornerRadius(10), Padding = new Thickness(16, 0, 22, 0), Height = CardHeight,
                 Background = Ink.Brush("SeleneGlassColor", 0.9), BorderBrush = Ink.Brush("SeleneInkColor", 0.07), BorderThickness = new Thickness(1),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
                 Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,

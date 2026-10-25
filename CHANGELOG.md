@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Progress notifications: one size for every card (a little wider, two lines of room), and no dark frame before the card (the progress window has no background of its own any more).
 - Progress notifications: the screen behind no longer darkens (Playnite dims its main window while any of its windows is open, and its hidden progress window counted) and no dark frame flashes before the card; Playnite's own sounds stay on meanwhile.
 - Empty-tab message: keeps following the row after the login or a menu has been over the home (it stayed put and ended up on the cards).
 - Collection with no games: a B Back hint, and B (Escape / Backspace on a keyboard) goes back to Spotlight; Y no longer opens Playnite's search keyboard, and A / X do nothing there.

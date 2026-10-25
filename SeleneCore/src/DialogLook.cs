@@ -189,11 +189,16 @@ namespace Selene
         {
             var grid = w.FindName("GridMain") as Grid;
             if (grid == null) return;
+            var baseFill = new Border();
+            baseFill.SetResourceReference(Border.BackgroundProperty, "SeleneBaseBrush");
+            Grid.SetRowSpan(baseFill, Math.Max(1, grid.RowDefinitions.Count));
+            Grid.SetColumnSpan(baseFill, Math.Max(1, grid.ColumnDefinitions.Count));
+            grid.Children.Insert(0, baseFill);
             var backdrop = LoginScene.BackdropFor(w);
             Grid.SetRowSpan(backdrop, Math.Max(1, grid.RowDefinitions.Count));
             Grid.SetColumnSpan(backdrop, Math.Max(1, grid.ColumnDefinitions.Count));
             backdrop.Margin = new Thickness(0);
-            grid.Children.Insert(0, backdrop);
+            grid.Children.Insert(1, backdrop);
             backdrop.Opacity = 0;
             backdrop.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(400)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
             HomeNav.Log("progress look: Selene background");
