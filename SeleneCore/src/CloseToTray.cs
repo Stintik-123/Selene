@@ -99,6 +99,7 @@ namespace Selene
         {
             if (msg == 0x0112 /* WM_SYSCOMMAND */ && ((int)wParam & 0xFFF0) == 0xF060 /* SC_CLOSE */ && !reallyQuit && !AppShuttingDown())
             {
+                HomeNav.Log("tray: close command (Alt " + ((GetAsyncKeyState(0x12) & 0x8000) != 0) + ", F4 " + ((GetAsyncKeyState(0x73) & 0x8000) != 0) + ")");
                 // Alt+F4 quits for real: the close goes on to Playnite as usual (Exit in the menu, the X, the taskbar still hide)
                 if (AltF4Held())
                 {
@@ -232,6 +233,19 @@ namespace Selene
             SetOwnAudioMute(false);
             if (Features.On("startrefresh")) HomeNav.RefreshLibrary("shown");
             if (tray != null) tray.Visible = false;
+        }
+
+        // Alt+F4 pressed on Playnite's main window: quit for real (caught as a key as well as the close command it becomes,
+        // since the close command didn't always arrive)
+        public static void AltF4()
+        {
+            if (reallyQuit) return;
+            HomeNav.Log("tray: Alt+F4 key -> quit");
+            reallyQuit = true;
+            if (tray != null) tray.Visible = false;
+            // the main window's own close, as Alt+F4 does without Selene: Playnite shuts down its usual way
+            var main = Application.Current.MainWindow;
+            if (main != null) main.Close(); else Application.Current.Shutdown();
         }
 
         private static void QuitForReal()

@@ -71,6 +71,13 @@ namespace Selene
         {
             try
             {
+                // Alt+F4 on the main window quits Playnite for real, whatever screen is up (a dialog's Alt+F4 closes the dialog)
+                if (e.Key == Key.System && e.SystemKey == Key.F4 && ReferenceEquals(sender, Application.Current.MainWindow))
+                {
+                    e.Handled = true;
+                    CloseToTray.AltF4();
+                    return;
+                }
                 // the login layer (menu, profiles...) is up: its keys are its own (this class handler runs before the
                 // layer's, and moved the home row behind the menu)
                 if (LoginScene.IsActive) return;
