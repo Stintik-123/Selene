@@ -202,6 +202,7 @@ namespace Selene
                 ShowSwitch(index, true);
                 if (opt.Key == "trailersound") HomeNav.ApplyValueSettings();
                 if (opt.Key == "shade") Contrast.Apply();
+                if (opt.Key == "prompts") Ui.RefreshPrompts();   // the hints show the new button names
                 HomeNav.Log("settings: " + opt.Key + " = " + Features.Value(opt.Key));
                 return;
             }

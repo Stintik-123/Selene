@@ -53,6 +53,7 @@ namespace Selene
             else if (focused != null && focused.Name.StartsWith("SeleneShotTile")) { key = "shot"; hints = new[] { "A", "View" }; }
             else if (focused != null && (focused.Name == "SelenePlayBtn" || focused.Name == "SeleneDetailsBtn" || focused.Name == "SeleneFavBtn")) { key = "pill"; hints = new[] { "A", "Select" }; }
             else { key = "other"; hints = new string[0]; }
+            if (Ui.PlayStationPrompts) key += "|ps";   // the button names changed (Xbox / PlayStation): built again
             if (key == shown) return;
             shown = key;
             bar.Children.Clear();

@@ -96,7 +96,7 @@ namespace Selene
                 foreach (var b in new[] { "A", "B", "X", "Y", "LB", "RB", "LT", "RT" }) res["SelenePrompt" + b] = PromptLabel(b);
             }
             catch { }
-            if (changed) HomeNav.Log("prompts: " + (ps ? "PlayStation" : "Xbox"));
+            if (changed) { HomeNav.Log("prompts: " + (ps ? "PlayStation" : "Xbox")); try { HomeHints.Update(); } catch { } }
         }
 
         public static string PromptLabel(string button)

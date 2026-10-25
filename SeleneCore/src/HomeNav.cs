@@ -1693,6 +1693,9 @@ namespace Selene
         // the library trailer's own sound is on: the music add-on pauses for it
         private static bool libraryTrailerSound;
         public static void TrailerSound(bool on) { libraryTrailerSound = on; ApplyVideoPause(); }
+        // a clip playing in Captures: the music waits (it played on under the clip's own sound)
+        public static void ClipPlaying(bool on) { clipPlaying = on; ApplyVideoPause(); }
+        private static bool clipPlaying;
 
         private static string FullTrailerPath(object game)
         {
@@ -1815,7 +1818,7 @@ namespace Selene
 
         private static void ApplyVideoPause()
         {
-            bool want = (previewShowing && previewSound) || musicHeldForLaunch || libraryTrailerSound;
+            bool want = (previewShowing && previewSound) || musicHeldForLaunch || libraryTrailerSound || clipPlaying;
             if (videoPause == want) return;
             videoPause = want;
             SetUpsVideoPlaying(want);

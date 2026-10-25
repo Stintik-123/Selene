@@ -16,9 +16,12 @@ namespace Selene
         private bool ready, stopped, playing;
         private double lastAt = -1;
 
-        public static ClipAudio For(string clip)
+        private double volume = 0.9;
+        public double Volume { get { return volume; } set { volume = value; if (player != null) player.Volume = value; } }
+
+        public static ClipAudio For(string clip, double volume)
         {
-            var a = new ClipAudio();
+            var a = new ClipAudio { volume = volume };
             var ui = Application.Current.Dispatcher;
             System.Threading.Tasks.Task.Factory.StartNew(() =>
             {
@@ -29,7 +32,7 @@ namespace Selene
                 ui.BeginInvoke(new Action(() =>
                 {
                     if (a.stopped) return;
-                    a.player = new MediaPlayer { Volume = 0.9 };
+                    a.player = new MediaPlayer { Volume = a.volume };
                     a.player.MediaOpened += (s, e) => { a.ready = true; HomeNav.Log("clip sound: ready"); };
                     a.player.MediaFailed += (s, e) => HomeNav.Log("clip sound: player failed (" + e.ErrorException.Message + ")");
                     a.player.Open(new Uri(wav));
