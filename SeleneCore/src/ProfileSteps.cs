@@ -41,6 +41,7 @@ namespace Selene
             Wallpaper = editing != null ? editing.Wallpaper : null;
             Look = editing != null && editing.HomeBackground == "wallpaper" ? "wallpaper" : "art";
             previewTheme = null;
+            previewLook = null;
             steps = new Step[] { new NameStep(this), new AvatarStep(this), new ThemeStep(this), new BackgroundStep(this) };
             Root.Children.Add(body);
             for (int i = 0; i < steps.Length; i++)
@@ -315,6 +316,7 @@ namespace Selene
         // was mostly empty cards). Clair Obscur: Expedition 33 is the sample game; its art, logo and cover come from Steam once. ----
         // the theme the preview is drawn in: the one picked on the theme step (not applied until A), null = Selene's own now
         private static string previewTheme, previewWallpaper;
+        private static string previewLook;   // the background step's Game art / Background only: the preview only, never the home
         private static Color PC(string key, double alpha = 1)
         {
             var v = previewTheme != null ? ThemePalettes.Peek(previewTheme, key) : Application.Current.TryFindResource(key);
@@ -333,7 +335,7 @@ namespace Selene
             root.Children.Add(baseFill);
             var wall = previewTheme != null ? Wallpapers.Decoded(previewWallpaper) : res["SeleneWallpaper"] as ImageSource;
             if (wall != null) root.Children.Add(new Image { Source = wall, Stretch = Stretch.UniformToFill });
-            var artOff = res["SeleneArtOpacity"] is double && (double)res["SeleneArtOpacity"] < 0.05;
+            var artOff = previewLook != null ? previewLook == "wallpaper" : res["SeleneArtOpacity"] is double && (double)res["SeleneArtOpacity"] < 0.05;
             var art = HomeNav.SamplePicture;
             if (art != null && !artOff) root.Children.Add(new Image { Source = art, Stretch = Stretch.UniformToFill });
             // the home's shading: from the left, the top and the bottom
@@ -930,7 +932,6 @@ namespace Selene
                     var wallpaper = Owner.Wallpaper ?? ThemePalettes.DefaultWallpaper(id);
                     Wallpapers.Show(wallpaper);
                     LoginScene.RefreshBackdrop();
-                    Profiles.ApplyHomeBackground(Owner.Look);
                 });
                 previewTheme = null;
                 HomeNav.PreviewChanged();
@@ -966,7 +967,7 @@ namespace Selene
             private readonly List<Tile> tiles = new List<Tile>();
             private readonly ScrollingGrid grid;
             private readonly TextBlock groupLabel;
-            private readonly Segmented look = new Segmented("Home background", new[] { "Game art", "Background only" }, "X");
+            private readonly Segmented look = new Segmented("Preview", new[] { "Game art", "Background only" }, "X");
             private readonly TextBlock lookNote = new TextBlock { FontSize = 15, FontFamily = Ui.Body, TextWrapping = TextWrapping.Wrap, MaxWidth = 820, Margin = new Thickness(4, 12, 0, 0) };
             private readonly List<string> groups = new List<string>();
             private readonly Later apply = new Later(260);   // after the 220 ms glide: applied mid-glide, the swap made it stutter
@@ -1049,7 +1050,7 @@ namespace Selene
                 hasArt = false;   // (the preview draws its own sample home; nothing is put on the real one)
                 Fill();
                 RefreshPreviewLater();
-                look.Select(Owner.Look == "wallpaper" ? 1 : 0, false);
+                look.Select(previewLook == "wallpaper" ? 1 : 0, false);
                 ShowNote();
                 ShowFocus(false);
             }
@@ -1067,19 +1068,19 @@ namespace Selene
                 if (live) apply.Run(show); else show();
             }
 
+            // X: the preview with or without the game's art, to see the background both ways (the home itself isn't changed)
             private void ShowLook(bool changed)
             {
-                look.Select(Owner.Look == "wallpaper" ? 1 : 0, changed);
-                if (changed) RefreshPreviewLater();
+                look.Select(previewLook == "wallpaper" ? 1 : 0, changed);
+                if (changed) { HomeNav.PreviewChanged(); RefreshPreviewLater(); }
                 ShowNote();
-                Profiles.ApplyHomeBackground(Owner.Look);
             }
 
             public override void Left() { }   // the sample art stays until the profile screen closes
 
             private void ShowNote()
             {
-                lookNote.Text = Owner.Look == "wallpaper" ? "The home always shows this background."
+                lookNote.Text = previewLook == "wallpaper" ? "The home always shows this background."
                               : "The home shows each game's art (an example game in the preview); this background is behind the login, the menus and an empty home.";
             }
 
@@ -1095,8 +1096,7 @@ namespace Selene
             public override void Extra(string button)
             {
                 if (button != "X") return;
-                var looks = Profiles.HomeBackgrounds;
-                Owner.Look = looks[(Array.IndexOf(looks, Owner.Look) + 1) % looks.Length];
+                previewLook = previewLook == "wallpaper" ? "art" : "wallpaper";
                 Ui.Key();
                 ShowLook(true);
             }

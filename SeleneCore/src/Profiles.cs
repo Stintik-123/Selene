@@ -279,7 +279,9 @@ namespace Selene
             var wallpaper = p != null && !string.IsNullOrEmpty(p.Wallpaper) ? p.Wallpaper : ThemePalettes.DefaultWallpaper(theme);
             Wallpapers.Show(wallpaper);
             LoginScene.RefreshBackdrop();
-            ApplyHomeBackground(p != null ? p.HomeBackground : null);
+            // the home always shows the games' art (the background step's Game art / Background only switch is only a look in
+            // its preview; a profile saved with "wallpaper" while it still changed the home shows art again)
+            ApplyHomeBackground("art");
             TopProfile.Refresh();
         }
 
