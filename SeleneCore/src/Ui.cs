@@ -558,18 +558,21 @@ namespace Selene
         private readonly Action onYes, onNo;
         private bool onYesButton, done;
         private readonly FrameworkElement panel;
+        private readonly bool warning;
 
-        public Dialog(string icon, string title, string text, string yesLabel, string noLabel, Action onYes, Action onNo)
+        // warning: a red badge and a red Yes (Remove...); otherwise the theme's accent (Install all, Restart)
+        public Dialog(string icon, string title, string text, string yesLabel, string noLabel, Action onYes, Action onNo, bool warning = true)
         {
             this.onYes = onYes;
             this.onNo = onNo;
+            this.warning = warning;
             Root = new Grid { Background = Ink.Brush("SeleneScrimColor", 0.62) };
             var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
             var badge = new Grid { Width = 84, Height = 84, HorizontalAlignment = HorizontalAlignment.Center };
-            badge.Children.Add(new Ellipse { Fill = new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0x6B, 0x6B)) });
+            badge.Children.Add(new Ellipse { Fill = warning ? (Brush)new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0x6B, 0x6B)) : Ink.Brush("GlyphColor", 0.19) });
             // icon glyphs sit a little low in their box: nudged to the circle's middle
             var glyph = new TextBlock { Text = icon, FontFamily = Ui.Glyphs, FontSize = 36, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 5) };
-            glyph.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
+            if (warning) glyph.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush"); else glyph.Foreground = Ink.Brush("GlyphColor");
             badge.Children.Add(glyph);
             col.Children.Add(badge);
             col.Children.Add(new TextBlock { Text = title, FontSize = 34, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 0) });
@@ -608,8 +611,11 @@ namespace Selene
             no.Focus(!onYesButton);
             yes.Focus(onYesButton);
             // the destructive answer turns red when chosen
-            if (onYesButton) { yes.Root.SetResourceReference(Border.BackgroundProperty, "WarningBrush"); yes.Root.SetResourceReference(Border.BorderBrushProperty, "WarningBrush"); }
+            if (onYesButton && warning) { yes.Root.SetResourceReference(Border.BackgroundProperty, "WarningBrush"); yes.Root.SetResourceReference(Border.BorderBrushProperty, "WarningBrush"); }
         }
+
+        // starts on Yes (for a question whose Yes is the usual answer)
+        public Dialog StartOnYes() { onYesButton = true; ShowFocus(); return this; }
 
         public void Handle(string b)
         {

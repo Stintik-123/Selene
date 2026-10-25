@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Setup check, Install all: one question for every add-on instead of Playnite's question (and restart question) per add-on. Selene downloads them all, each card showing DOWNLOADING... then RESTART TO FINISH while the button counts along, and asks once to restart; Playnite installs them all on that restart.
 - Setup check: Down from the bottom row of cards always reaches the buttons, even pressed quickly several times (only a Down right after arriving on that row waits a moment, so a held stick doesn't skip it); it lands on the nearer button.
 - Dialog buttons: the words sit in the middle of the pill (they sat a little low).
 - Playnite's progress screen (downloading an add-on, updating the library) has the same moving background as the setup check (switch: Look, Selene dialogs).

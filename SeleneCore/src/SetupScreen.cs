@@ -16,6 +16,8 @@ namespace Selene
     public class SetupScreen : Screen
     {
         private DateTime bottomArrivedAt = DateTime.MinValue;   // the last move onto the bottom row of cards
+        private Dialog ask;            // Install all's question, then the restart question
+        private bool batchRunning;     // Install all is downloading
         private const int Columns = 6;
         private readonly bool firstRun;
         // where each card sits: its row and its x from the centre (rows are centred, so a short last row sits in the middle)
@@ -252,6 +254,7 @@ namespace Selene
 
         public override void Handle(string b)
         {
+            if (ask != null) { ask.Handle(b); return; }   // a question is up: the press is its own
             if (b == "B")
             {
                 if (firstRun) { Ui.Shake(Root.Children[0]); return; }
@@ -317,11 +320,13 @@ namespace Selene
             if (index == ButtonsStart)
             {
                 var missing = Missing();
-                if (missing.Count == 0) { Ui.Shake(installAll.Root); return; }
+                if (missing.Count == 0 || batchRunning) { Ui.Shake(installAll.Root); return; }
                 Ui.Confirm();
-                installQueue.Clear();
-                foreach (var a in missing) installQueue.Enqueue(a.Id);
-                InstallNext();
+                // one question for all of them (Playnite's own link asked once per add-on, with a restart question each time)
+                ask = new Dialog("\uE896", "Install " + missing.Count + (missing.Count == 1 ? " add-on?" : " add-ons?"),
+                    string.Join(" \u00B7 ", missing.Select(m => m.Name)) + "\n\nSelene downloads them now. Playnite installs them all on its next restart.",
+                    "Install all", "Not now", () => { ask = null; StartBatch(missing); }, () => ask = null, false).StartOnYes();
+                ask.Open(Root);
                 return;
             }
             var item = items[index];
@@ -380,6 +385,77 @@ namespace Selene
             SetStatus(statuses[openingAt], items[openingAt]);
             openingAt = -1;
             ShowFocus();
+        }
+
+        // Install all: every package downloaded and queued for Playnite's next start. The button counts along and breathes, each
+        // card says DOWNLOADING... in turn and RESTART TO FINISH once it's queued, then one question: restart now?
+        private void StartBatch(List<AddonInfo> addons)
+        {
+            batchRunning = true;
+            installAll.Text = "Downloading\u2026";
+            Breathe(installAll.Root, true);
+            int busyCard = -1;
+            AddonBatch.Run(addons,
+                (i, count, id) =>
+                {
+                    installAll.Text = "Downloading " + (i + 1) + " of " + count + "\u2026";
+                    busyCard = items.FindIndex(it => it.Key == "addon:" + id);
+                    if (busyCard >= 0)
+                    {
+                        statuses[busyCard].Text = "DOWNLOADING\u2026";
+                        statuses[busyCard].Foreground = Ink.Brush("SeleneInkColor", 0.85);
+                        Breathe(statuses[busyCard].Parent as UIElement ?? statuses[busyCard], true);
+                    }
+                    var name = addons[i].Name;
+                    info.Show("\uE896", Tone.Accent, "Installing add-ons", (i + 1) + " of " + count, "Downloading " + name + "\u2026", "Playnite installs them all on its next restart.");
+                },
+                (id, ok) =>
+                {
+                    int at = items.FindIndex(it => it.Key == "addon:" + id);
+                    if (at < 0) return;
+                    Breathe(statuses[at].Parent as UIElement ?? statuses[at], false);
+                    if (ok)
+                    {
+                        SetupCheck.Accept(id);
+                        var was = items[at];
+                        items[at] = new SetupItem { Key = was.Key, Title = was.Title, About = was.About, State = SetupState.Optional, Detail = SetupCheck.PendingRestart };
+                        SetStatus(statuses[at], items[at]);
+                        Ui.Pop(statuses[at]);
+                        Ui.Tick();
+                    }
+                    else
+                    {
+                        statuses[at].Text = "COULDN'T DOWNLOAD";
+                        statuses[at].SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
+                        Ui.Shake(cards[at].Root);
+                    }
+                },
+                (queued, failed) =>
+                {
+                    batchRunning = false;
+                    Breathe(installAll.Root, false);
+                    missingCache = null;
+                    UpdateInstallAll();
+                    ShowFocus();
+                    if (queued == 0)
+                    {
+                        Ui.Notice("The add-ons couldn't be downloaded. Check the internet connection and try again.", 7000);
+                        return;
+                    }
+                    Ui.Chime();
+                    var text = queued + (queued == 1 ? " add-on is" : " add-ons are") + " ready" + (failed > 0 ? " (" + failed + " couldn't be downloaded)" : "") + ". They start working after a restart.";
+                    ask = new Dialog("\uE72C", "Restart Playnite?", text, "Restart now", "Later",
+                        () => { ask = null; if (!AddonBatch.RestartPlaynite()) Ui.Notice("Restart Playnite to finish installing.", 7000); },
+                        () => ask = null, false).StartOnYes();
+                    ask.Open(Root);
+                });
+        }
+
+        private static void Breathe(UIElement el, bool on)
+        {
+            if (el == null) return;
+            if (!on) { el.BeginAnimation(UIElement.OpacityProperty, null); el.Opacity = 1; return; }
+            el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, 0.45, TimeSpan.FromMilliseconds(650)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
         }
 
         // Playnite shows one install prompt at a time: the next add-on is asked for once Playnite is back in front
