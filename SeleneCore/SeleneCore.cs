@@ -253,6 +253,7 @@ namespace Selene
 
         public static readonly Option[] All =
         {
+            new Option { Group = "Start-up", Key = "updatecheck", Label = "New version notice", About = "Once a day Selene looks for a newer version and says so in a notification. Nothing is downloaded or installed by itself." },
             new Option { Group = "Start-up", Key = "intro", Label = "Logo intro", About = "The Selene logo when Playnite starts." },
             new Option { Group = "Start-up", Key = "login", Label = "Who's playing?", About = "Pick a profile at start. Off: the last one signs in by itself." },
             new Option { Group = "Start-up", Key = "starton", Label = "Start on", About = "The screen Playnite opens on: Spotlight, Collection (all your games), or whichever you were on last.", Choices = new[] { "spotlight", "collection", "last" }, Names = new[] { "Spotlight", "Collection", "Where you left it" }, Default = "spotlight" },

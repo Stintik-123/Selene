@@ -519,6 +519,35 @@ namespace Selene
             HomeNav.Log("session card: " + game.Name + ", " + seconds + " s");
         }
 
+        // a short note of Selene's own (a new version is out...): the usual card with an icon, a bold line and a line under it,
+        // held for a few seconds
+        public static void ShowNote(string title, string line, int glyph)
+        {
+            var main = Application.Current.MainWindow;
+            if (main == null) return;
+            if (source != null) { Later(1500, () => ShowNote(title, line, glyph)); return; }   // a task's card up now: after it
+            if (layer == null) Build();
+            Place(main);
+            Shape(false);
+            icon.Background = Ink.Brush("GlyphColor", 0.18);
+            icon.Child = new TextBlock { Text = Ui.Icon(glyph), FontFamily = Ui.Icons, FontSize = 28, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            icon.Visibility = Visibility.Visible;
+            titleLine.Content = new TextBlock { Text = title, FontFamily = Ui.Display, FontSize = 18, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 110 };
+            titleLine.Visibility = Visibility.Visible;
+            words.Text = line;
+            if (leaveTimer != null) leaveTimer.Stop();
+            leaving = false;
+            shownAt = DateTime.Now;
+            layer.Visibility = Visibility.Visible;
+            slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            Ui.NotifySound();
+            leaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(9000) };
+            leaveTimer.Tick += (s, e) => { leaveTimer.Stop(); Leave(); };
+            leaveTimer.Start();
+            HomeNav.Log("note card: " + title);
+        }
+
         // the game's Steam app id: a Steam game's own, or the stand-in's (Expedition 33); null for anything else
         private const string SteamPlugin = "cb91dfc9-b977-43bf-8e70-55f46e410fab";
         private static string SteamAppId(Playnite.SDK.Models.Game game)

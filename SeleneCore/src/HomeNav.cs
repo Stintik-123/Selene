@@ -70,6 +70,7 @@ namespace Selene
             DialogLook.Install();   // Playnite's message boxes as Selene cards
             ProgressToast.DevPreviewLater();
             ProgressToast.DevSessionLater();   // %TEMP%\selene-dev-session: a pretend session card   // %TEMP%\selene-dev-toast: a pretend task to see the notification card
+            UpdateCheck.Later();   // once a day: a newer Selene out? (%TEMP%\selene-dev-update: pretend one is)
             Ui.DevFrameLog();   // %TEMP%\selene-dev-frames: frames per second in the log
             EventManager.RegisterClassHandler(typeof(ListBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnListLoaded));
             EventManager.RegisterClassHandler(typeof(TextBlock), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnTextLoaded));

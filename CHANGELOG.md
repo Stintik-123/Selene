@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- New version notice (switch: Start-up): once a day Selene checks GitHub for a newer release and says so in a notification, with where to get it (Playnite's desktop mode, Add-ons, Updates). Each version is mentioned once; nothing is downloaded by itself.
 - Add-ons' progress tasks (Extra Metadata downloading logos and trailers...) now run behind Selene's notification card directly (every add-on, also when it starts the task right after a library update, and Playnite's own tasks): Playnite no longer builds and shows its progress window for each one, which froze everything moving for a moment just before the card.
 - Full refresh rate (switch: Look): Selene moves at your screen's own rate (120, 144 Hz...) while Playnite is in front; WPF's 60 fps steps landed unevenly on fast screens, a stutter everywhere.
 - No freeze as a notification comes up: Playnite's full-screen see-through progress window is made tiny and moved off the screen the moment it appears (Windows redrew it the slow way on every frame until then: a few hundred ms of stutter before each card).
