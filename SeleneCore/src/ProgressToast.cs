@@ -27,6 +27,10 @@ namespace Selene
         private const double CardWidth = 440, Edge = 28, ShadowRoom = 24, Drift = 26;
         private const int MinShownMs = 2600, AfterDoneMs = 1100, InMs = 260, OutMs = 220;
         private static Window hiddenProgress;   // Playnite's own window, kept out of sight
+        private static DateTime busyUntil = DateTime.MinValue;
+
+        // a progress task is being shown as a card (or just was): focus moving around then is Playnite's own business
+        public static bool Busy { get { return source != null || hiddenProgress != null || DateTime.Now < busyUntil || (toast != null && toast.IsVisible); } }
 
         // the card (one at a time)
         private static Window toast;
@@ -60,6 +64,12 @@ namespace Selene
             var hwnd = new WindowInteropHelper(w).Handle;
             if (hwnd != IntPtr.Zero) SetWindowLong(hwnd, -20, GetWindowLong(hwnd, -20) | 0x08000000 /* NOACTIVATE */ | 0x80 /* TOOLWINDOW */);
             var mainHwnd = new WindowInteropHelper(main).Handle;
+            // the main window first gets its input back and the focus, THEN Playnite's window goes: hidden while the main one
+            // was still locked by it, Windows handed the focus to another program, and Selene's "a game covers Playnite" guard
+            // blanked the home (the black screen, flickering as tasks came and went)
+            busyUntil = DateTime.Now.AddSeconds(6);
+            EnableWindow(mainHwnd, true);
+            main.Activate();
             if (hwnd != IntPtr.Zero) ShowWindow(hwnd, 0 /* SW_HIDE */);
             // the modal window disabled the main one: it gets its input back, so browsing goes on while the task runs
             w.Dispatcher.BeginInvoke(new Action(() => { HideProgress(); EnableWindow(mainHwnd, true); main.Activate(); }), DispatcherPriority.Background);
@@ -72,7 +82,6 @@ namespace Selene
 
         private static void Show(Window main, object vm)
         {
-            DimProbe.AroundNotification();   // diagnostic for the dark veil (temporary)
             source = vm;
             if (toast == null) Build();
             if (leaveTimer != null) leaveTimer.Stop();
@@ -156,7 +165,14 @@ namespace Selene
                 SetWindowLong(h, -20, GetWindowLong(h, -20) | 0x08000000 /* NOACTIVATE */ | 0x80 /* TOOLWINDOW */ | 0x20 /* TRANSPARENT: clicks go through */);
             };
             poll = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
-            poll.Tick += (s, e) => { HideProgress(); KeepOnTop(); Update(); };
+            poll.Tick += (s, e) =>
+            {
+                HideProgress(); KeepOnTop(); Update();
+                // never a blank home behind the card: if it was blanked anyway, it comes back
+                var m = Application.Current.MainWindow;
+                var r = m != null ? m.Content as UIElement : null;
+                if (m != null && m.IsActive && r != null && r.Opacity < 0.01) { HomeNav.FadeInRoot(r); HomeNav.Log("progress look: home was blank, shown again"); }
+            };
         }
 
         // words and bar from the task (polled: Playnite changes them on its worker thread)

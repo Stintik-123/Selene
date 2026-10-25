@@ -57,9 +57,11 @@ namespace Selene
                 double k = Math.Max(0, Math.Min(1, (bright - 0.28) / 0.45));
                 var scrim = Ink.Of("SeleneScrimColor");
                 double a = 0.8 * k;
-                var glow = new RadialGradientBrush { Center = new Point(0.5, 0.5), GradientOrigin = new Point(0.5, 0.5), RadiusX = 0.62, RadiusY = 0.8 };
+                // an ellipse that has faded to nothing before the block's edges (a wider radius left hard top and bottom edges)
+                var glow = new RadialGradientBrush { Center = new Point(0.5, 0.5), GradientOrigin = new Point(0.5, 0.5), RadiusX = 0.5, RadiusY = 0.5 };
                 glow.GradientStops.Add(new GradientStop(WithAlpha(scrim, a), 0));
-                glow.GradientStops.Add(new GradientStop(WithAlpha(scrim, a * 0.72), 0.55));
+                glow.GradientStops.Add(new GradientStop(WithAlpha(scrim, a * 0.8), 0.45));
+                glow.GradientStops.Add(new GradientStop(WithAlpha(scrim, a * 0.3), 0.78));
                 glow.GradientStops.Add(new GradientStop(WithAlpha(scrim, 0), 1));
                 SetBackground(block, glow);
                 // the quieter words (the hint under a title) come up toward full white over brighter spots

@@ -290,6 +290,23 @@
                                             </StackPanel>
                                         </StackPanel>
                                     </StackPanel>
+                                    <!-- no games in Collection: just B, back to Spotlight (the game hints beside it are hidden) -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Items.Count, ElementName=PART_ListGameItems}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <StackPanel Style="{StaticResource HintItem}">
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="{DynamicResource SelenePromptB}" Style="{StaticResource HintKey}"/></Border>
+                                            <TextBlock Text="Back" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                         <StackPanel.Style>
                                             <Style TargetType="StackPanel">

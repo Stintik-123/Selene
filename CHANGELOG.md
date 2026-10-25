@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Collection with no games: a B Back hint, and B (Escape / Backspace on a keyboard) goes back to Spotlight; Y no longer opens Playnite's search keyboard, and A / X do nothing there.
+- Progress notifications: no more black or flickering home behind them (hiding Playnite's progress window handed the focus to another program for a moment, and Selene took that for a game covering Playnite).
 - Readable text that adapts: the empty-tab and empty-Collection messages measure how bright the picture right behind them is and get a soft dark glow and brighter words to match (nothing over a dark spot, a deep glow over a bright one), again whenever the background changes (switch: Look, Readable text).
 - Collection with no games: the message sits in the middle of the screen without the Selene mark, and the game stats and the Play / Details / Game options / Filter hints are hidden (only Spotlight and Menu do anything there).
 - Empty tab message: rises and fades in with the cards at start (and on a tab switch) instead of popping in.

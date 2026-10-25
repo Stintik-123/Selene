@@ -80,6 +80,19 @@ namespace Selene
         {
             try
             {
+                // Collection with no games, keyboard: Escape / Backspace back to Spotlight, the game keys do nothing
+                if (!LoginScene.IsActive && SeleneShell.CollectionActive && CollectionEmpty() && !Ui.KeyIsPadCopy())
+                {
+                    var key = e.Key == Key.System ? e.SystemKey : e.Key;
+                    if (key == Key.Escape || key == Key.Back)
+                    {
+                        var back = FindByName(Application.Current.MainWindow, "SeleneNav_hub") as System.Windows.Controls.Primitives.ButtonBase;
+                        if (back != null && back.Command != null) { Ui.Back(); back.Command.Execute(null); }
+                        e.Handled = true;
+                        return;
+                    }
+                    if (key == Key.Enter || key == Key.Space || key == Key.Delete || key == Key.F2 || key == Key.F3) { e.Handled = true; return; }
+                }
                 // the login layer (menu, profiles...) is up: its keys are its own (this class handler runs before the
                 // layer's, and moved the home row behind the menu)
                 if (LoginScene.IsActive) return;
@@ -2586,6 +2599,21 @@ namespace Selene
                     e.Cancel();
                     return;
                 }
+                // Collection with no games: B goes back to Spotlight, and the game buttons do nothing (Y opened Playnite's search
+                // keyboard, A/X had no game to act on)
+                if (SeleneShell.CollectionActive && CollectionEmpty())
+                {
+                    var norm = Ui.Normalize(pressed);
+                    if (norm == "B")
+                    {
+                        var mw0 = Application.Current.MainWindow;
+                        var back = mw0 != null ? FindByName(mw0, "SeleneNav_hub") as System.Windows.Controls.Primitives.ButtonBase : null;
+                        if (back != null && back.Command != null) { Log("B in empty Collection -> Spotlight"); Ui.Back(); back.Command.Execute(null); }
+                        e.Cancel();
+                        return;
+                    }
+                    if (norm == "A" || norm == "X" || norm == "Y" || pressed == "RightStick") { e.Cancel(); return; }
+                }
                 if (pressed == "B" && item != null && InLibraryList(item))
                 {
                     var w = Window.GetWindow(item);
@@ -2842,6 +2870,14 @@ namespace Selene
         private static DateTime lastToolWindowAt = DateTime.MinValue;
 
         // a window of Playnite's other than the main one has the focus (a dialog)
+        // Collection's list has nothing in it (no games, or none on this tab)
+        public static bool CollectionEmpty()
+        {
+            var mw = Application.Current.MainWindow;
+            var list = mw != null ? FindByName(mw, "PART_ListGameItems") as ItemsControl : null;
+            return list != null && list.Items.Count == 0;
+        }
+
         public static bool DialogUp()
         {
             try
@@ -5471,6 +5507,7 @@ namespace Selene
                     {
                         check.Stop();
                         if (mw.IsActive) return;
+                        if (ProgressToast.Busy) return;   // a progress notification moved the focus around: not a game
                         uint pid;
                         var fgw = GetForegroundWindow();
                         GetWindowThreadProcessId(fgw, out pid);
