@@ -206,7 +206,8 @@ namespace Selene
 
         // ---- a clip's player: its buttons (icons with the controller button under each), volume, holding to scrub ----
         private const double BarBottom = 122;
-        private static double clipVolume = 0.9;   // for the session
+        private static double clipVolume = Features.Number("clipvolume") / 100.0;   // the Clip volume setting (Up / Down change it too)
+        public static void ClipVolumeChanged() { clipVolume = Features.Number("clipvolume") / 100.0; }
         private TextBlock playGlyph, scrubTime, volumeGlyph;
         private StackPanel jumpHint;
         private Border volumePanel, volumeFill;
@@ -267,6 +268,7 @@ namespace Selene
         private void ChangeVolume(int dir)
         {
             clipVolume = Math.Max(0, Math.Min(1, Math.Round((clipVolume + 0.1 * dir) * 10) / 10));
+            Features.SetValue("clipvolume", ((int)Math.Round(clipVolume * 100)).ToString());
             if (clipSound != null) clipSound.Volume = clipVolume;
             if (video != null) try { video.Volume = clipVolume; } catch { }
             volumeFill.Height = 220 * clipVolume;

@@ -71,6 +71,7 @@ namespace Selene
             ProgressToast.DevPreviewLater();
             ProgressToast.DevSessionLater();   // %TEMP%\selene-dev-session: a pretend session card   // %TEMP%\selene-dev-toast: a pretend task to see the notification card
             UpdateCheck.Later();   // once a day: a newer Selene out? (%TEMP%\selene-dev-update: pretend one is)
+            IdleScreen.Install();  // the idle screen's clock
             Ui.DevFrameLog();   // %TEMP%\selene-dev-frames: frames per second in the log
             EventManager.RegisterClassHandler(typeof(ListBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnListLoaded));
             EventManager.RegisterClassHandler(typeof(TextBlock), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnTextLoaded));
@@ -1661,7 +1662,7 @@ namespace Selene
         // the settings that are a choice of values, read once (the rest are read where they're used)
         public static void ApplyValueSettings()
         {
-            previewSound = Features.Value("trailersound") == "on";
+            previewSound = Features.On("trailersound");
             Ui.RefreshPrompts();   // Button names
             // the tab set may have changed (Selene's / Playnite's / both): rebuilt, shown, and the row refiltered
             try
@@ -2608,6 +2609,7 @@ namespace Selene
             try
             {
                 var ke = e.StagingItem.Input as KeyEventArgs;
+                if (ke != null && ke.RoutedEvent != Keyboard.KeyUpEvent) IdleScreen.Touched();   // a press: not idle
                 // Playnite also turns LT/RT into PageUp/PageDown, which scrolled the hub to the last section. On the game
                 // row the triggers are the filter only, so those keys are dropped there.
                 if (ke != null && (ke.Key == Key.PageUp || ke.Key == Key.PageDown || ke.Key == Key.Home || ke.Key == Key.End)
@@ -4614,6 +4616,11 @@ namespace Selene
         // black frame is also what Windows remembers, so the first Guide press has no stale picture). Gives up after 45 s
         // (a launcher or dialog may need input); Guide during loading cancels it.
         private static bool launching;
+        public static bool Launching { get { return launching; } }
+        public static bool GameRunning()
+        {
+            try { return gameWindow != IntPtr.Zero || (Api != null && Api.Database.Games.Any(g => g.IsRunning)); } catch { return false; }
+        }
         private static bool coverCancelledByGuide;
         private static Guid launchGameId = Guid.Empty;
         // games that start through another launcher (Ubisoft Connect, the EA app, Rockstar, Battle.net, the Xbox app) take
@@ -4999,8 +5006,10 @@ namespace Selene
                 try
                 {
                     startingSeen = false;
+                    launchedFromCollection = SeleneShell.CollectionActive;   // for After a game: where you were
                     QuietFocus(2500);     // the loading screen and the game take focus: not a move
                     if (previewArm != null) previewArm.Stop();   // no trailer card under the loading screen
+                    if (!Features.On("loadingscreen")) { Api.StartGame(id); Log("play: Playnite's plain start (loading screen off)"); return; }
                     HoldMusicForLaunch(true);
                     PlayStartingSound();  // Playnite played it when IT started the game (~1 s after the press now)
                     var swCover = System.Diagnostics.Stopwatch.StartNew();
@@ -5033,10 +5042,12 @@ namespace Selene
             else Application.Current.Dispatcher.BeginInvoke(start, System.Windows.Threading.DispatcherPriority.Background);
         }
 
+        private static bool launchedFromCollection;
+
         public static void GameStarting(Guid gameId)
         {
             var app = Application.Current;
-            if (app == null) return;
+            if (app == null || !Features.On("loadingscreen")) return;
             QuietFocus(2500);
             app.Dispatcher.Invoke(new Action(() =>
             {
@@ -5910,6 +5921,7 @@ namespace Selene
                     HidePreview();
                     var hub = FindByName(w, "WelcomeHubOverlay");
                     var proxy = FindByName(w, "SeleneNav_hub") as System.Windows.Controls.Primitives.ButtonBase;
+                    if (Features.Value("aftergame") == "where" && launchedFromCollection) { SeleneShell.ShowLibrary(); Log("game status -> Collection (After a game: where you were)"); return; }
                     if ((hub == null || !hub.IsVisible) && proxy != null && proxy.Command != null && proxy.Command.CanExecute(null)) proxy.Command.Execute(null);
                     FocusRowSoon(0);
                     FocusRowSoon(300);

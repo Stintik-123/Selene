@@ -416,11 +416,12 @@ namespace Selene
         public static void Confirm() { if (Features.On("sounds") && !HomeNav.PlayPlayniteSound(true)) Play("activation.wav", 0.85); }
         public static void Back() { Play("CloseAdditionalView.wav", 0.8); }
         public static void Chime() { Play("Success.wav", 0.85); }   // something finished: a profile made, a setup step done
-        public static void Boot() { Play("Boot.wav", 0.9); }
+        public static void Boot() { if (Features.On("startsound")) Play("Boot.wav", 0.9); }
         public static void Alert() { Play("Alert.wav", 0.85); }
         // a notification shows (Selene's notices, a progress card): theme\Audio\Notification.wav, else the panel sound
         public static void NotifySound()
         {
+            if (!Features.On("notifysound")) return;
             if (System.IO.File.Exists(SelenePaths.ThemeAudio("Notification.wav"))) Play("Notification.wav", 0.8); else Play("OpenPanel.wav", 0.55);
         }   // asking before something can't be undone
 

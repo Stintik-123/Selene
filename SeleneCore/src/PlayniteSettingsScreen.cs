@@ -40,8 +40,7 @@ namespace Selene
             general.Rows.Add(Switch("HideMouserCursor", "Hide the mouse pointer", "The pointer stays hidden while you use a controller."));
             general.Rows.Add(Switch("MinimizeAfterGameStartup", "Minimize when a game starts", "Playnite gets out of the way as a game starts."));
             general.Rows.Add(Switch("ShowClock", "Clock", "The time in the top bar."));
-            general.Rows.Add(Switch("ShowBattery", "Controller battery", "The controller's battery in the top bar."));
-            general.Rows.Add(Switch("ShowBatteryPercentage", "Battery as a number", "The battery as a percentage, not only a symbol."));
+            general.Rows.Add(Switch("ShowBattery", "Controller battery", "The controller's battery in the top bar, as a percentage."));
             general.Rows.Add(Choice("ButtonPrompts", "Button prompts", "Which controller's buttons the hints show.", new[] { "Xbox", "PlayStation" }, null));
             general.Rows.Add(Switch("AsyncImageLoading", "Load pictures in the background", "Lists stay smooth while their pictures load."));
             general.Rows.Add(Switch("SmoothScrolling", "Smooth scrolling", "Lists glide instead of stepping."));
@@ -191,7 +190,6 @@ namespace Selene
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(400) });
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             var left = new StackPanel();
-            if (Features.On("brand"))
             {
                 // Playnite's own logo beside the title (these are its settings), with a soft breathing halo like Selene's mark
                 var head = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(14, 0, 0, 30) };
@@ -203,11 +201,6 @@ namespace Selene
                 words.Children.Add(new TextBlock { Text = "Playnite", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(2, 2, 0, 0) });
                 head.Children.Add(words);
                 left.Children.Add(head);
-            }
-            else
-            {
-                left.Children.Add(new TextBlock { Text = "Settings", FontSize = 40, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(18, 0, 0, 6) });
-                left.Children.Add(new TextBlock { Text = "Playnite", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(20, 0, 0, 30) });
             }
             foreach (var s in Sections)
             {
@@ -404,6 +397,7 @@ namespace Selene
             if (b == "A")
             {
                 Set(opt.Prop, !On(opt.Prop));
+                if (opt.Prop == "ShowBattery") Set("ShowBatteryPercentage", On(opt.Prop));   // the number goes with the symbol
                 Ui.Key();
                 ShowValue(index, true);
                 return;

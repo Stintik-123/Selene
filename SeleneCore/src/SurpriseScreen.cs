@@ -115,7 +115,16 @@ namespace Selene
                 label.FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
             }
             candidates = pool == 0 ? all.Where(g => g.IsInstalled).ToList() : pool == 1 ? all.Where(g => GameFacts.Seconds(g) == 0 && !GameFacts.LastPlayed(g).HasValue).ToList() : all.ToList();
+            // without repeats: the ones already picked wait until every game has come up (then it starts over)
+            if (Features.On("surprisenorepeat") && candidates.Count > 1)
+            {
+                var fresh = candidates.Where(g => !seen.Contains(g.Id)).ToList();
+                if (fresh.Count == 0) { seen.Clear(); fresh = candidates; }
+                candidates = fresh;
+            }
         }
+
+        private static readonly HashSet<Guid> seen = new HashSet<Guid>();   // picked already (while Playnite runs)
 
         public override void Shown() { Spin(); }
         public override void Hidden() { closed = true; step.Stop(); }
@@ -136,6 +145,7 @@ namespace Selene
             }
             hint.Text = "Not sure what to play? Selene picks one.";
             pick = preset != null && candidates.Contains(preset) ? preset : candidates[random.Next(candidates.Count)];
+            seen.Add(pick.Id);
             preset = null;   // Y spins for real next time
             // a handful of other covers to flick past (decoded ahead, off the UI thread), the pick's last
             var pass = new List<Game>();

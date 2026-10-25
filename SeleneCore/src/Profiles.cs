@@ -279,9 +279,8 @@ namespace Selene
             var wallpaper = p != null && !string.IsNullOrEmpty(p.Wallpaper) ? p.Wallpaper : ThemePalettes.DefaultWallpaper(theme);
             Wallpapers.Show(wallpaper);
             LoginScene.RefreshBackdrop();
-            // the home always shows the games' art (the background step's Game art / Background only switch is only a look in
-            // its preview; a profile saved with "wallpaper" while it still changed the home shows art again)
-            ApplyHomeBackground("art");
+            // the Spotlight background setting: the picked game's art, or always the wallpaper
+            ApplyHomeBackground(Features.Value("homebackground") == "wallpaper" ? "wallpaper" : "art");
             TopProfile.Refresh();
         }
 

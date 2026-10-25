@@ -74,7 +74,7 @@ namespace Selene
         public static void Apply()
         {
             if (window == null) return;
-            bool on = Features.On("brand");
+            bool on = true;   // (the logo had a switch up to 1.0.0)
             foreach (var name in Slots)
             {
                 var slot = HomeNav.FindByName(window, name) as UIElement;

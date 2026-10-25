@@ -13,7 +13,7 @@ namespace Selene
     // flips one (saved straight away); Left or B goes back to the groups; B there goes back to the menu.
     public class SettingsScreen : Screen
     {
-        private static readonly int[] GroupIcons = { 0xEB9B, 0xEA28, 0xE88A, 0xE050, 0xE40A, 0xE338 };
+        private static readonly int[] GroupIcons = { 0xEB9B /* power */, 0xE88A /* home */, 0xE8F1 /* grid */, 0xE7F4 /* notifications */, 0xE050 /* volume */, 0xE40A /* palette */, 0xE338 /* games */, 0xE869 /* build */ };
 
         private readonly List<Border> groupRows = new List<Border>();
         private readonly StackPanel optionList = new StackPanel();
@@ -46,7 +46,6 @@ namespace Selene
 
             // left: title and the groups
             var left = new StackPanel();
-            if (Features.On("brand"))
             {
                 // Selene's own page: its mark, glowing, beside the title; the version under it
                 var head = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(14, 0, 0, 30) };
@@ -58,11 +57,6 @@ namespace Selene
                 words.Children.Add(new TextBlock { Text = "Selene " + Brand.Version, FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(2, 2, 0, 0) });
                 head.Children.Add(words);
                 left.Children.Add(head);
-            }
-            else
-            {
-                left.Children.Add(new TextBlock { Text = "Settings", FontSize = 40, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(18, 0, 0, 6) });
-                left.Children.Add(new TextBlock { Text = "Selene", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(20, 0, 0, 30) });
             }
             for (int i = 0; i < Features.Groups.Length; i++)
             {
@@ -87,8 +81,7 @@ namespace Selene
 
             Root.Children.Add(layout);
             // Y copies the logs for a bug report (it was an entry of its own in the menu)
-            if (Features.On("copylog")) Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Copy log")));
-            else Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
+            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Copy log")));
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Select")));
         }
 
@@ -116,7 +109,13 @@ namespace Selene
                 var track = new Border { Width = 56, Height = 30, CornerRadius = new CornerRadius(15), VerticalAlignment = VerticalAlignment.Center, Child = knob, Margin = new Thickness(24, 0, 0, 0) };
                 TextBlock value = null;
                 SliderBar slider = null;
-                if (f.IsChoice && f.Slider)
+                if (f.Action != null)
+                {
+                    // a row that does something: its button's label in a pill
+                    track = new Border { CornerRadius = new CornerRadius(17), Padding = new Thickness(16, 4, 16, 5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24, 0, 0, 0), Background = Ink.Brush("SeleneInkColor", 0.12), Child = new TextBlock { Text = f.Action, FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor") } };
+                    knob = null;
+                }
+                else if (f.IsChoice && f.Slider)
                 {
                     // a number: a line with a knob (Left / Right)
                     slider = new SliderBar();
@@ -142,8 +141,11 @@ namespace Selene
             }
         }
 
+        private Dialog ask;
+
         private void ShowSwitch(int i, bool animate)
         {
+            if (options[i].Action != null) return;
             if (options[i].IsChoice)
             {
                 var o = options[i];
@@ -189,7 +191,8 @@ namespace Selene
         public override void Handle(string b)
         {
             if (picker != null && picker.IsOpen) { picker.Handle(b); return; }   // a choice's list has the buttons
-            if (b == "Y" && Features.On("copylog")) { MenuScreen.CopyLog(); return; }
+            if (ask != null) { ask.Handle(b); return; }   // the Reset question is up
+            if (b == "Y") { MenuScreen.CopyLog(); return; }
             if (!inOptions)
             {
                 if (b == "B") { Ui.Back(); if (fromMenu) LoginScene.Show(new MenuScreen(true), -1); else LoginScene.Finish(); return; }
@@ -227,6 +230,19 @@ namespace Selene
                 return;
             }
             if (opt.IsChoice && (b == "DPadRight" || b == "A")) return;   // (A on a number row: nothing; Right: nothing)
+            if (opt.Action != null)
+            {
+                if (b != "A") { MoveRow(b); return; }
+                Ui.Confirm();
+                if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false), 1);
+                else if (opt.Key == "reset")
+                {
+                    ask = new Dialog("\uE5D5", "Reset Selene settings?", "Every switch and choice goes back to how Selene ships. Your profiles, theme and wallpaper stay.",
+                        "Reset", "Keep them", () => { ask = null; Features.ResetAll(); Ui.Play("Success.wav", 0.8); ApplyEverything(); ShowGroup(false); ShowFocus(); }, () => ask = null, true);
+                    ask.Open(Root);
+                }
+                return;
+            }
             if (b == "A")
             {
                 var key = options[index].Key;
@@ -243,11 +259,28 @@ namespace Selene
                 HomeNav.Log("settings: " + key + " " + (Features.On(key) ? "on" : "off"));
                 return;
             }
+            MoveRow(b);
+        }
+
+        private void MoveRow(string b)
+        {
             int n = index + (b == "DPadDown" ? 1 : b == "DPadUp" ? -1 : 0);
             if (n == index || n < 0 || n >= rows.Count) return;
             index = n;
             Ui.Tick();
             ShowFocus();
+        }
+
+        // after a reset: everything that reads a setting once is told
+        private static void ApplyEverything()
+        {
+            try
+            {
+                Brand.Apply(); TopProfile.Refresh(); HomeHints.Update(); LoginScene.RefreshBackdrop(); Contrast.Apply();
+                HomeNav.ApplyValueSettings(); Ui.FullRateChanged(); Profiles.ApplyLook(); IdleScreen.Restart();
+                GameFacts.CardStats(); CapturesScreen.CountInBackground();
+            }
+            catch (Exception ex) { HomeNav.Log("settings reset: " + ex.Message); }
         }
 
         // what a changed choice sets going at once
@@ -256,6 +289,10 @@ namespace Selene
             if (opt.Key == "trailersound") HomeNav.ApplyValueSettings();
             if (opt.Key == "shade") Contrast.Apply();
             if (opt.Key == "prompts") Ui.RefreshPrompts();   // the hints show the new button names
+            if (opt.Key == "homebackground") Profiles.ApplyLook();
+            if (opt.Key == "idle") IdleScreen.Restart();
+            if (opt.Key == "clipvolume") CapturesScreen.ClipVolumeChanged();
+            if (opt.Key == "starttab" || opt.Key == "filtertabs") HomeNav.ApplyValueSettings();
             HomeNav.Log("settings: " + opt.Key + " = " + Features.Value(opt.Key));
         }
     }
