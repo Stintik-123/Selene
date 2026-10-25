@@ -61,7 +61,7 @@ namespace Selene
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnWindowPreviewGotFocus));
             EventManager.RegisterClassHandler(typeof(ListBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnListLoaded));
             EventManager.RegisterClassHandler(typeof(TextBlock), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnTextLoaded));
-            var tvBackup = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "fullscreenConfig.tv.json");
+            var tvBackup = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "fullscreenConfig.tv.json");
             RowMode = System.IO.File.Exists(tvBackup) ? "all" : "tv";
             var app = Application.Current;
             if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Unhush(); GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); if (Features.On("tray")) CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
@@ -2280,8 +2280,7 @@ namespace Selene
         // Section cards: items "nav:<name>" at the start of the row. A runs hidden proxy button SeleneNav_<name>;
         // Y (or F2) picks a card up, Left/Right moves it among the cards, Y/A drops it. Order is saved.
         private static string movingCard;
-        private static readonly string CardOrderFile = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-card-order.txt");
+        private static readonly string CardOrderFile = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "selene-card-order.txt");
 
         // where the row starts after Playnite starts or someone signs in: the Store card (the first card without it)
         private static int StartCardIndex(ListBox row)
@@ -3262,8 +3261,7 @@ namespace Selene
         private static System.Collections.ObjectModel.ObservableCollection<object> games;
         private static IEnumerable gameSource;
         private static System.Windows.Data.CollectionContainer gameContainer;
-        private static readonly string GameOrderFile = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-game-order.txt");
+        private static readonly string GameOrderFile = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "selene-game-order.txt");
 
         private static void UseOwnGameList(ListBox row)
         {
@@ -3356,8 +3354,7 @@ namespace Selene
             }
             catch (Exception ex) { Log("filter preset: " + ex.Message); }
         }
-        private static readonly string RowFilterFile = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-row-filter.txt");
+        private static readonly string RowFilterFile = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "selene-row-filter.txt");
         private static int rowFilter = -1;
         private static Border filterPill;
         private static TextBlock filterPillText;
@@ -3821,7 +3818,7 @@ namespace Selene
         private static int taskbarStateBefore = -1;
 
         // remembers the user's own taskbar state across crashes (Playnite closed without its exit step left it hidden)
-        private static readonly string TaskbarFlag = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-taskbar-before.txt");
+        private static readonly string TaskbarFlag = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "selene-taskbar-before.txt");
         private static bool IsFullscreenApp { get { return System.Diagnostics.Process.GetCurrentProcess().ProcessName.IndexOf("Fullscreen", StringComparison.OrdinalIgnoreCase) >= 0; } }
 
         // Taskbar auto-hide is OFF (user's choice, 2026-10-10): the taskbar is left as the user set it. Only a state that an

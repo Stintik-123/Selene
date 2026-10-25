@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Black screen on a portable Playnite: Selene Core looked for Playnite's settings and the theme under AppData, so on a portable install it stayed off and the theme sat on its dark, empty login layer for ever. It asks Playnite where things are now (installed or portable).
+- Missing icons and button glyphs: the theme package had no Fonts folder (Playnite's Toolbox leaves one out of every .pthm), so the menu icons and the controller button fonts fell back to whatever Windows had. The package carries them now.
+- Without Selene Core (not installed, or disabled) the theme says so after a few seconds, with what to install, instead of staying dark.
 - Start on (Start-up) is a choice: Spotlight, Collection, or where you left it (the screen you were on when Playnite closed). A Start on Collection switch that was on becomes Collection.
 - Selene settings: a long group scrolls to keep the focused row in view (Spotlight's rows ran off the screen and the focus went on into rows you couldn't see).
 - Button names in the hints: Xbox or PlayStation (cross, circle, square, triangle, L1 / R1 / L2 / R2), as Playnite's own Button prompts setting or chosen in Selene settings (Navigation, Button names).

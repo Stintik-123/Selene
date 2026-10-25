@@ -65,6 +65,8 @@ namespace Selene
             UpdateLastPlayed();
             // no login this start (intro and Who's playing? both off): Collection right away if that's the start screen
             var loginLayer = Part("AcceuilSettings");
+            var coreNote = Part("SeleneCoreNotice");
+            if (coreNote != null) coreNote.Visibility = Visibility.Collapsed;   // the theme's note for when Core isn't running
             if (loginLayer != null && !loginLayer.IsVisible) LoginScene.AllowBackdropVideo();
             if (loginLayer != null && !loginLayer.IsVisible && StartOnCollection()) ShowLibrary();
             // Playnite's "game is running" screen (switching back to Playnite while a game runs): the home instead
@@ -171,8 +173,7 @@ namespace Selene
         public static bool CollectionActive { get; private set; }
 
         // the screen you were on last, for Start on: Where you left it (a word in a file, like the filter tab)
-        private static readonly string StartScreenFile = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-start-screen.txt");
+        private static readonly string StartScreenFile = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "selene-start-screen.txt");
 
         private static void RememberScreen(string screen)
         {

@@ -1162,6 +1162,32 @@
                             <!-- ================= LOGIN ================= -->
                             <Grid x:Name="AcceuilSettings" Background="{DynamicResource SeleneScrimBrush}">
                                 <Grid x:Name="LoginCenterShell"/>
+                                <!-- Selene Core builds the login into LoginCenterShell and takes this layer down. Without Core (not
+                                     installed, disabled) the layer would stay dark for ever, so this note fades in after a few seconds;
+                                     Core collapses it as it starts. -->
+                                <StackPanel x:Name="SeleneCoreNotice" Opacity="0" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="980" Margin="40">
+                                    <StackPanel.Triggers>
+                                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" BeginTime="0:0:8" Duration="0:0:0.6">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut"/>
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </StackPanel.Triggers>
+                                    <TextBlock Text="Selene Core isn't running" FontFamily="{StaticResource FontMain}" FontSize="42" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SeleneInkBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
+                                    <TextBlock FontFamily="{StaticResource FontMain}" FontSize="23" Foreground="{DynamicResource SeleneInkBrush}" Opacity="0.85"
+                                               TextAlignment="Center" TextWrapping="Wrap" Margin="0,22,0,0" LineHeight="34"
+                                               Text="Selene is this theme plus its add-on, Selene Core. Install SeleneCore.pext from github.com/mattxslv/Selene/releases (open the file, or drag it onto Playnite's window), then restart Playnite. If it is installed already, make sure it is enabled under Add-ons."/>
+                                    <TextBlock FontFamily="{StaticResource FontMain}" FontSize="19" Foreground="{DynamicResource SeleneInkBrush}" Opacity="0.6"
+                                               TextAlignment="Center" TextWrapping="Wrap" Margin="0,22,0,0"
+                                               Text="Playnite's menu still opens from here (the Start / Menu button on a controller) to pick another theme meanwhile."/>
+                                </StackPanel>
                             </Grid>
                         </Grid>
 

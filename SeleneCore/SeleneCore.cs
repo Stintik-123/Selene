@@ -21,7 +21,7 @@ namespace Selene
         public SeleneCorePlugin(IPlayniteAPI api) : base(api)
         {
             settings = new SeleneSettingsViewModel(this);
-            SelenePaths.Init(this, settings.Settings);
+            SelenePaths.Init(this, PlayniteApi, settings.Settings);
             Features.Init(settings.Settings, () => SavePluginSettings(settings.Settings));
             Profiles.Init(GetPluginUserDataPath());
             Properties = new GenericPluginProperties { HasSettings = true };
@@ -37,7 +37,8 @@ namespace Selene
 
         public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
         {
-            if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use, staying off"); return; }
+            if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use (fullscreen theme: " + SelenePaths.ActiveThemeId + "), staying off"); return; }
+            HomeNav.Log("paths: config " + SelenePaths.PlayniteConfig + " | theme " + SelenePaths.ThemeDir + (PlayniteApi.Paths.IsPortable ? " | portable" : ""));
             HomeNav.Api = PlayniteApi;
             HomeNav.Install();
             if (Features.On("translate")) Lang.Load(PlayniteApi);
@@ -155,7 +156,7 @@ namespace Selene
         public void EndEdit()
         {
             plugin.SavePluginSettings(Settings);
-            SelenePaths.Init(plugin, Settings);
+            SelenePaths.Init(plugin, plugin.PlayniteApi, Settings);
             Features.Init(Settings, () => plugin.SavePluginSettings(Settings));
         }
 
