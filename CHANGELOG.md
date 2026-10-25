@@ -4,7 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Readable text: the darkness is painted behind the words, shaped to their lines with soft edges, so the text itself stays sharp (the halo on the letters made it look blurry).
+- Readable text: the soft halo around the letters is drawn behind the words as a picture, so the text itself stays sharp (as an effect on the letters it made them look blurry).
 - No games at all: the filter tabs are hidden on Spotlight and in Collection.
 - Progress notifications: no flicker before the card (Playnite's own dim layer is held off while it shows).
 - Profile steps: the slide to the next page is smooth (the next page is built first, then both slide as one picture each), and the theme / background preview is never empty (opened from the menu in Collection, the home wasn't there to be pictured).

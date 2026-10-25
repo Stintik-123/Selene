@@ -89,7 +89,7 @@ namespace Selene
                 double was = q.Opacity;
                 if (was >= 0) t.Foreground = Ink.Brush("SeleneInkColor", was + (0.95 - was) * k);
                 if (k < 0.08) { Plain(t); return; }   // readable as it is: nothing added
-                Glow(t, 0.42 + 0.48 * k);
+                Halo(t, 10 + 26 * k, 0.55 + 0.45 * k);   // as the earlier halo: wider and darker over brighter spots
             }
             catch (Exception ex) { HomeNav.Log("readable: " + ex.Message); }
         }
@@ -113,57 +113,47 @@ namespace Selene
             o.Roomy = false;
         }
 
-        // a soft dark glow painted in the text's own background, shaped to its lines (the words stay sharp: nothing is drawn
-        // over or through them). The text gets room around it for the glow's soft edge (padding), given back by a margin of
-        // the same size, so nothing moves.
-        private static void Glow(TextBlock t, double strength)
+        // the soft dark halo around the letters (a blurred dark copy of the text), drawn once into a picture that is the text's
+        // own background: the words themselves get no effect, so they stay sharp (an effect on the text made it look blurry).
+        // The text gets room around it for the halo (padding), given back by a margin of the same size, so nothing moves.
+        private static void Halo(TextBlock t, double blur, double opacity)
         {
             var o = LayoutOf(t);
-            double padX = Math.Round(Math.Max(18, t.FontSize * 1.2)), padY = Math.Round(Math.Max(10, t.FontSize * 0.75));
-            if (!o.Roomy)
+            double pad = Math.Ceiling(blur + 4);
+            if (!o.Roomy || Math.Abs(t.Padding.Left - o.Padding.Left - pad) > 0.5)
             {
-                t.Padding = new Thickness(o.Padding.Left + padX, o.Padding.Top + padY, o.Padding.Right + padX, o.Padding.Bottom + padY);
-                t.Margin = new Thickness(o.Margin.Left - padX, o.Margin.Top - padY, o.Margin.Right - padX, o.Margin.Bottom - padY);
-                if (!double.IsNaN(o.Width)) t.Width = o.Width + 2 * padX;
-                if (!double.IsInfinity(o.MaxWidth)) t.MaxWidth = o.MaxWidth + 2 * padX;
-                if (!double.IsNaN(o.Height)) t.Height = o.Height + 2 * padY;
-                if (!double.IsInfinity(o.MaxHeight)) t.MaxHeight = o.MaxHeight + 2 * padY;
+                if (o.Roomy) Plain(t);
+                t.Padding = new Thickness(o.Padding.Left + pad, o.Padding.Top + pad, o.Padding.Right + pad, o.Padding.Bottom + pad);
+                t.Margin = new Thickness(o.Margin.Left - pad, o.Margin.Top - pad, o.Margin.Right - pad, o.Margin.Bottom - pad);
+                if (!double.IsNaN(o.Width)) t.Width = o.Width + 2 * pad;
+                if (!double.IsInfinity(o.MaxWidth)) t.MaxWidth = o.MaxWidth + 2 * pad;
+                if (!double.IsNaN(o.Height)) t.Height = o.Height + 2 * pad;
+                if (!double.IsInfinity(o.MaxHeight)) t.MaxHeight = o.MaxHeight + 2 * pad;
                 o.Roomy = true;
                 t.UpdateLayout();
             }
             double W = t.ActualWidth, H = t.ActualHeight;
-            var pad = t.Padding;
-            double textW = Math.Max(1, W - pad.Left - pad.Right), textH = Math.Max(1, H - pad.Top - pad.Bottom);
-            string text = t.Text ?? "";
-            if (text.Trim().Length == 0 || W < 2 || H < 2) { t.Background = null; return; }
-            var ft = new FormattedText(text, System.Globalization.CultureInfo.CurrentUICulture, t.FlowDirection,
-                new Typeface(t.FontFamily, t.FontStyle, t.FontWeight, t.FontStretch), t.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(t).PixelsPerDip);
-            if (t.TextWrapping != TextWrapping.NoWrap) ft.MaxTextWidth = textW;
-            ft.TextAlignment = t.TextAlignment;
-            if (!double.IsNaN(t.LineHeight) && t.LineHeight > 0) ft.LineHeight = t.LineHeight;
-            double lineW = Math.Min(ft.WidthIncludingTrailingWhitespace, textW), lineH = Math.Min(ft.Height, textH);
-            double x0 = pad.Left + (t.TextAlignment == TextAlignment.Center ? (textW - lineW) / 2 : t.TextAlignment == TextAlignment.Right ? textW - lineW : 0);
-            var words = new Rect(x0, pad.Top, lineW, lineH);
-            // stacked rounded layers, each a little smaller: the darkness ramps up smoothly from the edge to the words
-            const int layers = 16;
-            double a = Math.Max(0.01, Math.Min(0.95, strength));
-            double each = 1 - Math.Pow(1 - a, 1.0 / layers);
-            var scrim = Ink.Of("SeleneScrimColor");
-            scrim.A = (byte)Math.Round(255 * each);
-            var fill = new SolidColorBrush(scrim);
-            fill.Freeze();
-            var group = new DrawingGroup();
-            group.Children.Add(new GeometryDrawing(Brushes.Transparent, null, new RectangleGeometry(new Rect(0, 0, W, H))));   // 1:1 with the text
-            for (int i = 0; i < layers; i++)
+            if ((t.Text ?? "").Trim().Length == 0 || W < 2 || H < 2) { t.Background = null; return; }
+            // the copy: same words, same font and wrapping, in the shade color, blurred
+            var copy = new TextBlock
             {
-                double f = 1 - (double)i / layers;    // 1 = the outermost layer
-                double ex = padX * 0.95 * f, ey = padY * 0.95 * f;
-                var r = new Rect(words.X - ex, words.Y - ey, words.Width + 2 * ex, words.Height + 2 * ey);
-                double radius = Math.Min(r.Height / 2, ey + t.FontSize * 0.45);
-                group.Children.Add(new GeometryDrawing(fill, null, new RectangleGeometry(r, radius, radius)));
-            }
-            group.Freeze();
-            var brush = new DrawingBrush(group) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top };
+                Text = t.Text, FontFamily = t.FontFamily, FontSize = t.FontSize, FontWeight = t.FontWeight, FontStyle = t.FontStyle, FontStretch = t.FontStretch,
+                TextAlignment = t.TextAlignment, TextWrapping = t.TextWrapping, TextTrimming = t.TextTrimming, LineHeight = t.LineHeight,
+                LineStackingStrategy = t.LineStackingStrategy, FlowDirection = t.FlowDirection,
+                Foreground = new SolidColorBrush(Ink.Of("SeleneScrimColor")), Opacity = opacity,
+                Margin = t.Padding, Width = Math.Max(1, W - t.Padding.Left - t.Padding.Right),
+                Effect = new BlurEffect { Radius = blur, RenderingBias = RenderingBias.Quality, KernelType = KernelType.Gaussian }
+            };
+            var host = new Grid { Width = W, Height = H };
+            host.Children.Add(copy);
+            host.Measure(new Size(W, H));
+            host.Arrange(new Rect(0, 0, W, H));
+            host.UpdateLayout();
+            var dpi = VisualTreeHelper.GetDpi(t);
+            var pic = new RenderTargetBitmap((int)Math.Ceiling(W * dpi.DpiScaleX), (int)Math.Ceiling(H * dpi.DpiScaleY), 96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY, PixelFormats.Pbgra32);
+            pic.Render(host);
+            pic.Freeze();
+            var brush = new ImageBrush(pic) { Stretch = Stretch.Fill };
             brush.Freeze();
             t.Background = brush;
         }
