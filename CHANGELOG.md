@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Avatars: your own GIF keeps moving (it went through the framing step and became one still).
 - Idle screen: anywhere in Selene (not only Spotlight); each game's art comes with its logo or name and a line (playtime, last played), every fourth turn one of your own screenshots; the clock and date at the bottom right; the press that wakes it does nothing else.
 - Settings lists show there is more: the rows past the edge peek in, blurred and fading into the dark, at the bottom and (once scrolled) the top. Store: a loading card in the middle while the store fetches (after a currency change it looked like a dark page); Store currency changed from settings comes back to settings.
 - Start-up: the backdrop fades in on every PC (the cover drawn on its own thread never showed on some, so the wallpaper snapped in; a plain one fades after the first frame).

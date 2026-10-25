@@ -659,7 +659,7 @@ namespace Selene
 
             public AvatarStep(ProfileSteps owner) : base(owner)
             {
-                Header("Choose your avatar", "Pick one, or use your own picture.");
+                Header("Choose your avatar", "Pick one, or use your own picture. A GIF keeps moving.");
                 files.Add(null);
                 var steam = AnimatedAvatar.Steam ?? SelenePaths.AvatarImage;   // the animated one when the account has it
                 // pictures added before, except a saved copy of the Steam avatar (it has its own tile)
@@ -795,6 +795,22 @@ namespace Selene
                 }
                 var picked = HomeNav.Api != null ? HomeNav.Api.Dialogs.SelectImagefile() : null;
                 if (string.IsNullOrEmpty(picked)) return true;
+                // a GIF is kept whole, so it keeps moving (the framing step would have kept one still of it); it shows cropped to
+                // the circle like the Steam one
+                if (picked.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+                {
+                    string kept;
+                    try { kept = Profiles.KeepPicture(picked); }
+                    catch (Exception ex) { HomeNav.Log("avatar gif: " + ex.Message); Ui.Shake(tiles[0].Root); return true; }
+                    files.Insert(1, kept);
+                    var gt = AddTile(kept, 1);
+                    gt.Face.Background = AnimatedAvatar.Brush(kept, 192);
+                    index = 1;
+                    ShowFocus();
+                    Ui.Pop(gt.Root);
+                    Ui.Confirm();
+                    return true;
+                }
                 // frame it first: the circle shows exactly what the avatar will be
                 // framed: back to the grid with the new picture right after "+", chosen; A on it uses it
                 crop = AvatarCrop.Open(picked, saved =>
