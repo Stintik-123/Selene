@@ -100,9 +100,6 @@ namespace Selene
 
         private static string Icon(string key)
         {
-            if (key == "library") return "\uE8F1";
-            if (key == "folders") return "\uE8B7";
-            if (key == "controller") return "\uE7FC";
             if (key == "ludusavi-program") return "\uE896";
             if (key.StartsWith("clash:")) return "\uE7BA";
             return "\uE74C";   // an add-on
@@ -135,13 +132,6 @@ namespace Selene
         // a card's state in a word or two ("392 games", "Installed", "Not installed"...)
         private static string Short(SetupItem item)
         {
-            if (item.Key == "library")
-            {
-                int games = System.Text.RegularExpressions.Regex.Matches(item.Detail ?? "", @"(\d+) games").Cast<System.Text.RegularExpressions.Match>().Sum(m => int.Parse(m.Groups[1].Value));
-                return item.State == SetupState.Ready ? games + " games" : "No games";
-            }
-            if (item.Key == "folders") return item.State == SetupState.Ready ? item.Detail : "Optional";
-            if (item.Key == "controller") return item.State == SetupState.Ready ? "Connected" : "Not connected";
             if (item.Key == "ludusavi-program") return item.State == SetupState.Ready ? "Ready" : "Not set up";
             if (item.Key.StartsWith("clash:")) return "Clashes";
             if (item.State == SetupState.Ready) return "Installed";
@@ -152,7 +142,7 @@ namespace Selene
         {
             for (int i = 0; i < cards.Count; i++) Ui.Rise(cards[i].Root, 140 + i * 45);
             ShowFocus();
-            // things change behind the screen (an add-on installed, a controller plugged in): check again every few seconds
+            // things change behind the screen (an add-on installed or turned on): check again every few seconds
             recheck = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
             recheck.Tick += (s, e) => Recheck();
             recheck.Start();
@@ -252,9 +242,6 @@ namespace Selene
             }
             if (item.AddonId != null) { info.Show(icon, Tone.Accent, item.Title, "Not installed", item.About, "Playnite asks you to confirm. It works after a restart.", "A", "Install"); return; }
             if (item.Key == "ludusavi-program") { info.Show(icon, Tone.Accent, item.Title, "Not set up", item.About, "Downloads the free Ludusavi program and connects it.", "A", "Set up"); return; }
-            if (item.Key == "library") { info.Show(icon, Tone.Warning, item.Title, "No games", item.About, "Connect a store in Playnite's settings, under Libraries."); return; }
-            if (item.Key == "folders") { info.Show(icon, Tone.Muted, item.Title, "Optional", item.About, "Add folders in Selene Core's settings (desktop mode)."); return; }
-            if (item.Key == "controller") { info.Show(icon, Tone.Muted, item.Title, "Not connected", item.About, "Plug in or pair a controller; Selene picks it up by itself."); return; }
             info.Show(icon, Tone.Warning, item.Title, "Turned off", item.About, "Turn it on in Playnite's Add-ons.");
         }
 

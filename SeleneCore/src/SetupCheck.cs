@@ -29,7 +29,7 @@ namespace Selene
         public string About { get; set; }
     }
 
-    // What the first-launch setup checks: games, game folders, the add-ons that come with Selene, a controller,
+    // What the first-launch setup checks: the add-ons that come with Selene (installed or not),
     // and add-ons that do the same job as Selene Core (they would fight it)
     public static class SetupCheck
     {
@@ -63,10 +63,10 @@ namespace Selene
 
         public static List<SetupItem> Run(IPlayniteAPI api)
         {
-            var items = new List<SetupItem> { Library(api), GameFolders() };
+            // only the add-ons: installed or not (the library, game folders and controller live elsewhere)
+            var items = new List<SetupItem>();
             items.AddRange(Included.Select(a => IncludedAddon(api, a)));
             if (Enabled(api, "mtkennerly.ludusavi")) items.Add(LudusaviProgram(api));
-            items.Add(Controller());
             items.AddRange(Clashes.Where(c => Enabled(api, c.Id)).Select(c => new SetupItem
             {
                 Key = "clash:" + c.Id,
@@ -117,88 +117,10 @@ namespace Selene
             };
         }
 
-        private static SetupItem Library(IPlayniteAPI api)
-        {
-            var stores = api.Addons.Plugins.OfType<LibraryPlugin>().ToDictionary(p => p.Id, p => p.Name);
-            var games = api.Database.Games.ToList();
-            var perStore = games.Where(g => stores.ContainsKey(g.PluginId))
-                                .GroupBy(g => stores[g.PluginId])
-                                .OrderByDescending(g => g.Count())
-                                .Select(g => g.Key + " · " + g.Count() + " games")
-                                .ToList();
-            var own = games.Count(g => g.PluginId == Guid.Empty);
-            var orphaned = games.Count(g => g.PluginId != Guid.Empty && !stores.ContainsKey(g.PluginId));
-            if (own > 0) perStore.Add("Your folders · " + own + " games");
-            if (orphaned > 0) perStore.Add("From store add-ons that are off · " + orphaned + " games");
-            return new SetupItem
-            {
-                Key = "library",
-                Title = "Game library",
-                About = "The games Selene shows, from your stores or your own folders.",
-                State = games.Count > 0 ? SetupState.Ready : SetupState.Missing,
-                Detail = games.Count > 0 ? string.Join(", ", perStore) : "No games yet: connect a store in Playnite's settings"
-            };
-        }
-
-        private static SetupItem GameFolders()
-        {
-            var folders = SelenePaths.GameFolders.Length;
-            return new SetupItem
-            {
-                Key = "folders",
-                Title = "Games outside a store",
-                About = "Folders Selene watches for games no store knows about; new games there are added automatically.",
-                State = folders > 0 ? SetupState.Ready : SetupState.Optional,
-                Detail = folders > 0 ? folders + (folders == 1 ? " folder" : " folders") : "Optional · add your game folders"
-            };
-        }
-
-        private static SetupItem Controller()
-        {
-            bool connected = XInput.AnyConnected();
-            return new SetupItem
-            {
-                Key = "controller",
-                Title = "Controller",
-                About = "Selene is made for a controller; keyboard works too.",
-                State = connected ? SetupState.Ready : SetupState.Optional,
-                Detail = connected ? "Connected" : "Not connected"
-            };
-        }
-
         // opens Playnite's own add-on installer for that add-on
         public static void Install(string addonId)
         {
             Process.Start("playnite://playnite/installaddon/" + addonId);
-        }
-
-        private static class XInput
-        {
-            [DllImport("xinput1_4.dll", EntryPoint = "XInputGetState")] private static extern int GetState14(int user, byte[] state);
-            [DllImport("xinput9_1_0.dll", EntryPoint = "XInputGetState")] private static extern int GetState910(int user, byte[] state);
-
-            private static Func<int, byte[], int> getState;
-
-            private static Func<int, byte[], int> Find()
-            {
-                var candidates = new Func<int, byte[], int>[] { GetState14, GetState910 };
-                foreach (var candidate in candidates)
-                {
-                    try { candidate(0, new byte[16]); return candidate; }
-                    catch (DllNotFoundException) { }
-                    catch (EntryPointNotFoundException) { }
-                }
-                LogManager.GetLogger().Warn("Selene Core: no XInput on this PC, can't detect controllers");
-                return (user, state) => 1167;  // ERROR_DEVICE_NOT_CONNECTED
-            }
-
-            public static bool AnyConnected()
-            {
-                if (getState == null) getState = Find();
-                for (int user = 0; user < 4; user++)
-                    if (getState(user, new byte[16]) == 0) return true;
-                return false;
-            }
         }
     }
 }
