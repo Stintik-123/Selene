@@ -332,6 +332,21 @@ namespace Selene
         }
 
         // the task ended: the bar runs to the end, the card stays to be read, then slides out (unless another task takes it)
+        // a task Selene runs itself (SeleneDialogs): the card without any Playnite window behind it
+        public static bool Usable()
+        {
+            var main = Application.Current != null ? Application.Current.MainWindow : null;
+            return main != null && main.IsVisible && main.WindowState != WindowState.Minimized && main.ActualWidth >= 400;
+        }
+        public static void ShowTask(object vm)
+        {
+            var main = Application.Current.MainWindow;
+            if (main == null) return;
+            Show(main, vm);
+            HomeNav.Log("progress look: notification card (Selene's own task)");
+        }
+        public static void EndTask(object vm) { TaskDone(vm); }
+
         private static void TaskDone(object vm)
         {
             var m0 = Application.Current.MainWindow;

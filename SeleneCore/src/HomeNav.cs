@@ -66,6 +66,7 @@ namespace Selene
             libTimer.Start();
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown));
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnWindowPreviewGotFocus));
+            SeleneDialogs.Install(Api);   // add-ons' progress tasks behind Selene's card (no Playnite window built for each)
             DialogLook.Install();   // Playnite's message boxes as Selene cards
             ProgressToast.DevPreviewLater();
             ProgressToast.DevSessionLater();   // %TEMP%\selene-dev-session: a pretend session card   // %TEMP%\selene-dev-toast: a pretend task to see the notification card
