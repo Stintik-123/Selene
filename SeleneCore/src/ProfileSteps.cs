@@ -272,7 +272,9 @@ namespace Selene
             var frame = new Border
             {
                 Child = host, CornerRadius = new CornerRadius(16), BorderBrush = Ink.Brush("SeleneInkColor", 0.25), BorderThickness = new Thickness(1),
-                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black }
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black },
+                // the frame and its shadow as one picture: a step sliding moved it without blurring the shadow again each frame
+                CacheMode = new BitmapCache(1.0)
             };
             var col = new StackPanel();
             col.Children.Add(new TextBlock { Text = "PREVIEW", FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(2, 0, 0, 10) });
@@ -972,7 +974,7 @@ namespace Selene
             private readonly Segmented look = new Segmented("Show", new[] { "Game art", "Background only" }, "X");
             private readonly TextBlock lookNote = new TextBlock { FontSize = 15, FontFamily = Ui.Body, TextWrapping = TextWrapping.Wrap, MaxWidth = 820, Margin = new Thickness(4, 12, 0, 0) };
             private readonly List<string> groups = new List<string>();
-            private readonly Later apply = new Later(260);   // after the 220 ms glide: applied mid-glide, the swap made it stutter
+            private readonly Later apply = new Later(450);   // once you rest on one: applied between quick moves, the swap landed in the next glide (it stuttered)
             private int index, generation;
             private bool hasArt;   // the library has a game whose art the preview can show
 
