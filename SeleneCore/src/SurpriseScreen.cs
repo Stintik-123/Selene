@@ -80,7 +80,7 @@ namespace Selene
             Root.Children.Add(col);
 
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
-            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("Y", "Spin again"), Ui.Prompt("X", "Show on Spotlight"), Ui.Prompt("A", "Play")));
+            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("Y", "Spin again"), Ui.Prompt("X", "Show on Spotlight")));   // (A: the Play pill under the card says it)
             step.Tick += (s, e) => Step();
             ShowTabs();
         }

@@ -1747,7 +1747,8 @@ namespace Selene
             musicMode = mode;
             SetUpsSetting("ForceDefaultMusicOverride", WantDefault);
             ApplyVideoPause();
-            if (musicHeldForLaunch) SetUpsVideoPlaying(true);   // the add-on starts the song over when the override flips: paused again
+            if (musicHeldForLaunch) SetUpsVideoPlaying(true);
+            EmptyLibraryMusic();   // the add-on starts the song over when the override flips: paused again
             // UniPlaySong can switch to a game's song on its own when Playnite's selection changes: like the legacy theme,
             // the wanted state is checked 4x a second and put back
             if (musicGuard == null)
@@ -1759,12 +1760,41 @@ namespace Selene
                     var prop = live != null ? live.GetType().GetProperty("ForceDefaultMusicOverride") : null;
                     if (prop == null || !Features.On("music")) return;
                     if (!Equals(prop.GetValue(live, null), WantDefault)) { prop.SetValue(live, WantDefault, null); Log("UPS ForceDefaultMusicOverride put back to " + WantDefault); }
+                    if ((DateTime.Now - emptyMusicAt).TotalSeconds > 3) EmptyLibraryMusic();
                 };
                 musicGuard.Start();
             }
         }
 
         private static System.Windows.Threading.DispatcherTimer musicGuard;
+
+        // No games yet: the add-on starts its default track only when a game gets selected, so with nothing to select the
+        // home and the login stayed silent. It's asked for the default track with a stand-in game (one with no songs).
+        private static DateTime emptyMusicAt = DateTime.MinValue;
+        private static Playnite.SDK.Models.Game musicStandIn;
+        private static void EmptyLibraryMusic()
+        {
+            emptyMusicAt = DateTime.Now;
+            try
+            {
+                if (Api == null || !WantDefault || !Features.On("music") || musicHeldForLaunch || videoPause == true) return;
+                if (Api.Database.Games.Count > 0) return;
+                var settings = LiveUps();
+                var plugin = Api.Addons.Plugins.FirstOrDefault(pl => pl.Id == UniPlaySongId);
+                if (settings == null || plugin == null) return;
+                var field = plugin.GetType().GetField("_playbackService", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                var service = field != null ? field.GetValue(plugin) : null;
+                if (service == null) return;
+                var playing = service.GetType().GetProperty("IsPlayingDefaultMusic");
+                if (playing != null && Equals(playing.GetValue(service, null), true)) return;
+                var interim = service.GetType().GetMethod("PlayDefaultMusicInterim");
+                if (interim == null) return;
+                if (musicStandIn == null) musicStandIn = new Playnite.SDK.Models.Game("Selene") { IsInstalled = true };
+                interim.Invoke(service, new object[] { musicStandIn, settings });
+                Log("UPS: no games, default track asked for");
+            }
+            catch (Exception ex) { Log("UPS empty-library music: " + ex.Message); }
+        }
         private static bool WantDefault { get { return musicMode == "login" || musicMode == "home"; } }
 
         // UniPlaySong pauses while its "video is playing" flag is up: under a trailer with sound
