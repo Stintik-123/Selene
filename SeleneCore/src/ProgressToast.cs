@@ -206,6 +206,9 @@ namespace Selene
             icon.Child = downloadGlyph;
             icon.Visibility = Visibility.Visible;
             titleLine.Visibility = Visibility.Collapsed;
+            words.FontSize = 17;
+            words.Foreground = Ink.Brush("SeleneInkColor", 0.95);
+            words.TextWrapping = TextWrapping.Wrap;
             Shape(false);
             if (leaveTimer != null) leaveTimer.Stop();
             barShown = -1;
@@ -532,9 +535,13 @@ namespace Selene
             icon.Background = Ink.Brush("GlyphColor", 0.18);
             icon.Child = new TextBlock { Text = Ui.Icon(glyph), FontFamily = Ui.Icons, FontSize = 28, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             icon.Visibility = Visibility.Visible;
-            titleLine.Content = new TextBlock { Text = title, FontFamily = Ui.Display, FontSize = 18, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 110 };
+            titleLine.Content = new TextBlock { Text = title, FontFamily = Ui.Display, FontSize = 19, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 110 };
             titleLine.Visibility = Visibility.Visible;
+            titleLine.Margin = new Thickness(0, 0, 0, 3);
             words.Text = line;
+            words.FontSize = 15;
+            words.Foreground = Ink.Brush("SeleneInkColor", 0.65);
+            words.TextWrapping = TextWrapping.NoWrap;
             if (leaveTimer != null) leaveTimer.Stop();
             leaving = false;
             shownAt = DateTime.Now;

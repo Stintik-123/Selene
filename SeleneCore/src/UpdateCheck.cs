@@ -67,7 +67,7 @@ namespace Selene
             if (newest == null) return;
             HomeNav.Log("update check: newest " + newest + ", this is " + Brand.Version);
             if (!IsNewer(newest) || (!pretend && newest == told)) return;
-            ProgressToast.ShowNote("Selene " + newest + " is out", "Get it in Playnite's desktop mode: Add-ons, Updates (Menu, Desktop mode).", 0xE923 /* update */);
+            ProgressToast.ShowNote("Selene " + newest + " is available", "Desktop mode  ›  Add-ons  ›  Updates", 0xE923 /* update */);
         }
 
         private static bool IsNewer(string newest)
