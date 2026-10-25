@@ -253,6 +253,7 @@ namespace Selene
         // Alt+F4: quit for real, the way Alt+F4 quits Playnite without Selene (its main window closes, Playnite shuts down)
         public static void AltF4()
         {
+            HomeNav.Quitting = true;
             if (reallyQuit) return;
             HomeNav.Log("tray: Alt+F4 -> quit");
             reallyQuit = true;

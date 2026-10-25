@@ -308,6 +308,17 @@ namespace Selene
             };
         }
 
+        // the icon tile by what the task says: a download arrow for fetching, a sync sign for updates and imports, a gear otherwise
+        private static void IconFor(string text)
+        {
+            if (downloadGlyph == null || !ReferenceEquals(icon.Child, downloadGlyph)) return;
+            var t = text.ToLowerInvariant();
+            int glyph = t.Contains("download") || t.Contains("fetch") || t.Contains("logo") || t.Contains("trailer") || t.Contains("video") ? 0xE2C4 /* file_download */
+                      : t.Contains("updat") || t.Contains("import") || t.Contains("library") || t.Contains("sync") || t.Contains("scan") ? 0xE627 /* sync */
+                      : 0xE8B8 /* settings */;
+            downloadGlyph.Text = Ui.Icon(glyph);
+        }
+
         // words and bar from the task (polled: Playnite changes them on its worker thread)
         private static void Update()
         {
@@ -317,7 +328,7 @@ namespace Selene
                 var args = Prop(source, "ProgressArgs");
                 var text = Prop(args, "Text") as string;
                 if (text != null) text = text.Trim();   // Playnite's texts can start with spaces (they sat indented)
-                if (!string.IsNullOrEmpty(text) && words.Text != text) words.Text = text;
+                if (!string.IsNullOrEmpty(text) && words.Text != text) { words.Text = text; IconFor(text); }
                 bool indeterminate = Equals(Prop(args, "IsIndeterminate"), true);
                 double max = ToDouble(Prop(args, "ProgressMaxValue")), value = ToDouble(Prop(args, "CurrentProgressValue"));
                 double width = track.ActualWidth;

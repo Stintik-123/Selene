@@ -4625,6 +4625,7 @@ namespace Selene
         // (a launcher or dialog may need input); Guide during loading cancels it.
         private static bool launching;
         public static bool Launching { get { return launching; } }
+        public static bool Quitting;   // Playnite is being closed for real (Exit, Alt+F4, power actions)
         public static bool GameRunning()
         {
             try { return gameWindow != IntPtr.Zero || (Api != null && Api.Database.Games.Any(g => g.IsRunning)); } catch { return false; }

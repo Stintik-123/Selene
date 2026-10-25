@@ -105,8 +105,11 @@ namespace Selene
             return false;
         }
 
-        private static bool Mine()
+        private static bool Mine(GlobalProgressOptions options)
         {
+            if (HomeNav.Quitting) return false;   // Playnite on its way out: its own "Exiting" screen, not a card
+            var text = options != null ? options.Text ?? "" : "";
+            if (text.IndexOf("Exiting", StringComparison.OrdinalIgnoreCase) >= 0 || text.IndexOf("Shutting down", StringComparison.OrdinalIgnoreCase) >= 0) return false;
             return Features.On("dialogs") && Features.On("progresstoast") && ProgressToast.Usable();
         }
 
@@ -120,12 +123,12 @@ namespace Selene
 
         public GlobalProgressResult ActivateGlobalProgress(Action<GlobalProgressActionArgs> progresAction, GlobalProgressOptions progressOptions)
         {
-            return OnUi(() => Mine() ? Run(args => Task.Run(() => progresAction(args)), progressOptions) : inner.ActivateGlobalProgress(progresAction, progressOptions));
+            return OnUi(() => Mine(progressOptions) ? Run(args => Task.Run(() => progresAction(args)), progressOptions) : inner.ActivateGlobalProgress(progresAction, progressOptions));
         }
 
         public GlobalProgressResult ActivateGlobalProgress(Func<GlobalProgressActionArgs, Task> progresAction, GlobalProgressOptions progressOptions)
         {
-            return OnUi(() => Mine() ? Run(args => Task.Run(() => progresAction(args)), progressOptions) : inner.ActivateGlobalProgress(progresAction, progressOptions));
+            return OnUi(() => Mine(progressOptions) ? Run(args => Task.Run(() => progresAction(args)), progressOptions) : inner.ActivateGlobalProgress(progresAction, progressOptions));
         }
 
         // the task on a worker thread; meanwhile the UI keeps running (a nested message loop, as Playnite's own modal window

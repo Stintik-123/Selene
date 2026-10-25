@@ -214,6 +214,7 @@ namespace Selene
                 {
                     try
                     {
+                        HomeNav.Quitting = true;
                         if (what < 0) Later(() => PlayniteMenu.Run("ExitCommand"));
                         else Power.Run(what);
                     }
