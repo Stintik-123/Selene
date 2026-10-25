@@ -192,6 +192,7 @@ namespace Selene
         }
 
         private Border pauseBadge;
+        private DateTime pressDecides = DateTime.MinValue;
 
         private void PausedLook(bool on)
         {
@@ -200,17 +201,18 @@ namespace Selene
             if (pauseBadge.Visibility == Visibility.Visible) return;
             pauseBadge.Visibility = Visibility.Visible;
             pauseBadge.Opacity = 0;
-            pauseBadge.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(140)) { EasingFunction = Ui.Out() }));
-            var pop = new ScaleTransform(0.85, 0.85);
+            pauseBadge.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(90)) { EasingFunction = Ui.Out() }));
+            var pop = new ScaleTransform(0.94, 0.94);
             pauseBadge.RenderTransform = pop;
-            pop.BeginAnimation(ScaleTransform.ScaleXProperty, Ui.Fast(new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(180)) { EasingFunction = Ui.Out() }));
-            pop.BeginAnimation(ScaleTransform.ScaleYProperty, Ui.Fast(new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(180)) { EasingFunction = Ui.Out() }));
+            pop.BeginAnimation(ScaleTransform.ScaleXProperty, Ui.Fast(new DoubleAnimation(0.94, 1, TimeSpan.FromMilliseconds(110)) { EasingFunction = Ui.Out() }));
+            pop.BeginAnimation(ScaleTransform.ScaleYProperty, Ui.Fast(new DoubleAnimation(0.94, 1, TimeSpan.FromMilliseconds(110)) { EasingFunction = Ui.Out() }));
         }
 
         private void ShowProgress(double at, double length, bool isPaused)
         {
             clipAt = at; clipLength = length;
-            if (paused != isPaused) { paused = isPaused; ShowControls(true); PausedLook(paused); }
+            // (just after a press the player's report can be from before it: the press decides for a moment)
+            if (paused != isPaused && DateTime.Now > pressDecides) { paused = isPaused; ShowControls(true); PausedLook(paused); }
             double w = Math.Max(0, progressTrack.Width);
             progress.Width = length > 0 ? Math.Max(0, Math.Min(w, w * at / length)) : 0;
             timeText.Text = Clock(at) + (length > 0 ? " / " + Clock(length) : "");
@@ -226,7 +228,16 @@ namespace Selene
 
         private void TogglePause()
         {
-            if (clip != null) { clip.TogglePause(); return; }
+            if (clip != null)
+            {
+                // the sign follows the press at once (it waited for the player's next report, half a second away)
+                clip.TogglePause();
+                paused = !paused;
+                pressDecides = DateTime.Now.AddMilliseconds(700);
+                PausedLook(paused);
+                ShowControls(true);
+                return;
+            }
             var me = video;
             if (me == null) return;
             try { if (paused) me.Play(); else me.Pause(); } catch { }
