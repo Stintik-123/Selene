@@ -74,8 +74,8 @@ namespace Selene
             if (!Active || args.Game == null) return;
             LocalGames.AfterGameStopped(args.Game);
             Profiles.RecordSession(args.Game.Id, args.ElapsedSeconds);
-            // back from a game: a card says how long it was played (once Selene is in front again)
-            if (Features.On("sessioncard") && args.ElapsedSeconds >= 60)
+            // back from a game: a card says how long it was played (once Selene is in front again) (any session over 10 s: a short one showed nothing)
+            if (Features.On("sessioncard") && args.ElapsedSeconds >= 10)
             {
                 var game = args.Game; var secs = args.ElapsedSeconds;
                 System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>

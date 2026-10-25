@@ -2285,6 +2285,10 @@ namespace Selene
                 ApplyCardOrder(row);
                 RebuildGames(row);
                 int first = startOnCards && row.Items.Count > 0 ? StartCardIndex(row) : FirstGameIndex(row);
+                // a game running (home from inside it): straight on that game (on the first one, the first game's art
+                // flashed up before the focus went over to the running one)
+                int running = RunningGameIndex(row);
+                if (running >= 0) first = running;
                 startOnCards = false;
                 movingCard = null;
                 movingGame = null;
@@ -2469,6 +2473,18 @@ namespace Selene
         {
             int i = row.Items.IndexOf("nav:store");
             return i >= 0 ? i : 0;
+        }
+
+        private static int RunningGameIndex(ListBox row)
+        {
+            for (int i = 0; i < row.Items.Count; i++)
+            {
+                var g = row.Items[i];
+                if (g == null || g is string || g is RowPad) continue;
+                var running = Prop(g, "IsRunning");
+                if (running is bool && (bool)running) return i;
+            }
+            return -1;
         }
 
         private static int FirstGameIndex(ListBox row)
@@ -4322,7 +4338,9 @@ namespace Selene
         // console "Play Game" while it runs: close it (ask first), then start it fresh. WM_CLOSE first; if the game is
         // still up after 8 s its process is ended. Playnite notices the exit, then the game is started again.
         // ---- Close Game from the home screen (console style): "Closing this game or app..." with its icon, then home ----
-        private static Window closingWindow;
+        // inside Playnite's own window, over everything (a window of its own was covered at once when Playnite brought its
+        // main window forward as the game ended: the home cut in, still showing "Now playing")
+        private static Grid closingLayer;
 
         private static void CloseGame(object game)
         {
@@ -4475,14 +4493,13 @@ namespace Selene
                 stack.Children.Add(status);
                 root.Children.Add(stack);
 
-                closingWindow = new Window
-                {
-                    WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, ShowActivated = false,
-                    AllowsTransparency = true, Background = Brushes.Transparent, Content = root, Title = "SeleneLaunchCover",
-                    Left = main.Left, Top = main.Top, Width = main.ActualWidth, Height = main.ActualHeight
-                };
-                closingWindow.SourceInitialized += (s, e) => DisableWindowTransitions(new System.Windows.Interop.WindowInteropHelper(closingWindow).Handle);
-                closingWindow.Show();
+                var host = FindByName(main, "PART_MainHost") as Grid;
+                if (host == null) { Log("closing screen: no host"); return; }
+                Grid.SetRowSpan(root, 99);
+                Grid.SetColumnSpan(root, 99);
+                Panel.SetZIndex(root, 9997);
+                host.Children.Add(root);
+                closingLayer = root;
                 var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
                 root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = ease });
                 lift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(18, 0, TimeSpan.FromMilliseconds(520)) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } });
@@ -4490,16 +4507,27 @@ namespace Selene
             catch (Exception ex) { Log("closing screen failed: " + ex.Message); }
         }
 
+        // the home under it has caught up first (Now playing / Resume gives way to Play a moment after the game ends), then
+        // the screen fades away into it
         private static void HideClosingScreen()
         {
-            var cw = closingWindow;
-            closingWindow = null;
-            if (cw == null) return;
-            var content = cw.Content as UIElement;
-            if (content == null) { try { cw.Close(); } catch { } return; }
-            var anim = new DoubleAnimation(0, TimeSpan.FromMilliseconds(420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
-            anim.Completed += (s, e) => { try { cw.Close(); } catch { } };
-            content.BeginAnimation(UIElement.OpacityProperty, anim);
+            var layer = closingLayer;
+            closingLayer = null;
+            if (layer == null) return;
+            var wait = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(650) };
+            wait.Tick += (s0, e0) =>
+            {
+                wait.Stop();
+                var anim = new DoubleAnimation(0, TimeSpan.FromMilliseconds(450)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+                anim.Completed += (s, e) =>
+                {
+                    foreach (var me in layer.Children.OfType<MediaElement>()) { try { me.Stop(); me.Close(); } catch { } }
+                    var parent = layer.Parent as Panel;
+                    if (parent != null) parent.Children.Remove(layer);
+                };
+                layer.BeginAnimation(UIElement.OpacityProperty, anim);
+            };
+            wait.Start();
         }
 
         private static void RestartGame(object game)
