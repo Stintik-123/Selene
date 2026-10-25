@@ -53,6 +53,22 @@ namespace Selene
             w.BeginAnimation(UIElement.OpacityProperty, null);
             w.Opacity = 0;
             w.Background = Brushes.Transparent;
+            HoldDim(main, true);
+        }
+
+        // Playnite's own dim layer (BorderDim in its main window) held hidden while a card shows: switching its flag off was not
+        // enough, Playnite sends the "off" about 10 ms late from another thread and the dark layer flashed (the flicker)
+        private static UIElement dimLayer;
+        private static void HoldDim(Window main, bool hold)
+        {
+            try
+            {
+                if (dimLayer == null && main.Template != null) dimLayer = main.Template.FindName("BorderDim", main) as UIElement;
+                if (dimLayer == null) return;
+                if (hold) dimLayer.Visibility = Visibility.Collapsed;   // a local value outranks Playnite's trigger
+                else dimLayer.ClearValue(UIElement.VisibilityProperty);
+            }
+            catch { }
         }
 
         // Playnite dims its whole main window while any child window is open (its ChildOpened flag shows an 80% dark layer, and
@@ -215,7 +231,8 @@ namespace Selene
             poll.Tick += (s, e) =>
             {
                 HideProgress(); KeepOnTop(); Update();
-                if (Application.Current.MainWindow != null) UndimNow(Application.Current.MainWindow);
+                var mainNow = Application.Current.MainWindow;
+                if (mainNow != null) { UndimNow(mainNow); HoldDim(mainNow, OnlyProgressOpen(mainNow)); }   // a real dialog: Playnite's dim back
                 // never a blank home behind the card: if it was blanked anyway, it comes back
                 var m = Application.Current.MainWindow;
                 var r = m != null ? m.Content as UIElement : null;
@@ -263,6 +280,8 @@ namespace Selene
         // the task ended: the bar runs to the end, the card stays to be read, then slides out (unless another task takes it)
         private static void TaskDone(object vm)
         {
+            var m0 = Application.Current.MainWindow;
+            if (m0 != null) m0.Dispatcher.BeginInvoke(new Action(() => { if (!Busy || source == null) HoldDim(m0, false); }), DispatcherPriority.Background);
             if (!ReferenceEquals(vm, source) || toast == null) return;
             source = null;
             poll.Stop();

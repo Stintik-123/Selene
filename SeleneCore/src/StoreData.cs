@@ -257,9 +257,7 @@ namespace Selene
 
         private static string Open(string protocol, string appLink, string web)
         {
-            try { using (var key = Microsoft.Win32.Registry.ClassesRoot.OpenSubKey(protocol)) if (key != null) return appLink; }
-            catch { }
-            return web;
+            return StoreScreen.Registered(protocol) ? appLink : web;   // the app when it's there, else the store's page in the browser
         }
 
         // Steam's lists are its search results (they page: 25 games at a time, as far as you scroll), in this region's prices

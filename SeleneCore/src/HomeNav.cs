@@ -3826,6 +3826,10 @@ namespace Selene
                 if (la.HasValue && la.Value > DateTime.Now.AddDays(-30)) recent++;
             }
             var res = Application.Current.Resources;
+            // no games at all: the filter tabs have nothing to filter (an empty tab with games elsewhere keeps them)
+            var mwTabs = Application.Current.MainWindow;
+            var tabs = mwTabs != null ? FindByName(mwTabs, "SeleneFilterTabs") as UIElement : null;
+            if (tabs != null) tabs.Visibility = all == 0 ? Visibility.Collapsed : Visibility.Visible;
             res["SeleneStatGames"] = all.ToString();
             res["SeleneStatInstalled"] = installed.ToString();
             res["SeleneStatRecent"] = recent.ToString();
