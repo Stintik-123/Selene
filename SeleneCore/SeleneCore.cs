@@ -243,7 +243,7 @@ namespace Selene
         {
             new Option { Group = "Start-up", Key = "intro", Label = "Logo intro", About = "The Selene logo when Playnite starts." },
             new Option { Group = "Start-up", Key = "login", Label = "Who's playing?", About = "Pick a profile at start. Off: the last one signs in by itself." },
-            new Option { Group = "Start-up", Key = "startcollection", Label = "Start on Collection", About = "Open on all your games instead of Spotlight.", DefaultOn = false },
+            new Option { Group = "Start-up", Key = "starton", Label = "Start on", About = "The screen Playnite opens on: Spotlight, Collection (all your games), or whichever you were on last.", Choices = new[] { "spotlight", "collection", "last" }, Names = new[] { "Spotlight", "Collection", "Where you left it" }, Default = "spotlight" },
             new Option { Group = "Start-up", Key = "startrefresh", Label = "Library update at start", About = "Selene asks Playnite to look for new and removed games 20 s after it starts, and when it comes back from the tray. Only the small mark in the top bar shows it." },
             new Option { Group = "Start-up", Key = "setuphint", Label = "Add-on hint", About = "A note on the home when logos and trailers need the Extra Metadata add-on and it isn't installed." },
             new Option { Group = "Navigation", Key = "viewswitch", Label = "View button", About = "Switches Spotlight and Collection. Hold it to search." },
@@ -284,7 +284,17 @@ namespace Selene
         private static SeleneSettings settings;
         private static Action save;
 
-        public static void Init(SeleneSettings s, Action saveAll) { settings = s; save = saveAll; }
+        public static void Init(SeleneSettings s, Action saveAll)
+        {
+            settings = s; save = saveAll;
+            // the Start on Collection switch (up to 1.0.0) is the Start on choice now
+            if (s != null && s.TurnedOn != null && s.TurnedOn.Remove("startcollection"))
+            {
+                if (s.Values == null) s.Values = new Dictionary<string, string>();
+                if (!s.Values.ContainsKey("starton")) s.Values["starton"] = "collection";
+                if (save != null) save();
+            }
+        }
 
         private static bool DefaultOn(string key) { var o = All.FirstOrDefault(f => f.Key == key); return o == null || o.DefaultOn; }
 

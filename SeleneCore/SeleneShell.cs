@@ -66,7 +66,7 @@ namespace Selene
             // no login this start (intro and Who's playing? both off): Collection right away if that's the start screen
             var loginLayer = Part("AcceuilSettings");
             if (loginLayer != null && !loginLayer.IsVisible) LoginScene.AllowBackdropVideo();
-            if (loginLayer != null && !loginLayer.IsVisible && Features.On("startcollection")) ShowLibrary();
+            if (loginLayer != null && !loginLayer.IsVisible && StartOnCollection()) ShowLibrary();
             // Playnite's "game is running" screen (switching back to Playnite while a game runs): the home instead
             var status = HomeNav.FindByName(main, "PART_ElemGameStatus") as UIElement;
             if (status != null) status.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) HomeNav.GameStatusShown(); };
@@ -170,6 +170,25 @@ namespace Selene
         // Collection is showing (or being switched to): Spotlight's selection guard stays out of its way
         public static bool CollectionActive { get; private set; }
 
+        // the screen you were on last, for Start on: Where you left it (a word in a file, like the filter tab)
+        private static readonly string StartScreenFile = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite", "selene-start-screen.txt");
+
+        private static void RememberScreen(string screen)
+        {
+            if (Features.Value("starton") != "last") return;
+            try { System.IO.File.WriteAllText(StartScreenFile, screen); } catch { }
+        }
+
+        // the Start on setting: Collection, or whichever screen was up when Playnite last closed
+        public static bool StartOnCollection()
+        {
+            var v = Features.Value("starton");
+            if (v != "last") return v == "collection";
+            try { return System.IO.File.Exists(StartScreenFile) && System.IO.File.ReadAllText(StartScreenFile).Trim() == "collection"; }
+            catch { return false; }
+        }
+
         public static void ShowLibrary()
         {
             var home = Part("WelcomeHubOverlay");
@@ -177,6 +196,7 @@ namespace Selene
             if (home == null || library == null) return;
             int mine = ++switchCount;
             CollectionActive = true;
+            RememberScreen("collection");
             library.BeginAnimation(UIElement.OpacityProperty, null);
             library.Visibility = Visibility.Visible;   // under Spotlight, loading its art meanwhile
             HomeNav.SetMusic("home");   // Collection like Spotlight: the default track, a game's song with its trailer
@@ -250,6 +270,7 @@ namespace Selene
             if (home == null) return;
             int mine = ++switchCount;
             CollectionActive = false;
+            RememberScreen("spotlight");
             if (instant)
             {
                 if (library != null) { library.BeginAnimation(UIElement.OpacityProperty, null); library.Visibility = Visibility.Collapsed; }
@@ -355,7 +376,7 @@ namespace Selene
             var login = Part("AcceuilSettings");
             if (login == null) return;
             HomeNav.QuietFocus(1200);   // focus goes back to the home
-            if (!LoginScene.KeepHome && Features.On("startcollection")) { ShowLibrary(); HomeNav.Log("start on Collection"); }
+            if (!LoginScene.KeepHome && StartOnCollection()) { ShowLibrary(); HomeNav.Log("start on Collection"); }
             else if (!LoginScene.KeepHome) HomeNav.HoldHomeForIntro();
             var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
             fade.Completed += (s, e) => { login.Visibility = Visibility.Collapsed; login.BeginAnimation(UIElement.OpacityProperty, null); login.Opacity = 1; };

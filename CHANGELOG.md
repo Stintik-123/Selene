@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Start on (Start-up) is a choice: Spotlight, Collection, or where you left it (the screen you were on when Playnite closed). A Start on Collection switch that was on becomes Collection.
 - Selene settings: a long group scrolls to keep the focused row in view (Spotlight's rows ran off the screen and the focus went on into rows you couldn't see).
 - Button names in the hints: Xbox or PlayStation (cross, circle, square, triangle, L1 / R1 / L2 / R2), as Playnite's own Button prompts setting or chosen in Selene settings (Navigation, Button names).
 - Filter tabs (Spotlight, Filter tabs): LB / RB go through Selene's five tabs, your own Playnite filter presets, or both. Presets are applied through Playnite, so they behave exactly as in Playnite, on Spotlight and in Collection.
