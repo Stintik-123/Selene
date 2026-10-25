@@ -237,7 +237,8 @@ namespace Selene
             {
                 if (b != "A") { MoveRow(b); return; }
                 Ui.Confirm();
-                if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false, () => new SettingsScreen(true, "Games")), 1);
+                if (opt.Key == "report") { bool back = fromMenu; LoginScene.Show(new ReportScreen(() => new SettingsScreen(back, "Advanced")), 1); }
+                else if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false, () => new SettingsScreen(true, "Games")), 1);
                 else if (opt.Key == "reset")
                 {
                     ask = new Dialog("\uE5D5", "Reset Selene settings?", "Every switch and choice goes back to how Selene ships. Your profiles, theme and wallpaper stay.",
