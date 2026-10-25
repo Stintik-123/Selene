@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Settings (Selene's and Playnite's): a choice opens a list over its value (A, Up / Down, A to pick, B to leave it as it was) instead of Left / Right going round the values; numbers (text size, rows, columns, volumes) are sliders: a line with a knob, Left / Right move it.
 - Clip player: holding Left / Right glides through the clip with a preview of the frame above the bar (a tap still jumps 10 s), Up / Down set the volume (a slider shows at the right), Selene's music waits while a clip plays, and the hints became player buttons (skip, 10 s back, play / pause, 10 s on, volume) with the controller button under each. Spotlight's hints follow a change of button names (PlayStation / Xbox) at once.
 - Clips have sound: the browser that plays the NVIDIA app's AV1 clips can't decode their AAC sound, so Windows decodes the sound track once (kept in the temp folder for two days) and Selene plays it in step with the picture: pause, play, seeking and looping follow it.
 - Notification cards are sharp: on whole pixels (a card as wide as its words had soft text); the new-version card fits its words.

@@ -246,6 +246,7 @@ namespace Selene
             public string[] Choices, Names;
             public string Default;
             public bool IsChoice { get { return Choices != null; } }
+            public bool Slider;   // a number along a line (Left / Right) instead of a list to pick from
         }
 
         // the groups Selene settings shows, in order (each option names its group)
@@ -276,7 +277,7 @@ namespace Selene
             new Option { Group = "Sound & music", Key = "sounds", Label = "Interface sounds", About = "Sounds when you move, select and go back." },
             new Option { Group = "Sound & music", Key = "music", Label = "Music control", About = "Default music while browsing, a game's song with its trailer." },
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },
-            new Option { Group = "Sound & music", Key = "soundvolume", Label = "Sound volume", About = "How loud Selene's own sounds are.", Choices = new[] { "25", "50", "75", "100" }, Names = new[] { "25%", "50%", "75%", "100%" }, Default = "100" },
+            new Option { Group = "Sound & music", Key = "soundvolume", Slider = true, Label = "Sound volume", About = "How loud Selene's own sounds are.", Choices = new[] { "25", "50", "75", "100" }, Names = new[] { "25%", "50%", "75%", "100%" }, Default = "100" },
             new Option { Group = "Look", Key = "fullrate", Label = "Full refresh rate", About = "Selene moves at your screen's own rate (120, 144 Hz...) instead of 60 fps, which stuttered on fast screens. Only while Playnite is in front." },
             new Option { Group = "Look", Key = "progresstoast", Label = "Progress as a notification", About = "Add-ons downloading logos or trailers show a small card at the top right instead of covering the screen; you keep browsing." },
             new Option { Group = "Look", Key = "dialogs", Label = "Selene dialogs", About = "Playnite's questions (add-on installs, restart, errors) as Selene cards: an icon, centred text, a soft rise." },

@@ -22,7 +22,9 @@ namespace Selene
         private readonly List<Border> rows = new List<Border>();
         private readonly List<Border> knobs = new List<Border>();
         private readonly List<Border> tracks = new List<Border>();
-        private readonly List<TextBlock> values = new List<TextBlock>();   // a choice row's current value (null on switch rows)
+        private readonly List<TextBlock> values = new List<TextBlock>();
+        private readonly List<SliderBar> sliders = new List<SliderBar>();   // a number row's line (null on the others)
+        private ChoiceList picker;   // a choice's list, open over its value   // a choice row's current value (null on switch rows)
         private List<Features.Option> options = new List<Features.Option>();
         private int group, index;
         private bool inOptions;
@@ -103,7 +105,7 @@ namespace Selene
         {
             options = Features.All.Where(o => o.Group == Features.Groups[group]).ToList();
             groupTitle.Text = Features.Groups[group].ToUpperInvariant();
-            optionList.Children.Clear(); rows.Clear(); knobs.Clear(); tracks.Clear(); values.Clear();
+            optionList.Children.Clear(); rows.Clear(); knobs.Clear(); tracks.Clear(); values.Clear(); sliders.Clear();
             for (int i = 0; i < options.Count; i++)
             {
                 var f = options[i];
@@ -113,15 +115,19 @@ namespace Selene
                 var knob = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(11), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(4, 0, 0, 0), Background = Brushes.White, RenderTransform = new TranslateTransform() };
                 var track = new Border { Width = 56, Height = 30, CornerRadius = new CornerRadius(15), VerticalAlignment = VerticalAlignment.Center, Child = knob, Margin = new Thickness(24, 0, 0, 0) };
                 TextBlock value = null;
-                if (f.IsChoice)
+                SliderBar slider = null;
+                if (f.IsChoice && f.Slider)
                 {
-                    // a choice: its value in a pill with arrows (Left / Right go round the values)
-                    var pill = new StackPanel { Orientation = Orientation.Horizontal };
-                    pill.Children.Add(new TextBlock { Text = "\u2039", FontSize = 22, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 3) });
-                    value = new TextBlock { FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, MinWidth = 120, TextAlignment = TextAlignment.Center };
-                    pill.Children.Add(value);
-                    pill.Children.Add(new TextBlock { Text = "\u203A", FontSize = 22, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 3) });
-                    track = new Border { CornerRadius = new CornerRadius(17), Padding = new Thickness(12, 4, 12, 5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24, 0, 0, 0), Background = Ink.Brush("SeleneInkColor", 0.12), Child = pill };
+                    // a number: a line with a knob (Left / Right)
+                    slider = new SliderBar();
+                    track = slider.Root;
+                    value = slider.Value;
+                    knob = null;
+                }
+                else if (f.IsChoice)
+                {
+                    // a choice: its value; A opens the list of them
+                    track = ChoiceLook.Pill(out value);
                     knob = null;
                 }
                 var line = new DockPanel();
@@ -130,7 +136,7 @@ namespace Selene
                 line.Children.Add(text);
                 var row = new Border { Child = line, CornerRadius = new CornerRadius(16), Padding = new Thickness(26, 18, 24, 18), Margin = new Thickness(0, 0, 0, 8), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Ink.Brush("SeleneGlassColor", 0.7) };
                 optionList.Children.Add(row);
-                rows.Add(row); knobs.Add(knob); tracks.Add(track); values.Add(value);
+                rows.Add(row); knobs.Add(knob); tracks.Add(track); values.Add(value); sliders.Add(slider);
                 ShowSwitch(i, false);
                 if (animate) Ui.Rise(row, i * 40, 10, 220);
             }
@@ -140,7 +146,9 @@ namespace Selene
         {
             if (options[i].IsChoice)
             {
-                values[i].Text = Features.ValueName(options[i].Key);
+                var o = options[i];
+                if (sliders[i] != null) { sliders[i].Set(Math.Max(0, Array.IndexOf(o.Choices, Features.Value(o.Key))), o.Choices.Length, Features.ValueName(o.Key), animate); return; }
+                values[i].Text = Features.ValueName(o.Key);
                 if (animate) Ui.Pop(tracks[i]);
                 return;
             }
@@ -180,6 +188,7 @@ namespace Selene
 
         public override void Handle(string b)
         {
+            if (picker != null && picker.IsOpen) { picker.Handle(b); return; }   // a choice's list has the buttons
             if (b == "Y" && Features.On("copylog")) { MenuScreen.CopyLog(); return; }
             if (!inOptions)
             {
@@ -194,18 +203,30 @@ namespace Selene
                 return;
             }
             var opt = options[index];
-            if (b == "B" || (b == "DPadLeft" && !opt.IsChoice)) { inOptions = false; Ui.Back(); ShowFocus(); return; }
-            if (opt.IsChoice && (b == "A" || b == "DPadLeft" || b == "DPadRight"))
+            if (b == "B" || (b == "DPadLeft" && !(opt.IsChoice && opt.Slider))) { inOptions = false; Ui.Back(); ShowFocus(); return; }
+            if (opt.IsChoice && opt.Slider && (b == "DPadLeft" || b == "DPadRight"))
             {
-                Features.Cycle(opt.Key, b == "DPadLeft" ? -1 : 1);
-                Ui.Key();
+                int at = Math.Max(0, Array.IndexOf(opt.Choices, Features.Value(opt.Key))) + (b == "DPadLeft" ? -1 : 1);
+                if (at < 0 || at >= opt.Choices.Length) return;   // the end of the line
+                Features.SetValue(opt.Key, opt.Choices[at]);
+                Ui.Tick();
                 ShowSwitch(index, true);
-                if (opt.Key == "trailersound") HomeNav.ApplyValueSettings();
-                if (opt.Key == "shade") Contrast.Apply();
-                if (opt.Key == "prompts") Ui.RefreshPrompts();   // the hints show the new button names
-                HomeNav.Log("settings: " + opt.Key + " = " + Features.Value(opt.Key));
+                AfterChoice(opt);
                 return;
             }
+            if (opt.IsChoice && b == "A" && !opt.Slider)
+            {
+                int row = index;
+                var names = opt.Names ?? opt.Choices;
+                picker = ChoiceList.Open(Root, tracks[row], names, Math.Max(0, Array.IndexOf(opt.Choices, Features.Value(opt.Key))), k =>
+                {
+                    Features.SetValue(opt.Key, opt.Choices[k]);
+                    ShowSwitch(row, true);
+                    AfterChoice(opt);
+                });
+                return;
+            }
+            if (opt.IsChoice && (b == "DPadRight" || b == "A")) return;   // (A on a number row: nothing; Right: nothing)
             if (b == "A")
             {
                 var key = options[index].Key;
@@ -227,6 +248,15 @@ namespace Selene
             index = n;
             Ui.Tick();
             ShowFocus();
+        }
+
+        // what a changed choice sets going at once
+        private void AfterChoice(Features.Option opt)
+        {
+            if (opt.Key == "trailersound") HomeNav.ApplyValueSettings();
+            if (opt.Key == "shade") Contrast.Apply();
+            if (opt.Key == "prompts") Ui.RefreshPrompts();   // the hints show the new button names
+            HomeNav.Log("settings: " + opt.Key + " = " + Features.Value(opt.Key));
         }
     }
 }
