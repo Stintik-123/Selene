@@ -291,13 +291,17 @@ namespace Selene
             again.Tick += (s, e) =>
             {
                 tries++;
-                bool ok = RefreshPreview();
+                // the second picture is always taken: the first can catch a change mid-fade (game art / background only fade),
+                // and skipping this one as "nothing changed" left the preview showing the other choice
+                bool ok = RefreshPreview(tries == 1 && (DateTime.Now - HomeNav.PreviewChangedAt).TotalMilliseconds < 1500);
                 if (tries >= 1 && (ok || tries >= 5)) again.Stop();
             };
             again.Start();
         }
 
-        private static bool RefreshPreview()
+        private static bool RefreshPreview() { return RefreshPreview(false); }
+
+        private static bool RefreshPreview(bool force)
         {
             try
             {
@@ -306,7 +310,7 @@ namespace Selene
                 if (shown.Count == 0) return false;
                 // a picture of this very state already: nothing to take (each one cost a frame or more, and quick moves between the
                 // steps stacked them into the next slide)
-                shown = shown.Where(b => b.Version != HomeNav.PreviewVersion || b.Front.Source == null).ToList();
+                shown = shown.Where(b => force || b.Version != HomeNav.PreviewVersion || b.Front.Source == null).ToList();
                 if (shown.Count == 0) return true;
                 var main = Application.Current.MainWindow;
                 var viewHost = main != null ? HomeNav.FindByName(main, "PART_ViewHost") : null;

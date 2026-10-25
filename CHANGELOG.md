@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Choose your background: the preview shows the look you picked (Game art / Background only showed the other one after the last speed-up).
 - Captures: the blurred picture behind the grid crossfades from one capture to the next (it blinked to black and back), and smoothly.
 - Captures: clips play with sound (the browser kept them muted; it now gets a click it counts as yours).
 - Session card: just the game's logo and the line (no cover beside them).

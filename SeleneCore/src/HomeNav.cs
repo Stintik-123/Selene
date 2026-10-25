@@ -1017,7 +1017,8 @@ namespace Selene
 
         // something the profile steps' preview shows changed (it is pictured again only then)
         public static int PreviewVersion { get; private set; }
-        public static void PreviewChanged() { PreviewVersion++; }
+        public static DateTime PreviewChangedAt { get; private set; }
+        public static void PreviewChanged() { PreviewVersion++; PreviewChangedAt = DateTime.Now; }
 
         public static bool ShowArtForPreview(bool on)
         {
