@@ -145,6 +145,21 @@ namespace Selene
 
         // developer switch: %TEMP%\selene-dev-keys holds "<ms> <button>" pairs (e.g. "3000 A 800 DPadRight"), pressed in turn
         // after start, to walk through the screens without a controller
+        private static void DevKeyOnHome(string button)
+        {
+            var key = button == "DPadLeft" ? System.Windows.Input.Key.Left : button == "DPadRight" ? System.Windows.Input.Key.Right : button == "DPadUp" ? System.Windows.Input.Key.Up
+                    : button == "DPadDown" ? System.Windows.Input.Key.Down : button == "A" ? System.Windows.Input.Key.Enter : button == "B" ? System.Windows.Input.Key.Escape : System.Windows.Input.Key.None;
+            var target = System.Windows.Input.Keyboard.FocusedElement as UIElement ?? Application.Current.MainWindow;
+            var source = target != null ? PresentationSource.FromVisual(target) : null;
+            if (key == System.Windows.Input.Key.None || source == null) return;
+            foreach (var ev in new[] { System.Windows.Input.Keyboard.PreviewKeyDownEvent, System.Windows.Input.Keyboard.KeyDownEvent })
+            {
+                var args = new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, source, Environment.TickCount, key) { RoutedEvent = ev };
+                target.RaiseEvent(args);
+                if (args.Handled) break;
+            }
+        }
+
         private static void DevKeys()
         {
             var file = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-keys");
@@ -169,7 +184,8 @@ namespace Selene
                 HomeNav.Log("dev key " + step[1]);
                 if (step[1] == "menu") SeleneShell.OpenMenu();
                 else if (step[1].StartsWith("type:") && current != null) current.Type(step[1].Substring(5));
-                else HandleButton(step[1]);
+                else if (IsActive) HandleButton(step[1]);
+                else DevKeyOnHome(step[1]);   // the layer closed: the key goes to the home as a keyboard press would
                 next();
             };
             next();

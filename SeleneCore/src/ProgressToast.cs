@@ -24,6 +24,8 @@ namespace Selene
         [DllImport("user32.dll")] private static extern int SetWindowLong(IntPtr hWnd, int index, int value);
         [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int cmd);
         [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
+        [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+        [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left, Top, Right, Bottom; }
 
         private const double CardWidth = 500, CardHeight = 96, Edge = 28, ShadowRoom = 24, Drift = 26;   // one size for every card
         private const int MinShownMs = 2600, AfterDoneMs = 1100, InMs = 260, OutMs = 220;
@@ -83,6 +85,13 @@ namespace Selene
             w.Opacity = 0;
             w.Background = Brushes.Transparent;
             HoldDim(main, true);
+            // shown as a card (the same test as Make): emptied, tiny and off the screen already now. It's a see-through window
+            // the size of the screen, which Windows redraws the slow way on every frame until it's made small (it froze
+            // everything moving for a few hundred ms before each card)
+            if (main.WindowState == WindowState.Minimized || main.ActualWidth < 400) return;
+            w.Content = null;
+            var hwnd = new WindowInteropHelper(w).Handle;
+            if (hwnd != IntPtr.Zero) SetWindowPos(hwnd, IntPtr.Zero, -32000, -32000, 1, 1, 0x0010 /* NOACTIVATE */ | 0x0004 /* NOZORDER */ | 0x0200 /* NOOWNERZORDER */);
         }
 
         // Playnite's own dim layer (BorderDim in its main window) held hidden while a card shows: switching its flag off was not
@@ -166,7 +175,7 @@ namespace Selene
             EnableWindow(mainHwnd, true);
             main.Activate();
             steps.Append(" c" + timing.ElapsedMilliseconds);
-            if (hwnd != IntPtr.Zero) ShowWindow(hwnd, 0 /* SW_HIDE */);
+            // (not hidden the Windows way too: it's tiny, see-through and off the screen already, and hiding it cost ~40 ms)
             steps.Append(" d" + timing.ElapsedMilliseconds);
             // the modal window disabled the main one: it gets its input back, so browsing goes on while the task runs
             w.Dispatcher.BeginInvoke(new Action(() => { var t0 = System.Diagnostics.Stopwatch.StartNew(); HideProgress(); EnableWindow(mainHwnd, true); if (!main.IsActive) main.Activate(); if (t0.ElapsedMilliseconds > 8) HomeNav.Log("notification: second pass " + t0.ElapsedMilliseconds + " ms"); }), DispatcherPriority.Background);
@@ -376,7 +385,10 @@ namespace Selene
             try
             {
                 var h = new WindowInteropHelper(w).Handle;
-                if (h != IntPtr.Zero && IsWindowVisible(h)) ShowWindow(h, 0 /* SW_HIDE */);
+                // Playnite placed it back over the screen: off it again (one cheap call, only when it moved)
+                RECT r;
+                if (h != IntPtr.Zero && GetWindowRect(h, out r) && (r.Left > -30000 || r.Right - r.Left > 2))
+                    SetWindowPos(h, IntPtr.Zero, -32000, -32000, 1, 1, 0x0010 /* NOACTIVATE */ | 0x0004 /* NOZORDER */ | 0x0200 /* NOOWNERZORDER */);
                 if (w.Opacity > 0) { w.BeginAnimation(UIElement.OpacityProperty, null); w.Opacity = 0; }
                 var main = Application.Current.MainWindow;
                 if (main != null) EnableWindow(new WindowInteropHelper(main).Handle, true);
