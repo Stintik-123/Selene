@@ -216,7 +216,7 @@ namespace Selene
             groupTitle = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(8, 14, 0, 16) };
             right.Children.Add(groupTitle);
             var scroller = new ScrollViewer { Content = optionList, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, MaxHeight = 715, Focusable = false };
-            right.Children.Add(PeekScroller.Wrap(scroller, optionList));   // the rows past the edge peek in, blurred, fading into the dark
+            right.Children.Add(PeekScroller.Wrap(scroller));   // the rows fade into the dark at the edges
             Grid.SetColumn(right, 1);
             layout.Children.Add(right);
             Root.Children.Add(layout);
