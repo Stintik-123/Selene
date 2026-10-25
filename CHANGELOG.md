@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Profile steps: the slide to the next page is smooth (the next page is built first, then both slide as one picture each), and the theme / background preview is never empty (opened from the menu in Collection, the home wasn't there to be pictured).
+- Readable text everywhere on the home and in Collection: each piece of text is measured against the picture right behind it; where it reads fine nothing is added, where the picture is bright it gets a soft dark halo hugging its letters (no box, no hard edges) and grey text comes up toward white (switch: Look, Readable text).
 - Progress notifications: one size for every card (a little wider, two lines of room), and no dark frame before the card (the progress window has no background of its own any more).
 - Progress notifications: the screen behind no longer darkens (Playnite dims its main window while any of its windows is open, and its hidden progress window counted) and no dark frame flashes before the card; Playnite's own sounds stay on meanwhile.
 - Empty-tab message: keeps following the row after the login or a menu has been over the home (it stayed put and ended up on the cards).

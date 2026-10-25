@@ -115,19 +115,29 @@ namespace Selene
             Save();
         }
 
+        // the next step is built first (its grid, pictures, preview), then both pages slide, each as one cached picture: built
+        // during the slide, the work made the slide stutter (choosing a theme, on to the background)
         private void GoTo(int i, int dir)
         {
             var old = steps[step].Root;
             steps[step].Left();
             old.IsHitTestVisible = false;
-            Ui.Slide(old, 0, -dir * 70, 1, 0, 220, () => body.Children.Remove(old));
             step = i;
             var now = steps[step].Root;
             now.IsHitTestVisible = true;
+            now.Opacity = 0;
             if (!body.Children.Contains(now)) body.Children.Add(now);
-            Ui.Slide(now, dir * 70, 0, 0, 1, 300);
             steps[step].Shown();
             ShowDots();
+            var oldStep = old;
+            body.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                oldStep.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
+                now.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
+                Ui.Slide(oldStep, 0, -dir * 70, 1, 0, 220, () => { body.Children.Remove(oldStep); oldStep.CacheMode = null; });
+                Ui.Slide(now, dir * 70, 0, 0, 1, 300, () => now.CacheMode = null);
+                Ui.MeasureFrames("profile step slide", 340);
+            }), DispatcherPriority.Background);
         }
 
         private void Save()
@@ -262,19 +272,30 @@ namespace Selene
         {
             if (previewFront == null) return;
             previewFront.Dispatcher.BeginInvoke(new Action(() => RefreshPreview()), DispatcherPriority.Loaded);
+            // again a moment later (anything fading in), and up to a few more times while no picture could be taken
+            int tries = 0;
             var again = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(520) };
-            again.Tick += (s, e) => { again.Stop(); RefreshPreview(); };
+            again.Tick += (s, e) =>
+            {
+                tries++;
+                bool ok = RefreshPreview();
+                if (tries >= 1 && (ok || tries >= 5)) again.Stop();
+            };
             again.Start();
         }
 
-        private static void RefreshPreview()
+        private static bool RefreshPreview()
         {
             try
             {
-                if (previewFront == null || !previewFront.IsLoaded) return;
+                if (previewFront == null || !previewFront.IsLoaded) return false;
                 var main = Application.Current.MainWindow;
                 var viewHost = main != null ? HomeNav.FindByName(main, "PART_ViewHost") : null;
-                if (viewHost == null || viewHost.ActualWidth < 1) return;
+                if (viewHost == null || viewHost.ActualWidth < 1) { HomeNav.Log("preview: no view host yet"); return false; }
+                // the home must be up under the profile screen to be pictured (opened from the menu in Collection it wasn't)
+                var hubNow = HomeNav.FindByName(main, "WelcomeHubOverlay") as UIElement;
+                if (hubNow != null && !hubNow.IsVisible) { HomeNav.Log("preview: the home is hidden -> shown under the profile screen"); SeleneShell.ShowHome(true); viewHost.UpdateLayout(); }
+                if (hubNow != null && hubNow.Opacity < 0.05) { HomeNav.Log("preview: the home is faded out"); return false; }
                 double scale = previewWidth / viewHost.ActualWidth;
                 var dv = new DrawingVisual();
                 using (var dc = dv.RenderOpen())
@@ -289,7 +310,7 @@ namespace Selene
                     }
                 }
                 int w = (int)Math.Round(viewHost.ActualWidth * scale), h = (int)Math.Round(viewHost.ActualHeight * scale);
-                if (w < 2 || h < 2) return;
+                if (w < 2 || h < 2) return false;
                 var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96 * scale, 96 * scale, PixelFormats.Pbgra32);
                 rtb.Render(dv);
                 rtb.Freeze();
@@ -299,8 +320,9 @@ namespace Selene
                 previewFront.BeginAnimation(UIElement.OpacityProperty, null);
                 previewFront.Opacity = 0;
                 Ui.Fade(previewFront, 1, 260);
+                return true;
             }
-            catch (Exception ex) { HomeNav.Log("preview: " + ex.Message); }
+            catch (Exception ex) { HomeNav.Log("preview: " + ex.Message); return false; }
         }
 
         // a debounced action: moving quickly through choices only applies the one you stop on
