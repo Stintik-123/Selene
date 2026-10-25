@@ -296,7 +296,9 @@ namespace Selene
                 var shown = previews.Where(b => b.Front.IsLoaded && b.Front.IsVisible && (b.Version != HomeNav.PreviewVersion || b.Front.Child == null)).ToList();
                 foreach (var box in shown)
                 {
-                    var mock = new Viewbox { Stretch = Stretch.Fill, Child = SampleHome() };
+                    // drawn once into a picture the size of the box: the slides and the step's own glides move a picture,
+                    // not the 1920x1080 sample with its shadows (the steps fell under 60 fps)
+                    var mock = new Viewbox { Stretch = Stretch.Fill, Child = SampleHome(), CacheMode = new BitmapCache(1.0) };
                     // the old drawing stays under the new one as it fades in: a soft change, not a cut
                     var old = box.Front.Child;
                     box.Front.Child = null;
@@ -324,7 +326,7 @@ namespace Selene
             c.A = (byte)Math.Round(c.A * alpha);
             return c;
         }
-        private static SolidColorBrush PB(string key, double alpha = 1) { return new SolidColorBrush(PC(key, alpha)); }
+        private static SolidColorBrush PB(string key, double alpha = 1) { var b = new SolidColorBrush(PC(key, alpha)); b.Freeze(); return b; }
 
         private static FrameworkElement SampleHome()
         {
@@ -519,7 +521,7 @@ namespace Selene
                 g.Children.Add(label);
                 var badge = new Grid { Width = 22, Height = 22, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 5, 6, 0) };
                 badge.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor", 0.9) });
-                badge.Children.Add(new TextBlock { Text = button, FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });   // capitals sit low in their box
+                badge.Children.Add(Ui.Letter(button, 12, FontWeights.Bold, Ink.Brush("SeleneScrimColor")));
                 g.Children.Add(badge);
                 return g;
             }
@@ -967,7 +969,7 @@ namespace Selene
             private readonly List<Tile> tiles = new List<Tile>();
             private readonly ScrollingGrid grid;
             private readonly TextBlock groupLabel;
-            private readonly Segmented look = new Segmented("Preview", new[] { "Game art", "Background only" }, "X");
+            private readonly Segmented look = new Segmented("Show", new[] { "Game art", "Background only" }, "X");
             private readonly TextBlock lookNote = new TextBlock { FontSize = 15, FontFamily = Ui.Body, TextWrapping = TextWrapping.Wrap, MaxWidth = 820, Margin = new Thickness(4, 12, 0, 0) };
             private readonly List<string> groups = new List<string>();
             private readonly Later apply = new Later(260);   // after the 220 ms glide: applied mid-glide, the swap made it stutter

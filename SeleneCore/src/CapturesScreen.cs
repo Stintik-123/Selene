@@ -385,7 +385,7 @@ namespace Selene
             int first = Math.Max(0, Math.Min(row - 1, rows - Visible));
             if (first == firstRow && animate) return;
             firstRow = first;
-            pageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-first * PitchY, TimeSpan.FromMilliseconds(animate ? 260 : 0)) { EasingFunction = Ui.Out() });
+            pageShift.BeginAnimation(TranslateTransform.YProperty, Ui.Fast(new DoubleAnimation(-first * PitchY, TimeSpan.FromMilliseconds(animate ? 260 : 0)) { EasingFunction = Ui.Out() }));   // at the screen's rate (WPF's default is 60)
         }
 
         // ---- the viewer ----

@@ -84,7 +84,9 @@ namespace Selene
                     t.Start();
                 }
             }
-            w.Activated += (s, e) => { if (w.IsVisible && w.WindowState != WindowState.Minimized) SetOwnAudioMute(false); };
+            // only when it was muted (going through every audio device on each activation took ~100 ms: a hitch whenever a
+            // notification or a dialog handed the focus back)
+            w.Activated += (s, e) => { if (ownMuted && w.IsVisible && w.WindowState != WindowState.Minimized) SetOwnAudioMute(false); };
             Application.Current.Exit += (s, e) => { if (tray != null) { tray.Visible = false; tray.Dispose(); } };
 
             // The theme builds its power panel only when it opens, so catch "Exit Playnite" at the moment it is pressed:
@@ -361,8 +363,11 @@ namespace Selene
             int SetMute([MarshalAs(UnmanagedType.Bool)] bool mute, ref Guid ctx);
         }
 
+        private static bool ownMuted;
+
         public static void SetOwnAudioMute(bool mute)
         {
+            ownMuted = mute;
             try
             {
                 uint me = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;

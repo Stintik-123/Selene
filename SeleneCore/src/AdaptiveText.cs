@@ -70,6 +70,13 @@ namespace Selene
 
         private static void MeasureAll()
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            try { MeasureAllNow(); }
+            finally { if (sw.ElapsedMilliseconds > 8) HomeNav.Log("readable: measured in " + sw.ElapsedMilliseconds + " ms"); }
+        }
+
+        private static void MeasureAllNow()
+        {
             texts.RemoveAll(r => !(r.Target is TextBlock));
             foreach (var r in texts.ToList())
             {

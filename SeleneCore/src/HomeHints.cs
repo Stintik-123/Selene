@@ -65,8 +65,12 @@ namespace Selene
         {
             var prompt = Ui.Prompt(Ui.Icon(icon), label);
             var dot = prompt.Children[0] as Grid;
-            var glyph = dot != null && dot.Children.Count > 1 ? dot.Children[1] as TextBlock : null;
-            if (glyph != null) { glyph.FontFamily = Ui.Icons; glyph.FontSize = size; glyph.FontWeight = FontWeights.Normal; glyph.Margin = new Thickness(0); }
+            if (dot != null && dot.Children.Count > 1)
+            {
+                // an icon font glyph (the letter shape is drawn in the body font, which has no icons)
+                dot.Children.RemoveAt(1);
+                dot.Children.Add(new TextBlock { Text = Ui.Icon(icon), FontFamily = Ui.Icons, FontSize = size, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            }
             return prompt;
         }
 

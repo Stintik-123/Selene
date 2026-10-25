@@ -122,10 +122,36 @@ namespace Selene
             var dot = new Grid { Width = 32, Height = 32 };
             dot.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor") });
             button = PromptLabel(button);
-            dot.Children.Add(new TextBlock { Text = button, FontSize = button.Length > 1 ? 11 : 16, FontWeight = FontWeights.SemiBold, FontFamily = Body, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });   // capitals sit low in their box
+            dot.Children.Add(Letter(button, button.Length > 1 ? 11 : 16, FontWeights.SemiBold, Ink.Brush("SeleneScrimColor")));
             sp.Children.Add(dot);
             sp.Children.Add(new TextBlock { Text = label, FontSize = 21, FontFamily = Body, Foreground = Ink.Brush("SeleneInkColor", 0.9), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) });
             return sp;
+        }
+
+        // a button's letter centred on its drawn shape in a round badge (a TextBlock centres its line box, so capitals sat
+        // off-centre, and nudging it was right for one letter and wrong for the next)
+        public static FrameworkElement Letter(string text, double size, FontWeight weight, Brush brush)
+        {
+            var typeface = new Typeface(Body, FontStyles.Normal, weight, FontStretches.Normal);
+            var ft = new FormattedText(text ?? "", System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, size, Brushes.Black, 1.0);
+            var geometry = ft.BuildGeometry(new Point(0, 0));
+            var b = geometry.Bounds;
+            if (b.IsEmpty) return new TextBlock { Text = text, FontSize = size, FontWeight = weight, FontFamily = Body, Foreground = brush, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            geometry.Transform = new TranslateTransform(-b.X, -b.Y);
+            return new System.Windows.Shapes.Path
+            {
+                Data = geometry, Fill = brush, Width = b.Width, Height = b.Height, Stretch = Stretch.None,
+                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, SnapsToDevicePixels = false
+            };
+        }
+
+        // a badge letter's color (Letter's shape, or a plain TextBlock)
+        public static void LetterBrush(UIElement letter, Brush brush)
+        {
+            var path = letter as System.Windows.Shapes.Shape;
+            if (path != null) { path.Fill = brush; return; }
+            var tb = letter as TextBlock;
+            if (tb != null) tb.Foreground = brush;
         }
 
         // prompts row, bottom right (or left)
@@ -269,6 +295,56 @@ namespace Selene
 
         // frame times over the next `ms`, to the log: how smooth a move really was (count, average, worst gap)
         private static bool measuring;
+        // developer switch: %TEMP%\selene-dev-frames makes the log say, each second, how many frames were drawn and the longest
+        // gap between two (to find what makes Selene stutter)
+        public static void DevFrameLog()
+        {
+            if (!System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-frames"))) return;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            double last = 0, worst = 0, second = 0; int n = 0;
+            // and every UI-thread job longer than 40 ms, by name
+            var started = new Dictionary<System.Windows.Threading.DispatcherOperation, double>();
+            var hooks = Application.Current.Dispatcher.Hooks;
+            hooks.OperationStarted += (s, e) => { started[e.Operation] = sw.Elapsed.TotalMilliseconds; };
+            hooks.OperationCompleted += (s, e) =>
+            {
+                double t0;
+                if (!started.TryGetValue(e.Operation, out t0)) return;
+                started.Remove(e.Operation);
+                double took = sw.Elapsed.TotalMilliseconds - t0;
+                if (took < 40) return;
+                string name = "?";
+                try
+                {
+                    var f = typeof(System.Windows.Threading.DispatcherOperation).GetField("_method", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                    var d = f != null ? f.GetValue(e.Operation) as Delegate : null;
+                    if (d != null) name = (d.Method.DeclaringType != null ? d.Method.DeclaringType.FullName : "") + "." + d.Method.Name + (d.Target != null ? " on " + d.Target.GetType().Name : "");
+                    var timer = d != null ? d.Target as System.Windows.Threading.DispatcherTimer : null;
+                    if (timer != null)
+                    {
+                        var tf = typeof(System.Windows.Threading.DispatcherTimer).GetField("Tick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                        var tick = tf != null ? tf.GetValue(timer) as Delegate : null;
+                        if (tick != null) foreach (var h in tick.GetInvocationList()) name += " -> " + (h.Method.DeclaringType != null ? h.Method.DeclaringType.FullName : "") + "." + h.Method.Name;
+                        name += " every " + timer.Interval.TotalMilliseconds + " ms";
+                    }
+                }
+                catch { }
+                HomeNav.Log("slow job " + took.ToString("0") + " ms: " + name + " (" + e.Operation.Priority + ")");
+            };
+            System.Windows.Media.CompositionTarget.Rendering += (s, e) =>
+            {
+                double t = sw.Elapsed.TotalMilliseconds;
+                if (n > 0 && t - last > 60) HomeNav.Log("frame gap " + (t - last).ToString("0") + " ms");
+                if (n > 0) worst = Math.Max(worst, t - last);
+                last = t; n++;
+                if (t - second >= 1000)
+                {
+                    HomeNav.Log("fps " + n + ", worst gap " + worst.ToString("0") + " ms" + (ProgressToast.Busy ? " (notification up)" : ""));
+                    second = t; n = 0; worst = 0;
+                }
+            };
+        }
+
         public static void MeasureFrames(string what, int ms)
         {
             if (measuring) return;
@@ -340,7 +416,7 @@ namespace Selene
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             var dot = new Grid { Width = 26, Height = 26 };
             dot.Children.Add(new Ellipse { Fill = main ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.9) });
-            dot.Children.Add(new TextBlock { Text = button, FontSize = 13, FontWeight = FontWeights.Bold, FontFamily = Body, Foreground = main ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 2) });   // capitals sit low in their box
+            dot.Children.Add(Letter(button, 13, FontWeights.Bold, main ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneScrimColor")));
             row.Children.Add(dot);
             row.Children.Add(new TextBlock { Text = label, FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Body, Foreground = main ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 4, 1) });
             return new Border

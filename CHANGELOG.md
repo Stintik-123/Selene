@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Smoother: a notification coming up no longer freezes the screen for a moment (hiding Playnite's progress window took ~180 ms, now a single quick call; the focus coming back no longer re-checks every audio device), the add-on hint is worked out in the background, element look-ups are remembered instead of searching the whole screen each time, the Captures grid glides at the screen's rate, and the profile preview is drawn once as a picture. Store: B from a game opened in "More from" goes back to the Store. Button letters sit exactly in the middle of their circles. Choose your background: the switch is labelled "Show".
 - Back from a game: Home opens straight on the running game (the first game's art flashed up), closing a game fades into Spotlight once it shows Play again (the closing screen cut away and Now playing vanished a moment later), the session card shows after any session over 10 s, and the game is muted again while you're on the home (an audio error stopped it now and then).
 - Surprise me: only LB / RB change the list (Left / Right did too).
 - Choose your background: X (Game art / Background only) only changes the preview, to see the background with and without a game's art; the home always shows the games' art (a profile that had switched it off shows it again).

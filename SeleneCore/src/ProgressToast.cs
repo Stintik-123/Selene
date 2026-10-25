@@ -138,21 +138,26 @@ namespace Selene
         {
             var main = Application.Current.MainWindow;
             if (main == null || ReferenceEquals(main, w) || !main.IsVisible || main.WindowState == WindowState.Minimized || main.ActualWidth < 400) return false;
+            var timing = System.Diagnostics.Stopwatch.StartNew();
+            var steps = new System.Text.StringBuilder();
 
             // Playnite's own window: out of sight and out of the way (it closes by itself when the task ends). Emptied and hidden the
             // Windows way too, and kept so (Playnite fades / places it after this: a dark veil over the screen stayed otherwise)
             w.BeginAnimation(UIElement.OpacityProperty, null);
             w.Content = null;
+            steps.Append(" a" + timing.ElapsedMilliseconds);
             w.Background = Brushes.Transparent;
             hiddenProgress = w;
-            w.WindowState = WindowState.Normal;
-            w.SizeToContent = SizeToContent.Manual;
-            w.Width = 1; w.Height = 1;
-            w.Left = -32000; w.Top = -32000;
             w.Opacity = 0;
-            w.ShowInTaskbar = false;
+            steps.Append(" b" + timing.ElapsedMilliseconds);
             var hwnd = new WindowInteropHelper(w).Handle;
-            if (hwnd != IntPtr.Zero) SetWindowLong(hwnd, -20, GetWindowLong(hwnd, -20) | 0x08000000 /* NOACTIVATE */ | 0x80 /* TOOLWINDOW */);
+            // off the screen, tiny, off the taskbar: one call to Windows (set one WPF property at a time - size, place, state,
+            // taskbar - it took ~130 ms, a hitch in everything moving each time a notification came up)
+            if (hwnd != IntPtr.Zero)
+            {
+                SetWindowLong(hwnd, -20, GetWindowLong(hwnd, -20) | 0x08000000 /* NOACTIVATE */ | 0x80 /* TOOLWINDOW */);
+                SetWindowPos(hwnd, IntPtr.Zero, -32000, -32000, 1, 1, 0x0010 /* NOACTIVATE */ | 0x0004 /* NOZORDER */ | 0x0200 /* NOOWNERZORDER */);
+            }
             var mainHwnd = new WindowInteropHelper(main).Handle;
             // the main window first gets its input back and the focus, THEN Playnite's window goes: hidden while the main one
             // was still locked by it, Windows handed the focus to another program, and Selene's "a game covers Playnite" guard
@@ -160,14 +165,19 @@ namespace Selene
             busyUntil = DateTime.Now.AddSeconds(6);
             EnableWindow(mainHwnd, true);
             main.Activate();
+            steps.Append(" c" + timing.ElapsedMilliseconds);
             if (hwnd != IntPtr.Zero) ShowWindow(hwnd, 0 /* SW_HIDE */);
+            steps.Append(" d" + timing.ElapsedMilliseconds);
             // the modal window disabled the main one: it gets its input back, so browsing goes on while the task runs
-            w.Dispatcher.BeginInvoke(new Action(() => { HideProgress(); EnableWindow(mainHwnd, true); main.Activate(); }), DispatcherPriority.Background);
+            w.Dispatcher.BeginInvoke(new Action(() => { var t0 = System.Diagnostics.Stopwatch.StartNew(); HideProgress(); EnableWindow(mainHwnd, true); if (!main.IsActive) main.Activate(); if (t0.ElapsedMilliseconds > 8) HomeNav.Log("notification: second pass " + t0.ElapsedMilliseconds + " ms"); }), DispatcherPriority.Background);
             w.Closed += (s, e) => { if (ReferenceEquals(hiddenProgress, w)) hiddenProgress = null; TaskDone(w.DataContext); };
             WatchDimming(main);
             UndimNow(main);
 
+            steps.Append(" e" + timing.ElapsedMilliseconds);
+            long before = timing.ElapsedMilliseconds;
             Show(main, w.DataContext);
+            if (timing.ElapsedMilliseconds > 60) HomeNav.Log("notification: made in " + before + " + " + (timing.ElapsedMilliseconds - before) + " ms (" + steps + ")");
             HomeNav.Log("progress look: notification card");
             return true;
         }

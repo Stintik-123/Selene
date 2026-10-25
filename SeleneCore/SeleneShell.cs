@@ -255,9 +255,15 @@ namespace Selene
                 {
                     var api = HomeNav.Api;
                     if (api == null) return;
-                    bool missing = false;
-                    foreach (var a in SetupCheck.MissingIncluded(api)) if (a.Id.StartsWith("ExtraMetadataLoader")) missing = true;
-                    if (missing) Ui.Notice("Logos and trailers come with the Extra Metadata add-on. Menu, Setup check installs it.", 9000);
+                    // worked out off the UI thread (asking Playnite which add-ons are installed took ~120 ms: a hitch on the home)
+                    var ui = Application.Current.Dispatcher;
+                    System.Threading.Tasks.Task.Factory.StartNew(() =>
+                    {
+                        bool missing = false;
+                        try { foreach (var a in SetupCheck.MissingIncluded(api)) if (a.Id.StartsWith("ExtraMetadataLoader")) missing = true; }
+                        catch (Exception ex) { HomeNav.Log("add-on hint: " + ex.Message); }
+                        if (missing) ui.BeginInvoke(new Action(() => Ui.Notice("Logos and trailers come with the Extra Metadata add-on. Menu, Setup check installs it.", 9000)));
+                    });
                 }
                 catch (Exception ex) { HomeNav.Log("add-on hint: " + ex.Message); }
             };

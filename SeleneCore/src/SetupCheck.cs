@@ -81,7 +81,8 @@ namespace Selene
         // add-ons that come with Selene and aren't installed yet (turned-off ones need turning on in Add-ons instead)
         public static List<AddonInfo> MissingIncluded(IPlayniteAPI api)
         {
-            return Included.Where(a => !api.Addons.Addons.Contains(a.Id)).ToList();
+            var installed = new HashSet<string>(api.Addons.Addons ?? new List<string>(), StringComparer.OrdinalIgnoreCase);   // read once (Playnite works it out on each ask)
+            return Included.Where(a => !installed.Contains(a.Id)).ToList();
         }
 
         private static bool Enabled(IPlayniteAPI api, string addonId)

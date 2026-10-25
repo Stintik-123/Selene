@@ -69,6 +69,7 @@ namespace Selene
             DialogLook.Install();   // Playnite's message boxes as Selene cards
             ProgressToast.DevPreviewLater();
             ProgressToast.DevSessionLater();   // %TEMP%\selene-dev-session: a pretend session card   // %TEMP%\selene-dev-toast: a pretend task to see the notification card
+            Ui.DevFrameLog();   // %TEMP%\selene-dev-frames: frames per second in the log
             EventManager.RegisterClassHandler(typeof(ListBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnListLoaded));
             EventManager.RegisterClassHandler(typeof(TextBlock), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnTextLoaded));
             var tvBackup = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "fullscreenConfig.tv.json");
@@ -2439,7 +2440,26 @@ namespace Selene
             title.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, delay, 0.2, null));
         }
 
+        // the last element found for a name in a window, kept while it's still in that window: the whole tree walked on every
+        // look-up took up to ~100 ms on a big library, and timers look things up many times a second (hitches)
+        private static readonly Dictionary<string, WeakReference> foundInWindow = new Dictionary<string, WeakReference>();
+
         internal static FrameworkElement FindByName(DependencyObject root, string n)
+        {
+            var window = root as Window;
+            if (window == null || n == null) return Search(root, n);
+            WeakReference known;
+            if (foundInWindow.TryGetValue(n, out known))
+            {
+                var fe = known.Target as FrameworkElement;
+                if (fe != null && fe.Name == n && window.IsAncestorOf(fe)) return fe;
+            }
+            var hit = Search(root, n);
+            if (hit != null) foundInWindow[n] = new WeakReference(hit);
+            return hit;
+        }
+
+        private static FrameworkElement Search(DependencyObject root, string n)
         {
             int k = VisualTreeHelper.GetChildrenCount(root);
             for (int i = 0; i < k; i++)
@@ -2447,7 +2467,7 @@ namespace Selene
                 var ch = VisualTreeHelper.GetChild(root, i);
                 var fe = ch as FrameworkElement;
                 if (fe != null && fe.Name == n) return fe;
-                var hit = FindByName(ch, n);
+                var hit = Search(ch, n);
                 if (hit != null) return hit;
             }
             return null;
