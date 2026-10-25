@@ -295,6 +295,32 @@ namespace Selene
 
         // frame times over the next `ms`, to the log: how smooth a move really was (count, average, worst gap)
         private static bool measuring;
+        // Full refresh rate: WPF draws only when something animates, and its animations step at 60 fps; on a 120/144 Hz screen
+        // 60 doesn't divide the refresh, so frames landed unevenly (a stutter). Listening to every frame makes it draw at the
+        // screen's own rate. Only while Playnite's window is the active one (never behind a game). Switch: "fullrate".
+        private static bool fullRateOn;
+        private static void EveryFrame(object sender, EventArgs e) { }
+        private static Window fullRateWatched;
+        public static void WatchFullRate(Window main)
+        {
+            if (main == null || ReferenceEquals(main, fullRateWatched)) return;
+            fullRateWatched = main;
+            Action update = () =>
+            {
+                bool want = Features.On("fullrate") && main.IsActive && main.IsVisible && main.WindowState != WindowState.Minimized;
+                if (want == fullRateOn) return;
+                fullRateOn = want;
+                if (want) System.Windows.Media.CompositionTarget.Rendering += EveryFrame;
+                else System.Windows.Media.CompositionTarget.Rendering -= EveryFrame;
+            };
+            main.Activated += (s, e) => update();
+            main.Deactivated += (s, e) => update();
+            main.StateChanged += (s, e) => update();
+            main.IsVisibleChanged += (s, e) => update();
+            update();
+        }
+        public static void FullRateChanged() { var m = Application.Current.MainWindow; if (m != null) { if (fullRateOn && !Features.On("fullrate")) { fullRateOn = false; System.Windows.Media.CompositionTarget.Rendering -= EveryFrame; } else if (!fullRateOn && Features.On("fullrate") && m.IsActive) { fullRateOn = true; System.Windows.Media.CompositionTarget.Rendering += EveryFrame; } } }
+
         // developer switch: %TEMP%\selene-dev-frames makes the log say, each second, how many frames were drawn and the longest
         // gap between two (to find what makes Selene stutter)
         public static void DevFrameLog()

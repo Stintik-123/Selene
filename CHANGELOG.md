@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Full refresh rate (switch: Look): Selene moves at your screen's own rate (120, 144 Hz...) while Playnite is in front; WPF's 60 fps steps landed unevenly on fast screens, a stutter everywhere.
 - No freeze as a notification comes up: Playnite's full-screen see-through progress window is made tiny and moved off the screen the moment it appears (Windows redrew it the slow way on every frame until then: a few hundred ms of stutter before each card).
 - Smoother: a notification coming up no longer freezes the screen for a moment (hiding Playnite's progress window took ~180 ms, now a single quick call; the focus coming back no longer re-checks every audio device), the add-on hint is worked out in the background, element look-ups are remembered instead of searching the whole screen each time, the Captures grid glides at the screen's rate, and the profile preview is drawn once as a picture. Store: B from a game opened in "More from" goes back to the Store. Button letters sit exactly in the middle of their circles. Choose your background: the switch is labelled "Show".
 - Back from a game: Home opens straight on the running game (the first game's art flashed up), closing a game fades into Spotlight once it shows Play again (the closing screen cut away and Now playing vanished a moment later), the session card shows after any session over 10 s, and the game is muted again while you're on the home (an audio error stopped it now and then).

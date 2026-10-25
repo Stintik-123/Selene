@@ -214,6 +214,7 @@ namespace Selene
                 Ui.Key();
                 ShowSwitch(index, true);
                 if (key == "hints") HomeHints.Update();
+                if (key == "fullrate") Ui.FullRateChanged();
                 if (key == "glow") LoginScene.RefreshBackdrop();
                 if (key == "music" && !Features.On(key)) HomeNav.ReleaseMusic();
                 if (key == "cardpictures") { GameFacts.CardStats(); CapturesScreen.CountInBackground(); }

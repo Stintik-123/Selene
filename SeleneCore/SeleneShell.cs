@@ -102,6 +102,7 @@ namespace Selene
             Wire("SeleneNav_captures", () => new CapturesScreen());
             Wire("SeleneNav_surprise", () => new SurpriseScreen());
             HomeNav.ApplyValueSettings();
+            Ui.WatchFullRate(main);            // the screen's own refresh rate while Playnite is in front
             DetailsStage.Attach(main);         // the details page's lower half
             GameFacts.CardStats();
             CapturesScreen.CountInBackground();
