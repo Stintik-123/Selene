@@ -97,7 +97,7 @@ namespace Selene
         {
             var folder = SelenePaths.ThemeFile("Avatars");
             // pictures and GIFs (a GIF default moves, like one of your own)
-            return Directory.Exists(folder) ? Directory.GetFiles(folder).Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)).OrderBy(f => f.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) ? 1 : 0).ThenBy(f => f).ToArray() : new string[0];   // the still ones first, the moving ones after
+            return Directory.Exists(folder) ? Directory.GetFiles(folder).Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)).OrderBy(f => f).ToArray() : new string[0];
         }
 
         public static Profile Create(string name, string avatar, string theme, string wallpaper)
