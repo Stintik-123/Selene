@@ -681,7 +681,7 @@ namespace Selene
             private readonly List<Tile> tiles = new List<Tile>();
             private readonly TextBlock nameLabel;
             private readonly StackPanel colors = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 18, 0, 0) };
-            private readonly Later apply = new Later(110);
+            private readonly Later apply = new Later(250);   // after the 220 ms glide (a theme change repaints everything)
             private int index;
 
             public ThemeStep(ProfileSteps owner) : base(owner)
@@ -814,7 +814,7 @@ namespace Selene
             private readonly Segmented look = new Segmented("Home background", new[] { "Game art", "Background only" }, "X");
             private readonly TextBlock lookNote = new TextBlock { FontSize = 15, FontFamily = Ui.Body, TextWrapping = TextWrapping.Wrap, MaxWidth = 820, Margin = new Thickness(4, 12, 0, 0) };
             private readonly List<string> groups = new List<string>();
-            private readonly Later apply = new Later(130);
+            private readonly Later apply = new Later(260);   // after the 220 ms glide: applied mid-glide, the swap made it stutter
             private int index, generation;
             private bool hasArt;   // the library has a game whose art the preview can show
 
@@ -897,7 +897,8 @@ namespace Selene
                 grid.Reveal(index);
                 groupLabel.Text = (index == 0 ? "THEME" : groups[index].ToUpperInvariant());
                 var file = files[index] ?? ThemePalettes.DefaultWallpaper(Owner.Theme);
-                Action show = () => { LoginScene.CrossfadeBackdrop(() => { Wallpapers.Show(file); LoginScene.RefreshBackdrop(); }); RefreshPreviewLater(); };
+                // decoded off the UI thread first, so the swap itself costs nothing in the middle of a glide
+                Action show = () => Wallpapers.Prepare(file, () => { LoginScene.CrossfadeBackdrop(() => { Wallpapers.Show(file); LoginScene.RefreshBackdrop(); }); RefreshPreviewLater(); });
                 if (live) apply.Run(show); else show();
             }
 

@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Start-up library update waits until you are signed in: add-ons answer it with progress screens of their own (downloading logos, trailers...), which came up in the middle of the login and profile setup.
+- Progress screen: a slim bar in the theme's color that fills as the work goes, under the words (it showed a second, smaller Selene mark).
+- Choose your background / theme: smooth moves through the grid (each move decoded a full-size wallpaper on the screen's thread mid-glide; it is decoded in the background now, the last few kept, and the change lands once the glide is done).
 - Setup check, Install all: one question for every add-on instead of Playnite's question (and restart question) per add-on. Selene downloads them all, each card showing DOWNLOADING... then RESTART TO FINISH while the button counts along, and asks once to restart; Playnite installs them all on that restart.
 - Setup check: Down from the bottom row of cards always reaches the buttons, even pressed quickly several times (only a Down right after arriving on that row waits a moment, so a held stick doesn't skip it); it lands on the nearer button.
 - Dialog buttons: the words sit in the middle of the pill (they sat a little low).

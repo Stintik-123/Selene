@@ -55,7 +55,14 @@ namespace Selene
             LocalGames.StartRunningWatch();
             Smoothness.Start();
             var libTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
-            libTimer.Tick += (s, e) => { libTimer.Stop(); if (Features.On("startrefresh")) RefreshLibrary("start"); };   // the Library update at start switch
+            // not while the login / profile setup is up: add-ons answer a library update with progress screens of their own
+            // (logos, trailers, achievements...), which landed in the middle of making a profile. It waits for the home.
+            libTimer.Tick += (s, e) =>
+            {
+                if (LoginScene.IsActive || DialogUp()) { libTimer.Interval = TimeSpan.FromSeconds(5); return; }
+                libTimer.Stop();
+                if (Features.On("startrefresh")) RefreshLibrary("start");
+            };   // the Library update at start switch
             libTimer.Start();
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown));
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnWindowPreviewGotFocus));
@@ -3092,6 +3099,8 @@ namespace Selene
             try
             {
                 if ((DateTime.Now - lastLibraryRefresh).TotalMinutes < 10) return;
+                // the automatic ones never under the login / profile setup (add-ons' progress screens would cover it)
+                if (why != "menu" && LoginScene.IsActive) { Log("library refresh (" + why + ") skipped: login is up"); return; }
                 LocalGames.Scan();  // games installed outside a store (the game folders) -> library, before the refresh's new-game setup
                 var w = Application.Current.MainWindow;
                 var vm = w != null ? w.DataContext : null;
