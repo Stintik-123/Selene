@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Setup check: Down from the bottom row of cards always reaches the buttons, even pressed quickly several times (only a Down right after arriving on that row waits a moment, so a held stick doesn't skip it); it lands on the nearer button.
 - Dialog buttons: the words sit in the middle of the pill (they sat a little low).
 - Playnite's progress screen (downloading an add-on, updating the library) has the same moving background as the setup check (switch: Look, Selene dialogs).
 - Start: the logo intro rises from the dark straight into the moving background (the plainer drawn one showed for half a second first).

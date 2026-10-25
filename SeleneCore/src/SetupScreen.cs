@@ -15,6 +15,7 @@ namespace Selene
     // goes on to the profile steps; from the menu, B or Continue goes back to the home.
     public class SetupScreen : Screen
     {
+        private DateTime bottomArrivedAt = DateTime.MinValue;   // the last move onto the bottom row of cards
         private const int Columns = 6;
         private readonly bool firstRun;
         // where each card sits: its row and its x from the centre (rows are centred, so a short last row sits in the middle)
@@ -265,8 +266,13 @@ namespace Selene
             if (index < items.Count)
             {
                 next = CardMove(index, b);
-                // onto the buttons only with a fresh press: a held stick repeats and skipped the bottom row
-                if (next < 0 && b == "DPadDown" && !Ui.Repeated(b)) next = ButtonsStart + 1;
+                if (next < 0 && b == "DPadDown")
+                {
+                    // onto the buttons, the nearer one. Only a Down that comes right after landing on the bottom row waits (a held
+                    // stick went row, row, buttons in one go); resting there, any Down goes at once, however fast the taps
+                    if ((DateTime.Now - bottomArrivedAt).TotalMilliseconds > 300) next = cardX[index] < 0 ? ButtonsStart : ButtonsStart + 1;
+                }
+                else if (next >= 0 && cardRow[next] == cardRow[items.Count - 1] && cardRow[index] != cardRow[next]) bottomArrivedAt = DateTime.Now;
             }
             else
             {
