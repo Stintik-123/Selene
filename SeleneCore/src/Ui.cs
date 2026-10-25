@@ -368,6 +368,7 @@ namespace Selene
         public static void StartupFrameLog()
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
+            WatchSlowJobs(sw, 40, 9000);
             double last = 0; int n = 0;
             EventHandler tick = null;
             tick = (s, e) =>
@@ -385,17 +386,36 @@ namespace Selene
             if (!System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-frames"))) return;
             var sw = System.Diagnostics.Stopwatch.StartNew();
             double last = 0, worst = 0, second = 0; int n = 0;
-            // and every UI-thread job longer than 40 ms, by name
+            WatchSlowJobs(sw, 14, 0);
+            System.Windows.Media.CompositionTarget.Rendering += (s, e) =>
+            {
+                double t = sw.Elapsed.TotalMilliseconds;
+                if (n > 0 && t - last > 60) HomeNav.Log("frame gap " + (t - last).ToString("0") + " ms");
+                if (n > 0) worst = Math.Max(worst, t - last);
+                last = t; n++;
+                if (t - second >= 1000)
+                {
+                    HomeNav.Log("fps " + n + ", worst gap " + worst.ToString("0") + " ms" + (ProgressToast.Busy ? " (notification up)" : ""));
+                    second = t; n = 0; worst = 0;
+                }
+            };
+        }
+
+        // every UI-thread job longer than 'threshold' ms goes to the log by name (for 'forMs' ms, 0 = for good)
+        private static void WatchSlowJobs(System.Diagnostics.Stopwatch sw, double threshold, double forMs)
+        {
             var started = new Dictionary<System.Windows.Threading.DispatcherOperation, double>();
             var hooks = Application.Current.Dispatcher.Hooks;
-            hooks.OperationStarted += (s, e) => { started[e.Operation] = sw.Elapsed.TotalMilliseconds; };
-            hooks.OperationCompleted += (s, e) =>
+            System.Windows.Threading.DispatcherHookEventHandler onStart = null, onDone = null;
+            onStart = (s, e) => { started[e.Operation] = sw.Elapsed.TotalMilliseconds; };
+            onDone = (s, e) =>
             {
+                if (forMs > 0 && sw.Elapsed.TotalMilliseconds > forMs) { hooks.OperationStarted -= onStart; hooks.OperationCompleted -= onDone; return; }
                 double t0;
                 if (!started.TryGetValue(e.Operation, out t0)) return;
                 started.Remove(e.Operation);
                 double took = sw.Elapsed.TotalMilliseconds - t0;
-                if (took < 14) return;   // (dev log only)
+                if (took < threshold) return;
                 string name = "?";
                 try
                 {
@@ -414,18 +434,8 @@ namespace Selene
                 catch { }
                 HomeNav.Log("slow job " + took.ToString("0") + " ms: " + name + " (" + e.Operation.Priority + ")");
             };
-            System.Windows.Media.CompositionTarget.Rendering += (s, e) =>
-            {
-                double t = sw.Elapsed.TotalMilliseconds;
-                if (n > 0 && t - last > 60) HomeNav.Log("frame gap " + (t - last).ToString("0") + " ms");
-                if (n > 0) worst = Math.Max(worst, t - last);
-                last = t; n++;
-                if (t - second >= 1000)
-                {
-                    HomeNav.Log("fps " + n + ", worst gap " + worst.ToString("0") + " ms" + (ProgressToast.Busy ? " (notification up)" : ""));
-                    second = t; n = 0; worst = 0;
-                }
-            };
+            hooks.OperationStarted += onStart;
+            hooks.OperationCompleted += onDone;
         }
 
         public static void MeasureFrames(string what, int ms)
