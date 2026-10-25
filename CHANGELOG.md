@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Selene settings: Up from the first group goes round to the last (Advanced), Down from the last back to the first.
 - Report a problem (Selene settings > Advanced), no GitHub account needed: three quick steps (what went wrong, where you were, a few words with the on-screen keys or a keyboard), then it's sent as a GitHub issue with your versions and Selene's logs (names, folders and emails taken out), and a code to scan follows it.
 - Exit Playnite no longer freezes on the last picture. A capture picked on a game's details page fades in straight over the page (it opened hidden behind it, then flashed the Captures grid or the home), and B goes back to the details page on the first press, without lighting up Play. Start-up is quiet but for Selene's chime: the music (UniPlaySong) starts with the home, not over the intro and the profile picker. Backing out of Edit profile returns to the menu over the home (it came back on the login background).
 - Settings lists show there's more like the details page does: the rows at the edge blur and fade into the dark (the last row looked evenly faded, and a bright line flickered at the top while moving). The menu opens on Power, now in the middle, with Selene settings to its left, Playnite settings to its right and Setup check at the end.

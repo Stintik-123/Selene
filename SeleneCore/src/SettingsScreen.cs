@@ -201,7 +201,8 @@ namespace Selene
                 if (b == "B") { Ui.Back(); if (fromMenu) LoginScene.Show(new MenuScreen(true), -1); else LoginScene.Finish(); return; }
                 if ((b == "A" || b == "DPadRight") && options.Count > 0) { inOptions = true; index = 0; Ui.Tick(); ShowFocus(); return; }
                 int next = group + (b == "DPadDown" ? 1 : b == "DPadUp" ? -1 : 0);
-                if (next == group || next < 0 || next >= groupRows.Count) return;
+                if (next == group) return;
+                next = (next + groupRows.Count) % groupRows.Count;   // round from the first group to the last and back
                 group = next;
                 Ui.Tick();
                 ShowGroup(true);
