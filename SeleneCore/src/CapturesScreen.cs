@@ -692,8 +692,9 @@ namespace Selene
                 }
                 // Playnite's own player first (H.264 from Xbox Game Bar); a clip it can't decode (AV1 from the NVIDIA app) goes to
                 // the browser Playnite ships with, as the Store trailers do
-                var me = new MediaElement { Source = new Uri(c.Path), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close, Stretch = Stretch.Uniform, Volume = clipVolume };
+                var me = new MediaElement { Source = new Uri(c.Path), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close, Stretch = Stretch.Uniform, Volume = clipVolume, Opacity = 0 };
                 video = me;
+                me.MediaOpened += (s, e) => Ui.Fade(me, 1, 360);   // fades in with its first frame
                 me.MediaEnded += (s, e) => { try { me.Position = TimeSpan.Zero; me.Play(); } catch { } };
                 me.MediaFailed += (s, e) =>
                 {
@@ -705,7 +706,9 @@ namespace Selene
                     if (clip == null) { viewerDate.Text = "This clip can't be played here."; return; }
                     clipSound = ClipAudio.For(path, clipVolume);
                     clip.Progress = (at, length, isPaused) => { if (viewing && clip != null) { ShowProgress(at, length, isPaused); if (clipSound != null) clipSound.Sync(at, isPaused); } };
+                    clip.View.Opacity = 0;
                     viewer.Children.Insert(1, clip.View);
+                    Ui.Fade(clip.View, 1, 360, 250);   // (the page draws its first frame meanwhile)
                 };
                 viewer.Children.Insert(1, me);
                 me.Play();
@@ -713,7 +716,7 @@ namespace Selene
             }
             else
             {
-                Ui.LoadInOrder(new List<string> { c.Path }, 1920, (k, pic) => { if (viewing && index == i) picture.Source = pic; });
+                Ui.LoadInOrder(new List<string> { c.Path }, 1920, (k, pic) => { if (viewing && index == i) { picture.Source = pic; picture.Opacity = 0; Ui.Fade(picture, 1, 320); } });
             }
             if (!viewing)
             {

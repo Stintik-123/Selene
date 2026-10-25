@@ -2694,6 +2694,7 @@ namespace Selene
                 if (mainW != null && (mainW.WindowState == WindowState.Minimized || !PlayniteInFront()))
                 {
                     e.Cancel();  // Playnite out of sight: the pad belongs to whatever is in front (a menu here could restart the PC)
+                    if (ke.RoutedEvent == Keyboard.KeyDownEvent) Log("pad: press ignored, Playnite not in front (" + ForegroundWho() + ")");
                     return;
                 }
                 // a button let go: screens that tell a tap from a hold hear of it (the clip player's Left / Right)
@@ -2733,6 +2734,7 @@ namespace Selene
                 // the screen behind too)
                 if (DialogUp())
                 {
+                    Log("pad: " + pressed + " went to a window over Playnite (" + ActiveWindowWho() + ")");
                     // B answers it the safe way (No / Cancel); Playnite's own dialogs did nothing on B
                     if (Ui.Normalize(pressed) == "B" && DialogLook.Back()) e.Cancel();
                     return;
@@ -3126,6 +3128,28 @@ namespace Selene
             }
             catch { }
             return false;
+        }
+
+        private static string ForegroundWho()
+        {
+            try
+            {
+                uint pid;
+                GetWindowThreadProcessId(GetForegroundWindow(), out pid);
+                return System.Diagnostics.Process.GetProcessById((int)pid).ProcessName;
+            }
+            catch (Exception ex) { return ex.Message; }
+        }
+
+        private static string ActiveWindowWho()
+        {
+            try
+            {
+                foreach (Window w in Application.Current.Windows)
+                    if (!ReferenceEquals(w, Application.Current.MainWindow) && w.IsVisible && w.IsActive) return w.GetType().FullName + " \"" + w.Title + "\"";
+            }
+            catch { }
+            return "?";
         }
 
         private static bool PlayniteInFront()
