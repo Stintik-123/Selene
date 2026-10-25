@@ -15,6 +15,18 @@ namespace Selene
     {
         private const double Base = 0.3, Max = 0.88;
         private static double wallpaperNeed = 0;
+        private static ImageSource wallpaperImg;
+        // the background changed (another wallpaper, game art came or went): text that adapts to it measures again
+        public static event Action Changed;
+        public static ImageSource WallpaperImage { get { return wallpaperImg; } }
+
+        // the picture behind the home right now: the game art when it shows, else the wallpaper
+        public static ImageSource Behind()
+        {
+            var artOpacity = Application.Current.Resources["SeleneArtOpacity"];
+            bool artShown = art.Count > 0 && !(artOpacity is double && (double)artOpacity < 0.05);
+            return artShown ? art.Values.Last() : wallpaperImg;
+        }
         private static readonly Dictionary<object, ImageSource> art = new Dictionary<object, ImageSource>();
         private static readonly Dictionary<ImageSource, double> measured = new Dictionary<ImageSource, double>();
 
@@ -56,6 +68,7 @@ namespace Selene
 
         public static void Wallpaper(ImageSource img)
         {
+            wallpaperImg = img;
             wallpaperNeed = Need(img);
             Apply();
         }
@@ -86,6 +99,8 @@ namespace Selene
                 double to = name == "SeleneHubShadeTop" ? Math.Max(0, (strength - Base) * 1.2) : strength;   // the top bar's only when needed
                 shade.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(450)) { EasingFunction = ease });
             }
+            var changed = Changed;
+            if (changed != null) changed();
         }
     }
 }

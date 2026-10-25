@@ -72,6 +72,7 @@ namespace Selene
 
         private static void Show(Window main, object vm)
         {
+            DimProbe.AroundNotification();   // diagnostic for the dark veil (temporary)
             source = vm;
             if (toast == null) Build();
             if (leaveTimer != null) leaveTimer.Stop();

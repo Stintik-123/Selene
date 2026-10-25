@@ -65,6 +65,8 @@ namespace Selene
             UpdateLastPlayed();
             // no login this start (intro and Who's playing? both off): Collection right away if that's the start screen
             var loginLayer = Part("AcceuilSettings");
+            // Collection's "no games" message stays readable over a bright wallpaper
+            AdaptiveText.Watch(Part("SeleneLibraryEmpty") as FrameworkElement, () => Contrast.WallpaperImage);
             var coreNote = Part("SeleneCoreNotice");
             if (coreNote != null) coreNote.Visibility = Visibility.Collapsed;   // the theme's note for when Core isn't running
             if (loginLayer != null && !loginLayer.IsVisible) LoginScene.AllowBackdropVideo();

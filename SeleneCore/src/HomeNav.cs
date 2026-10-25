@@ -2251,6 +2251,8 @@ namespace Selene
                     k++;
                 }
                 Log("intro played on " + k + " tiles");
+                // an empty tab's message comes in with them, just after the last card lands
+                RowEmptyIn(0.30 + k * 0.045 + 0.2);
             }
             catch (Exception ex)
             {
@@ -3694,11 +3696,29 @@ namespace Selene
             titleBlock.Text = title;
             ((TextBlock)FindByName(box, "SeleneRowEmptyHint")).Text = hint;
             // it sits in the row, so it moves with the row's own filter-switch animation (a second one of its own doubled it)
+            bool wasShown = box.Visibility == Visibility.Visible;
             box.BeginAnimation(UIElement.OpacityProperty, null);
             box.Opacity = 1;
             box.RenderTransform = null;
             box.Visibility = Visibility.Visible;
             FollowRowEmpty(row, box);
+            if (!wasShown) RowEmptyIn(0.12);   // never just pops in
+        }
+
+        // the empty-tab message rises and fades in (after a delay in seconds), like the cards do
+        private static void RowEmptyIn(double delay)
+        {
+            var box = emptyBox;
+            if (box == null || box.Visibility != Visibility.Visible) return;
+            var inner = VisualTreeHelper.GetChildrenCount(box) > 0 ? VisualTreeHelper.GetChild(box, 0) as FrameworkElement : null;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            box.BeginAnimation(UIElement.OpacityProperty, Keys(0, 1, delay, 0.45, ease));
+            if (inner != null)
+            {
+                var rise = new TranslateTransform();
+                inner.RenderTransform = rise;
+                rise.BeginAnimation(TranslateTransform.YProperty, Keys(16, 0, delay, 0.55, ease));
+            }
         }
 
         // the message stays beside the row's last card, which slides as the row scrolls and glides: while it shows, it is put
@@ -3714,6 +3734,10 @@ namespace Selene
             emptyAt = new TranslateTransform();
             box.Margin = new Thickness(0);
             box.RenderTransform = emptyAt;
+            // room around the words for the readable glow (the box sits 36 further left to keep the words in place)
+            var inner = VisualTreeHelper.GetChildrenCount(box) > 0 ? VisualTreeHelper.GetChild(box, 0) as FrameworkElement : null;
+            if (inner != null) inner.Margin = new Thickness(36, 22, 36, 22);
+            AdaptiveText.Watch(box, Contrast.Behind);
             System.Windows.Media.CompositionTarget.Rendering -= OnFollowRowEmpty;
             System.Windows.Media.CompositionTarget.Rendering += OnFollowRowEmpty;
             OnFollowRowEmpty(null, EventArgs.Empty);
@@ -3735,7 +3759,7 @@ namespace Selene
                     if (row.Items[i] is RowPad) { pad = row.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement; break; }
                 if (parent == null || pad == null || pad.ActualWidth < 1 || box.ActualHeight < 1) return;
                 var at = pad.TransformToVisual(parent).Transform(new Point(0, pad.ActualHeight / 2));
-                double x = at.X + 40, y = at.Y - box.ActualHeight / 2;
+                double x = at.X + 4, y = at.Y - box.ActualHeight / 2;
                 if (Math.Abs(emptyAt.X - x) > 0.25) emptyAt.X = x;
                 if (Math.Abs(emptyAt.Y - y) > 0.25) emptyAt.Y = y;
             }

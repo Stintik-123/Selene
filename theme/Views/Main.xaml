@@ -122,6 +122,16 @@
                                 </Grid>
                                 <!-- the game at a glance: playtime, last played, where it's from (the store's own logo), its year -->
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,28,0,0">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Style.Triggers>
+                                                <!-- no games in Collection: nothing to tell about, nothing to do with one -->
+                                                <DataTrigger Binding="{Binding Items.Count, ElementName=PART_ListGameItems}" Value="0">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
                                     <StackPanel Margin="0,0,26,0">
                                         <TextBlock Text="PLAYTIME" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                         <TextBlock Text="{Binding SelectedGame.Playtime, Mode=OneWay, Converter={StaticResource PlayTimeToStringConverter}}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
@@ -281,6 +291,16 @@
                                         </StackPanel>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Style.Triggers>
+                                                    <!-- no games in Collection: nothing to tell about, nothing to do with one -->
+                                                    <DataTrigger Binding="{Binding Items.Count, ElementName=PART_ListGameItems}" Value="0">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
                                         <StackPanel Style="{StaticResource HintItem}">
                                             <Border Style="{StaticResource HintBadge}"><TextBlock Text="{DynamicResource SelenePromptA}" Style="{StaticResource HintKey}"/></Border>
                                             <TextBlock Text="Play" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
@@ -306,8 +326,8 @@
                                 <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="0,0,0,0" Background="Transparent" BorderThickness="0"
                                            ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Item"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
-                                <!-- nothing to show: Selene's mark (drawn by Selene Core, slowly glowing) over Playnite's message -->
-                                <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <!-- nothing to show: Playnite's message in the middle of the screen (Selene Core sets its readable glow) -->
+                                <StackPanel x:Name="SeleneLibraryEmpty" Grid.Row="0" Grid.RowSpan="4" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,40">
                                     <StackPanel.Style>
                                         <Style TargetType="StackPanel">
                                             <Setter Property="Visibility" Value="Collapsed" />
@@ -318,8 +338,7 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
-                                    <Grid x:Name="SeleneEmptyMarkLibrary" Width="96" Height="96" Margin="0,0,0,20" HorizontalAlignment="Center" Visibility="Collapsed"/>
-                                    <TextBlock FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center" Style="{StaticResource TextBlockBaseStyle}"/>
+                                    <TextBlock FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center" Margin="48,26,48,28" Style="{StaticResource TextBlockBaseStyle}"/>
                                 </StackPanel>
 
                                 <!-- Playnite's filter panels open over the left side -->

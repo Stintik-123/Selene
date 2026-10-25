@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Readable text that adapts: the empty-tab and empty-Collection messages measure how bright the picture right behind them is and get a soft dark glow and brighter words to match (nothing over a dark spot, a deep glow over a bright one), again whenever the background changes (switch: Look, Readable text).
+- Collection with no games: the message sits in the middle of the screen without the Selene mark, and the game stats and the Play / Details / Game options / Filter hints are hidden (only Spotlight and Menu do anything there).
+- Empty tab message: rises and fades in with the cards at start (and on a tab switch) instead of popping in.
 - Notifications for progress stay at least a couple of seconds (a quick task flashed by), fade in with a short drift like a console's notification (an icon tile beside the words, soft square corners) and out the same way, and tasks one after another share the card; the screen behind no longer goes dark.
 - Home with no games (or an empty tab): the message sits beside the last card and moves with the row as it scrolls (it stayed put and ended up on the cards).
 - Choose your background with no games yet: the preview shows an example game's art (Clair Obscur: Expedition 33, fetched from Steam the first time) so Game art / Background only shows what it does.
