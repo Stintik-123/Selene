@@ -310,7 +310,7 @@ namespace Selene
             new Option { Group = "Games", Key = "admin", Label = "No-prompt launchers", About = "Admin games skip the Windows prompt after their first run." },
             new Option { Group = "Games", Key = "quietbackups", Label = "Quiet save backups", About = "Ludusavi backs up saves after playing without asking." },
             // ---- Advanced ----
-            new Option { Group = "Advanced", Key = "report", Label = "Report a problem", About = "A code to scan for a bug report on GitHub, and your logs saved to the Desktop to attach.", Action = "Open" },
+            new Option { Group = "Advanced", Key = "report", Label = "Report a problem", About = "Tell us what went wrong in a few presses. No GitHub account needed.", Action = "Open" },
             new Option { Group = "Advanced", Key = "fullrate", Label = "Match the screen's refresh rate", About = "Selene moves at 120 / 144 Hz on such screens instead of 60. Only while Playnite is in front." },
             new Option { Group = "Advanced", Key = "viewswitch", Label = "View button", About = "Switches Spotlight and Collection. Hold it to search." },
             new Option { Group = "Advanced", Key = "playnitesettings", Label = "Playnite settings, Selene's way", About = "The menu's Playnite settings as a Selene screen. Off: Playnite's own pages." },

@@ -78,7 +78,6 @@ function build(r) {
     `| Selene | ${cell(field(r.selene, 40))} |`,
     `| Playnite | ${cell(field(r.playnite, 40))} |`,
     `| Windows | ${cell(field(r.windows, 80))} |`,
-    `| Screen | ${cell(field(r.screen, 80))} |`,
     "",
     "_Sent from Selene's Report a problem screen._",
   ];
