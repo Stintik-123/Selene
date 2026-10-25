@@ -2619,7 +2619,7 @@ namespace Selene
 // per-press file logging removed (disk write on the UI thread every move)
                 //                 Log("pad " + pressed + " focus=" + (Keyboard.FocusedElement == null ? "null" : Keyboard.FocusedElement.GetType().Name) + " item=" + (item != null ? item.DataContext : null));
                 // LB / RB switch the home's filters (All games, Installed...); moving a tile: nothing
-                if ((pressed == "LeftShoulder" || pressed == "RightShoulder") && FocusOnHome())
+                if ((pressed == "LeftShoulder" || pressed == "RightShoulder") && SpotlightShowing())
                 {
                     if (movingCard == null && movingGame == null) CycleRowFilter(pressed == "RightShoulder" ? 1 : -1);   // also brings focus back to the game row
                     e.Cancel();
@@ -2933,6 +2933,20 @@ namespace Selene
             if (w == null || w != Application.Current.MainWindow) return false;
             var hub = FindByName(w, "WelcomeHubOverlay");
             return hub != null && hub.IsVisible && hub.IsAncestorOf(f);  // the whole home screen, top bar included
+        }
+
+        // Spotlight is the screen showing, even with the focus nowhere useful (just after signing in it sat on nothing, or on
+        // something hidden: the first LB / RB went to Playnite and did nothing)
+        private static bool SpotlightShowing()
+        {
+            if (FocusOnHome()) return true;
+            if (LoginScene.IsActive || SeleneShell.CollectionActive) return false;
+            var w = Application.Current.MainWindow;
+            if (w == null || !w.IsActive) return false;
+            var f = Keyboard.FocusedElement as UIElement;
+            if (f != null && Window.GetWindow(f) == w && f.IsVisible) return false;   // something real of the main window has it
+            var hub = FindByName(w, "WelcomeHubOverlay");
+            return hub != null && hub.IsVisible;
         }
 
 

@@ -115,7 +115,8 @@ namespace Selene
                             if (parts.Length >= 3 && double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out at)
                                 && double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out length))
                             {
-                                if (t2.reports++ < 2) HomeNav.Log("clip: " + text + " (" + (int)view.ActualWidth + "x" + (int)view.ActualHeight + ")");
+                                var r = t2.reports++;
+                                if (r < 2 || r == 12) HomeNav.Log("clip: " + text + " (" + (int)view.ActualWidth + "x" + (int)view.ActualHeight + ")");
                                 if (t2.Progress != null) t2.Progress(at, length, parts[2] == "1");
                             }
                         }
@@ -131,7 +132,7 @@ namespace Selene
                     + "function draw(){if(v.videoWidth>0){var s=Math.min(c.width/v.videoWidth,c.height/v.videoHeight),w=v.videoWidth*s,h=v.videoHeight*s;"
                     + "x.drawImage(v,(c.width-w)/2,(c.height-h)/2,w,h);n++;}requestAnimationFrame(draw);}requestAnimationFrame(draw);"
                     + "v.addEventListener('playing',function(){document.title=(v.muted?'playing muted ':'playing ')+v.videoWidth+'x'+v.videoHeight;});"
-                    + "setInterval(function(){if(v.readyState>0)document.title='p='+v.currentTime.toFixed(1)+'|'+(isFinite(v.duration)?v.duration.toFixed(1):'0')+'|'+(v.paused?1:0)+'|'+n;},500);"
+                    + "setInterval(function(){if(v.readyState>0)document.title='p='+v.currentTime.toFixed(1)+'|'+(isFinite(v.duration)?v.duration.toFixed(1):'0')+'|'+(v.paused?1:0)+'|'+n+'|muted='+(v.muted?1:0)+' vol='+v.volume+' audiobytes='+(v.webkitAudioDecodedByteCount||0)+' aac='+v.canPlayType('audio/mp4; codecs=mp4a.40.2');},500);"
                     + "window.selene={toggle:function(){if(v.paused)v.play();else v.pause();},seek:function(d){try{var m=isFinite(v.duration)?v.duration-0.3:1e9;v.currentTime=Math.max(0,Math.min(m,v.currentTime+d));}catch(e){}}};"
                     + "v.addEventListener('error',function(){document.title='failed: '+(v.error?v.error.code+' '+v.error.message:'');});"
                     + "document.addEventListener('mousedown',function(){if(v.muted){v.muted=false;var q=v.play();if(q&&q.catch)q.catch(function(){v.muted=true;v.play();});}});"

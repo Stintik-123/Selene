@@ -74,7 +74,6 @@ namespace Selene
             items.Add(new Item { Icon = Ui.Icon(0xe627), Label = "Update library", Run = UpdateLibrary });
             items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Run = () => LoginScene.Show(new SettingsScreen(true), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xf0c5), Label = "Setup check", Run = () => LoginScene.Show(new SetupScreen(false, true), 1) });
-            if (Features.On("copylog")) items.Add(new Item { Icon = Ui.Icon(0xe14d), Label = "Copy log", Run = CopyLog });
             items.Add(new Item { Icon = Ui.Icon(0xe8b8), Label = "Playnite settings", Run = () => { if (Features.On("playnitesettings")) LoginScene.Show(new PlayniteSettingsScreen(), 1); else Later(PlayniteMenu.OpenSettings); } });
             items.Add(new Item { Icon = Ui.Icon(0xe30c), Label = "Desktop mode", Run = () => Later(() => PlayniteMenu.Main("SwitchToDesktopCommand")) });
             items.Add(new Item { Icon = Ui.Icon(0xe8ac), Label = "Power", Run = OpenPower });
@@ -232,7 +231,7 @@ namespace Selene
 
         // Playnite's own windows open once the menu has faded away
         // the tail of Selene's and Playnite's logs to the clipboard, for a bug report
-        private static void CopyLog()
+        internal static void CopyLog()
         {
             try
             {

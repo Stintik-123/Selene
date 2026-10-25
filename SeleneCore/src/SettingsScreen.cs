@@ -84,7 +84,9 @@ namespace Selene
             layout.Children.Add(right);
 
             Root.Children.Add(layout);
-            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
+            // Y copies the logs for a bug report (it was an entry of its own in the menu)
+            if (Features.On("copylog")) Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("Y", "Copy log")));
+            else Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Select")));
         }
 
@@ -178,6 +180,7 @@ namespace Selene
 
         public override void Handle(string b)
         {
+            if (b == "Y" && Features.On("copylog")) { MenuScreen.CopyLog(); return; }
             if (!inOptions)
             {
                 if (b == "B") { Ui.Back(); if (fromMenu) LoginScene.Show(new MenuScreen(true), -1); else LoginScene.Finish(); return; }

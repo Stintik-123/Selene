@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Copy log moved out of the menu: Y in Selene settings copies the logs. Spotlight's first LB / RB after signing in now switches the tab (it went nowhere).
 - Spotlight: the buttons wait until the cards have flown in (a move mid-flight left the row half-landed), and the selected card's ring no longer blinks when a notification comes up.
 - Choose your theme: moving through the themes changes only the preview; Selene takes the theme when you press A.
 - Dark wallpapers with bright detail (a dotted map, stars): the console gradient and the readable-text halo now notice the detail behind the words (it was averaged away), and the gradient is always at least a little there.
@@ -74,7 +75,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Game details: a game with no captures shows a quiet tile saying so (Down from the screenshots went nowhere and the activity beside it never showed), and More like this fills up with looser matches and your most played games when few are close.
 - Choose your theme / background: smooth again (the preview is a picture of the home, retaken when the choice changes, instead of a live mirror redrawn on every frame); the backdrop crossfades to the new wallpaper; the preview itself crossfades.
 - Game details: the next band sharpens and brightens with the glide again (it switched at once), the covers are crisp again, and Down works right after opening the details from Collection (the focus could sit on nothing).
-- Other PCs: a note on the home when the Extra Metadata add-on (logos, trailers) isn't installed, pointing at the setup check (switch: Start-up, Add-on hint); Copy log in the menu puts both logs on the clipboard for a bug report (switch: Navigation); games that start through Ubisoft Connect, the EA app, Rockstar, Battle.net or the Xbox app get longer waits on the loading screen; Selene speaks Playnite's language when theme\Localization has a file for it (switch: Look), with a way to collect every phrase for translators.
+- Other PCs: a note on the home when the Extra Metadata add-on (logos, trailers) isn't installed, pointing at the setup check (switch: Start-up, Add-on hint); Copy log (Y in Selene settings) puts both logs on the clipboard for a bug report (switch: Navigation); games that start through Ubisoft Connect, the EA app, Rockstar, Battle.net or the Xbox app get longer waits on the loading screen; Selene speaks Playnite's language when theme\Localization has a file for it (switch: Look), with a way to collect every phrase for translators.
 - Other PCs: text falls back to Segoe UI where Segoe UI Variable is missing (Windows 10); the details page's activity block hangs from the right edge, so screens that aren't 16:9 keep it on screen; the drifting dust stays off when WPF has no graphics card to draw with.
 ## 1.0.0 - 2026-10-23
 
