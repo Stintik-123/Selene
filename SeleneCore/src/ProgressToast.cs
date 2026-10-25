@@ -290,12 +290,10 @@ namespace Selene
                 HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
                 Width = CardWidth + ShadowRoom + Edge, Margin = new Thickness(0, 112 - ShadowRoom, 0, 0)
             };
-            // on whole pixels, with text drawn for the screen (as wide as its words, the card's edges fell between pixels and its
-            // text went soft)
+            // on whole pixels (as wide as its words, the card's edges fell between pixels and its text went soft); the text keeps
+            // WPF's smooth shapes (drawn "for the screen" it went jaggy)
             layer.UseLayoutRounding = true;
             layer.SnapsToDevicePixels = true;
-            TextOptions.SetTextFormattingMode(layer, TextFormattingMode.Display);
-            TextOptions.SetTextHintingMode(layer, TextHintingMode.Fixed);
             layer.Children.Add(card);
             poll = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
             poll.Tick += (s, e) =>
