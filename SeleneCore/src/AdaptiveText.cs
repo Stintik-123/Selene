@@ -91,7 +91,7 @@ namespace Selene
                 double was = q.Opacity;
                 if (was >= 0) t.Foreground = Ink.Brush("SeleneInkColor", was + (0.95 - was) * k);
                 if (k < 0.08 || !HaloOn) { Plain(t); return; }   // readable as it is (or the halo off): nothing added
-                Halo(t, 10 + 26 * k, 0.55 + 0.45 * k);   // as the earlier halo: wider and darker over brighter spots
+                Halo(t, 10 + 26 * k, 0.55 + 0.45 * k, 1 + (int)Math.Round(2 * k * k));   // wider, darker and denser over brighter spots
             }
             catch (Exception ex) { HomeNav.Log("readable: " + ex.Message); }
         }
@@ -118,7 +118,7 @@ namespace Selene
         // the soft dark halo around the letters (a blurred dark copy of the text), drawn once into a picture that is the text's
         // own background: the words themselves get no effect, so they stay sharp (an effect on the text made it look blurry).
         // The text gets room around it for the halo (padding), given back by a margin of the same size, so nothing moves.
-        private static void Halo(TextBlock t, double blur, double opacity)
+        private static void Halo(TextBlock t, double blur, double opacity, int layers)
         {
             var o = LayoutOf(t);
             double pad = Math.Ceiling(blur + 4);
@@ -148,6 +148,15 @@ namespace Selene
             };
             var host = new Grid { Width = W, Height = H };
             host.Children.Add(copy);
+            // over a very bright spot a single blurred copy of thin letters is too faint: up to three, stacked
+            for (int i = 1; i < layers; i++)
+                host.Children.Add(new TextBlock
+                {
+                    Text = copy.Text, FontFamily = copy.FontFamily, FontSize = copy.FontSize, FontWeight = copy.FontWeight, FontStyle = copy.FontStyle, FontStretch = copy.FontStretch,
+                    TextAlignment = copy.TextAlignment, TextWrapping = copy.TextWrapping, TextTrimming = copy.TextTrimming, LineHeight = copy.LineHeight,
+                    LineStackingStrategy = copy.LineStackingStrategy, FlowDirection = copy.FlowDirection, Foreground = copy.Foreground, Opacity = opacity,
+                    Margin = copy.Margin, Width = copy.Width, Effect = new BlurEffect { Radius = blur * (1 + 0.35 * i), RenderingBias = RenderingBias.Quality, KernelType = KernelType.Gaussian }
+                });
             host.Measure(new Size(W, H));
             host.Arrange(new Rect(0, 0, W, H));
             host.UpdateLayout();

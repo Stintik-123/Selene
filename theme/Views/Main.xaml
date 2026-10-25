@@ -436,7 +436,7 @@
                                             </LinearGradientBrush>
                                         </Border.OpacityMask>
                                     </Border>
-                                    <Border x:Name="SeleneHubShadeBottom" Background="{DynamicResource SeleneScrimBrush}" Opacity="0">
+                                    <Border x:Name="SeleneHubShadeBottom" Background="{DynamicResource SeleneScrimBrush}" Opacity="0.3">
                                         <Border.OpacityMask>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                 <GradientStop Color="#00000000" Offset="0.4"/>
@@ -445,11 +445,12 @@
                                         </Border.OpacityMask>
                                     </Border>
                                     <!-- behind the top bar, only over bright pictures (Selene Core deepens these three shades as the picture needs) -->
-                                    <Border x:Name="SeleneHubShadeTop" Background="{DynamicResource SeleneScrimBrush}" Opacity="0">
+                                    <Border x:Name="SeleneHubShadeTop" Background="{DynamicResource SeleneScrimBrush}" Opacity="0.3">
                                         <Border.OpacityMask>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                <GradientStop Color="#D0000000" Offset="0"/>
-                                                <GradientStop Color="#00000000" Offset="0.2"/>
+                                                <GradientStop Color="#E6000000" Offset="0"/>
+                                                <GradientStop Color="#70000000" Offset="0.1"/>
+                                                <GradientStop Color="#00000000" Offset="0.26"/>
                                             </LinearGradientBrush>
                                         </Border.OpacityMask>
                                     </Border>

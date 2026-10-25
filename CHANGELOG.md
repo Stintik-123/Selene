@@ -8,7 +8,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Store: no flash the first time it opens (choosing the currency it already used emptied and refetched every list, and each list coming back rebuilt the page); moves glide at the screen's own frame rate.
 - Smoother motion overall: Selene's slides, fades and rises run at the screen's speed (they were held near 60 fps).
 - Profile steps: the slide from one step to the next is smooth (pictures, the backdrop, the theme recolor and the preview arriving mid-slide redrew the whole sliding page; they now wait for the slide to end).
-- Spotlight: no more darkening along the screen edges (left, bottom, top bar); readable text keeps its own halo where a picture is bright.
+- Spotlight: shading only at the top (bar, clock) and bottom (hints), as deep as the picture needs, like a console; the shade from the left is gone and readable text keeps its own halo.
 - Choose your theme: the preview shows the home (it stayed empty; the background step had taken the only preview).
 - Progress notifications stay with Playnite: after Alt+Tab to another program the card goes behind it with Playnite (it stayed on top of everything).
 - Readable text: the soft halo around the letters is drawn behind the words as a picture, so the text itself stays sharp (as an effect on the letters it made them look blurry).

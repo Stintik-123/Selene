@@ -14,7 +14,6 @@ namespace Selene
     public static class Contrast
     {
         private const double Base = 0.3, Max = 0.88;
-        private const bool EdgeShades = false;
         private static double wallpaperNeed = 0;
         private static ImageSource wallpaperImg;
         // the background changed (another wallpaper, game art came or went): text that adapts to it measures again
@@ -97,8 +96,9 @@ namespace Selene
             {
                 var shade = HomeNav.FindByName(w, name) as UIElement;
                 if (shade == null) continue;
-                double to = name == "SeleneHubShadeTop" ? Math.Max(0, (strength - Base) * 1.2) : strength;   // the top bar's only when needed
-                if (!EdgeShades) to = 0;   // the darkening along Spotlight's edges is off (readable text has its own halo)
+                // like a console: soft shading at the top (the bar, the clock) and the bottom (the hints) only, as deep as the picture
+                // needs; nothing from the left (the middle is open, readable text has its own halo)
+                double to = name == "SeleneHubShadeLeft" ? 0 : strength;
                 shade.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(450)) { EasingFunction = ease });
             }
             var changed = Changed;
