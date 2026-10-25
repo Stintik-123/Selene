@@ -1812,8 +1812,8 @@ namespace Selene
         // from Play until the game shows: no default music over the loading screen (UniPlaySong pauses for the running game after)
         private static bool musicHeldForLaunch;
 
-        // start-up stays quiet but for Selene's chime: UniPlaySong starts its default music on its own as Playnite opens, past
-        // the VideoIsPlaying hold, so its player gets a pause source of its own, and is paused again if it starts anyway
+        // start-up stays quiet but for Selene's chime: UniPlaySong starts music on its own as Playnite opens, past the
+        // VideoIsPlaying hold, so its player is turned down, gets a pause source of its own, and is paused again if it starts
         private static object upsPlayer;
         private static System.Windows.Threading.DispatcherTimer quietWatch;
 
@@ -1836,8 +1836,11 @@ namespace Selene
                 var remove = type.GetMethod("RemovePauseSource");
                 if (add == null || remove == null) return;
                 var source = Enum.Parse(add.GetParameters()[0].ParameterType, "Settings");
+                var volume = type.GetMethod("SetVolumeMultiplier");
                 if (on)
                 {
+                    // silent too: a game's own song (the one selected when Playnite last closed) starts past any pause
+                    if (volume != null) volume.Invoke(upsPlayer, new object[] { 0.0 });
                     add.Invoke(upsPlayer, new[] { source });
                     if (quietWatch == null)
                     {
@@ -1864,6 +1867,7 @@ namespace Selene
                 {
                     if (quietWatch != null) quietWatch.Stop();
                     remove.Invoke(upsPlayer, new[] { source });
+                    if (volume != null) volume.Invoke(upsPlayer, new object[] { 1.0 });
                     Log("start-up: music released");
                 }
             }

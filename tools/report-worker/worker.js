@@ -69,7 +69,7 @@ function build(r) {
   const field = (v, max) => scrub(String(v ?? "").slice(0, max)).trim();
   const note = field(r.note, 2000);
   const lines = [
-    `**${r.category}**`,
+    `**${r.category}**${field(r.place, 60) ? "  ·  " + field(r.place, 60) : ""}`,
     "",
     note ? note : "_No description given._",
     "",
@@ -83,7 +83,7 @@ function build(r) {
   ];
   let body = lines.join("\n");
   // the logs fill what's left, newest lines kept
-  const logs = [["selene.log", r.seleneLog], ["playnite.log", r.playniteLog]].filter(([, v]) => typeof v === "string" && v.length);
+  const logs = [["Problems in selene.log", r.seleneProblems], ["selene.log (recent)", r.seleneLog], ["playnite.log (warnings and errors)", r.playniteLog]].filter(([, v]) => typeof v === "string" && v.length);
   const room = Math.max(0, MAX_BODY - body.length - 400);
   const each = logs.length ? Math.floor(room / logs.length) : 0;
   for (const [name, content] of logs) {
@@ -92,7 +92,8 @@ function build(r) {
     body += `\n\n<details><summary>${name}</summary>\n\n\`\`\`\`\n${log}\n\`\`\`\`\n</details>`;
   }
   const short = note.replace(/\s+/g, " ").slice(0, 60);
-  return { title: `[Report] ${r.category}${short ? ": " + short : ""}`, body, labels: ["bug"] };
+  const where = field(r.place, 60);
+  return { title: `[Report] ${r.category}${where ? " (" + where + ")" : ""}${short ? ": " + short : ""}`, body, labels: ["bug"] };
 }
 
 // no names or home folders in a public issue
