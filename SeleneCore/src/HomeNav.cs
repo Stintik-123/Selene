@@ -3727,8 +3727,15 @@ namespace Selene
                 default: title = "No games yet"; hint = "Connect a store in Playnite's settings, or run the setup check: Menu, Extensions, Selene."; break;
             }
             var titleBlock = (TextBlock)FindByName(box, "SeleneRowEmptyTitle");
-            // the row is rebuilt more than once on a tab switch: the same message already showing stays put (no second slide-in)
-            if (box.Visibility == Visibility.Visible && titleBlock.Text == title) return;
+            // the row is rebuilt more than once on a tab switch: the same message already showing stays put (no second slide-in),
+            // still following the row
+            if (box.Visibility == Visibility.Visible && titleBlock.Text == title)
+            {
+                emptyRow = row; emptyBox = box;
+                System.Windows.Media.CompositionTarget.Rendering -= OnFollowRowEmpty;
+                System.Windows.Media.CompositionTarget.Rendering += OnFollowRowEmpty;
+                return;
+            }
             titleBlock.Text = title;
             ((TextBlock)FindByName(box, "SeleneRowEmptyHint")).Text = hint;
             // it sits in the row, so it moves with the row's own filter-switch animation (a second one of its own doubled it)
@@ -3784,11 +3791,13 @@ namespace Selene
             try
             {
                 var box = emptyBox; var row = emptyRow;
-                if (box == null || row == null || box.Visibility != Visibility.Visible || !box.IsVisible)
+                // gone for good (the tab has games again): stop; only out of sight for now (the login over the home): wait
+                if (box == null || row == null || box.Visibility != Visibility.Visible)
                 {
                     System.Windows.Media.CompositionTarget.Rendering -= OnFollowRowEmpty;
                     return;
                 }
+                if (!box.IsVisible) return;
                 var parent = VisualTreeHelper.GetParent(box) as Visual;
                 FrameworkElement pad = null;
                 for (int i = 0; i < row.Items.Count; i++)

@@ -43,6 +43,51 @@ namespace Selene
         private static bool sweeping, leaving;
         private static double barShown = -1;
 
+        // Playnite's progress window draws its first frame (an opaque dark screen) before it is Loaded: it is made invisible as
+        // it activates, which comes first (the black flash before the card)
+        public static void Prehide(Window w)
+        {
+            if (!Features.On("dialogs") || !Features.On("progresstoast")) return;
+            var main = Application.Current.MainWindow;
+            if (main == null || ReferenceEquals(main, w) || !main.IsVisible) return;
+            w.BeginAnimation(UIElement.OpacityProperty, null);
+            w.Opacity = 0;
+            w.Background = Brushes.Transparent;
+        }
+
+        // Playnite dims its whole main window while any child window is open (its ChildOpened flag shows an 80% dark layer, and
+        // its sounds go quiet). The hidden progress window counts as one: while the card shows, the flag is put back at once,
+        // unless a real dialog (a menu, a question) is open too.
+        private static bool vmHooked;
+        public static void WatchDimming(Window main)
+        {
+            if (vmHooked || main == null) return;
+            var vm = main.DataContext as System.ComponentModel.INotifyPropertyChanged;
+            var prop = vm != null ? vm.GetType().GetProperty("ChildOpened") : null;
+            if (prop == null || !prop.CanWrite) return;
+            vmHooked = true;
+            vm.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName != "ChildOpened" || !Equals(prop.GetValue(vm, null), true)) return;
+                if (!Features.On("progresstoast") || !OnlyProgressOpen(main)) return;
+                prop.SetValue(vm, false, null);
+            };
+        }
+
+        // the only child windows up are Playnite's progress windows (shown as the card)
+        private static bool OnlyProgressOpen(Window main)
+        {
+            bool any = false;
+            foreach (Window w in Application.Current.Windows)
+            {
+                if (ReferenceEquals(w, main) || ReferenceEquals(w, toast) || !w.IsVisible && w.GetType().Name != "ProgressWindow") continue;
+                if (!(w.GetType().Namespace ?? "").StartsWith("Playnite")) continue;   // Selene's own windows don't count
+                if (w.GetType().Name != "ProgressWindow") return false;
+                any = true;
+            }
+            return any || Busy;
+        }
+
         // false: leave it as Playnite's full screen (no main window to sit on yet, at start-up)
         public static bool Make(Window w)
         {
@@ -74,6 +119,8 @@ namespace Selene
             // the modal window disabled the main one: it gets its input back, so browsing goes on while the task runs
             w.Dispatcher.BeginInvoke(new Action(() => { HideProgress(); EnableWindow(mainHwnd, true); main.Activate(); }), DispatcherPriority.Background);
             w.Closed += (s, e) => { if (ReferenceEquals(hiddenProgress, w)) hiddenProgress = null; TaskDone(w.DataContext); };
+            WatchDimming(main);
+            UndimNow(main);
 
             Show(main, w.DataContext);
             HomeNav.Log("progress look: notification card");
@@ -168,6 +215,7 @@ namespace Selene
             poll.Tick += (s, e) =>
             {
                 HideProgress(); KeepOnTop(); Update();
+                if (Application.Current.MainWindow != null) UndimNow(Application.Current.MainWindow);
                 // never a blank home behind the card: if it was blanked anyway, it comes back
                 var m = Application.Current.MainWindow;
                 var r = m != null ? m.Content as UIElement : null;
@@ -242,6 +290,18 @@ namespace Selene
             };
             slideIn.BeginAnimation(TranslateTransform.XProperty, slide);
             card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn });
+        }
+
+        // Playnite's dim layer off now (it was switched on as the progress window loaded, before Selene saw it)
+        private static void UndimNow(Window main)
+        {
+            try
+            {
+                var vm = main.DataContext;
+                var prop = vm != null ? vm.GetType().GetProperty("ChildOpened") : null;
+                if (prop != null && prop.CanWrite && Equals(prop.GetValue(vm, null), true) && OnlyProgressOpen(main)) prop.SetValue(vm, false, null);
+            }
+            catch { }
         }
 
         // Playnite's progress window back out of sight if it came back (moved over the screen, faded in), the main window usable

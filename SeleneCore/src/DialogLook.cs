@@ -17,6 +17,28 @@ namespace Selene
         public static void Install()
         {
             EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnWindowLoaded));
+            // Playnite's windows raise a routed "activated" as they appear, before their first frame (Loaded comes after it): the
+            // progress window is made invisible there, so its dark first frame never shows
+            try
+            {
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (asm.GetName().Name != "Playnite") continue;
+                    var wb = asm.GetType("Playnite.Controls.WindowBase");
+                    var field = wb != null ? wb.GetField("ActivatedRoutedEvent", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) : null;
+                    var evt = field != null ? field.GetValue(null) as RoutedEvent : null;
+                    if (evt != null)
+                        EventManager.RegisterClassHandler(wb, evt, new RoutedEventHandler((s, e) =>
+                        {
+                            var w = s as Window;
+                            if (w != null && w.GetType().Name == "ProgressWindow") ProgressToast.Prehide(w);
+                        }));
+                    break;
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("dialog look: early hook failed: " + ex.Message); }
+            var mw = Application.Current.MainWindow;
+            if (mw != null) ProgressToast.WatchDimming(mw);
         }
 
         private static void OnWindowLoaded(object sender, RoutedEventArgs e)
