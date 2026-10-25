@@ -49,6 +49,14 @@ namespace Selene
             card.BorderBrush = Ink.Brush("SeleneInkColor", 0.12);
             card.Child = null;
             var inside = new Grid();
+            // the shadow on a layer of its own behind the text: an effect on the card drew its text through a bitmap (soft text)
+            var shadowed = card.Background;
+            card.Effect = null;
+            inside.Children.Add(new Border
+            {
+                CornerRadius = new CornerRadius(28), Background = shadowed, IsHitTestVisible = false,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 48, Opacity = 0.55, Color = Colors.Black }
+            });
             var wash = new RadialGradientBrush { Center = new Point(0.5, -0.1), GradientOrigin = new Point(0.5, -0.1), RadiusX = 0.75, RadiusY = 0.7 };
             wash.GradientStops.Add(Ink.Stop("GlyphColor", 0.22, 0));
             wash.GradientStops.Add(Ink.Stop("GlyphColor", 0.06, 0.55));
@@ -57,6 +65,8 @@ namespace Selene
             panel.Margin = new Thickness(56, 44, 56, 40);
             inside.Children.Add(panel);
             card.Child = inside;
+            TextOptions.SetTextFormattingMode(card, TextFormattingMode.Display);   // crisp at the screen's pixels
+            TextOptions.SetTextRenderingMode(card, TextRenderingMode.ClearType);
 
             // the icon in a ring, for what kind of question it is
             panel.Children.Insert(0, IconRing(KindOf(title, text, buttons)));
@@ -97,7 +107,16 @@ namespace Selene
             card.Opacity = 0;
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             var t = TimeSpan.FromMilliseconds(260);
-            card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, t) { EasingFunction = ease });
+            var fadeIn = new DoubleAnimation(1, t) { EasingFunction = ease };
+            // settled: the animations come off and the transform goes, so the text is drawn sharp again (text under a held
+            // animated transform stays in WPF's blurrier animation mode)
+            fadeIn.Completed += (s, e) =>
+            {
+                card.BeginAnimation(UIElement.OpacityProperty, null);
+                card.Opacity = 1;
+                card.RenderTransform = Transform.Identity;
+            };
+            card.BeginAnimation(UIElement.OpacityProperty, fadeIn);
             scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, t) { EasingFunction = ease });
             scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, t) { EasingFunction = ease });
             move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, t) { EasingFunction = ease });
