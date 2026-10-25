@@ -2,16 +2,18 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 
 namespace Selene
 {
-    // A list that scrolls shows there's more: the rows fade into the dark at the bottom when more is below, and at the top
-    // once it has scrolled.
+    // A list that scrolls shows there's more, as the details page's lower rows do: the rows at the bottom edge (when more is
+    // below) and the top edge (once it has scrolled) are blurred and fade into the dark.
     public static class PeekScroller
     {
         public const double Band = 110;
 
-        public static Grid Wrap(ScrollViewer scroller)
+        public static Grid Wrap(ScrollViewer scroller, Panel rows)
         {
             var host = new Grid { ClipToBounds = true };
             host.Children.Add(scroller);
@@ -36,11 +38,34 @@ namespace Selene
                 b1.Color = more ? Color.FromArgb(0x70, 0, 0, 0) : Colors.Black;
                 b1.Offset = more ? 1 - fb * 0.45 : 1;
                 b2.Offset = more ? 1 - fb : 1;
+                foreach (UIElement row in rows.Children)
+                {
+                    var fe = row as FrameworkElement;
+                    if (fe == null || fe.ActualHeight < 1) continue;
+                    double top = fe.TranslatePoint(new Point(0, 0), scroller).Y, bottom = top + fe.ActualHeight;
+                    bool soft = (more && bottom > h - Band * 0.5) || (above && top < Band * 0.3);
+                    Soften(fe, soft);
+                }
             };
             scroller.ScrollChanged += (s, e) => update();
             scroller.SizeChanged += (s, e) => update();
             scroller.Loaded += (s, e) => update();
+            rows.SizeChanged += (s, e) => update();
             return host;
+        }
+
+        private static void Soften(FrameworkElement row, bool on)
+        {
+            var blur = row.Effect as BlurEffect;
+            if (blur == null)
+            {
+                if (!on) return;
+                blur = new BlurEffect { Radius = 0, RenderingBias = RenderingBias.Performance };
+                row.Effect = blur;
+            }
+            if (Equals(row.Tag, on ? "soft" : "sharp")) return;
+            row.Tag = on ? "soft" : "sharp";
+            blur.BeginAnimation(BlurEffect.RadiusProperty, new DoubleAnimation(on ? 5 : 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
         }
     }
 }

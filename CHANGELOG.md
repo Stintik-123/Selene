@@ -5,7 +5,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Exit Playnite no longer freezes on the last picture. Captures opened from a game's details page show up (they opened hidden behind the page). Backing out of Edit profile returns to the menu over the home (it came back on the login background).
-- Settings lists fade smoothly into the dark at the edges (the last row looked evenly faded, and a bright line flickered at the top while moving).
+- Settings lists show there's more like the details page does: the rows at the edge blur and fade into the dark (the last row looked evenly faded, and a bright line flickered at the top while moving). The menu opens on Power, now in the middle, with Selene settings to its left, Playnite settings to its right and Setup check at the end.
 
 ## 1.1.0 - 2026-10-25
 
