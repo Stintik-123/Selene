@@ -144,9 +144,12 @@ namespace Selene
         // ---------------- motion ----------------
         public static IEasingFunction Out() { return new CubicEase { EasingMode = EasingMode.EaseOut }; }
 
+        // at the screen's own speed (WPF caps an animation near 60 frames a second unless told otherwise; the TV runs at 120 / 144)
+        public static T Fast<T>(T t) where T : Timeline { Timeline.SetDesiredFrameRate(t, 144); return t; }
+
         public static void Fade(UIElement el, double to, int ms, int delay = 0, Action done = null)
         {
-            var a = new DoubleAnimation(to, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(delay), EasingFunction = Out() };
+            var a = Fast(new DoubleAnimation(to, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(delay), EasingFunction = Out() });
             if (done != null) a.Completed += (s, e) => done();
             el.BeginAnimation(UIElement.OpacityProperty, a);
         }
@@ -163,7 +166,7 @@ namespace Selene
         {
             el.Opacity = 0;
             Fade(el, 1, ms, delay);
-            Shift(el).BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(from, 0, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(delay), EasingFunction = Out() });
+            Shift(el).BeginAnimation(TranslateTransform.YProperty, Fast(new DoubleAnimation(from, 0, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(delay), EasingFunction = Out() }));
         }
 
         // slides sideways while fading (screen changes)
@@ -171,7 +174,7 @@ namespace Selene
         {
             el.Opacity = fromOpacity;
             Fade(el, toOpacity, ms, 0, done);
-            Shift(el).BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(fromX, toX, TimeSpan.FromMilliseconds(ms)) { EasingFunction = Out() });
+            Shift(el).BeginAnimation(TranslateTransform.XProperty, Fast(new DoubleAnimation(fromX, toX, TimeSpan.FromMilliseconds(ms)) { EasingFunction = Out() }));
         }
 
         public static ScaleTransform Scaler(FrameworkElement el)
@@ -312,9 +315,23 @@ namespace Selene
                     var pic = Wallpapers.Load(files[i], width);
                     if (pic == null) continue;
                     int at = i;
-                    dispatcher.BeginInvoke(new Action(() => loaded(at, pic)), System.Windows.Threading.DispatcherPriority.Background);
+                    dispatcher.BeginInvoke(new Action(() => AfterHold(() => loaded(at, pic))), System.Windows.Threading.DispatcherPriority.Background);
                 }
             });
+        }
+
+        // a page slide in progress: changes to what's on it wait until it's over (each picture arriving mid-slide redrew the
+        // whole sliding page: the step slides stuttered)
+        private static DateTime holdUntil = DateTime.MinValue;
+        public static void HoldVisuals(int ms) { holdUntil = DateTime.Now.AddMilliseconds(ms); }
+
+        public static void AfterHold(Action act)
+        {
+            var wait = (holdUntil - DateTime.Now).TotalMilliseconds;
+            if (wait <= 0) { act(); return; }
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(wait + 10) };
+            t.Tick += (s, e) => { t.Stop(); act(); };
+            t.Start();
         }
 
         // a button-like pill: the controller badge inside, then what it does (the main one filled with the focus color)

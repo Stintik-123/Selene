@@ -127,6 +127,7 @@ namespace Selene
             now.IsHitTestVisible = true;
             now.Opacity = 0;
             if (!body.Children.Contains(now)) body.Children.Add(now);
+            Ui.HoldVisuals(380);   // the slide below: pictures, the backdrop and the preview change after it
             steps[step].Shown();
             ShowDots();
             var oldStep = old;
@@ -275,7 +276,7 @@ namespace Selene
         internal static void RefreshPreviewLater()
         {
             if (previews.Count == 0) return;
-            Application.Current.Dispatcher.BeginInvoke(new Action(() => RefreshPreview()), DispatcherPriority.Loaded);
+            Application.Current.Dispatcher.BeginInvoke(new Action(() => Ui.AfterHold(() => RefreshPreview())), DispatcherPriority.Loaded);
             // again a moment later (anything fading in), and up to a few more times while no picture could be taken
             int tries = 0;
             var again = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(520) };
@@ -805,7 +806,9 @@ namespace Selene
             }
 
             // the whole of Selene recolors, the home's wallpaper too (the theme's own, unless one was picked)
-            private void Show(string id)
+            private void Show(string id) { Ui.AfterHold(() => ShowNow(id)); }
+
+            private void ShowNow(string id)
             {
                 LoginScene.CrossfadeBackdrop(() =>
                 {
@@ -929,7 +932,7 @@ namespace Selene
                 groupLabel.Text = (index == 0 ? "THEME" : groups[index].ToUpperInvariant());
                 var file = files[index] ?? ThemePalettes.DefaultWallpaper(Owner.Theme);
                 // decoded off the UI thread first, so the swap itself costs nothing in the middle of a glide
-                Action show = () => Wallpapers.Prepare(file, () => { LoginScene.CrossfadeBackdrop(() => { Wallpapers.Show(file); LoginScene.RefreshBackdrop(); }); RefreshPreviewLater(); });
+                Action show = () => Wallpapers.Prepare(file, () => Ui.AfterHold(() => { LoginScene.CrossfadeBackdrop(() => { Wallpapers.Show(file); LoginScene.RefreshBackdrop(); }); RefreshPreviewLater(); }));
                 if (live) apply.Run(show); else show();
             }
 

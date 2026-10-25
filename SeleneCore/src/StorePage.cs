@@ -165,15 +165,21 @@ namespace Selene
             Ui.Rise(info, 60, 16, 320);
         }
 
-        public override void Hidden() { closed = true; heroLater.Stop(); }
+        public override void Hidden() { closed = true; heroLater.Stop(); if (rebuildLater != null) rebuildLater.Stop(); }
+        private System.Windows.Threading.DispatcherTimer rebuildLater;
 
         // a list came in: rebuild the rows if it belongs to this tab (keeping the place)
         private void Arrived(string key)
         {
             if (!RowsFor(tab).Any(r => r.Item2.Contains(key))) { ShowStatus(); return; }
-            if (rebuildQueued) return;
+            if (rebuildLater == null)
+            {
+                rebuildLater = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+                rebuildLater.Tick += (s, e) => { rebuildLater.Stop(); rebuildQueued = false; if (!closed) Build(); };
+            }
             rebuildQueued = true;
-            Root.Dispatcher.BeginInvoke(new Action(() => { rebuildQueued = false; if (!closed) Build(); }), System.Windows.Threading.DispatcherPriority.Background);
+            rebuildLater.Stop();
+            rebuildLater.Start();
         }
 
         // the rows each tab shows, and the lists they're made of (mixed in turn)
@@ -251,7 +257,8 @@ namespace Selene
             bool last = rowIndex == rows.Count - 1;
             double h = RowH + Peek;
             var ms = TimeSpan.FromMilliseconds(animate ? 260 : 0);
-            rowShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-rowIndex * RowH + (last ? Peek : 0), ms) { EasingFunction = Ui.Out() });
+            rowShift.BeginAnimation(TranslateTransform.YProperty, Ui.Fast(new DoubleAnimation(-rowIndex * RowH + (last ? Peek : 0), ms) { EasingFunction = Ui.Out() }));
+            if (animate) Ui.MeasureFrames("store row glide", 300);
             fadeAbove.BeginAnimation(GradientStop.ColorProperty, new ColorAnimation(last ? Color.FromArgb(0, 0, 0, 0) : Colors.Black, ms));
             fadeTop.BeginAnimation(GradientStop.OffsetProperty, new DoubleAnimation(last ? 1 : RowH / h, ms));
             fadeMid.BeginAnimation(GradientStop.OffsetProperty, new DoubleAnimation(last ? 1 : (RowH + 30) / h, ms));
@@ -491,7 +498,8 @@ namespace Selene
                     int next = row.Index + (b == "DPadRight" ? 1 : -1);
                     if (next < 0 || next >= row.Items.Count) return;
                     row.Index = next;
-                    row.Shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-Math.Max(0, next - 1) * Pitch, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
+                    row.Shift.BeginAnimation(TranslateTransform.XProperty, Ui.Fast(new DoubleAnimation(-Math.Max(0, next - 1) * Pitch, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() }));
+                    Ui.MeasureFrames("store tile glide", 260);
                     Ui.Tick();
                     LoadNearby();
                     MoreFor(row);

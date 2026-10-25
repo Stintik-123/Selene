@@ -18,8 +18,8 @@ namespace Selene
     public static class AdaptiveText
     {
         private static readonly List<WeakReference> texts = new List<WeakReference>();
-        // the dark halo behind bright-backed text: off for now (the user found it too much); grey text still brightens
-        private const bool HaloOn = false;
+        // the dark halo behind bright-backed text (on: the darkness taken off was the screen-edge shading)
+        private const bool HaloOn = true;
         private static bool hooked;
         private static DispatcherTimer batch;
 

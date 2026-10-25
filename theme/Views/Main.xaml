@@ -427,7 +427,7 @@
                                         </FadeImage.Style>
                                     </FadeImage>
                                     </Grid>
-                                    <Border x:Name="SeleneHubShadeLeft" Background="{DynamicResource SeleneScrimBrush}" Opacity="0.3">
+                                    <Border x:Name="SeleneHubShadeLeft" Background="{DynamicResource SeleneScrimBrush}" Opacity="0">
                                         <Border.OpacityMask>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                                 <GradientStop Color="#E0000000" Offset="0"/>
@@ -436,7 +436,7 @@
                                             </LinearGradientBrush>
                                         </Border.OpacityMask>
                                     </Border>
-                                    <Border x:Name="SeleneHubShadeBottom" Background="{DynamicResource SeleneScrimBrush}" Opacity="0.3">
+                                    <Border x:Name="SeleneHubShadeBottom" Background="{DynamicResource SeleneScrimBrush}" Opacity="0">
                                         <Border.OpacityMask>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                 <GradientStop Color="#00000000" Offset="0.4"/>
@@ -518,7 +518,8 @@
                                                                             </Border>
                                                                             <!-- Selene Core plays the selected tile's trailer here -->
                                                                             <Grid x:Name="TileVideoHost" IsHitTestVisible="False"/>
-                                                                            <Border x:Name="Shine" CornerRadius="12" Opacity="0" IsHitTestVisible="False" Background="{DynamicResource SeleneFocusBrush}">
+                                                                            <!-- the glint sweeping over the focused tile: always light (in the focus color it was invisible in themes with a dark or colored focus) -->
+                                                                            <Border x:Name="Shine" CornerRadius="12" Opacity="0" IsHitTestVisible="False" Background="White">
                                                                                 <Border.OpacityMask>
                                                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0.6">
                                                                                         <LinearGradientBrush.RelativeTransform><TranslateTransform x:Name="ShineShift" X="-1.5"/></LinearGradientBrush.RelativeTransform>

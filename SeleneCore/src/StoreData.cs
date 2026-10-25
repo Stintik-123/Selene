@@ -95,6 +95,7 @@ namespace Selene
         {
             try { Directory.CreateDirectory(SelenePaths.DataFolder); File.WriteAllText(RegionFile, country); } catch (Exception ex) { HomeNav.Log("store region: " + ex.Message); }
             if (chosen == country) return;
+            if (country == Country) { chosen = country; HomeNav.Log("store: prices stay in " + country); return; }   // the prices already shown
             bool changed = chosen != null && chosen.Length == 2 || country != Country;
             chosen = country;
             HomeNav.Log("store: prices for " + country);
