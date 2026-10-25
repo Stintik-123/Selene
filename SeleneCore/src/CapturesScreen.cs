@@ -76,14 +76,14 @@ namespace Selene
 
             // all / screenshots / clips: pills up top (LB / RB)
             var tabBar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 36, 0, 0) };
-            tabBar.Children.Add(Ui.Prompt("LB", ""));
+            tabBar.Children.Add(HomeNav.FilterBadge("LB"));   // the same badges as Spotlight's and Collection's tabs
             foreach (var f in Filters)
             {
                 var pill = new Border { CornerRadius = new CornerRadius(18), Padding = new Thickness(18, 6, 18, 8), Margin = new Thickness(6, 0, 6, 0), Child = new TextBlock { Text = f, FontSize = 19, FontFamily = Ui.Body } };
                 tabs.Add(pill);
                 tabBar.Children.Add(pill);
             }
-            tabBar.Children.Add(Ui.Prompt("RB", ""));
+            tabBar.Children.Add(HomeNav.FilterBadge("RB"));
             Root.Children.Add(tabBar);
             ShowTabs();
 
@@ -142,7 +142,7 @@ namespace Selene
             hideControls.Tick += (s, e) => { hideControls.Stop(); if (!paused) ShowControls(false); };
             playerClock.Tick += (s, e) => PollPlayer();
 
-            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back"), Ui.Prompt("LB RB", "Filter")));
+            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));   // (the tabs show LB / RB themselves)
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Open")));
         }
 

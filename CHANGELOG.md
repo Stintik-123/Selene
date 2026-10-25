@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Captures and Surprise me: the LB / RB badges on their tabs look like Spotlight's and Collection's; Captures drops the LB RB Filter hint (the tabs show it).
 - Profile steps keep up when you go back and forth quickly (the preview was pictured again on every step change, and the sample art faded in and out under the screen; both only happen now when something changed).
 - Readable text: dark text gets no halo.
 - Session card: back from a game, a card with its cover and logo says how long you played this time and in total; Steam games without a logo here get Steam's (fetched once, kept) (switch: Games, Session card).

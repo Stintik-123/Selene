@@ -55,14 +55,14 @@ namespace Selene
 
             // where it draws from: three pills up top (LB / RB)
             var tabBar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 36, 0, 0) };
-            tabBar.Children.Add(Ui.Prompt("LB", ""));
+            tabBar.Children.Add(HomeNav.FilterBadge("LB"));   // the same badges as Spotlight's and Collection's tabs
             foreach (var p in Pools)
             {
                 var pill = new Border { CornerRadius = new CornerRadius(18), Padding = new Thickness(18, 6, 18, 8), Margin = new Thickness(6, 0, 6, 0), Child = new TextBlock { Text = p, FontSize = 19, FontFamily = Ui.Body } };
                 tabs.Add(pill);
                 tabBar.Children.Add(pill);
             }
-            tabBar.Children.Add(Ui.Prompt("RB", ""));
+            tabBar.Children.Add(HomeNav.FilterBadge("RB"));
             Root.Children.Add(tabBar);
 
             var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 20, 0, 0) };
