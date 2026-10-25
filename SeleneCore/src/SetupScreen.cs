@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace Selene
@@ -152,6 +153,7 @@ namespace Selene
         public override void Hidden()
         {
             if (recheck != null) recheck.Stop();
+            if (openingWait != null) { openingWait.Stop(); openingWait = null; }
             var w = Application.Current.MainWindow;
             if (w != null) w.Activated -= OnActivated;
         }
@@ -183,6 +185,7 @@ namespace Selene
                 if (fresh[i].Key != items[i].Key || (fresh[i].State == items[i].State && fresh[i].Detail == items[i].Detail)) continue;
                 bool nowReady = fresh[i].State == SetupState.Ready && items[i].State != SetupState.Ready;
                 items[i] = fresh[i];
+                if (i == openingAt) continue;   // OPENING... stays until Playnite's question is up
                 SetStatus(statuses[i], fresh[i]);
                 Ui.Pop(statuses[i]);
                 if (nowReady) Ui.Tick();
@@ -314,7 +317,7 @@ namespace Selene
                 return;
             }
             var item = items[index];
-            if (item.AddonId != null) { Ui.Confirm(); SetupCheck.Install(item.AddonId); return; }
+            if (item.AddonId != null) { Ui.Confirm(); ShowOpening(item.AddonId); SetupCheck.Install(item.AddonId); return; }
             if (item.Key == "ludusavi-program" && item.State != SetupState.Ready) { SetUpLudusavi(index); return; }
             if (item.State == SetupState.Ready) { Ui.Pop(cards[index].Root); Ui.Tick(); return; }
             Ui.Shake(cards[index].Root);   // nothing to do from here; the hint says where
@@ -330,6 +333,47 @@ namespace Selene
             return missingCache;
         }
 
+        // Playnite takes a moment (it fetches the add-on's details) before its install question comes up: meanwhile the card
+        // says OPENING... and breathes, and the panel says what's happening, so the press doesn't look like it did nothing
+        private DispatcherTimer openingWait;
+        private int openingAt = -1;
+        private DateTime openingSince;
+
+        private void ShowOpening(string addonId)
+        {
+            EndOpening();
+            openingAt = items.FindIndex(i => i.AddonId == addonId);
+            openingSince = DateTime.Now;
+            if (openingAt >= 0)
+            {
+                var chip = statuses[openingAt].Parent as UIElement ?? statuses[openingAt];
+                statuses[openingAt].Text = "OPENING…";
+                statuses[openingAt].Foreground = Ink.Brush("SeleneInkColor", 0.85);
+                chip.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, 0.4, TimeSpan.FromMilliseconds(600)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
+                var item = items[openingAt];
+                info.Show(Icon(item.Key), Tone.Accent, item.Title, "Opening", item.About, "Playnite is getting the add-on. Its question comes up in a moment.");
+            }
+            openingWait = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+            openingWait.Tick += (s, e) =>
+            {
+                // the question is up (or Playnite never answered): back to normal
+                if (HomeNav.DialogUp() || (DateTime.Now - openingSince).TotalSeconds > 25) EndOpening();
+            };
+            openingWait.Start();
+        }
+
+        private void EndOpening()
+        {
+            if (openingWait != null) { openingWait.Stop(); openingWait = null; }
+            if (openingAt < 0 || openingAt >= statuses.Count) { openingAt = -1; return; }
+            var chip = statuses[openingAt].Parent as UIElement ?? statuses[openingAt];
+            chip.BeginAnimation(UIElement.OpacityProperty, null);
+            chip.Opacity = 1;
+            SetStatus(statuses[openingAt], items[openingAt]);
+            openingAt = -1;
+            ShowFocus();
+        }
+
         // Playnite shows one install prompt at a time: the next add-on is asked for once Playnite is back in front
         private void InstallNext()
         {
@@ -337,8 +381,9 @@ namespace Selene
             missingCache = null;
             var id = installQueue.Dequeue();
             HomeNav.Log("setup: installing " + id + " (" + installQueue.Count + " more)");
+            ShowOpening(id);
             try { SetupCheck.Install(id); }
-            catch (Exception ex) { HomeNav.Log("setup: install " + id + " failed: " + ex.Message); }
+            catch (Exception ex) { HomeNav.Log("setup: install " + id + " failed: " + ex.Message); EndOpening(); }
         }
 
         private DispatcherTimer installWait;

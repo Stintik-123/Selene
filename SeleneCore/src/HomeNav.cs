@@ -59,6 +59,7 @@ namespace Selene
             libTimer.Start();
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown));
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnWindowPreviewGotFocus));
+            DialogLook.Install();   // Playnite's message boxes as Selene cards
             EventManager.RegisterClassHandler(typeof(ListBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnListLoaded));
             EventManager.RegisterClassHandler(typeof(TextBlock), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnTextLoaded));
             var tvBackup = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "fullscreenConfig.tv.json");

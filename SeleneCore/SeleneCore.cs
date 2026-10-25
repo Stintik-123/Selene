@@ -265,6 +265,7 @@ namespace Selene
             new Option { Group = "Sound & music", Key = "music", Label = "Music control", About = "Default music while browsing, a game's song with its trailer." },
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },
             new Option { Group = "Sound & music", Key = "soundvolume", Label = "Sound volume", About = "How loud Selene's own sounds are.", Choices = new[] { "25", "50", "75", "100" }, Names = new[] { "25%", "50%", "75%", "100%" }, Default = "100" },
+            new Option { Group = "Look", Key = "dialogs", Label = "Selene dialogs", About = "Playnite's questions (add-on installs, restart, errors) as Selene cards: an icon, centred text, a soft rise." },
             new Option { Group = "Look", Key = "brand", Label = "Selene logo", About = "The logo in Selene settings and on empty screens." },
             new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
             new Option { Group = "Look", Key = "textshadow", Label = "Readable text", About = "A soft halo behind text so it reads over bright pictures." },

@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Playnite's questions (add-on installs, restart, errors) look like Selene: an icon in a soft ring, centred text, an add-on's name, author and version on a card of their own, a glow of the theme's color, and the card rises in (switch: Look, Selene dialogs).
+- Setup check: pressing Install shows the card OPENING... until Playnite's question comes up (nothing seemed to happen for a few seconds).
 - Logo intro: plays over the same moving background as the login and setup screens (it had a plainer one of its own).
 - Close to tray: Alt+F4 quits Playnite for real; Exit in the menu, the X and the taskbar's Close still hide it to the tray.
 - Logo intro: no dark flicker as it ends (the drawn background went before the background video was there; now the video fades in over it). The setup check has no "A Select" hint in the corner.
