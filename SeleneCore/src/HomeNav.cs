@@ -3698,31 +3698,48 @@ namespace Selene
             box.Opacity = 1;
             box.RenderTransform = null;
             box.Visibility = Visibility.Visible;
-            PlaceRowEmpty(row, box);
-            row.Dispatcher.BeginInvoke(new Action(() => PlaceRowEmpty(row, box)), System.Windows.Threading.DispatcherPriority.Loaded);
+            FollowRowEmpty(row, box);
         }
 
-        // beside the row's last card (cards come and go with their switches: a fixed spot ended up on top of them), centred on it
-        private static void PlaceRowEmpty(ListBox row, FrameworkElement box)
+        // the message stays beside the row's last card, which slides as the row scrolls and glides: while it shows, it is put
+        // next to the first spacer after the cards on every frame (a spot worked out once ended up on the cards or far off)
+        private static ListBox emptyRow;
+        private static FrameworkElement emptyBox;
+        private static TranslateTransform emptyAt;
+
+        private static void FollowRowEmpty(ListBox row, FrameworkElement box)
+        {
+            emptyRow = row;
+            emptyBox = box;
+            emptyAt = new TranslateTransform();
+            box.Margin = new Thickness(0);
+            box.RenderTransform = emptyAt;
+            System.Windows.Media.CompositionTarget.Rendering -= OnFollowRowEmpty;
+            System.Windows.Media.CompositionTarget.Rendering += OnFollowRowEmpty;
+            OnFollowRowEmpty(null, EventArgs.Empty);
+        }
+
+        private static void OnFollowRowEmpty(object sender, EventArgs e)
         {
             try
             {
-                var parent = VisualTreeHelper.GetParent(box) as FrameworkElement;
-                FrameworkElement last = null;
-                for (int i = 0; i < row.Items.Count; i++)
+                var box = emptyBox; var row = emptyRow;
+                if (box == null || row == null || box.Visibility != Visibility.Visible || !box.IsVisible)
                 {
-                    if (!(row.Items[i] is string)) continue;
-                    var c = row.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
-                    if (c != null && c.IsVisible) last = c;
+                    System.Windows.Media.CompositionTarget.Rendering -= OnFollowRowEmpty;
+                    return;
                 }
-                if (parent == null || last == null || last.ActualWidth < 1) return;
-                // the card's resting size (a focused card grows; the gap leaves room for that)
-                var at = last.TransformToVisual(parent).Transform(new Point(0, 0));
-                double right = at.X + last.ActualWidth, middle = at.Y + last.ActualHeight / 2;
-                box.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                box.Margin = new Thickness(right + 64, Math.Max(0, middle - box.DesiredSize.Height / 2), 0, 0);
+                var parent = VisualTreeHelper.GetParent(box) as Visual;
+                FrameworkElement pad = null;
+                for (int i = 0; i < row.Items.Count; i++)
+                    if (row.Items[i] is RowPad) { pad = row.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement; break; }
+                if (parent == null || pad == null || pad.ActualWidth < 1 || box.ActualHeight < 1) return;
+                var at = pad.TransformToVisual(parent).Transform(new Point(0, pad.ActualHeight / 2));
+                double x = at.X + 40, y = at.Y - box.ActualHeight / 2;
+                if (Math.Abs(emptyAt.X - x) > 0.25) emptyAt.X = x;
+                if (Math.Abs(emptyAt.Y - y) > 0.25) emptyAt.Y = y;
             }
-            catch (Exception ex) { Log("row empty: " + ex.Message); }
+            catch { }
         }
 
         // the numbers on the Library and Store cards
