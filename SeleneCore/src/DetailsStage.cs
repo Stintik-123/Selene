@@ -23,6 +23,11 @@ namespace Selene
         private static readonly List<Action>[] opens = { new List<Action>(), new List<Action>(), new List<Action>() };
         private static readonly int[] at = new int[3];
         private static int zone;   // 0: the pills (Playnite's focus), 1..3: the bands
+        private static Border sink;   // the keyboard focus while a band has Selene's focus (on a pill, that pill lit up too)
+
+        public static bool InBand { get { return details != null && details.IsVisible && zone > 0; } }
+
+        public static void FocusBand() { if (sink != null) sink.Focus(); }
         private static Guid shownId;
         private static DispatcherTimer shotsWatch;
         private static int shotsSeen;
@@ -55,6 +60,11 @@ namespace Selene
                 var page = Part<Grid>("SeleneDetailsPage");
                 shift = page != null ? page.RenderTransform as TranslateTransform : null;
                 if (page == null) { HomeNav.Log("details stage: no page in the template"); return; }
+                if (sink == null || !ReferenceEquals(sink.Parent, page))
+                {
+                    sink = new Border { Width = 0, Height = 0, Focusable = true, FocusVisualStyle = null, IsHitTestVisible = false };
+                    page.Children.Add(sink);
+                }
                 // what the glide moves is cached in pieces: the top block and each band's pictures are textures, the bands' blur
                 // and fade animate over them (one cache for the whole page went soft and had to be redrawn for every step)
                 page.CacheMode = null;
@@ -420,6 +430,8 @@ namespace Selene
                     return false;
                 case "A":
                 {
+                    // the layer just closed over the page (a capture): a stray Enter then reopened what was closed
+                    if ((DateTime.Now - LoginScene.ClosedAt).TotalMilliseconds < 1500) { HomeNav.Log("details stage: A right after the layer closed, ignored"); return true; }
                     int i = at[zone - 1];
                     if (i < opens[zone - 1].Count) { Ui.Confirm(); opens[zone - 1][i](); }
                     return true;

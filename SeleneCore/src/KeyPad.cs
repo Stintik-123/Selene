@@ -41,7 +41,13 @@ namespace Selene
                     var t = new Tile(w, key - 6, 14, 4) { FocusScale = 1.1 };
                     var label = new TextBlock { Text = Label(v, doneText), FontSize = v.Length == 1 ? 22 : 18, FontFamily = v == "shift" || v == "erase" ? Ui.Glyphs : Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
                     if (v.Length == 1 && char.IsLetter(v[0])) letterLabels.Add(label);
-                    if (v == "done") doneLabel = label;
+                    if (v == "done")
+                    {
+                        doneLabel = label;
+                        label.FontWeight = FontWeights.SemiBold;
+                        t.Face.Background = Ink.Brush("SeleneFocusColor", 0.3);   // the way out stands out among the letters
+                        t.Face.BorderBrush = Ink.Brush("SeleneFocusColor", 0.8);
+                    }
                     t.Face.Child = v == "done" || v == "erase" || v == "space" ? (UIElement)WithBadge(label, v == "done" ? "\u2261" : v == "space" ? "Y" : "X") : label;
                     t.Root.Margin = new Thickness(gap / 2, 0, gap / 2, 0);
                     rowPanel.Children.Add(t.Root);

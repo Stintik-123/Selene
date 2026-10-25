@@ -302,8 +302,11 @@ namespace Selene
         }
 
         // signed in (or carrying on without profiles): the layer fades away to the home
+        public static DateTime ClosedAt = DateTime.MinValue;
+
         public static void Finish()
         {
+            ClosedAt = DateTime.Now;
             if (startupQuiet) { startupQuiet = false; HomeNav.QuietStartup(false); HomeNav.HoldMusicForLaunch(false); }
             SeleneShell.HideLogin();
             if (!keepHome) return;
@@ -317,7 +320,8 @@ namespace Selene
                 if (loginRoot != null && loginRoot.IsVisible && ++waited < 30) return;
                 t.Stop();
                 var el = returnFocus as UIElement;
-                if (el != null && el.IsVisible) el.Focus();
+                if (DetailsStage.InBand) DetailsStage.FocusBand();   // back on a band of the details page: not its pills
+                else if (el != null && el.IsVisible) el.Focus();
                 keepHome = false;
             };
             t.Start();

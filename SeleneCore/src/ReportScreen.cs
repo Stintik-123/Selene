@@ -36,7 +36,7 @@ namespace Selene
         private List<Tile> tiles = new List<Tile>();
         private int columns;
         private KeyPad pad;
-        private TextBlock noteText;
+        private TextBlock noteText, noteHint;
         private Border noteBox;
         private string note = "";
         private bool sending;
@@ -117,8 +117,10 @@ namespace Selene
             noteText = new TextBlock { FontSize = 21, FontFamily = Ui.Body, TextWrapping = TextWrapping.Wrap };
             noteBox = new Border { Child = noteText, MinHeight = 96, CornerRadius = new CornerRadius(18), Padding = new Thickness(24, 18, 24, 18), Background = Ink.Brush("SeleneInkColor", 0.08), BorderBrush = Ink.Brush("SeleneFocusColor", 0.7), BorderThickness = new Thickness(2) };
             col.Children.Add(noteBox);
+            noteHint = new TextBlock { Text = "Nothing to add? Press Send as it is, with A on it or the Start button.", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(6, 10, 0, 0) };
+            col.Children.Add(noteHint);
             pad = new KeyPad("Send");
-            pad.Root.Margin = new Thickness(0, 26, 0, 0);
+            pad.Root.Margin = new Thickness(0, 20, 0, 0);
             pad.Typed = Type;
             pad.Erased = Erase;
             pad.Done = Send;
@@ -146,6 +148,7 @@ namespace Selene
             bool empty = note.Length == 0;
             noteText.Text = empty ? "What happened? A few words help a lot (optional)." : note + "\u258F";
             noteText.Foreground = Ink.Brush("SeleneInkColor", empty ? 0.45 : 0.95);
+            if (noteHint != null) noteHint.Visibility = empty ? Visibility.Visible : Visibility.Hidden;
             if (pad != null) pad.After(note);
         }
 
@@ -224,8 +227,11 @@ namespace Selene
                 {
                     var seleneLog = ReadLines(Path.Combine(Path.GetTempPath(), "selene.log"));
                     var playniteLog = ReadLines(HomeNav.Api != null ? Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "playnite.log") : "");
-                    report["seleneLog"] = Scrub(string.Join("\n", Last(seleneLog.Where(l => !Noise(l)), 350)));
-                    report["seleneProblems"] = Scrub(string.Join("\n", Last(seleneLog.Where(Problem), 40)));
+                    // this session only (from Selene's start), the problems once each with how often
+                    int start = seleneLog.FindLastIndex(l => l.Contains("login: scene attached"));
+                    var session = start > 0 ? seleneLog.Skip(start - 5).ToList() : seleneLog;
+                    report["seleneLog"] = Scrub(string.Join("\n", Last(session.Where(l => !Noise(l)), 350)));
+                    report["seleneProblems"] = Scrub(string.Join("\n", Grouped(session.Where(Problem))));
                     report["playniteLog"] = Scrub(string.Join("\n", Last(playniteLog.Where(l => l.Contains("|ERROR") || l.Contains("|WARN") || l.StartsWith("   ") || l.StartsWith("System.")), 120)));
                     try { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; } catch { }
                     var js = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
@@ -259,7 +265,25 @@ namespace Selene
 
         private static bool Problem(string line)
         {
-            return Regex.IsMatch(line, @"fail|error|exception|couldn't|not found|crash", RegexOptions.IgnoreCase) && !Noise(line);
+            if (!Regex.IsMatch(line, @"fail|error|exception|couldn't|not found|crash", RegexOptions.IgnoreCase) || Noise(line)) return false;
+            // known and harmless: a clip handed to the browser player, a list looked for before it's built
+            return line.IndexOf("clip failed in the player", StringComparison.Ordinal) < 0 && line.IndexOf("list not found/visible", StringComparison.Ordinal) < 0;
+        }
+
+        // the same message over and over: once, with its last time and how often
+        private static IEnumerable<string> Grouped(IEnumerable<string> lines)
+        {
+            var order = new List<string>();
+            var last = new Dictionary<string, string>();
+            var count = new Dictionary<string, int>();
+            foreach (var line in lines)
+            {
+                var text = line.Length > 13 && line[2] == ':' ? line.Substring(13) : line;
+                if (!count.ContainsKey(text)) { order.Add(text); count[text] = 0; }
+                count[text]++;
+                last[text] = line.Length > 12 ? line.Substring(0, 12) : "";
+            }
+            return order.Select(t => last[t] + " " + t + (count[t] > 1 ? "  (x" + count[t] + ")" : "")).Skip(Math.Max(0, order.Count - 40));
         }
 
         private void Done(string url, string error)
@@ -276,7 +300,7 @@ namespace Selene
             card.Children.Add(new TextBlock { Text = ok ? "Thanks, report #" + number + " is sent" : "Couldn't send it", FontSize = 38, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 26, 0, 0) });
             card.Children.Add(new TextBlock
             {
-                Text = ok ? "Scan the code to follow it on GitHub, or to add screenshots."
+                Text = ok ? "Scan the code to see it on GitHub. Adding screenshots or comments there needs a free GitHub account."
                      : error == "slow down" ? "That's a few reports in a row. Try again in an hour, or scan the code to report on GitHub."
                      : "No internet, maybe. Scan the code to report on GitHub instead.",
                 FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 700, Margin = new Thickness(0, 10, 0, 0)
