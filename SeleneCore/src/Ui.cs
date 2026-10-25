@@ -300,26 +300,44 @@ namespace Selene
         // screen's own rate. Only while Playnite's window is the active one (never behind a game). Switch: "fullrate".
         private static bool fullRateOn;
         private static void EveryFrame(object sender, EventArgs e) { }
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+        private static readonly uint ownPid = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+
+        // Playnite is what's in front: any of its windows has the foreground (its hidden progress window takes the activation
+        // while a notification shows: going by the main window's own "active", the full rate went off just then)
+        private static bool PlayniteInFront(Window main)
+        {
+            if (main == null || !main.IsVisible || main.WindowState == WindowState.Minimized) return false;
+            uint pid;
+            GetWindowThreadProcessId(GetForegroundWindow(), out pid);
+            return pid == ownPid;
+        }
+
         private static Window fullRateWatched;
         public static void WatchFullRate(Window main)
         {
             if (main == null || ReferenceEquals(main, fullRateWatched)) return;
             fullRateWatched = main;
-            Action update = () =>
-            {
-                bool want = Features.On("fullrate") && main.IsActive && main.IsVisible && main.WindowState != WindowState.Minimized;
-                if (want == fullRateOn) return;
-                fullRateOn = want;
-                if (want) System.Windows.Media.CompositionTarget.Rendering += EveryFrame;
-                else System.Windows.Media.CompositionTarget.Rendering -= EveryFrame;
-            };
-            main.Activated += (s, e) => update();
-            main.Deactivated += (s, e) => update();
-            main.StateChanged += (s, e) => update();
-            main.IsVisibleChanged += (s, e) => update();
-            update();
+            main.Activated += (s, e) => FullRateChanged();
+            main.Deactivated += (s, e) => FullRateChanged();
+            main.StateChanged += (s, e) => FullRateChanged();
+            main.IsVisibleChanged += (s, e) => FullRateChanged();
+            var check = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(500) };
+            check.Tick += (s, e) => FullRateChanged();
+            check.Start();
+            FullRateChanged();
         }
-        public static void FullRateChanged() { var m = Application.Current.MainWindow; if (m != null) { if (fullRateOn && !Features.On("fullrate")) { fullRateOn = false; System.Windows.Media.CompositionTarget.Rendering -= EveryFrame; } else if (!fullRateOn && Features.On("fullrate") && m.IsActive) { fullRateOn = true; System.Windows.Media.CompositionTarget.Rendering += EveryFrame; } } }
+
+        public static void FullRateChanged()
+        {
+            bool want = Features.On("fullrate") && PlayniteInFront(fullRateWatched ?? Application.Current.MainWindow);
+            if (want == fullRateOn) return;
+            fullRateOn = want;
+            if (want) System.Windows.Media.CompositionTarget.Rendering += EveryFrame;
+            else System.Windows.Media.CompositionTarget.Rendering -= EveryFrame;
+            HomeNav.Log("full refresh rate " + (want ? "on" : "off"));
+        }
 
         // developer switch: %TEMP%\selene-dev-frames makes the log say, each second, how many frames were drawn and the longest
         // gap between two (to find what makes Selene stutter)
