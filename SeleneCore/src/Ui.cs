@@ -329,14 +329,38 @@ namespace Selene
             FullRateChanged();
         }
 
+        // the screen's refresh rate (the main display; asked again every 10 s, a TV can change mode)
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private struct DevMode
+        {
+            [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst = 32)] public string dmDeviceName;
+            public short dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra; public int dmFields;
+            public int dmPositionX, dmPositionY, dmDisplayOrientation, dmDisplayFixedOutput;
+            public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
+            [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst = 32)] public string dmFormName;
+            public short dmLogPixels; public int dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency;
+            public int dmICMMethod, dmICMIntent, dmMediaType, dmDitherType, dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight;
+        }
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] private static extern bool EnumDisplaySettings(string device, int mode, ref DevMode dm);
+        private static int screenRate; private static DateTime screenRateAt = DateTime.MinValue;
+        public static int ScreenRate()
+        {
+            if ((DateTime.Now - screenRateAt).TotalSeconds < 10) return screenRate;
+            screenRateAt = DateTime.Now;
+            try { var dm = new DevMode(); dm.dmSize = (short)System.Runtime.InteropServices.Marshal.SizeOf(typeof(DevMode)); if (EnumDisplaySettings(null, -1, ref dm)) screenRate = dm.dmDisplayFrequency; }
+            catch { }
+            return screenRate;
+        }
+
         public static void FullRateChanged()
         {
-            bool want = Features.On("fullrate") && PlayniteInFront(fullRateWatched ?? Application.Current.MainWindow);
+            // only worth it above 60 Hz (drawing every frame keeps the GPU a little busy; on a 60 Hz TV there's nothing to gain)
+            bool want = Features.On("fullrate") && ScreenRate() > 62 && PlayniteInFront(fullRateWatched ?? Application.Current.MainWindow);
             if (want == fullRateOn) return;
             fullRateOn = want;
             if (want) System.Windows.Media.CompositionTarget.Rendering += EveryFrame;
             else System.Windows.Media.CompositionTarget.Rendering -= EveryFrame;
-            HomeNav.Log("full refresh rate " + (want ? "on" : "off"));
+            HomeNav.Log("full refresh rate " + (want ? "on" : "off") + " (screen " + ScreenRate() + " Hz)");
         }
 
         // developer switch: %TEMP%\selene-dev-frames makes the log say, each second, how many frames were drawn and the longest
