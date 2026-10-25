@@ -111,15 +111,22 @@ namespace Selene
             back = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, RenderTransformOrigin = new Point(0.5, 0.5) };
             front = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, RenderTransformOrigin = new Point(0.5, 0.5) };
             foreach (var img in new[] { back, front }) { RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.LowQuality); img.CacheMode = new BitmapCache(1.0); layer.Children.Add(img); }
-            // a dim over all of it, deeper along the bottom where the words are
-            layer.Children.Add(new Border { Background = new SolidColorBrush(Color.FromArgb(0x5C, 0, 0, 0)) });
-            layer.Children.Add(new Border { VerticalAlignment = VerticalAlignment.Bottom, Height = 420, Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Color.FromArgb(0, 0, 0, 0), 0), new GradientStop(Color.FromArgb(0xB8, 0, 0, 0), 1) }, 90) });
+            // a dim over all of it, deeper along the bottom where the words are (everything over the pictures sits above their
+            // z-order: the pictures are swapped between 1 and 2, and the words at 0 slipped under them)
+            var dim = new Border { Background = new SolidColorBrush(Color.FromArgb(0x5C, 0, 0, 0)) };
+            Panel.SetZIndex(dim, 10);
+            layer.Children.Add(dim);
+            var bottomShade = new Border { VerticalAlignment = VerticalAlignment.Bottom, Height = 420, Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Color.FromArgb(0, 0, 0, 0), 0), new GradientStop(Color.FromArgb(0xB8, 0, 0, 0), 1) }, 90) };
+            Panel.SetZIndex(bottomShade, 11);
+            layer.Children.Add(bottomShade);
             captionA = new Grid { Opacity = 0 }; captionB = new Grid { Opacity = 0 };
+            Panel.SetZIndex(captionA, 12); Panel.SetZIndex(captionB, 12);
             layer.Children.Add(captionA); layer.Children.Add(captionB);
             var right = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 80, 64) };
             clock = new TextBlock { FontSize = 64, FontFamily = Ui.Display, FontWeight = FontWeights.Light, Foreground = new SolidColorBrush(Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Right };
             date = new TextBlock { FontSize = 20, FontFamily = Ui.Body, Foreground = new SolidColorBrush(Color.FromArgb(0xA6, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 2, 2, 0) };
             right.Children.Add(clock); right.Children.Add(date);
+            Panel.SetZIndex(right, 13);
             layer.Children.Add(right);
             host.Children.Add(layer);
             at = -1;
