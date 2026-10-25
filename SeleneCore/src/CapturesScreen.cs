@@ -143,6 +143,14 @@ namespace Selene
             // while holding Left / Right: the time being gone to, over the bar under the preview
             scrubTime = new TextBlock { FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Brushes.White, Width = 90, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Collapsed };
             controls.Children.Add(scrubTime);
+            jumpHint = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Collapsed };
+            jumpHint.Children.Add(new Border
+            {
+                MinWidth = 24, Height = 24, CornerRadius = new CornerRadius(12), Padding = new Thickness(6, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center,
+                Background = new SolidColorBrush(Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF)), Child = Ui.Letter(Ui.PromptLabel("Y"), 12, FontWeights.Bold, new SolidColorBrush(Color.FromArgb(0xFF, 0x1A, 0x1A, 0x1A)))
+            });
+            jumpHint.Children.Add(new TextBlock { Text = "Jump here", FontSize = 16, FontFamily = Ui.Body, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 1) });
+            controls.Children.Add(jumpHint);
             clipHints = PlayerButtons();
             imageHints = Ui.Prompts(true, Ui.Prompt("\u25C0 \u25B6", "Previous / next"));
             controls.Children.Add(clipHints);
@@ -161,7 +169,7 @@ namespace Selene
             viewer.Children.Add(VolumePanel());
             Panel.SetZIndex(viewer, 20);
             Root.Children.Add(viewer);
-            hideControls.Tick += (s, e) => { hideControls.Stop(); if (!paused) ShowControls(false); };
+            hideControls.Tick += (s, e) => { hideControls.Stop(); if (!paused && !pending && !scrubbing) ShowControls(false); };   // (kept while a spot waits)
             playerClock.Tick += (s, e) => PollPlayer();
 
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));   // (the tabs show LB / RB themselves)
@@ -200,6 +208,7 @@ namespace Selene
         private const double BarBottom = 122;
         private static double clipVolume = 0.9;   // for the session
         private TextBlock playGlyph, scrubTime, volumeGlyph;
+        private StackPanel jumpHint;
         private Border volumePanel, volumeFill;
         private readonly DispatcherTimer volumeHide = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1600) };
 
@@ -296,7 +305,9 @@ namespace Selene
                     if (!padHeld || closed || !viewing) return;
                     lastSeekDir = padDir;
                     scrubbing = true;
-                    scrubPos = ScrubClamp(clipAt);
+                    if (pendingWait != null) pendingWait.Stop();
+                    scrubPos = ScrubClamp(pending ? scrubPos : clipAt);
+                    pending = false;
                     scrubStarted = scrubLastTick = DateTime.Now;
                     StartScrubClock();
                 };
@@ -309,8 +320,58 @@ namespace Selene
         {
             if (closed || (button != "DPadLeft" && button != "DPadRight") || !padHeld) return;
             padHeld = false;
-            if (scrubbing) { EndScrub(true); return; }
-            if (holdWait != null && holdWait.IsEnabled) { holdWait.Stop(); Ui.Tick(); Seek(padDir * 10); }
+            if (scrubbing) { WaitAtSpot(); return; }
+            if (holdWait != null && holdWait.IsEnabled)
+            {
+                holdWait.Stop();
+                Ui.Tick();
+                if (pending) { scrubPos = ScrubClamp(scrubPos + padDir * 10); ShowScrub(scrubPos); WaitAtSpot(); }   // a tap moves the waiting spot
+                else Seek(padDir * 10);
+            }
+        }
+
+        // the glide let go: the spot stays shown, with "Y Jump here"; it's gone to after 5 s, or at once on Y; held again, the
+        // glide goes on from it; B leaves it
+        private bool pending;
+        private DispatcherTimer pendingWait;
+
+        private void WaitAtSpot()
+        {
+            scrubbing = false;
+            if (scrubClock != null) scrubClock.Stop();
+            pending = true;
+            ShowScrub(scrubPos);
+            if (pendingWait == null)
+            {
+                pendingWait = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+                pendingWait.Tick += (s, e) => { pendingWait.Stop(); if (pending) JumpToSpot(); };
+            }
+            pendingWait.Stop();
+            pendingWait.Start();
+        }
+
+        private void JumpToSpot()
+        {
+            if (!pending) return;
+            pending = false;
+            if (pendingWait != null) pendingWait.Stop();
+            HideScrub();
+            SeekTo(scrubPos);
+        }
+
+        private void LeaveSpot()
+        {
+            pending = false;
+            if (pendingWait != null) pendingWait.Stop();
+            HideScrub();
+            ShowProgress(clipAt, clipLength, paused);
+        }
+
+        private void HideScrub()
+        {
+            scrubTime.Visibility = Visibility.Collapsed;
+            jumpHint.Visibility = Visibility.Collapsed;
+            if (clip != null) clip.HidePreview();
         }
 
         private void StartScrubClock()
@@ -364,6 +425,8 @@ namespace Selene
             scrubTime.Text = Clock(t);
             scrubTime.Margin = new Thickness(x - 45, 0, 0, BarBottom + 14);
             scrubTime.Visibility = Visibility.Visible;
+            jumpHint.Margin = new Thickness(x + 52, 0, 0, BarBottom + 12);
+            jumpHint.Visibility = pending ? Visibility.Visible : Visibility.Collapsed;
             if (clip != null)
             {
                 double h = viewer.ActualHeight > 0 ? viewer.ActualHeight : 1080, vw = viewer.ActualWidth > 0 ? viewer.ActualWidth : 1920;
@@ -374,11 +437,11 @@ namespace Selene
 
         private void EndScrub(bool jump)
         {
+            if (pending && !jump) { LeaveSpot(); return; }
             if (!scrubbing) return;
             scrubbing = false;
             if (scrubClock != null) scrubClock.Stop();
-            scrubTime.Visibility = Visibility.Collapsed;
-            if (clip != null) clip.HidePreview();
+            HideScrub();
             if (jump) SeekTo(scrubPos);
         }
 
@@ -414,7 +477,7 @@ namespace Selene
             clipAt = at; clipLength = length;
             // (just after a press the player's report can be from before it: the press decides for a moment)
             if (paused != isPaused && DateTime.Now > pressDecides) { paused = isPaused; ShowControls(true); PausedLook(paused); }
-            if (scrubbing) return;
+            if (scrubbing || pending) return;
             double w = Math.Max(0, progressTrack.Width);
             progress.Width = length > 0 ? Math.Max(0, Math.Min(w, w * at / length)) : 0;
             timeText.Text = Clock(at) + (length > 0 ? " / " + Clock(length) : "");
@@ -678,6 +741,8 @@ namespace Selene
         {
             if (viewing)
             {
+                if (b == "B" && pending) { Ui.Back(); LeaveSpot(); return; }
+                if (b == "Y" && pending) { Ui.Confirm(); JumpToSpot(); return; }
                 if (b == "B") { Ui.Back(); CloseViewer(); return; }
                 bool isClip = index < items.Count && items[index].IsVideo;
                 if (!controlsShown) ShowControls(true); else hideControls.Stop();
