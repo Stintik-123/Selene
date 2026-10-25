@@ -40,6 +40,24 @@ namespace Selene
         private static Border icon;
         private static TextBlock downloadGlyph;
         private static ContentControl titleLine;
+        private static StackPanel text;
+        private const double SessionWidth = 400, SessionHeight = 182;   // the session card: narrower and taller, the logo big and centred
+
+        // a progress card's shape (wide, one row: icon tile and words) or the session card's (the logo over the words, centred)
+        private static void Shape(bool session)
+        {
+            card.Width = session ? SessionWidth : CardWidth;
+            card.Height = session ? SessionHeight : CardHeight;
+            card.Padding = session ? new Thickness(24, 16, 24, 18) : new Thickness(16, 0, 22, 0);
+            layer.Width = card.Width + ShadowRoom + Edge;
+            var centre = session ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+            text.HorizontalAlignment = centre;
+            titleLine.HorizontalAlignment = centre;
+            words.HorizontalAlignment = centre;
+            words.TextAlignment = session ? TextAlignment.Center : TextAlignment.Left;
+            words.MaxWidth = session ? SessionWidth - 48 : CardWidth - 100;
+            titleLine.Margin = session ? new Thickness(0, 0, 0, 12) : new Thickness(0, 0, 0, 4);
+        }
         private static Border card, track, fill;
         private static TextBlock words;
         private static TranslateTransform slideIn, sweep;
@@ -157,6 +175,7 @@ namespace Selene
             icon.Child = downloadGlyph;
             icon.Visibility = Visibility.Visible;
             titleLine.Visibility = Visibility.Collapsed;
+            Shape(false);
             if (leaveTimer != null) leaveTimer.Stop();
             barShown = -1;
             Place(main);
@@ -213,7 +232,7 @@ namespace Selene
                 Margin = new Thickness(0, 0, 16, 0), Child = downloadGlyph, ClipToBounds = true
             };
             titleLine = new ContentControl { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 0, 0, 4), HorizontalAlignment = HorizontalAlignment.Left };
-            var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             text.Children.Add(titleLine);
             text.Children.Add(words);
             var row = new DockPanel();
@@ -224,7 +243,7 @@ namespace Selene
             card = new Border
             {
                 Width = CardWidth, CornerRadius = new CornerRadius(10), Padding = new Thickness(16, 0, 22, 0), Height = CardHeight,
-                Background = Ink.Brush("SeleneGlassColor", 0.9), BorderBrush = Ink.Brush("SeleneInkColor", 0.07), BorderThickness = new Thickness(1),
+                Background = Ink.Brush("SeleneGlassColor", 0.72), BorderBrush = Ink.Brush("SeleneInkColor", 0.08), BorderThickness = new Thickness(1),   // see-through
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
                 Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(ShadowRoom, ShadowRoom, Edge, ShadowRoom), RenderTransform = slideIn
@@ -394,13 +413,14 @@ namespace Selene
                 var logo = System.IO.Path.Combine(api.Paths.ConfigurationPath, "ExtraMetadata", "games", game.Id.ToString(), "logo.png");
                 if (!System.IO.File.Exists(logo) && appId != null) logo = SteamFile(appId, "logo.png");
                 var pic = System.IO.File.Exists(logo) ? Wallpapers.Load(logo, 400) : null;
-                if (pic != null) title = new Image { Source = pic, MaxHeight = 44, MaxWidth = 240, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left };
+                if (pic != null) title = new Image { Source = pic, MaxHeight = 92, MaxWidth = SessionWidth - 80, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center };
             }
             catch { }
             if (title == null) title = new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 19, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 110 };
             titleLine.Content = title;
             titleLine.Visibility = Visibility.Visible;
             if (title is Image) icon.Visibility = Visibility.Collapsed;
+            Shape(title is Image);   // logo: the big centred card; no logo: the usual row with the cover and the name
             var line = "You played " + Duration(seconds);
             if (game.Playtime >= 3600) line += "  \u00B7  " + Duration(game.Playtime) + " in total";
             words.Text = line;
