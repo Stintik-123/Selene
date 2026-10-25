@@ -370,8 +370,9 @@ namespace Selene
             host.Opacity = 1;
             AfterFirstFrame(scene, () =>
             {
-                HomeNav.Log("backdrop fade-in: fading over 1000 ms");
-                var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(1000)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+                HomeNav.Log("backdrop fade-in: fading over 2200 ms");
+                // slow and even: a gentle sine curve over two seconds, at the screen's own frame rate
+                var fade = Ui.Fast(new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(2200)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
                 fade.Completed += (s, e) => scenePanel.Children.Remove(cover);
                 cover.BeginAnimation(UIElement.OpacityProperty, fade);
             });
