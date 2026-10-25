@@ -357,9 +357,14 @@ namespace Selene
         {
             var host = backdropHost;
             var scenePanel = host != null ? host.Parent as Panel : null;
-            if (host == null || scenePanel == null || host.Opacity > 0.99) return;
+            if (host == null || scenePanel == null || host.Opacity > 0.99)
+            {
+                HomeNav.Log("backdrop fade-in skipped: host=" + (host != null) + " panel=" + (scenePanel != null) + " opacity=" + (host != null ? host.Opacity.ToString("0.00") : "-"));
+                return;
+            }
             var dark = Application.Current.TryFindResource("SeleneScrimBrush") as Brush ?? Brushes.Black;
             var cover = new ThreadedFade(dark);
+            HomeNav.Log("backdrop fade-in: cover " + (cover.Ready ? "ready" : "NOT ready") + ", scene " + (scene != null && scene.IsLoaded ? "loaded" : "not loaded") + " " + (scene != null ? (int)scene.ActualWidth + "x" + (int)scene.ActualHeight : ""));
             scenePanel.Children.Insert(scenePanel.Children.IndexOf(host) + 1, cover);   // over the backdrop, under the logo
             host.Opacity = 1;
             host.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(900)), DispatcherPriority.ApplicationIdle);

@@ -18,6 +18,7 @@ namespace Selene
         private Grid root;
         private bool fading;
         private int lateWaits;
+        public bool Ready { get { return thread != null; } }
 
         public ThreadedFade(params Brush[] layers)
         {
@@ -104,6 +105,7 @@ namespace Selene
             }
             d.BeginInvoke(new Action(() =>
             {
+                HomeNav.Log("threaded fade: fading out over " + ms + " ms");
                 var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(ms)) { BeginTime = TimeSpan.FromMilliseconds(delayMs), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
                 fade.Completed += (s, e) => Dispatcher.BeginInvoke(new Action(Remove));
                 root.BeginAnimation(UIElement.OpacityProperty, fade);
