@@ -2624,6 +2624,14 @@ namespace Selene
                     e.Cancel();  // Playnite out of sight: the pad belongs to whatever is in front (a menu here could restart the PC)
                     return;
                 }
+                // a button let go: screens that tell a tap from a hold hear of it (the clip player's Left / Right)
+                if (ke.RoutedEvent == Keyboard.KeyUpEvent)
+                {
+                    var relProp = ke.GetType().GetProperty("Button");
+                    var rel = relProp != null ? relProp.GetValue(ke, null) : null;
+                    if (rel != null) Ui.Released(Ui.Normalize(rel.ToString()));
+                }
+                else Ui.PadPressAt = DateTime.Now;
                 // Start / View released: a short press does its usual thing (a hold already did its own)
                 if (ke.RoutedEvent == Keyboard.KeyUpEvent && holdButton != null)
                 {

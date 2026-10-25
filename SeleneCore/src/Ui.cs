@@ -494,6 +494,12 @@ namespace Selene
         // selection skipped one). Every keyboard handler checks KeyIsPadCopy first.
         private static DateTime padHandledAt = DateTime.MinValue;
         public static void PadHandled() { padHandledAt = DateTime.Now; }
+
+        // the controller: when a button last went down (a press that came from it), and buttons being let go
+        public static DateTime PadPressAt = DateTime.MinValue;
+        public static bool PressFromPad { get { return (DateTime.Now - PadPressAt).TotalMilliseconds < 80; } }
+        public static event Action<string> ButtonReleased;
+        public static void Released(string button) { var h = ButtonReleased; if (h != null) h(button); }
         public static bool KeyIsPadCopy() { return (DateTime.Now - padHandledAt).TotalMilliseconds < 120; }
 
         public static void Pressed(string button)

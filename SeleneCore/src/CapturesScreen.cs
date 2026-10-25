@@ -178,7 +178,7 @@ namespace Selene
             });
         }
 
-        public override void Hidden() { closed = true; StopVideo(); hideControls.Stop(); playerClock.Stop(); heroLater.Stop(); }
+        public override void Hidden() { closed = true; if (releaseHooked) Ui.ButtonReleased -= OnReleased; HomeNav.ClipPlaying(false); StopVideo(); hideControls.Stop(); playerClock.Stop(); heroLater.Stop(); }
 
         // ---- the words, bar and hints over the viewer ----
         private void ShowControls(bool on)
@@ -275,8 +275,59 @@ namespace Selene
         private double scrubPos;
         private DispatcherTimer scrubClock;
 
+        // with the controller, Selene sees the button let go: a short press is a tap (10 s), still down after a moment it's a
+        // hold and the glide starts there (Playnite only repeats a held button after 700 ms: the first press counted as a tap)
+        private bool padHeld, releaseHooked;
+        private int padDir;
+        private DispatcherTimer holdWait;
+
+        private void PadSeekPress(int dir)
+        {
+            if (!releaseHooked) { releaseHooked = true; Ui.ButtonReleased += OnReleased; }
+            if (padHeld) return;   // Playnite's repeats of the held button
+            padHeld = true;
+            padDir = dir;
+            if (holdWait == null)
+            {
+                holdWait = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
+                holdWait.Tick += (s, e) =>
+                {
+                    holdWait.Stop();
+                    if (!padHeld || closed || !viewing) return;
+                    lastSeekDir = padDir;
+                    scrubbing = true;
+                    scrubPos = ScrubClamp(clipAt);
+                    scrubStarted = scrubLastTick = DateTime.Now;
+                    StartScrubClock();
+                };
+            }
+            holdWait.Stop();
+            holdWait.Start();
+        }
+
+        private void OnReleased(string button)
+        {
+            if (closed || (button != "DPadLeft" && button != "DPadRight") || !padHeld) return;
+            padHeld = false;
+            if (scrubbing) { EndScrub(true); return; }
+            if (holdWait != null && holdWait.IsEnabled) { holdWait.Stop(); Ui.Tick(); Seek(padDir * 10); }
+        }
+
+        private void StartScrubClock()
+        {
+            if (scrubClock == null)
+            {
+                scrubClock = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(16) };
+                scrubClock.Tick += (s, e) => ScrubStep();
+            }
+            scrubClock.Start();
+            Ui.Tick();
+        }
+
+        // the keyboard: no "let go" to hear, so a held key is told by its repeats
         private void SeekPress(int dir)
         {
+            if (Ui.PressFromPad) { PadSeekPress(dir); return; }
             var now = DateTime.Now;
             bool repeat = dir == lastSeekDir && (now - lastSeekPress).TotalMilliseconds < 600;   // (a held button repeats after a short wait)
             lastSeekPress = now;
@@ -286,12 +337,7 @@ namespace Selene
             scrubbing = true;
             scrubPos = ScrubClamp(clipAt + dir * 10);
             scrubStarted = scrubLastTick = now;
-            if (scrubClock == null)
-            {
-                scrubClock = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(16) };
-                scrubClock.Tick += (s, e) => ScrubStep();
-            }
-            scrubClock.Start();
+            StartScrubClock();
         }
 
         private double ScrubClamp(double t) { return Math.Max(0, Math.Min(Math.Max(0, clipLength - 0.5), t)); }
@@ -301,7 +347,7 @@ namespace Selene
             var now = DateTime.Now;
             double dt = (now - scrubLastTick).TotalSeconds;
             scrubLastTick = now;
-            if ((now - lastSeekPress).TotalMilliseconds > 330) { EndScrub(true); return; }   // let go
+            if (!padHeld && (now - lastSeekPress).TotalMilliseconds > 330) { EndScrub(true); return; }   // (keyboard) let go
             double held = (now - scrubStarted).TotalSeconds;
             double speed = Math.Max(8, clipLength / 25) * (1 + held);   // seconds of clip per second held
             scrubPos = ScrubClamp(scrubPos + lastSeekDir * speed * dt);
@@ -610,6 +656,7 @@ namespace Selene
         private void CloseViewer()
         {
             viewing = false;
+            HomeNav.ClipPlaying(false);   // the music comes back
             StopVideo();
             Ui.Fade(viewer, 0, 200, 0, () => { viewer.Visibility = Visibility.Collapsed; picture.Source = null; });
             ShowFocus(true);
@@ -619,7 +666,6 @@ namespace Selene
         {
             playerClock.Stop();
             EndScrub(false);
-            HomeNav.ClipPlaying(false);
             if (clip != null) { clip.Stop(); clip = null; }
             if (clipSound != null) { clipSound.Stop(); clipSound = null; }
             if (video == null) return;
