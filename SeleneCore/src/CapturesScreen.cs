@@ -169,6 +169,8 @@ namespace Selene
             viewer.Children.Add(VolumePanel());
             Panel.SetZIndex(viewer, 20);
             Root.Children.Add(viewer);
+            // opened on one capture (a game's details page): the viewer is up from the start, so the grid never shows under it
+            if (openPath != null) { viewer.Visibility = Visibility.Visible; viewer.Opacity = 1; }
             hideControls.Tick += (s, e) => { hideControls.Stop(); if (!paused && !pending && !scrubbing) ShowControls(false); };   // (kept while a spot waits)
             playerClock.Tick += (s, e) => PollPlayer();
 
@@ -615,6 +617,7 @@ namespace Selene
             if (openPath != null) { int at0 = items.FindIndex(c => string.Equals(c.Path, openPath, StringComparison.OrdinalIgnoreCase)); if (at0 >= 0) index = at0; }
             ShowFocus(false);
             if (openPath != null && index < items.Count && string.Equals(items[index].Path, openPath, StringComparison.OrdinalIgnoreCase)) Open(index);
+            else if (openPath != null && !viewing) { viewer.Opacity = 0; viewer.Visibility = Visibility.Collapsed; }   // (gone since: the grid)
         }
 
         private static string Count(int n, string what) { return n + " " + what + (n == 1 ? "" : "s"); }
@@ -745,7 +748,7 @@ namespace Selene
             {
                 if (b == "B" && pending) { Ui.Back(); LeaveSpot(); return; }
                 if (b == "Y" && pending) { Ui.Confirm(); JumpToSpot(); return; }
-                if (b == "B") { Ui.Back(); CloseViewer(); return; }
+                if (b == "B") { Ui.Back(); if (openPath != null) LoginScene.Finish(); else CloseViewer(); return; }   // from the details page: back there
                 bool isClip = index < items.Count && items[index].IsVideo;
                 if (!controlsShown) ShowControls(true); else hideControls.Stop();
                 hideControls.Start();
