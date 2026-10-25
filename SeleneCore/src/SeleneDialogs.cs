@@ -108,8 +108,12 @@ namespace Selene
         private static bool Mine(GlobalProgressOptions options)
         {
             if (HomeNav.Quitting) return false;   // Playnite on its way out: its own "Exiting" screen, not a card
+            var app = Application.Current;
+            if (app == null || app.Dispatcher.HasShutdownStarted) return false;
+            // Playnite's shutdown passes the raw key "LOCClosingPlaynite"; running it inside our nested frame froze the exit
             var text = options != null ? options.Text ?? "" : "";
-            if (text.IndexOf("Exiting", StringComparison.OrdinalIgnoreCase) >= 0 || text.IndexOf("Shutting down", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            foreach (var word in new[] { "Closing", "Exiting", "Shutting" })
+                if (text.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0) return false;
             return Features.On("dialogs") && Features.On("progresstoast") && ProgressToast.Usable();
         }
 

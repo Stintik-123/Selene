@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -376,10 +377,23 @@ namespace Selene
             var login = Part("AcceuilSettings");
             if (login == null) return;
             HomeNav.QuietFocus(800);   // focus moves into the login layer: not a move
+            Raise(login, 1);
             login.BeginAnimation(UIElement.OpacityProperty, null);
             login.Opacity = 0;
             login.Visibility = Visibility.Visible;
             login.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
+
+        // the game details page sits after the login layer's grid in Main.xaml: opened from there (Captures), the layer must go over it
+        private static void Raise(UIElement login, int z)
+        {
+            DependencyObject child = login, parent = VisualTreeHelper.GetParent(login);
+            while (parent != null && !(parent is Panel && ((Panel)parent).Children.OfType<FrameworkElement>().Any(c => c.Name == "PART_ElemGameDetails")))
+            {
+                child = parent;
+                parent = VisualTreeHelper.GetParent(parent);
+            }
+            if (parent != null && child is UIElement) Panel.SetZIndex((UIElement)child, z);
         }
 
         // the login layer goes when the profile is picked (it was the theme plugin's job before)
@@ -391,7 +405,7 @@ namespace Selene
             if (!LoginScene.KeepHome && StartOnCollection()) { ShowLibrary(); HomeNav.Log("start on Collection"); }
             else if (!LoginScene.KeepHome) HomeNav.HoldHomeForIntro();
             var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
-            fade.Completed += (s, e) => { login.Visibility = Visibility.Collapsed; login.BeginAnimation(UIElement.OpacityProperty, null); login.Opacity = 1; };
+            fade.Completed += (s, e) => { login.Visibility = Visibility.Collapsed; login.BeginAnimation(UIElement.OpacityProperty, null); login.Opacity = 1; Raise(login, 0); };
             login.BeginAnimation(UIElement.OpacityProperty, fade);
         }
     }

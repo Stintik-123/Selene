@@ -230,7 +230,8 @@ namespace Selene
             RecolorDust();
             if (glow == null) return;
             bool wallpaper = Application.Current.Resources["SeleneWallpaper"] != null;
-            double to = wallpaper || !Features.On("glow") ? 0 : 1;
+            // a menu over the home keeps it hidden (backing out of Edit profile reapplies the look under the menu)
+            double to = wallpaper || !Features.On("glow") || (current != null && current.Overlay) ? 0 : 1;
             // not on screen yet (start-up): set as it should be, or the light flashed up and faded out during the fade-in
             if (backdropHost == null || backdropHost.Opacity < 0.01) { glow.BeginAnimation(UIElement.OpacityProperty, null); glow.Opacity = to; }
             else glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(300)));
