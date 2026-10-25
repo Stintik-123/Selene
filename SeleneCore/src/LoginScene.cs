@@ -244,7 +244,7 @@ namespace Selene
             var next = pending;
             pending = null;
             if (next != null) Show(next(), 0);
-            else if (!introPlayed) { introPlayed = true; AllowBackdropVideo(); Show(Features.On("intro") ? (Screen)new IntroScreen() : Start(), 0); }
+            else if (!introPlayed) { introPlayed = true; AllowBackdropVideo(); WhenCalm(scene, () => Show(Features.On("intro") ? (Screen)new IntroScreen() : Start(), 0)); }
             else Show(Start(), 0);
         }
 
@@ -368,7 +368,7 @@ namespace Selene
             var cover = new Border { Background = dark, IsHitTestVisible = false };
             scenePanel.Children.Insert(scenePanel.Children.IndexOf(host) + 1, cover);   // over the backdrop, under the logo
             host.Opacity = 1;
-            AfterFirstFrame(scene, () =>
+            WhenCalm(scene, () =>
             {
                 HomeNav.Log("backdrop fade-in: fading over 2200 ms");
                 // slow and even: a gentle sine curve over two seconds, at the screen's own frame rate
@@ -378,14 +378,28 @@ namespace Selene
             });
         }
 
-        private static void AfterFirstFrame(FrameworkElement el, Action act)
+        // once the element has its size, its first frame is drawn, and the frames come evenly (the start-up rush is over: the
+        // intro's fade and slide stuttered when they shared those frames with the library being built); 2.5 s at most
+        private static void WhenCalm(FrameworkElement el, Action act)
         {
             if (el == null) { act(); return; }
             Action whenSized = () =>
             {
-                int frames = 0;
+                int frames = 0, calm = 0;
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                double last = 0;
                 EventHandler tick = null;
-                tick = (s, e) => { if (++frames < 2) return; CompositionTarget.Rendering -= tick; act(); };
+                tick = (s, e) =>
+                {
+                    double t = sw.Elapsed.TotalMilliseconds;
+                    double gap = t - last; last = t;
+                    frames++;
+                    calm = frames > 1 && gap < 24 ? calm + 1 : 0;
+                    if (frames < 2 || (calm < 8 && t < 2500)) return;
+                    CompositionTarget.Rendering -= tick;
+                    HomeNav.Log("intro: frames calm after " + (int)t + " ms" + (calm < 8 ? " (gave up waiting)" : ""));
+                    act();
+                };
                 CompositionTarget.Rendering += tick;
             };
             if (el.ActualWidth > 1) { whenSized(); return; }
