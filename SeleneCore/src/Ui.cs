@@ -365,6 +365,21 @@ namespace Selene
 
         // developer switch: %TEMP%\selene-dev-frames makes the log say, each second, how many frames were drawn and the longest
         // gap between two (to find what makes Selene stutter)
+        public static void StartupFrameLog()
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            double last = 0; int n = 0;
+            EventHandler tick = null;
+            tick = (s, e) =>
+            {
+                double t = sw.Elapsed.TotalMilliseconds;
+                if (n++ > 0 && t - last > 40) HomeNav.Log("start-up frame gap " + (t - last).ToString("0") + " ms");
+                last = t;
+                if (t > 9000) System.Windows.Media.CompositionTarget.Rendering -= tick;
+            };
+            System.Windows.Media.CompositionTarget.Rendering += tick;
+        }
+
         public static void DevFrameLog()
         {
             if (!System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-frames"))) return;

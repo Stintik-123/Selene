@@ -80,7 +80,7 @@ namespace Selene
                 foreach (var sec in new[] { 1, 4, 10, 25 })
                 {
                     var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(sec) };
-                    t.Tick += (s2, e2) => { t.Stop(); if (w.IsVisible && w.WindowState != WindowState.Minimized) SetOwnAudioMute(false); };
+                    t.Tick += (s2, e2) => { t.Stop(); if (w.IsVisible && w.WindowState != WindowState.Minimized) System.Threading.Tasks.Task.Factory.StartNew(() => SetOwnAudioMute(false)); };   // off the UI thread: it took ~100 ms (a hitch in the intro)
                     t.Start();
                 }
             }

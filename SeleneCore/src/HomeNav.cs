@@ -73,6 +73,7 @@ namespace Selene
             UpdateCheck.Later();   // once a day: a newer Selene out? (%TEMP%\selene-dev-update: pretend one is)
             IdleScreen.Install();  // the idle screen's clock
             Ui.DevFrameLog();   // %TEMP%\selene-dev-frames: frames per second in the log
+            Ui.StartupFrameLog();   // the first seconds: long frames in the log (the intro must not stutter)
             EventManager.RegisterClassHandler(typeof(ListBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnListLoaded));
             EventManager.RegisterClassHandler(typeof(TextBlock), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnTextLoaded));
             var tvBackup = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "fullscreenConfig.tv.json");
