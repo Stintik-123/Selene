@@ -1,6 +1,5 @@
 // Playnite's progress screen (add-ons downloading logos or trailers after a library update, a library update itself...)
-// as a notification instead of a full screen: a glass card at the top right, Selene's mark beside the task's words and a
-// slim bar in the theme's color that fills as the work goes.
+// as a notification instead of a full screen: a glass card at the top right, under the clock, with the task's words.
 // Playnite opens that screen as a modal window and waits for it to close before carrying on, so it isn't held open: it is
 // moved off screen (invisible, the main window handed its input back) and the card is a window of Selene's own that mirrors
 // it. The card slides in from beyond the right edge with a sound, stays at least a few seconds so it can be read (the bar
@@ -89,7 +88,8 @@ namespace Selene
         {
             toast.Width = CardWidth + ShadowRoom + Edge;
             toast.Left = main.Left + main.ActualWidth - toast.Width;
-            toast.Top = main.Top + Edge - ShadowRoom;
+            // under the top bar (the clock and the profile), not over it: the bar is ~100 of the home's 1080 pixels high
+            toast.Top = main.Top + main.ActualHeight * 112 / 1080.0 - ShadowRoom;
         }
 
         private static void Build()
@@ -97,7 +97,7 @@ namespace Selene
             words = new TextBlock
             {
                 FontFamily = Ui.Body, FontSize = 18, Foreground = Ink.Brush("SeleneInkColor"), TextWrapping = TextWrapping.Wrap,
-                MaxWidth = CardWidth - 128, TextTrimming = TextTrimming.CharacterEllipsis, MaxHeight = 52
+                MaxWidth = CardWidth - 50, TextTrimming = TextTrimming.CharacterEllipsis, MaxHeight = 52
             };
             var title = new TextBlock { Text = "Selene", FontFamily = Ui.Display, FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(0, 0, 0, 3) };
             track = new Border { Height = 6, CornerRadius = new CornerRadius(3), Background = Ink.Brush("SeleneInkColor", 0.14), Margin = new Thickness(0, 12, 0, 0), ClipToBounds = true };
@@ -109,22 +109,14 @@ namespace Selene
             sweep = new TranslateTransform();
             fill.RenderTransform = sweep;
             track.Child = fill;
-            var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            text.Children.Add(title);
-            text.Children.Add(words);
-            text.Children.Add(track);
-            UIElement glow;
-            var mark = Ui.Mark(40, out glow);
-            mark.VerticalAlignment = VerticalAlignment.Center;
-            mark.Margin = new Thickness(0, 0, 18, 0);
-            var row = new DockPanel();
-            DockPanel.SetDock(mark, Dock.Left);
-            row.Children.Add(mark);
-            row.Children.Add(text);
+            // just the words: no mark, no bar (the bar is kept, unshown, so the task's progress code has somewhere to go)
+            var row = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            row.Children.Add(title);
+            row.Children.Add(words);
             slideIn = new TranslateTransform();
             card = new Border
             {
-                Width = CardWidth, CornerRadius = new CornerRadius(22), Padding = new Thickness(22, 18, 24, 20),
+                Width = CardWidth, CornerRadius = new CornerRadius(22), Padding = new Thickness(24, 16, 24, 18),
                 Background = Ink.Brush("SeleneGlassColor", 0.94), BorderBrush = Ink.Brush("SeleneInkColor", 0.18), BorderThickness = new Thickness(1),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
                 Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
@@ -155,6 +147,7 @@ namespace Selene
                 if (source == null) return;
                 var args = Prop(source, "ProgressArgs");
                 var text = Prop(args, "Text") as string;
+                if (text != null) text = text.Trim();   // Playnite's texts can start with spaces (they sat indented)
                 if (!string.IsNullOrEmpty(text) && words.Text != text) words.Text = text;
                 bool indeterminate = Equals(Prop(args, "IsIndeterminate"), true);
                 double max = ToDouble(Prop(args, "ProgressMaxValue")), value = ToDouble(Prop(args, "CurrentProgressValue"));
