@@ -30,6 +30,7 @@ namespace Selene
         private static int at;
         private static readonly Random random = new Random();
         public static bool Showing { get; private set; }
+        private static bool devPretend;
 
         public static void Install()
         {
@@ -63,6 +64,7 @@ namespace Selene
                 var host = HomeNav.FindByName(main, "PART_MainHost") as Grid;
                 if (host == null) return;
                 if (pretend) try { File.Delete(dev); } catch { }
+                devPretend = pretend;
                 Show(host);
             }
             catch (Exception ex) { HomeNav.Log("idle: " + ex.Message); }
@@ -87,9 +89,17 @@ namespace Selene
                     list.Add(slide);
                 }
             }
+            // your own screenshots: with the game's logo too, when it's one of yours (a capture only knows the game's name)
             var shots = CapturesScreen.Known.Where(c => !c.IsVideo && File.Exists(c.Path)).OrderByDescending(c => c.When).Take(8).ToList();
             for (int i = 0, k = 3; i < shots.Count && k <= list.Count; i++, k += 4)
-                list.Insert(k, new Slide { Picture = shots[i].Path, Title = shots[i].Game, Status = "Your screenshot", Figures = { new[] { "TAKEN", shots[i].When.ToString("MMMM d, yyyy") } } });
+            {
+                string shotLogo = null;
+                var game = api != null ? api.Database.Games.FirstOrDefault(g => string.Equals(g.Name, shots[i].Game, StringComparison.OrdinalIgnoreCase)) : null;
+                if (game != null) { var lp = Path.Combine(api.Paths.ConfigurationPath, "ExtraMetadata", "games", game.Id.ToString(), "logo.png"); if (File.Exists(lp)) shotLogo = lp; }
+                list.Insert(k, new Slide { Picture = shots[i].Path, Logo = shotLogo, Title = shots[i].Game, Status = "Your screenshot", Figures = { new[] { "TAKEN", shots[i].When.ToString("MMMM d, yyyy") } } });
+            }
+            // (the developer switch: a screenshot first, to see its words without waiting for the fourth turn)
+            if (devPretend) { int first = list.FindIndex(x => x.Status == "Your screenshot"); if (first > 0) { var sh = list[first]; list.RemoveAt(first); list.Insert(0, sh); } }
             if (list.Count == 0)
             {
                 var w = Wallpapers.Current;
