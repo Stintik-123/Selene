@@ -111,8 +111,7 @@ namespace Selene
             track.Child = fill;
             // just the words: no mark, no bar (the bar is kept, unshown, so the task's progress code has somewhere to go)
             var row = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            row.Children.Add(title);
-            row.Children.Add(words);
+            row.Children.Add(words);   // the task's words alone
             slideIn = new TranslateTransform();
             card = new Border
             {
