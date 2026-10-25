@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Surprise me: only LB / RB change the list (Left / Right did too).
 - Choose your background: X (Game art / Background only) only changes the preview, to see the background with and without a game's art; the home always shows the games' art (a profile that had switched it off shows it again).
 - Music on a PC with no games yet: the default track plays on the login and the home (the music add-on waited for a game to be selected). Surprise me: no "A Play" hint at the bottom (the Play pill under the card says it).
 - Copy log moved out of the menu: Y in Selene settings copies the logs. Spotlight's first LB / RB after signing in now switches the tab (it went nowhere).

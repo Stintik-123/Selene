@@ -213,9 +213,7 @@ namespace Selene
             {
                 case "LeftShoulder":
                 case "RightShoulder":
-                case "DPadLeft":
-                case "DPadRight":
-                    pool = (pool + (b == "RightShoulder" || b == "DPadRight" ? 1 : Pools.Length - 1)) % Pools.Length;
+                    pool = (pool + (b == "RightShoulder" ? 1 : Pools.Length - 1)) % Pools.Length;
                     Ui.Tick();
                     ShowTabs();
                     Ui.Pop(tabs[pool]);
