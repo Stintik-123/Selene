@@ -1003,14 +1003,16 @@ namespace Selene
 
         public static bool ShowArtForPreview(bool on)
         {
+            previewWanted = on;
             var w = Application.Current.MainWindow;
             var art = w != null ? FindByName(w, "SeleneHubArt") as Panel : null;
-            if (previewArt != null)
+            if (previewLayer != null)
             {
-                var parent = VisualTreeHelper.GetParent(previewArt) as Panel;
-                if (parent != null) parent.Children.Remove(previewArt);
-                previewArt = null;
+                var parent = VisualTreeHelper.GetParent(previewLayer) as Panel;
+                if (parent != null) parent.Children.Remove(previewLayer);
+                previewLayer = null;
             }
+            previewArt = null;
             if (!on) return false;
             if (art == null) { Log("preview art: no art layer"); return false; }
             var row = LiveRow();
@@ -1030,14 +1032,68 @@ namespace Selene
                     file = null;
                 }
             var pic = file != null ? Wallpapers.Load(file) : null;
-            Log("preview art: " + (pic != null ? name + " (" + file + ")" : "no game with art"));
-            if (pic == null) return false;
-            previewArt = new Image { Source = pic, Stretch = Stretch.UniformToFill, Opacity = 0 };
-            RenderOptions.SetBitmapScalingMode(previewArt, BitmapScalingMode.HighQuality);
-            art.Children.Add(previewArt);
-            previewArt.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(250)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-            return true;
+            Log("preview art: the example game (library art: " + (pic != null ? name : "none") + ")");
+            // always the example game (the same picture for everyone, whatever the library holds); the row's own game only
+            // tells the note below whether the library has art of its own
+            SampleArtForPreview(art);
+            return pic != null;
         }
+
+        private static void PutPreviewArt(Panel art, ImageSource pic, bool sample)
+        {
+            var img = new Image { Source = pic, Stretch = Stretch.UniformToFill };
+            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+            var layer = new Grid { Opacity = 0, IsHitTestVisible = false };
+            layer.Children.Add(img);
+            if (sample)
+                layer.Children.Add(new Border
+                {
+                    HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 60, 150),
+                    CornerRadius = new CornerRadius(16), Padding = new Thickness(18, 7, 18, 8), Background = Ink.Brush("SeleneGlassColor", 0.6),
+                    Child = new TextBlock { Text = "Example game art \u00B7 " + SampleName, FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85) }
+                });
+            previewArt = new Image();   // a marker for removal: the layer is what's shown
+            art.Children.Add(layer);
+            previewLayer = layer;
+            layer.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(250)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
+
+        // no game in the library yet: an example game's art (Steam's library art for it, fetched once and kept in Selene's media
+        // folder, not shipped with Selene), so the Game art / Background only choice shows what it does
+        private const string SampleName = "Clair Obscur: Expedition 33";
+        private const string SampleUrl = "https://cdn.akamai.steamstatic.com/steam/apps/1903340/library_hero.jpg";
+        private static Grid previewLayer;
+
+        private static bool SampleArtForPreview(Panel art)
+        {
+            var file = System.IO.Path.Combine(SelenePaths.Media("Sample"), "expedition33-hero.jpg");
+            if (System.IO.File.Exists(file))
+            {
+                var pic = Wallpapers.Load(file);
+                if (pic != null) { PutPreviewArt(art, pic, true); return true; }
+            }
+            var ui = Application.Current.Dispatcher;
+            System.Threading.Tasks.Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    try { System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12; } catch { }
+                    using (var web = new System.Net.WebClient()) web.DownloadFile(SampleUrl, file + ".part");
+                    if (System.IO.File.Exists(file)) System.IO.File.Delete(file);
+                    System.IO.File.Move(file + ".part", file);
+                    var pic = Wallpapers.Load(file);
+                    ui.BeginInvoke(new Action(() =>
+                    {
+                        if (pic == null || !previewWanted) return;
+                        PutPreviewArt(art, pic, true);
+                        ProfileSteps.RefreshPreviewLater();
+                    }));
+                }
+                catch (Exception ex) { Log("preview art: sample download failed: " + ex.Message); }
+            });
+            return true;   // it comes in a moment
+        }
+        private static bool previewWanted;
 
         // Collection's hidden game list stays tied to Playnite's selected game, and picked its first game (First Light) again
         // whenever Spotlight set "no game" for a card: Spotlight then loaded that art (the flash). While Spotlight shows,
@@ -3642,6 +3698,31 @@ namespace Selene
             box.Opacity = 1;
             box.RenderTransform = null;
             box.Visibility = Visibility.Visible;
+            PlaceRowEmpty(row, box);
+            row.Dispatcher.BeginInvoke(new Action(() => PlaceRowEmpty(row, box)), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        // beside the row's last card (cards come and go with their switches: a fixed spot ended up on top of them), centred on it
+        private static void PlaceRowEmpty(ListBox row, FrameworkElement box)
+        {
+            try
+            {
+                var parent = VisualTreeHelper.GetParent(box) as FrameworkElement;
+                FrameworkElement last = null;
+                for (int i = 0; i < row.Items.Count; i++)
+                {
+                    if (!(row.Items[i] is string)) continue;
+                    var c = row.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
+                    if (c != null && c.IsVisible) last = c;
+                }
+                if (parent == null || last == null || last.ActualWidth < 1) return;
+                // the card's resting size (a focused card grows; the gap leaves room for that)
+                var at = last.TransformToVisual(parent).Transform(new Point(0, 0));
+                double right = at.X + last.ActualWidth, middle = at.Y + last.ActualHeight / 2;
+                box.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                box.Margin = new Thickness(right + 64, Math.Max(0, middle - box.DesiredSize.Height / 2), 0, 0);
+            }
+            catch (Exception ex) { Log("row empty: " + ex.Message); }
         }
 
         // the numbers on the Library and Store cards

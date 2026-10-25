@@ -915,8 +915,7 @@ namespace Selene
             private void ShowNote()
             {
                 lookNote.Text = Owner.Look == "wallpaper" ? "The home always shows this background."
-                              : hasArt ? "The home shows each game's art; this background is behind the login, the menus and an empty home."
-                              : "Once you add games the home shows their art; until then it shows this background.";
+                              : "The home shows each game's art (an example game in the preview); this background is behind the login, the menus and an empty home.";
             }
 
             public override void Move(string dir)

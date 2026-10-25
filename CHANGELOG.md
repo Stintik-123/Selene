@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Notifications for progress stay at least a couple of seconds (a quick task flashed by), slide in from beyond the right edge of the screen and back out, and tasks one after another share the card.
+- Home with no games: "No games yet" sits beside the last card instead of on top of the cards.
+- Choose your background with no games yet: the preview shows an example game's art (Clair Obscur: Expedition 33, fetched from Steam the first time) so Game art / Background only shows what it does.
 - Progress as a notification: add-ons downloading logos, trailers and the like show a small Selene card at the top right (the task's words and a filling bar) instead of covering the whole screen, and you keep browsing meanwhile (switch: Look, Progress as a notification).
 - Notifications have a sound (theme\Audio\Notification.wav when there is one, else the panel sound).
 - Start-up library update waits until you are signed in: add-ons answer it with progress screens of their own (downloading logos, trailers...), which came up in the middle of the login and profile setup.
