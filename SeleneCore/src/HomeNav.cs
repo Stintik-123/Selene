@@ -1697,6 +1697,7 @@ namespace Selene
         // a clip playing in Captures: the music waits (it played on under the clip's own sound)
         public static void ClipPlaying(bool on) { clipPlaying = on; ApplyVideoPause(); }
         private static bool clipPlaying;
+        public static bool ClipIsPlaying { get { return clipPlaying; } }
 
         private static string FullTrailerPath(object game)
         {
@@ -2609,7 +2610,13 @@ namespace Selene
             try
             {
                 var ke = e.StagingItem.Input as KeyEventArgs;
-                if (ke != null && ke.RoutedEvent != Keyboard.KeyUpEvent) IdleScreen.Touched();   // a press: not idle
+                // a press: not idle; one that wakes the idle screen does nothing else
+                if (ke != null && ke.RoutedEvent != Keyboard.KeyUpEvent)
+                {
+                    bool woke = IdleScreen.Showing;
+                    IdleScreen.Touched();
+                    if (woke) { e.Cancel(); return; }
+                }
                 // Playnite also turns LT/RT into PageUp/PageDown, which scrolled the hub to the last section. On the game
                 // row the triggers are the filter only, so those keys are dropped there.
                 if (ke != null && (ke.Key == Key.PageUp || ke.Key == Key.PageDown || ke.Key == Key.Home || ke.Key == Key.End)

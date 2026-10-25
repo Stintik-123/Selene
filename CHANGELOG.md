@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Idle screen: anywhere in Selene (not only Spotlight); each game's art comes with its logo or name and a line (playtime, last played), every fourth turn one of your own screenshots; the clock and date at the bottom right; the press that wakes it does nothing else.
 - Settings lists show there is more: the rows past the edge peek in, blurred and fading into the dark, at the bottom and (once scrolled) the top. Store: a loading card in the middle while the store fetches (after a currency change it looked like a dark page); Store currency changed from settings comes back to settings.
 - Start-up: the backdrop fades in on a big library too (its fade thread came late on a busy start and the cover was dropped at once, so the wallpaper snapped in).
 - Selene settings reworked: eight groups (Start-up, Spotlight, Collection, Notifications, Sound & music, Look, Games, Advanced), shorter descriptions, and new settings: Start-up sound, Idle screen after (Spotlight dims and drifts through your games' art), Notification sound, Clip volume, Spotlight background (Game art / Wallpaper only), Loading screen on/off, After a game (Spotlight on that game / where you were), Ask before power actions, Surprise me without repeats, Store currency (change it again), and Reset Selene settings. Gone: the Copy log switch (Y in settings always copies it), the Selene logo switch; Trailer sound is a plain switch.
