@@ -136,7 +136,8 @@ namespace Selene
 
         public SliderBar()
         {
-            fill = new Border { Height = 6, CornerRadius = new CornerRadius(3), HorizontalAlignment = HorizontalAlignment.Left, Background = Ink.Brush("GlyphColor") };
+            // (Width starts at 0: animating a Border's Width from "not set" throws, and an animation exception ends Playnite)
+            fill = new Border { Width = 0, Height = 6, CornerRadius = new CornerRadius(3), HorizontalAlignment = HorizontalAlignment.Left, Background = Ink.Brush("GlyphColor") };
             knob = new Border { Width = 20, Height = 20, CornerRadius = new CornerRadius(10), HorizontalAlignment = HorizontalAlignment.Left, Background = Ink.Brush("SeleneInkColor"), RenderTransform = knobAt, Margin = new Thickness(-10, 0, 0, 0) };
             var line = new Grid { Width = Length, Height = 24, VerticalAlignment = VerticalAlignment.Center };
             line.Children.Add(new Border { Height = 6, CornerRadius = new CornerRadius(3), Background = Ink.Brush("SeleneInkColor", 0.2) });
@@ -153,7 +154,8 @@ namespace Selene
         {
             Value.Text = label;
             double f = count > 1 ? (double)index / (count - 1) : 1;
-            var ms = TimeSpan.FromMilliseconds(animate ? 160 : 0);
+            if (!animate) { fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = Length * f; knobAt.BeginAnimation(TranslateTransform.XProperty, null); knobAt.X = Length * f; return; }
+            var ms = TimeSpan.FromMilliseconds(160);
             fill.BeginAnimation(FrameworkElement.WidthProperty, Ui.Fast(new DoubleAnimation(Length * f, ms) { EasingFunction = Ui.Out() }));
             knobAt.BeginAnimation(TranslateTransform.XProperty, Ui.Fast(new DoubleAnimation(Length * f, ms) { EasingFunction = Ui.Out() }));
         }
