@@ -151,9 +151,12 @@ namespace Selene
         private int reports;
         private bool poked;
 
-        // a press of the mouse on the browser (WPF's own event, no pointer involved): the browser passes it on as a real one
+        // a press of the mouse on the browser, so it lets the clip play with sound (Chromium keeps media that starts by itself
+        // muted until the user has touched the page). Sent through the browser's host it counts as the user's own; WPF's own
+        // event (the fallback) was taken as made up and the clips stayed silent.
         private static void Poke(FrameworkElement view)
         {
+            if (HostClick(view)) return;
             try
             {
                 var down = new System.Windows.Input.MouseButtonEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, System.Windows.Input.MouseButton.Left) { RoutedEvent = System.Windows.Input.Mouse.MouseDownEvent, Source = view };
@@ -163,6 +166,44 @@ namespace Selene
                 HomeNav.Log("clip: asked for sound");
             }
             catch (Exception ex) { HomeNav.Log("clip: couldn't ask for sound (" + ex.Message + ")"); }
+        }
+
+        private static bool HostClick(FrameworkElement view)
+        {
+            try
+            {
+                var getBrowser = view.GetType().GetMethod("GetBrowser", Type.EmptyTypes);
+                var br = getBrowser != null ? getBrowser.Invoke(view, null) : null;
+                var getHost = br != null ? br.GetType().GetMethod("GetHost", Type.EmptyTypes) : null;
+                var host = getHost != null ? getHost.Invoke(br, null) : null;
+                if (host == null) return false;
+                int x = (int)Math.Max(1, view.ActualWidth / 2), y = (int)Math.Max(1, view.ActualHeight / 2);
+                foreach (var m in host.GetType().GetMethods().Where(mm => mm.Name == "SendMouseClickEvent"))
+                {
+                    var ps = m.GetParameters();
+                    Func<bool, object[]> args = null;
+                    if (ps.Length == 4 && ps[0].ParameterType.IsValueType && !ps[0].ParameterType.IsPrimitive)
+                    {
+                        // (MouseEvent, MouseButtonType, bool mouseUp, int clickCount)
+                        var flagsType = ps[0].ParameterType.GetConstructors().Select(c => c.GetParameters()).Where(p => p.Length == 3).Select(p => p[2].ParameterType).FirstOrDefault();
+                        if (flagsType == null) continue;
+                        var me = Activator.CreateInstance(ps[0].ParameterType, x, y, Enum.ToObject(flagsType, 0));
+                        args = up => new object[] { me, Enum.ToObject(ps[1].ParameterType, 0), up, 1 };
+                    }
+                    else if (ps.Length == 6)
+                    {
+                        // (int x, int y, MouseButtonType, bool mouseUp, int clickCount, CefEventFlags)
+                        args = up => new object[] { x, y, Enum.ToObject(ps[2].ParameterType, 0), up, 1, Enum.ToObject(ps[5].ParameterType, 0) };
+                    }
+                    if (args == null) continue;
+                    m.Invoke(host, args(false));
+                    m.Invoke(host, args(true));
+                    HomeNav.Log("clip: asked for sound (browser click)");
+                    return true;
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("clip: browser click failed (" + ex.Message + ")"); }
+            return false;
         }
 
         // where a clip is, how long it is, whether it's paused (twice a second, on the UI thread)

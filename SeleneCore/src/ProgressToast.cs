@@ -155,6 +155,7 @@ namespace Selene
             if (layer == null) Build();
             icon.Background = Ink.Brush("GlyphColor", 0.18);
             icon.Child = downloadGlyph;
+            icon.Visibility = Visibility.Visible;
             titleLine.Visibility = Visibility.Collapsed;
             if (leaveTimer != null) leaveTimer.Stop();
             barShown = -1;
@@ -381,9 +382,11 @@ namespace Selene
                 if (cover == null && appId != null && System.IO.File.Exists(SteamFile(appId, "library_600x900.jpg"))) cover = Wallpapers.Load(SteamFile(appId, "library_600x900.jpg"), 160);
             }
             catch { }
+            // just the logo and the line (no cover tile beside them); the tile only stands in when there's no logo at all
             icon.Child = null;
             icon.Background = cover != null ? (Brush)new ImageBrush(cover) { Stretch = Stretch.UniformToFill } : Ink.Brush("GlyphColor", 0.18);
             if (cover == null) icon.Child = new TextBlock { Text = Ui.Icon(0xE338 /* videogame_asset */), FontFamily = Ui.Icons, FontSize = 30, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            icon.Visibility = Visibility.Visible;
             // its logo (Extra Metadata's), else its name
             FrameworkElement title = null;
             try
@@ -397,6 +400,7 @@ namespace Selene
             if (title == null) title = new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 19, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 110 };
             titleLine.Content = title;
             titleLine.Visibility = Visibility.Visible;
+            if (title is Image) icon.Visibility = Visibility.Collapsed;
             var line = "You played " + Duration(seconds);
             if (game.Playtime >= 3600) line += "  \u00B7  " + Duration(game.Playtime) + " in total";
             words.Text = line;

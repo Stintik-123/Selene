@@ -4,6 +4,10 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Captures: the blurred picture behind the grid crossfades from one capture to the next (it blinked to black and back), and smoothly.
+- Captures: clips play with sound (the browser kept them muted; it now gets a click it counts as yours).
+- Session card: just the game's logo and the line (no cover beside them).
+- Captures viewer: a paused clip shows a big see-through pause sign in the middle; it is gone the moment the clip plays again.
 - Captures and Surprise me: the LB / RB badges on their tabs look like Spotlight's and Collection's; Captures drops the LB RB Filter hint (the tabs show it).
 - Profile steps keep up when you go back and forth quickly (the preview was pictured again on every step change, and the sample art faded in and out under the screen; both only happen now when something changed).
 - Readable text: dark text gets no halo.

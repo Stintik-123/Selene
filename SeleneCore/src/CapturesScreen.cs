@@ -54,6 +54,7 @@ namespace Selene
         private double clipAt, clipLength;
         private readonly string openPath;   // opened from the card's pictures: straight to this one
         private readonly Image hero = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
+        private readonly Image heroBack = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
         private readonly DispatcherTimer heroLater = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
         private string heroShown;
 
@@ -66,9 +67,16 @@ namespace Selene
             Root.Children.Add(dark);
             // the focused capture's picture, soft and faint, behind everything; a vignette keeps the edges dark
             RenderOptions.SetBitmapScalingMode(hero, BitmapScalingMode.LowQuality);
-            hero.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 40, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance };
-            Panel.SetZIndex(hero, -6);
-            Root.Children.Add(hero);
+            // two layers: the new picture fades in over the old one (a crossfade; it went to black and back), each blurred once
+            // into a half-size cache, so a fade doesn't redraw the blur every frame
+            foreach (var layer in new[] { heroBack, hero })
+            {
+                RenderOptions.SetBitmapScalingMode(layer, BitmapScalingMode.LowQuality);
+                layer.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 40, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance };
+                layer.CacheMode = new BitmapCache(0.5);
+                Panel.SetZIndex(layer, -6);
+                Root.Children.Add(layer);
+            }
             var vignette = new Border { IsHitTestVisible = false, Background = new RadialGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0.35, 0), Ink.Stop("SeleneScrimColor", 0.6, 0.6), Ink.Stop("SeleneScrimColor", 0.92, 1) }) { RadiusX = 0.78, RadiusY = 0.85 } };
             Panel.SetZIndex(vignette, -5);
             Root.Children.Add(vignette);
@@ -137,6 +145,15 @@ namespace Selene
             controls.Children.Add(imageHints);
             controls.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             viewer.Children.Add(controls);
+            // paused: a big see-through pause sign in the middle (pops in on pause, gone at once on play)
+            pauseBadge = new Border
+            {
+                Width = 132, Height = 132, CornerRadius = new CornerRadius(66), Background = new SolidColorBrush(Color.FromArgb(0x8C, 0, 0, 0)),
+                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false,
+                Visibility = Visibility.Collapsed, RenderTransformOrigin = new Point(0.5, 0.5),
+                Child = new TextBlock { Text = Ui.Icon(0xE034 /* pause */), FontFamily = Ui.Icons, FontSize = 72, Foreground = new SolidColorBrush(Color.FromArgb(0xEE, 0xFF, 0xFF, 0xFF)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+            };
+            viewer.Children.Add(pauseBadge);
             Panel.SetZIndex(viewer, 20);
             Root.Children.Add(viewer);
             hideControls.Tick += (s, e) => { hideControls.Stop(); if (!paused) ShowControls(false); };
@@ -174,10 +191,26 @@ namespace Selene
             return t.TotalHours >= 1 ? string.Format("{0}:{1:00}:{2:00}", (int)t.TotalHours, t.Minutes, t.Seconds) : string.Format("{0}:{1:00}", t.Minutes, t.Seconds);
         }
 
+        private Border pauseBadge;
+
+        private void PausedLook(bool on)
+        {
+            if (pauseBadge == null) return;
+            if (!on) { pauseBadge.BeginAnimation(UIElement.OpacityProperty, null); pauseBadge.Visibility = Visibility.Collapsed; return; }   // play: gone at once
+            if (pauseBadge.Visibility == Visibility.Visible) return;
+            pauseBadge.Visibility = Visibility.Visible;
+            pauseBadge.Opacity = 0;
+            pauseBadge.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(140)) { EasingFunction = Ui.Out() }));
+            var pop = new ScaleTransform(0.85, 0.85);
+            pauseBadge.RenderTransform = pop;
+            pop.BeginAnimation(ScaleTransform.ScaleXProperty, Ui.Fast(new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(180)) { EasingFunction = Ui.Out() }));
+            pop.BeginAnimation(ScaleTransform.ScaleYProperty, Ui.Fast(new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(180)) { EasingFunction = Ui.Out() }));
+        }
+
         private void ShowProgress(double at, double length, bool isPaused)
         {
             clipAt = at; clipLength = length;
-            if (paused != isPaused) { paused = isPaused; ShowControls(true); }
+            if (paused != isPaused) { paused = isPaused; ShowControls(true); PausedLook(paused); }
             double w = Math.Max(0, progressTrack.Width);
             progress.Width = length > 0 ? Math.Max(0, Math.Min(w, w * at / length)) : 0;
             timeText.Text = Clock(at) + (length > 0 ? " / " + Clock(length) : "");
@@ -198,6 +231,7 @@ namespace Selene
             if (me == null) return;
             try { if (paused) me.Play(); else me.Pause(); } catch { }
             paused = !paused;
+            PausedLook(paused);
             ShowControls(true);
         }
 
@@ -314,13 +348,19 @@ namespace Selene
             var path = c.IsVideo ? Thumbnails.Cached(c.Path) : c.Path;
             if (path == heroShown) return;
             heroShown = path;
-            if (path == null) { Ui.Fade(hero, 0, 300); return; }
+            if (path == null) { Ui.Fade(hero, 0, 300); Ui.Fade(heroBack, 0, 300); return; }
             Ui.LoadInOrder(new List<string> { path }, 480, (k, pic) =>
             {
                 if (closed || path != heroShown) return;
+                // the picture showing now stays underneath while the new one fades in over it
+                heroBack.BeginAnimation(UIElement.OpacityProperty, null);
+                heroBack.Source = hero.Source;
+                heroBack.Opacity = hero.Source != null ? hero.Opacity : 0;
+                hero.BeginAnimation(UIElement.OpacityProperty, null);
                 hero.Source = pic;
                 hero.Opacity = 0;
-                Ui.Fade(hero, 0.55, 600);
+                Ui.Fade(hero, 0.55, 420);
+                Ui.Fade(heroBack, 0, 520, 200);
             });
         }
 
@@ -348,6 +388,7 @@ namespace Selene
             viewerName.Text = c.Game;
             viewerDate.Text = c.When.ToString("MMMM d, yyyy  ·  HH:mm");
             paused = false;
+            PausedLook(false);
             clipAt = 0; clipLength = 0;
             progress.Width = 0;
             timeText.Text = "";
