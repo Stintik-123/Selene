@@ -1,6 +1,6 @@
-// Close-to-tray for Playnite Fullscreen: Exit / Alt+F4 / X hide Playnite to the notification area (hidden icons) and
+// Close-to-tray for Playnite Fullscreen: Exit / X / taskbar Close hide Playnite to the notification area (hidden icons) and
 // mute it, so the next TV switch or Guide press brings it back instantly instead of a cold start. Real shutdowns
-// (Windows shutting down, Playnite restarting itself) still go through. Right-click the tray icon to quit for real.
+// (Windows shutting down, Playnite restarting itself) still go through. Alt+F4, or right-click the tray icon, quits for real.
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -99,6 +99,14 @@ namespace Selene
         {
             if (msg == 0x0112 /* WM_SYSCOMMAND */ && ((int)wParam & 0xFFF0) == 0xF060 /* SC_CLOSE */ && !reallyQuit && !AppShuttingDown())
             {
+                // Alt+F4 quits for real: the close goes on to Playnite as usual (Exit in the menu, the X, the taskbar still hide)
+                if (AltF4Held())
+                {
+                    reallyQuit = true;
+                    if (tray != null) tray.Visible = false;
+                    HomeNav.Log("tray: Alt+F4 -> quit");
+                    return IntPtr.Zero;
+                }
                 handled = true;
                 // on the TV (console mode) Playnite is the whole screen: hiding it left a black desktop the pad can't reach
                 if (OnTv()) { HomeNav.Log("tray: close ignored on the TV"); return IntPtr.Zero; }
@@ -106,6 +114,14 @@ namespace Selene
                 HomeNav.Log("tray: Alt+F4 / close -> tray");
             }
             return IntPtr.Zero;
+        }
+
+        [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
+
+        // the close came from Alt+F4 (both keys down as Windows turns them into the close command)
+        private static bool AltF4Held()
+        {
+            return (GetAsyncKeyState(0x73 /* VK_F4 */) & 0x8000) != 0 && (GetAsyncKeyState(0x12 /* VK_MENU */) & 0x8000) != 0;
         }
 
         private static void OnAnyButtonClick(object sender, RoutedEventArgs e)

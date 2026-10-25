@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Close to tray: Alt+F4 quits Playnite for real; Exit in the menu, the X and the taskbar's Close still hide it to the tray.
 - Logo intro: no dark flicker as it ends (the drawn background went before the background video was there; now the video fades in over it). The setup check has no "A Select" hint in the corner.
 - Setup check: just the add-ons, installed or not (the game library, game folders and controller cards are gone).
 - Black screen on a portable Playnite: Selene Core looked for Playnite's settings and the theme under AppData, so on a portable install it stayed off and the theme sat on its dark, empty login layer for ever. It asks Playnite where things are now (installed or portable).
