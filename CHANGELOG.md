@@ -4,7 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Notifications for progress stay at least a couple of seconds (a quick task flashed by), slide in from beyond the right edge of the screen and back out, and tasks one after another share the card.
+- Notifications for progress stay at least a couple of seconds (a quick task flashed by), fade in with a short drift like a console's notification (an icon tile beside the words, soft square corners) and out the same way, and tasks one after another share the card; the screen behind no longer goes dark.
 - Home with no games (or an empty tab): the message sits beside the last card and moves with the row as it scrolls (it stayed put and ended up on the cards).
 - Choose your background with no games yet: the preview shows an example game's art (Clair Obscur: Expedition 33, fetched from Steam the first time) so Game art / Background only shows what it does.
 - Progress as a notification: add-ons downloading logos, trailers and the like show a small Selene card at the top right, under the clock, with the task's words instead of covering the whole screen, and you keep browsing meanwhile (switch: Look, Progress as a notification).

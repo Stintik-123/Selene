@@ -21,9 +21,12 @@ namespace Selene
         [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
         [DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr hWnd, int index);
         [DllImport("user32.dll")] private static extern int SetWindowLong(IntPtr hWnd, int index, int value);
+        [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int cmd);
+        [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
 
-        private const double CardWidth = 470, Edge = 28, ShadowRoom = 24;
-        private const int MinShownMs = 2600, AfterDoneMs = 1100, InMs = 460, OutMs = 380;
+        private const double CardWidth = 440, Edge = 28, ShadowRoom = 24, Drift = 26;
+        private const int MinShownMs = 2600, AfterDoneMs = 1100, InMs = 260, OutMs = 220;
+        private static Window hiddenProgress;   // Playnite's own window, kept out of sight
 
         // the card (one at a time)
         private static Window toast;
@@ -42,7 +45,12 @@ namespace Selene
             var main = Application.Current.MainWindow;
             if (main == null || ReferenceEquals(main, w) || !main.IsVisible || main.WindowState == WindowState.Minimized || main.ActualWidth < 400) return false;
 
-            // Playnite's own window: out of sight and out of the way (it closes by itself when the task ends)
+            // Playnite's own window: out of sight and out of the way (it closes by itself when the task ends). Emptied and hidden the
+            // Windows way too, and kept so (Playnite fades / places it after this: a dark veil over the screen stayed otherwise)
+            w.BeginAnimation(UIElement.OpacityProperty, null);
+            w.Content = null;
+            w.Background = Brushes.Transparent;
+            hiddenProgress = w;
             w.WindowState = WindowState.Normal;
             w.SizeToContent = SizeToContent.Manual;
             w.Width = 1; w.Height = 1;
@@ -52,9 +60,10 @@ namespace Selene
             var hwnd = new WindowInteropHelper(w).Handle;
             if (hwnd != IntPtr.Zero) SetWindowLong(hwnd, -20, GetWindowLong(hwnd, -20) | 0x08000000 /* NOACTIVATE */ | 0x80 /* TOOLWINDOW */);
             var mainHwnd = new WindowInteropHelper(main).Handle;
+            if (hwnd != IntPtr.Zero) ShowWindow(hwnd, 0 /* SW_HIDE */);
             // the modal window disabled the main one: it gets its input back, so browsing goes on while the task runs
-            w.Dispatcher.BeginInvoke(new Action(() => { EnableWindow(mainHwnd, true); main.Activate(); }), DispatcherPriority.Background);
-            w.Closed += (s, e) => TaskDone(w.DataContext);
+            w.Dispatcher.BeginInvoke(new Action(() => { HideProgress(); EnableWindow(mainHwnd, true); main.Activate(); }), DispatcherPriority.Background);
+            w.Closed += (s, e) => { if (ReferenceEquals(hiddenProgress, w)) hiddenProgress = null; TaskDone(w.DataContext); };
 
             Show(main, w.DataContext);
             HomeNav.Log("progress look: notification card");
@@ -75,8 +84,9 @@ namespace Selene
                 shownAt = DateTime.Now;
                 if (!toast.IsVisible) toast.Show();
                 KeepOnTop();
-                slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(CardWidth + Edge + ShadowRoom, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-                card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs * 0.6)));
+                // in, as a console does it: a quick fade with a short drift from the right
+                slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+                card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
                 Ui.NotifySound();
             }
             Update();
@@ -96,8 +106,8 @@ namespace Selene
         {
             words = new TextBlock
             {
-                FontFamily = Ui.Body, FontSize = 18, Foreground = Ink.Brush("SeleneInkColor"), TextWrapping = TextWrapping.Wrap,
-                MaxWidth = CardWidth - 50, TextTrimming = TextTrimming.CharacterEllipsis, MaxHeight = 52
+                FontFamily = Ui.Body, FontSize = 17, Foreground = Ink.Brush("SeleneInkColor", 0.95), TextWrapping = TextWrapping.Wrap, LineHeight = 23,
+                MaxWidth = CardWidth - 100, TextTrimming = TextTrimming.CharacterEllipsis, MaxHeight = 52
             };
             var title = new TextBlock { Text = "Selene", FontFamily = Ui.Display, FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(0, 0, 0, 3) };
             track = new Border { Height = 6, CornerRadius = new CornerRadius(3), Background = Ink.Brush("SeleneInkColor", 0.14), Margin = new Thickness(0, 12, 0, 0), ClipToBounds = true };
@@ -109,14 +119,24 @@ namespace Selene
             sweep = new TranslateTransform();
             fill.RenderTransform = sweep;
             track.Child = fill;
-            // just the words: no mark, no bar (the bar is kept, unshown, so the task's progress code has somewhere to go)
-            var row = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            row.Children.Add(words);   // the task's words alone
+            // like a console's notification: an icon tile on the left, the task's words beside it (the bar is kept, unshown, so
+            // the task's progress code has somewhere to go)
+            var icon = new Border
+            {
+                Width = 48, Height = 48, CornerRadius = new CornerRadius(8), Background = Ink.Brush("GlyphColor", 0.18), VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 16, 0),
+                Child = new TextBlock { Text = Ui.Icon(0xE2C4 /* file_download */), FontFamily = Ui.Icons, FontSize = 28, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+            };
+            words.VerticalAlignment = VerticalAlignment.Center;
+            var row = new DockPanel();
+            DockPanel.SetDock(icon, Dock.Left);
+            row.Children.Add(icon);
+            row.Children.Add(words);
             slideIn = new TranslateTransform();
             card = new Border
             {
-                Width = CardWidth, CornerRadius = new CornerRadius(22), Padding = new Thickness(24, 16, 24, 18),
-                Background = Ink.Brush("SeleneGlassColor", 0.94), BorderBrush = Ink.Brush("SeleneInkColor", 0.18), BorderThickness = new Thickness(1),
+                Width = CardWidth, CornerRadius = new CornerRadius(10), Padding = new Thickness(14, 14, 20, 14), MinHeight = 76,
+                Background = Ink.Brush("SeleneGlassColor", 0.9), BorderBrush = Ink.Brush("SeleneInkColor", 0.07), BorderThickness = new Thickness(1),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
                 Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(ShadowRoom, ShadowRoom, Edge, ShadowRoom), RenderTransform = slideIn
@@ -135,7 +155,7 @@ namespace Selene
                 SetWindowLong(h, -20, GetWindowLong(h, -20) | 0x08000000 /* NOACTIVATE */ | 0x80 /* TOOLWINDOW */ | 0x20 /* TRANSPARENT: clicks go through */);
             };
             poll = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
-            poll.Tick += (s, e) => { KeepOnTop(); Update(); };
+            poll.Tick += (s, e) => { HideProgress(); KeepOnTop(); Update(); };
         }
 
         // words and bar from the task (polled: Playnite changes them on its worker thread)
@@ -193,7 +213,7 @@ namespace Selene
             if (source != null || toast == null) return;
             leaving = true;
             var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
-            var slide = new DoubleAnimation(CardWidth + Edge + ShadowRoom, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn };
+            var slide = new DoubleAnimation(Drift, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn };
             slide.Completed += (s, e) =>
             {
                 if (!leaving) return;   // a new task brought it back meanwhile
@@ -204,7 +224,23 @@ namespace Selene
                 fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = 0;
             };
             slideIn.BeginAnimation(TranslateTransform.XProperty, slide);
-            card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(OutMs)) { BeginTime = TimeSpan.FromMilliseconds(OutMs * 0.35), EasingFunction = easeIn });
+            card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn });
+        }
+
+        // Playnite's progress window back out of sight if it came back (moved over the screen, faded in), the main window usable
+        private static void HideProgress()
+        {
+            var w = hiddenProgress;
+            if (w == null) return;
+            try
+            {
+                var h = new WindowInteropHelper(w).Handle;
+                if (h != IntPtr.Zero && IsWindowVisible(h)) ShowWindow(h, 0 /* SW_HIDE */);
+                if (w.Opacity > 0) { w.BeginAnimation(UIElement.OpacityProperty, null); w.Opacity = 0; }
+                var main = Application.Current.MainWindow;
+                if (main != null) EnableWindow(new WindowInteropHelper(main).Handle, true);
+            }
+            catch { }
         }
 
         private static void KeepOnTop()
