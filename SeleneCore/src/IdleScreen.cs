@@ -18,7 +18,7 @@ namespace Selene
     // in front. Any button wakes it, and that press does nothing else.
     public static class IdleScreen
     {
-        private class Slide { public string Picture, Logo, Title, Line; }
+        private class Slide { public string Picture, Logo, Title, Status; public List<string[]> Figures = new List<string[]>(); }   // Figures: label, value
 
         private static DateTime lastTouch = DateTime.Now;
         private static DispatcherTimer watch, turn, tick;
@@ -79,21 +79,21 @@ namespace Selene
                 {
                     var logo = Path.Combine(api.Paths.ConfigurationPath, "ExtraMetadata", "games", g.Id.ToString(), "logo.png");
                     var secs = GameFacts.Seconds(g);
-                    var parts = new List<string>();
-                    if (secs > 0) parts.Add("Playtime " + GameFacts.Hours(secs));
                     var last = GameFacts.LastPlayed(g);
-                    if (last.HasValue) parts.Add("Last played " + GameFacts.Ago(last));
-                    if (parts.Count == 0) parts.Add(g.IsInstalled ? "Installed, not played yet" : "Not installed");
-                    list.Add(new Slide { Picture = GameFacts.BackgroundPath(g), Logo = File.Exists(logo) ? logo : null, Title = g.Name, Line = string.Join("   ·   ", parts) });
+                    var slide = new Slide { Picture = GameFacts.BackgroundPath(g), Logo = File.Exists(logo) ? logo : null, Title = g.Name, Status = g.IsInstalled ? "Installed" : "Not installed" };
+                    if (secs > 0) slide.Figures.Add(new[] { "PLAYTIME", GameFacts.Hours(secs) });
+                    if (last.HasValue) slide.Figures.Add(new[] { "LAST PLAYED", GameFacts.Ago(last) });
+                    if (slide.Figures.Count == 0) slide.Figures.Add(new[] { "PLAYTIME", "Not played yet" });
+                    list.Add(slide);
                 }
             }
             var shots = CapturesScreen.Known.Where(c => !c.IsVideo && File.Exists(c.Path)).OrderByDescending(c => c.When).Take(8).ToList();
             for (int i = 0, k = 3; i < shots.Count && k <= list.Count; i++, k += 4)
-                list.Insert(k, new Slide { Picture = shots[i].Path, Title = shots[i].Game, Line = "Your screenshot   ·   " + shots[i].When.ToString("MMMM d, yyyy") });
+                list.Insert(k, new Slide { Picture = shots[i].Path, Title = shots[i].Game, Status = "Your screenshot", Figures = { new[] { "TAKEN", shots[i].When.ToString("MMMM d, yyyy") } } });
             if (list.Count == 0)
             {
                 var w = Wallpapers.Current;
-                if (!string.IsNullOrEmpty(w)) list.Add(new Slide { Picture = w, Title = "", Line = "" });
+                if (!string.IsNullOrEmpty(w)) list.Add(new Slide { Picture = w, Title = "" });
             }
             return list;
         }
@@ -173,7 +173,24 @@ namespace Selene
             ImageSource logo = slide.Logo != null ? Wallpapers.Load(slide.Logo, 600) : null;
             if (logo != null) words.Children.Add(new Image { Source = logo, MaxWidth = 520, MaxHeight = 170, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 16, Opacity = 0.6, Color = Colors.Black } });
             else if (!string.IsNullOrEmpty(slide.Title)) words.Children.Add(new TextBlock { Text = slide.Title, FontSize = 46, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, MaxWidth = 900, TextTrimming = TextTrimming.CharacterEllipsis });
-            if (!string.IsNullOrEmpty(slide.Line)) words.Children.Add(new TextBlock { Text = slide.Line, FontSize = 20, FontFamily = Ui.Body, Foreground = new SolidColorBrush(Color.FromArgb(0xBF, 0xFF, 0xFF, 0xFF)), Margin = new Thickness(2, 12, 0, 0) });
+            // under it: a small pill with the state, then the figures as small caps labels over their values (the session card's look)
+            var facts = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 18, 0, 0) };
+            if (!string.IsNullOrEmpty(slide.Status))
+                facts.Children.Add(new Border
+                {
+                    CornerRadius = new CornerRadius(12), Padding = new Thickness(12, 3, 12, 4), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 26, 0),
+                    Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)), BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1),
+                    Child = new TextBlock { Text = slide.Status, FontSize = 14, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = new SolidColorBrush(Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF)) }
+                });
+            for (int i = 0; i < slide.Figures.Count; i++)
+            {
+                if (i > 0) facts.Children.Add(new Border { Width = 1, Background = new SolidColorBrush(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF)), Margin = new Thickness(0, 4, 22, 4) });
+                var fig = new StackPanel { Margin = new Thickness(0, 0, 22, 0), VerticalAlignment = VerticalAlignment.Center };
+                fig.Children.Add(new TextBlock { Text = slide.Figures[i][0], FontSize = 11, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = new SolidColorBrush(Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF)) });
+                fig.Children.Add(new TextBlock { Text = slide.Figures[i][1], FontSize = 20, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Brushes.White, Margin = new Thickness(0, 1, 0, 0) });
+                facts.Children.Add(fig);
+            }
+            if (facts.Children.Count > 0) words.Children.Add(facts);
             captionA.Children.Add(words);
             captionA.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900)) { BeginTime = TimeSpan.FromMilliseconds(500), EasingFunction = Ui.Out() });
             ((TranslateTransform)words.RenderTransform).BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(14, 0, TimeSpan.FromMilliseconds(1100)) { BeginTime = TimeSpan.FromMilliseconds(500), EasingFunction = Ui.Out() });

@@ -363,13 +363,18 @@ namespace Selene
                 return;
             }
             var dark = Application.Current.TryFindResource("SeleneScrimBrush") as Brush ?? Brushes.Black;
-            var cover = new ThreadedFade(dark);
-            HomeNav.Log("backdrop fade-in: cover " + (cover.Ready ? "ready" : "NOT ready") + ", scene " + (scene != null && scene.IsLoaded ? "loaded" : "not loaded") + " " + (scene != null ? (int)scene.ActualWidth + "x" + (int)scene.ActualHeight : ""));
+            // a plain cover on the UI thread (the one drawn on its own thread never showed on some PCs: the wallpaper snapped in),
+            // melting away once the scene has its size and its first frame has been drawn
+            var cover = new Border { Background = dark, IsHitTestVisible = false };
             scenePanel.Children.Insert(scenePanel.Children.IndexOf(host) + 1, cover);   // over the backdrop, under the logo
             host.Opacity = 1;
-            // the fade starts once the scene has its size and its first frame has been drawn: started earlier (at idle), on a
-            // big library the first frame came only after the layout, when the cover had faded already (the wallpaper snapped in)
-            AfterFirstFrame(scene, () => cover.FadeOut(900));
+            AfterFirstFrame(scene, () =>
+            {
+                HomeNav.Log("backdrop fade-in: fading over 1000 ms");
+                var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(1000)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
+                fade.Completed += (s, e) => scenePanel.Children.Remove(cover);
+                cover.BeginAnimation(UIElement.OpacityProperty, fade);
+            });
         }
 
         private static void AfterFirstFrame(FrameworkElement el, Action act)
@@ -379,7 +384,7 @@ namespace Selene
             {
                 int frames = 0;
                 EventHandler tick = null;
-                tick = (s, e) => { if (++frames < 2) return; CompositionTarget.Rendering -= tick; HomeNav.Log("backdrop fade-in: starting after the first frame"); act(); };
+                tick = (s, e) => { if (++frames < 2) return; CompositionTarget.Rendering -= tick; act(); };
                 CompositionTarget.Rendering += tick;
             };
             if (el.ActualWidth > 1) { whenSized(); return; }
