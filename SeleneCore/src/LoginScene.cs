@@ -502,9 +502,9 @@ namespace Selene
             {
                 bool useVideo = seleneTheme && pair.Key != null && videoAllowed;   // the drawn one until the login layer is up
                 if (pair.Key != null) pair.Key.Visibility = useVideo ? Visibility.Visible : Visibility.Collapsed;
-                // switching to the video: the drawn backdrop stays until the video has faded in over it (MediaOpened)
-                bool videoUp = useVideo && pair.Key.Opacity > 0.99;
-                pair.Value.Visibility = useVideo && videoUp ? Visibility.Collapsed : Visibility.Visible;
+                // the video starts with the logo intro, so the drawn backdrop never shows under it: the screen rises from the dark
+                // straight into the video (the drawn one showed for half a second at start, then gave way)
+                pair.Value.Visibility = useVideo ? Visibility.Collapsed : Visibility.Visible;
             }
         }
 

@@ -56,6 +56,9 @@ namespace Selene
                 else if (w.IsVisible) Shown();
             };
             Application.Current.SessionEnding += (s, e) => reallyQuit = true;
+            // Alt+F4 quits for real from anywhere in Playnite: caught as the raw key message on Playnite's thread, before any
+            // screen, dialog or handler sees it (the WPF key event and the close command it becomes didn't always arrive)
+            System.Windows.Interop.ComponentDispatcher.ThreadFilterMessage += OnThreadMessage;
 
             // Playnite only honours --startclosedtotray in Desktop mode; do it for Fullscreen (background preload at login)
             foreach (var a in Environment.GetCommandLineArgs())
@@ -235,17 +238,34 @@ namespace Selene
             if (tray != null) tray.Visible = false;
         }
 
-        // Alt+F4 pressed on Playnite's main window: quit for real (caught as a key as well as the close command it becomes,
-        // since the close command didn't always arrive)
+        private static void OnThreadMessage(ref System.Windows.Interop.MSG msg, ref bool handled)
+        {
+            // WM_SYSKEYDOWN for F4 with Alt held (lParam bit 29), not a key repeat (bit 30)
+            if (handled || msg.message != 0x0104 || (int)msg.wParam != 0x73) return;
+            long lp = msg.lParam.ToInt64();
+            if (((lp >> 29) & 1) == 0 || ((lp >> 30) & 1) == 1) return;
+            handled = true;
+            AltF4();
+        }
+
+        // Alt+F4: quit for real, the way Alt+F4 quits Playnite without Selene (its main window closes, Playnite shuts down)
         public static void AltF4()
         {
             if (reallyQuit) return;
-            HomeNav.Log("tray: Alt+F4 key -> quit");
+            HomeNav.Log("tray: Alt+F4 -> quit");
             reallyQuit = true;
             if (tray != null) tray.Visible = false;
-            // the main window's own close, as Alt+F4 does without Selene: Playnite shuts down its usual way
-            var main = Application.Current.MainWindow;
-            if (main != null) main.Close(); else Application.Current.Shutdown();
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    var main = Application.Current.MainWindow;
+                    // a dialog up (an install question...) goes first, or the main window can't close under it
+                    foreach (Window other in Application.Current.Windows) if (!ReferenceEquals(other, main) && other.IsVisible) { try { other.Close(); } catch { } }
+                    if (main != null) main.Close(); else Application.Current.Shutdown();
+                }
+                catch (Exception ex) { HomeNav.Log("tray: Alt+F4 quit failed: " + ex.Message); Application.Current.Shutdown(); }
+            }));
         }
 
         private static void QuitForReal()

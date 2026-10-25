@@ -72,13 +72,6 @@ namespace Selene
         {
             try
             {
-                // Alt+F4 on the main window quits Playnite for real, whatever screen is up (a dialog's Alt+F4 closes the dialog)
-                if (e.Key == Key.System && e.SystemKey == Key.F4 && ReferenceEquals(sender, Application.Current.MainWindow))
-                {
-                    e.Handled = true;
-                    CloseToTray.AltF4();
-                    return;
-                }
                 // the login layer (menu, profiles...) is up: its keys are its own (this class handler runs before the
                 // layer's, and moved the home row behind the menu)
                 if (LoginScene.IsActive) return;
@@ -2436,7 +2429,12 @@ namespace Selene
                 HideCursorForController();
                 // one of Playnite's dialogs is up (a yes / no box, an add-on install): the press is the dialog's alone (it moved
                 // the screen behind too)
-                if (DialogUp()) return;
+                if (DialogUp())
+                {
+                    // B answers it the safe way (No / Cancel); Playnite's own dialogs did nothing on B
+                    if (Ui.Normalize(pressed) == "B" && DialogLook.Back()) e.Cancel();
+                    return;
+                }
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
                 if (StoreShowcase.Handle(Ui.Normalize(pressed)) || CardShowcase.Handle(Ui.Normalize(pressed))) { e.Cancel(); return; }   // the cards' pictures
                 EndQuietFocus();   // the user is moving now: their moves tick

@@ -93,6 +93,8 @@ namespace Selene
         {
             bool installed = api.Addons.Addons.Contains(addon.Id);
             bool on = installed && !api.Addons.DisabledAddons.Contains(addon.Id);
+            if (!installed && Accepted.Contains(addon.Id))
+                return new SetupItem { Key = "addon:" + addon.Id, Title = addon.Name, About = addon.About, State = SetupState.Optional, Detail = PendingRestart };
             return new SetupItem
             {
                 Key = "addon:" + addon.Id,
@@ -120,7 +122,27 @@ namespace Selene
         // opens Playnite's own add-on installer for that add-on
         public static void Install(string addonId)
         {
+            LastAsked = addonId;
             Process.Start("playnite://playnite/installaddon/" + addonId);
+        }
+
+        // add-ons said yes to in Playnite's install question this run: Playnite puts them in on its next start, so until the
+        // restart they count as done (not offered again, and the restart question can say how many are left)
+        public const string PendingRestart = "Installs when Playnite restarts";
+        public static string LastAsked;
+        public static readonly HashSet<string> Accepted = new HashSet<string>();
+
+        public static void Accept(string addonId)
+        {
+            if (string.IsNullOrEmpty(addonId)) return;
+            Accepted.Add(addonId);
+            HomeNav.Log("setup: " + addonId + " installs on the next restart");
+        }
+
+        // what's still to install (missing and not said yes to yet)
+        public static List<AddonInfo> LeftToInstall(IPlayniteAPI api)
+        {
+            return MissingIncluded(api).Where(a => !Accepted.Contains(a.Id)).ToList();
         }
     }
 }

@@ -133,6 +133,7 @@ namespace Selene
         private static string Short(SetupItem item)
         {
             if (item.Key == "ludusavi-program") return item.State == SetupState.Ready ? "Ready" : "Not set up";
+            if (item.Detail == SetupCheck.PendingRestart) return "Restart to finish";
             if (item.Key.StartsWith("clash:")) return "Clashes";
             if (item.State == SetupState.Ready) return "Installed";
             return item.AddonId != null ? "Not installed" : "Turned off";
@@ -242,6 +243,7 @@ namespace Selene
                     info.Show(icon, Tone.Warning, item.Title, "Clashes", item.About, "Turn it off in Playnite's Add-ons so the two don't fight.");
                     return;
             }
+            if (item.Detail == SetupCheck.PendingRestart) { info.Show(icon, Tone.Success, item.Title, "Restart to finish", item.About, "Installed. It starts working after Playnite restarts; install the others first to restart only once."); return; }
             if (item.AddonId != null) { info.Show(icon, Tone.Accent, item.Title, "Not installed", item.About, "Playnite asks you to confirm. It works after a restart.", "A", "Install"); return; }
             if (item.Key == "ludusavi-program") { info.Show(icon, Tone.Accent, item.Title, "Not set up", item.About, "Downloads the free Ludusavi program and connects it.", "A", "Set up"); return; }
             info.Show(icon, Tone.Warning, item.Title, "Turned off", item.About, "Turn it on in Playnite's Add-ons.");
@@ -329,7 +331,7 @@ namespace Selene
         private DateTime missingAt;
         private List<AddonInfo> Missing()
         {
-            if (missingCache == null || (DateTime.Now - missingAt).TotalSeconds > 4) { missingCache = SetupCheck.MissingIncluded(HomeNav.Api); missingAt = DateTime.Now; }
+            if (missingCache == null || (DateTime.Now - missingAt).TotalSeconds > 4) { missingCache = SetupCheck.LeftToInstall(HomeNav.Api); missingAt = DateTime.Now; }
             return missingCache;
         }
 

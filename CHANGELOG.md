@@ -4,6 +4,10 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Start: the logo intro rises from the dark straight into the moving background (the plainer drawn one showed for half a second first).
+- Playnite's dialogs: B (or Escape) answers No / Cancel (it did nothing); they close with a short sink-and-fade, and the dim behind them fades in and out; the card is a touch see-through over a dimmed screen, like Selene's own dialogs.
+- Add-on installs: Playnite's "Restart now?" says how many add-ons are left, with Restart now / Keep installing, so you restart once at the end; add-ons you said yes to show "Restart to finish" in the setup check, and Install all skips them.
+- Alt+F4 quits Playnite from anywhere, even with a dialog up (it is caught before anything else sees it).
 - Playnite's questions (add-on installs, restart, errors) look like Selene: an icon in a soft ring, centred text, an add-on's name, author and version on a card of their own, a glow of the theme's color, and the card rises in (switch: Look, Selene dialogs).
 - Setup check: pressing Install shows the card OPENING... until Playnite's question comes up (nothing seemed to happen for a few seconds).
 - Logo intro: plays over the same moving background as the login and setup screens (it had a plainer one of its own).

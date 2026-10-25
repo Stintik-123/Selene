@@ -43,26 +43,16 @@ namespace Selene
             // the card: fixed, roomy width; its padding moves inside so the accent glow can reach its edges
             card.Padding = new Thickness(0);
             card.CornerRadius = new CornerRadius(28);
-            card.Width = 680;
+            card.Width = 640;
             card.MinWidth = 0;
             card.MaxWidth = double.PositiveInfinity;
-            card.BorderBrush = Ink.Brush("SeleneInkColor", 0.12);
+            card.BorderBrush = Ink.Brush("SeleneInkColor", 0.16);
+            card.Background = Ink.Brush("SeleneGlassColor", 0.96);   // a touch see-through, like Selene's own dialogs
             card.Child = null;
             var inside = new Grid();
-            // the shadow on a layer of its own behind the text: an effect on the card drew its text through a bitmap (soft text)
-            var shadowed = card.Background;
-            card.Effect = null;
-            inside.Children.Add(new Border
-            {
-                CornerRadius = new CornerRadius(28), Background = shadowed, IsHitTestVisible = false,
-                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 48, Opacity = 0.55, Color = Colors.Black }
-            });
-            var wash = new RadialGradientBrush { Center = new Point(0.5, -0.1), GradientOrigin = new Point(0.5, -0.1), RadiusX = 0.75, RadiusY = 0.7 };
-            wash.GradientStops.Add(Ink.Stop("GlyphColor", 0.22, 0));
-            wash.GradientStops.Add(Ink.Stop("GlyphColor", 0.06, 0.55));
-            wash.GradientStops.Add(Ink.Stop("GlyphColor", 0, 1));
-            inside.Children.Add(new Border { CornerRadius = new CornerRadius(28), Background = wash, IsHitTestVisible = false });
-            panel.Margin = new Thickness(56, 44, 56, 40);
+            // the shadow as on Selene's own dialogs
+            card.Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 60, Opacity = 0.55, Color = Colors.Black };
+            panel.Margin = new Thickness(40, 40, 40, 36);
             inside.Children.Add(panel);
             card.Child = inside;
             TextOptions.SetTextFormattingMode(card, TextFormattingMode.Display);   // crisp at the screen's pixels
@@ -73,14 +63,19 @@ namespace Selene
 
             caption.HorizontalAlignment = HorizontalAlignment.Center;
             caption.TextAlignment = TextAlignment.Center;
-            caption.FontSize = 32;
-            caption.Margin = new Thickness(0, 18, 0, 10);
+            caption.FontSize = 34;
+            caption.FontFamily = Ui.Display;
+            caption.FontWeight = FontWeights.SemiBold;
+            caption.Margin = new Thickness(0, 22, 0, 10);
             caption.Visibility = string.IsNullOrWhiteSpace(title) ? Visibility.Collapsed : Visibility.Visible;
 
             message.TextAlignment = TextAlignment.Center;
             message.HorizontalAlignment = HorizontalAlignment.Center;
             message.MaxWidth = 560;
-            message.Opacity = 0.8;
+            message.FontSize = 19;
+            message.FontFamily = Ui.Body;
+            message.Foreground = Ink.Brush("SeleneInkColor", 0.75);
+            message.Opacity = 1;
 
             // "Do you want to install a new extension?" + a block of short lines (name, author, version): the block becomes a
             // card of its own with the name standing out
@@ -91,10 +86,15 @@ namespace Selene
                 panel.Children.Insert(panel.Children.IndexOf(message) + 1, DetailsCard(block));
             }
 
+            if (KindOf(title, text, buttons) == Kind.Addon) WatchInstallYes(w);
+            if (title.ToLowerInvariant().Contains("restart") && text.ToLowerInvariant().Contains("install")) RestartAdvice(w, panel, buttons);
+
             buttons.HorizontalAlignment = HorizontalAlignment.Center;
-            buttons.Margin = new Thickness(0, 30, 0, 0);
+            buttons.Margin = new Thickness(0, 34, 0, 0);
             // the pills' right margin (for a left-aligned row) would push a centred row off centre
             foreach (var b in buttons.Children.OfType<FrameworkElement>()) b.Margin = new Thickness(7, 0, 7, 0);
+
+            try { if (w.AllowsTransparency) w.Background = Ink.Brush("SeleneScrimColor", 0.62); } catch { }
 
             // in: the card rises and settles, a soft sound with it
             var scale = new ScaleTransform(0.96, 0.96);
@@ -120,7 +120,110 @@ namespace Selene
             scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, t) { EasingFunction = ease });
             scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, t) { EasingFunction = ease });
             move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, t) { EasingFunction = ease });
+            // the dimmed screen behind fades in with it
+            w.Opacity = 0;
+            w.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+            w.Opacity = 1;
             if (Features.On("sounds")) Ui.Play("OpenPanel.wav", 0.6);
+
+            // out: whatever answers it (a button, B, Escape), the card sinks and fades with the dim behind it, then it closes
+            bool closingDone = false, closing = false;
+            w.Closing += (s, e) =>
+            {
+                if (closingDone || closing) { if (closing && !closingDone) e.Cancel = true; return; }
+                e.Cancel = true;
+                closing = true;
+                var answer = w.DialogResult;   // set already when an answer closes it; kept for the real close
+                var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
+                var outT = TimeSpan.FromMilliseconds(170);
+                var sink = new ScaleTransform(1, 1);
+                card.RenderTransformOrigin = new Point(0.5, 0.5);
+                card.RenderTransform = sink;
+                sink.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.95, outT) { EasingFunction = easeIn });
+                sink.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.95, outT) { EasingFunction = easeIn });
+                var fade = new DoubleAnimation(0, outT) { EasingFunction = easeIn };
+                fade.Completed += (s2, e2) =>
+                {
+                    closingDone = true;
+                    try { if (answer.HasValue) w.DialogResult = answer; else w.Close(); }
+                    catch { try { w.Close(); } catch { } }
+                };
+                w.BeginAnimation(UIElement.OpacityProperty, fade);
+            };
+            w.PreviewKeyDown += (s, e) => { if (e.Key == System.Windows.Input.Key.Escape && Back(w)) e.Handled = true; };
+            open = w;
+        }
+
+        // the dialog up now (one at a time), for B from the pad
+        private static Window open;
+
+        // B on a pad: the open dialog's safe answer
+        public static bool Back()
+        {
+            var w = open;
+            if (w == null || !w.IsVisible) return false;
+            return Back(w);
+        }
+
+        // the safe answer: No, else Cancel, else OK (a note with only OK just goes)
+        private static bool Back(Window w)
+        {
+            foreach (var name in new[] { "ButtonNo", "ButtonCancel", "ButtonOK" })
+            {
+                var b = w.FindName(name) as System.Windows.Controls.Primitives.ButtonBase;
+                if (b == null || b.Visibility != Visibility.Visible || !b.IsEnabled) continue;
+                HomeNav.Log("dialog look: B -> " + name);
+                Ui.Back();
+                b.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent, b));
+                return true;
+            }
+            return false;
+        }
+
+        // Yes in an add-on's install question: that add-on goes in on the next restart
+        private static void WatchInstallYes(Window w)
+        {
+            var asked = SetupCheck.LastAsked;
+            var yes = w.FindName("ButtonYes") as System.Windows.Controls.Primitives.ButtonBase;
+            if (yes != null && asked != null) yes.Click += (s, e) => SetupCheck.Accept(asked);
+            SetupCheck.LastAsked = null;   // one question per request (an install from elsewhere isn't this one)
+        }
+
+        // "Restart Playnite?" after an install: say how many add-ons are left, so people install them all and restart once
+        private static void RestartAdvice(Window w, StackPanel panel, StackPanel buttons)
+        {
+            int left = 0;
+            try { if (HomeNav.Api != null) left = SetupCheck.LeftToInstall(HomeNav.Api).Count; } catch { }
+            var yes = w.FindName("ButtonYes") as ContentControl;
+            var no = w.FindName("ButtonNo") as ContentControl;
+            string note;
+            Control first;
+            if (left > 0)
+            {
+                note = left + (left == 1 ? " more add-on" : " more add-ons") + " to install. Keep installing and restart once at the end; they all start working together.";
+                if (no != null) no.Content = "Keep installing";
+                first = no;
+            }
+            else
+            {
+                note = "That's every add-on Selene works with. Restart now and they all start working.";
+                if (no != null) no.Content = "Later";
+                first = yes;
+            }
+            if (yes != null) yes.Content = "Restart now";
+            if (first != null) w.Dispatcher.BeginInvoke(new Action(() => first.Focus()), System.Windows.Threading.DispatcherPriority.Input);
+            panel.Children.Insert(panel.Children.IndexOf(buttons), new Border
+            {
+                Margin = new Thickness(0, 18, 0, 0), Padding = new Thickness(24, 14, 24, 14), CornerRadius = new CornerRadius(16),
+                Background = Ink.Brush("GlyphColor", 0.10), BorderBrush = Ink.Brush("GlyphColor", 0.28), BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Center, MaxWidth = 560,
+                Child = new TextBlock
+                {
+                    Text = note, FontFamily = Ui.Body, FontSize = 18, LineHeight = 26, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center,
+                    Foreground = Ink.Brush("SeleneInkColor", 0.9)
+                }
+            });
+            HomeNav.Log("dialog look: restart advice, " + left + " left");
         }
 
         private enum Kind { Addon, Restart, Problem, Question, Note }
@@ -148,25 +251,17 @@ namespace Selene
                 case Kind.Question: code = 0xE887; break;  // help
                 default: code = 0xE88E; break;             // info
             }
-            var halo = new Border
+            var badge = new Border
             {
-                Width = 92, Height = 92, CornerRadius = new CornerRadius(46), IsHitTestVisible = false,
-                Background = new RadialGradientBrush(Ink.Of(tone, 0.28), Ink.Of(tone, 0))
-            };
-            var ring = new Border
-            {
-                Width = 68, Height = 68, CornerRadius = new CornerRadius(34),
-                Background = Ink.Brush(tone, 0.16), BorderBrush = Ink.Brush(tone, 0.45), BorderThickness = new Thickness(1.5),
+                Width = 84, Height = 84, CornerRadius = new CornerRadius(42), HorizontalAlignment = HorizontalAlignment.Center,
+                Background = Ink.Brush(tone, 0.19),
                 Child = new TextBlock
                 {
-                    Text = Ui.Icon(code), FontFamily = Ui.Icons, FontSize = 34, Foreground = Ink.Brush(tone),
+                    Text = Ui.Icon(code), FontFamily = Ui.Icons, FontSize = 38, Foreground = Ink.Brush(tone),
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
-            var g = new Grid { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, -10) };
-            g.Children.Add(halo);
-            g.Children.Add(ring);
-            return g;
+            return badge;
         }
 
         // text = a sentence, an empty line, then 2-4 short lines (an add-on's name, author, version)
