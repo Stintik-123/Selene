@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Spotlight: the buttons wait until the cards have flown in (a move mid-flight left the row half-landed), and the selected card's ring no longer blinks when a notification comes up.
 - Choose your theme: moving through the themes changes only the preview; Selene takes the theme when you press A.
 - Dark wallpapers with bright detail (a dotted map, stars): the console gradient and the readable-text halo now notice the detail behind the words (it was averaged away), and the gradient is always at least a little there.
 - Profile preview: the row shows real games' covers around the sample game (fetched from Steam once), and the sample's cover shows its logo; Change theme from the menu has no step dots.
@@ -12,12 +13,12 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Choose your background: the preview shows the look you picked (Game art / Background only showed the other one after the last speed-up).
 - Captures: the blurred picture behind the grid crossfades from one capture to the next (it blinked to black and back), and smoothly.
 - Captures: clips play with sound (the browser kept them muted; it now gets a click it counts as yours).
-- Session card as in Selene Legacy: "Session ended", the game's logo (or name), what you played this time and the total play time, on a wide card; all notification cards are more see-through.
+- Session card as in Selene Legacy: "Session ended" and the game's name over THIS SESSION | TOTAL PLAYTIME, the logo on the right and the game's art faint behind it; the other notification cards are more see-through.
 - Captures viewer: a paused clip shows a big see-through pause sign in the middle, at once on the press (it waited for the player); it is gone the moment the clip plays again.
 - Captures and Surprise me: the LB / RB badges on their tabs look like Spotlight's and Collection's; Captures drops the LB RB Filter hint (the tabs show it).
 - Profile steps keep up when you go back and forth quickly (the preview was pictured again on every step change, and the sample art faded in and out under the screen; both only happen now when something changed).
 - Readable text: dark text gets no halo.
-- Session card: back from a game, a card with its cover and logo says how long you played this time and in total; Steam games without a logo here get Steam's (fetched once, kept) (switch: Games, Session card).
+- Session card: back from a game, a card with its logo says how long you played this time and in total; Steam games without a logo here get Steam's (fetched once, kept) (switch: Games, Session card).
 - Progress notifications are drawn inside Playnite's window: no black box flashing as the card appears, and no stutter while it shows (as a window of its own over the full-screen one, it slowed every frame).
 - Screens in the menu and profile steps slide smoothly: each new screen is set up before its slide starts, and the sliding pages are no longer drawn as one big picture (their own little animations redrew it every frame).
 - Profile steps: no lag opening Change theme or going back and forth between the theme and background steps (every avatar picture loaded as the screen opened, the background grid was rebuilt and reloaded on each return, the theme re-applied, and quick moves stacked slides).

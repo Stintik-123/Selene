@@ -41,14 +41,19 @@ namespace Selene
         private static TextBlock downloadGlyph;
         private static ContentControl titleLine;
         private static StackPanel text;
-        private const double SessionWidth = 470;   // the session card: Selene Legacy's, a wide card as tall as its lines
+        private const double SessionWidth = 560, SessionHeight = 150;   // the session card: Selene Legacy's
+        private static DockPanel row;
+        private static Brush glass, sessionGlass;
 
-        // a progress card's shape (wide, one row: icon tile and words) or the session card's (the logo over the words, centred)
+        // a progress card's shape (wide, one row: icon tile and words) or the session card's (Legacy's: words left, logo right)
         private static void Shape(bool session)
         {
             card.Width = session ? SessionWidth : CardWidth;
-            card.Height = session ? double.NaN : CardHeight;
-            card.Padding = session ? new Thickness(20, 14, 22, 16) : new Thickness(16, 0, 22, 0);
+            card.Height = session ? SessionHeight : CardHeight;
+            card.Padding = session ? new Thickness(0) : new Thickness(16, 0, 22, 0);
+            card.CornerRadius = new CornerRadius(session ? 14 : 10);
+            card.Background = session ? sessionGlass : glass;
+            if (!session && !ReferenceEquals(card.Child, row)) card.Child = row;
             layer.Width = card.Width + ShadowRoom + Edge;
             text.HorizontalAlignment = HorizontalAlignment.Left;
             titleLine.HorizontalAlignment = HorizontalAlignment.Left;
@@ -235,15 +240,17 @@ namespace Selene
             text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             text.Children.Add(titleLine);
             text.Children.Add(words);
-            var row = new DockPanel();
+            row = new DockPanel();
             DockPanel.SetDock(icon, Dock.Left);
             row.Children.Add(icon);
             row.Children.Add(text);
             slideIn = new TranslateTransform();
+            glass = Ink.Brush("SeleneGlassColor", 0.72);   // see-through
+            sessionGlass = Ink.Brush("SeleneGlassColor", 0.92);   // the session card: darker, the game's art shows faintly in it
             card = new Border
             {
                 Width = CardWidth, CornerRadius = new CornerRadius(10), Padding = new Thickness(16, 0, 22, 0), Height = CardHeight,
-                Background = Ink.Brush("SeleneGlassColor", 0.72), BorderBrush = Ink.Brush("SeleneInkColor", 0.08), BorderThickness = new Thickness(1),   // see-through
+                Background = glass, BorderBrush = Ink.Brush("SeleneInkColor", 0.08), BorderThickness = new Thickness(1),   // see-through
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
                 Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(ShadowRoom, ShadowRoom, Edge, ShadowRoom), RenderTransform = slideIn
@@ -376,13 +383,13 @@ namespace Selene
             if (main == null || game == null) return;
             // a Steam game without its logo or cover here: Steam's are fetched first (kept for next time), then the card shows
             var appId = SteamAppId(game);
-            if (!fetched && appId != null && (!System.IO.File.Exists(SteamFile(appId, "logo.png")) || !System.IO.File.Exists(SteamFile(appId, "library_600x900.jpg"))))
+            if (!fetched && appId != null && (!System.IO.File.Exists(SteamFile(appId, "logo.png")) || !System.IO.File.Exists(SteamFile(appId, "library_hero.jpg"))))
             {
                 var ui = main.Dispatcher;
                 System.Threading.Tasks.Task.Factory.StartNew(() =>
                 {
                     Fetch(appId, "logo.png");
-                    Fetch(appId, "library_600x900.jpg");
+                    Fetch(appId, "library_hero.jpg");
                     ui.BeginInvoke(new Action(() => ShowSession(game, seconds, true)));
                 });
                 return;
@@ -392,41 +399,63 @@ namespace Selene
             if (layer == null) Build();
             Place(main);
             var api = HomeNav.Api;
-            // the cover in the icon tile
-            ImageSource cover = null;
+            // as Selene Legacy had it: the game's art faint on the right; "Session ended", the name and two figures on the left;
+            // the logo on the right
+            ImageSource art = null, pic = null;
             try
             {
-                var file = !string.IsNullOrEmpty(game.CoverImage) ? api.Database.GetFullFilePath(game.CoverImage) : !string.IsNullOrEmpty(game.Icon) ? api.Database.GetFullFilePath(game.Icon) : null;
-                if (file != null && System.IO.File.Exists(file)) cover = Wallpapers.Load(file, 160);
-                if (cover == null && appId != null && System.IO.File.Exists(SteamFile(appId, "library_600x900.jpg"))) cover = Wallpapers.Load(SteamFile(appId, "library_600x900.jpg"), 160);
-            }
-            catch { }
-            // just the logo and the line (no cover tile beside them); the tile only stands in when there's no logo at all
-            icon.Child = null;
-            icon.Background = cover != null ? (Brush)new ImageBrush(cover) { Stretch = Stretch.UniformToFill } : Ink.Brush("GlyphColor", 0.18);
-            if (cover == null) icon.Child = new TextBlock { Text = Ui.Icon(0xE338 /* videogame_asset */), FontFamily = Ui.Icons, FontSize = 30, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            icon.Visibility = Visibility.Visible;
-            // its logo (Extra Metadata's), else its name
-            FrameworkElement title = null;
-            try
-            {
+                var file = !string.IsNullOrEmpty(game.BackgroundImage) ? api.Database.GetFullFilePath(game.BackgroundImage) : null;
+                if (file != null && System.IO.File.Exists(file)) art = Wallpapers.Load(file, 760);
+                if (art == null && appId != null && System.IO.File.Exists(SteamFile(appId, "library_hero.jpg"))) art = Wallpapers.Load(SteamFile(appId, "library_hero.jpg"), 760);
                 var logo = System.IO.Path.Combine(api.Paths.ConfigurationPath, "ExtraMetadata", "games", game.Id.ToString(), "logo.png");
                 if (!System.IO.File.Exists(logo) && appId != null) logo = SteamFile(appId, "logo.png");
-                var pic = System.IO.File.Exists(logo) ? Wallpapers.Load(logo, 400) : null;
-                if (pic != null) title = new Image { Source = pic, MaxHeight = 52, MaxWidth = 260, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 6) };
+                if (System.IO.File.Exists(logo)) pic = Wallpapers.Load(logo, 440);
             }
             catch { }
-            if (title == null) title = new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 20, FontWeight = FontWeights.Bold, Foreground = Ink.Brush("SeleneInkColor", 0.9), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = SessionWidth - 50, Margin = new Thickness(0, 2, 0, 4) };
-            // as Selene Legacy had it: "Session ended", the game, what was played now, the total
-            var body = new StackPanel();
-            body.Children.Add(new TextBlock { Text = "Session ended", FontFamily = Ui.Body, FontSize = 17, Foreground = Ink.Brush("SeleneInkColor", 0.8) });
-            body.Children.Add(title);
-            body.Children.Add(SessionLine(0xEA28 /* sports_esports */, Duration(seconds) + " played"));
-            if (game.Playtime > 0) body.Children.Add(SessionLine(0xE8B5 /* schedule */, "Total play time " + Duration(game.Playtime)));
-            titleLine.Content = body;
-            titleLine.Visibility = Visibility.Visible;
-            icon.Visibility = Visibility.Collapsed;   // Legacy's card: words only, no picture tile
+            var content = new Grid { Width = SessionWidth, Height = SessionHeight, Clip = new RectangleGeometry(new Rect(0, 0, SessionWidth, SessionHeight), 14, 14) };
+            if (art != null)
+            {
+                var picture = new Image
+                {
+                    Source = art, Stretch = Stretch.UniformToFill, Opacity = 0.42,
+                    OpacityMask = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Color.FromArgb(0, 0, 0, 0), 0.15), new GradientStop(Colors.Black, 0.85) }, 0)
+                };
+                RenderOptions.SetBitmapScalingMode(picture, BitmapScalingMode.Fant);
+                content.Children.Add(new Border
+                {
+                    Child = picture,
+                    OpacityMask = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Colors.Black, 0), new GradientStop(Colors.Black, 0.45), new GradientStop(Color.FromArgb(0, 0, 0, 0), 1) }, 90)
+                });
+            }
+            var inside = new Grid { Margin = new Thickness(20, 0, 18, 0), VerticalAlignment = VerticalAlignment.Center };
+            inside.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            inside.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var left = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            left.Children.Add(new TextBlock { Text = "Session ended", FontFamily = Ui.Body, FontSize = 13, Foreground = Ink.Brush("SeleneInkColor", 0.62) });
+            left.Children.Add(new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 20, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 12) });
+            var figures = new StackPanel { Orientation = Orientation.Horizontal };
+            figures.Children.Add(Figure("THIS SESSION", Duration(seconds), new Thickness(0, 0, 20, 0)));
+            if (game.Playtime > 0)
+            {
+                figures.Children.Add(new System.Windows.Shapes.Rectangle { Width = 1, Fill = Ink.Brush("SeleneInkColor", 0.2), Margin = new Thickness(0, 3, 20, 3) });
+                figures.Children.Add(Figure("TOTAL PLAYTIME", Duration(game.Playtime), new Thickness(0)));
+            }
+            left.Children.Add(figures);
+            inside.Children.Add(left);
+            if (pic != null)
+            {
+                var logoImage = new Image
+                {
+                    Source = pic, MaxWidth = 220, MaxHeight = 100, Stretch = Stretch.Uniform, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 4, 0),
+                    Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 10, Opacity = 0.6, Color = Colors.Black }
+                };
+                RenderOptions.SetBitmapScalingMode(logoImage, BitmapScalingMode.Fant);
+                Grid.SetColumn(logoImage, 1);
+                inside.Children.Add(logoImage);
+            }
+            content.Children.Add(inside);
             Shape(true);
+            card.Child = content;
             // in, held for a few seconds, out (no task behind it)
             if (leaveTimer != null) leaveTimer.Stop();
             leaving = false;
@@ -435,7 +464,7 @@ namespace Selene
             slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
             card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
             Ui.NotifySound();
-            leaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5500) };
+            leaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(8000) };
             leaveTimer.Tick += (s, e) => { leaveTimer.Stop(); Leave(); };
             leaveTimer.Start();
             HomeNav.Log("session card: " + game.Name + ", " + seconds + " s");
@@ -466,11 +495,12 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("session card: no " + name + " for " + appId + " (" + ex.Message + ")"); try { System.IO.File.Delete(file + ".part"); } catch { } }
         }
 
-        private static FrameworkElement SessionLine(int glyph, string what)
+        // one of the session card's figures: a small caps label over the value
+        private static FrameworkElement Figure(string label, string value, Thickness margin)
         {
-            var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 0) };
-            sp.Children.Add(new TextBlock { Text = Ui.Icon(glyph), FontFamily = Ui.Icons, FontSize = 18, Foreground = Ink.Brush("SeleneInkColor", 0.85), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
-            sp.Children.Add(new TextBlock { Text = what, FontFamily = Ui.Body, FontSize = 17, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+            var sp = new StackPanel { Margin = margin };
+            sp.Children.Add(new TextBlock { Text = label, FontFamily = Ui.Body, FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.6) });
+            sp.Children.Add(new TextBlock { Text = value, FontFamily = Ui.Display, FontSize = 19, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(0, 2, 0, 0) });
             return sp;
         }
 

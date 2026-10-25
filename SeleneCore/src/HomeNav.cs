@@ -99,6 +99,8 @@ namespace Selene
                 if (LoginScene.IsActive) return;
                 // the keyboard copy of a pad press Selene already handled (it moved things a second time)
                 if (Ui.KeyIsPadCopy() && (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape)) { e.Handled = true; return; }
+                // the cards are still flying in: nothing moves yet
+                if (IntroRunning && (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Space) && FocusOnHome()) { e.Handled = true; return; }
                 // the Store card's game pictures (Down from the card goes into them)
                 var asPad = e.Key == Key.Down ? "DPadDown" : e.Key == Key.Up ? "DPadUp" : e.Key == Key.Left ? "DPadLeft" : e.Key == Key.Right ? "DPadRight" : e.Key == Key.Enter ? "A" : e.Key == Key.Escape || e.Key == Key.Back ? "B" : null;
                 if (asPad != null && !e.Handled && (StoreShowcase.Handle(asPad) || CardShowcase.Handle(asPad) || DetailsStage.Handle(asPad))) { e.Handled = true; return; }
@@ -920,6 +922,13 @@ namespace Selene
             {
                 var win = Window.GetWindow(row);
                 if (win != null && !win.IsActive) return;  // switching to a game: leave the look alone
+                if (!(bool)a.NewValue)
+                {
+                    // the focus went to another window (Playnite's hidden progress window as a notification comes up, a
+                    // dialog): the ring stays (it blinked off and on with every notification)
+                    var now = Keyboard.FocusedElement as DependencyObject;
+                    if (now == null || Window.GetWindow(now) != win) return;
+                }
                 SetRowFocusLook(row, (bool)a.NewValue);
             };
             Action hookScroll = () =>
@@ -2078,6 +2087,9 @@ namespace Selene
         }
 
         private static DateTime lastIntro;
+        // the cards' fly-in is still going: moves wait for it (a move mid-flight left the row half-landed, a gap in it)
+        private static DateTime introUntil = DateTime.MinValue;
+        private static bool IntroRunning { get { return DateTime.Now < introUntil; } }
 
         // Playnite plays its move sound whenever anything gets keyboard focus, so focus Selene moves itself (signing in,
         // the home's intro, Play) sounded like moving. For a moment its move sound is emptied (Playnite skips an empty
@@ -2322,6 +2334,7 @@ namespace Selene
                     scale.BeginAnimation(ScaleTransform.ScaleYProperty, Keys(0.35, 1, delay, 0.65, glide));
                     k++;
                 }
+                introUntil = DateTime.Now.AddSeconds(0.30 + Math.Max(0, k - 1) * 0.045 + 0.65);
                 Log("intro played on " + k + " tiles");
                 // an empty tab's message comes in with them, just after the last card lands
                 RowEmptyIn(0.30 + k * 0.045 + 0.2);
@@ -2574,6 +2587,7 @@ namespace Selene
                     return;
                 }
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
+                if (IntroRunning && pressed != "Start" && pressed != "Back" && pressed != "Guide" && FocusOnHome()) { e.Cancel(); return; }
                 if (StoreShowcase.Handle(Ui.Normalize(pressed)) || CardShowcase.Handle(Ui.Normalize(pressed))) { e.Cancel(); return; }   // the cards' pictures
                 EndQuietFocus();   // the user is moving now: their moves tick
                 // View (Playnite calls it Back): home <-> library, like the legacy theme (Playnite opened its settings)
