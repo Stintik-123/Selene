@@ -74,6 +74,17 @@ namespace Selene
             if (!Active || args.Game == null) return;
             LocalGames.AfterGameStopped(args.Game);
             Profiles.RecordSession(args.Game.Id, args.ElapsedSeconds);
+            // back from a game: a card says how long it was played (once Selene is in front again)
+            if (Features.On("sessioncard") && args.ElapsedSeconds >= 60)
+            {
+                var game = args.Game; var secs = args.ElapsedSeconds;
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1800) };
+                    t.Tick += (s, e) => { t.Stop(); ProgressToast.ShowSession(game, secs); };
+                    t.Start();
+                }));
+            }
         }
 
         public override void OnLibraryUpdated(OnLibraryUpdatedEventArgs args)
@@ -274,6 +285,7 @@ namespace Selene
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
             new Option { Group = "Look", Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game and its trailer plays. R3 for its sound." },
             new Option { Group = "Look", Key = "shade", Label = "Shade over the art", About = "How much the home darkens the picture behind its words.", Choices = new[] { "0.7", "1", "1.3" }, Names = new[] { "Lighter", "As needed", "Deeper" }, Default = "1" },
+            new Option { Group = "Games", Key = "sessioncard", Label = "Session card", About = "After you play, a card with the game's logo says how long you played this time and in total." },
             new Option { Group = "Games", Key = "storepage", Label = "Store page", About = "The Store card opens free games, sales and new releases. Off: it picks a store app." },
             new Option { Group = "Games", Key = "storetrailers", Label = "Store trailers", About = "A game's trailer plays behind its Store page." },
             new Option { Group = "Games", Key = "storetab", Label = "Store opens on", About = "The tab the Store page starts on.", Choices = new[] { "All", "Steam", "Epic Games", "GOG", "Xbox", "More stores" }, Default = "All" },

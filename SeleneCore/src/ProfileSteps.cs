@@ -962,6 +962,8 @@ namespace Selene
                 groupLabel.Text = (index == 0 ? "THEME" : groups[index].ToUpperInvariant());
                 var file = files[index] ?? ThemePalettes.DefaultWallpaper(Owner.Theme);
                 // decoded off the UI thread first, so the swap itself costs nothing in the middle of a glide
+                // (back on this step with the same wallpaper: nothing to change, no crossfade or new preview picture)
+                if (!live && string.Equals(Wallpapers.Current ?? "", file ?? "", StringComparison.OrdinalIgnoreCase)) return;
                 Action show = () => Wallpapers.Prepare(file, () => Ui.AfterHold(() => { LoginScene.CrossfadeBackdrop(() => { Wallpapers.Show(file); LoginScene.RefreshBackdrop(); }); RefreshPreviewLater(); }));
                 if (live) apply.Run(show); else show();
             }

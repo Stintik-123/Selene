@@ -67,7 +67,8 @@ namespace Selene
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown));
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.PreviewGotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnWindowPreviewGotFocus));
             DialogLook.Install();   // Playnite's message boxes as Selene cards
-            ProgressToast.DevPreviewLater();   // %TEMP%\selene-dev-toast: a pretend task to see the notification card
+            ProgressToast.DevPreviewLater();
+            ProgressToast.DevSessionLater();   // %TEMP%\selene-dev-session: a pretend session card   // %TEMP%\selene-dev-toast: a pretend task to see the notification card
             EventManager.RegisterClassHandler(typeof(ListBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnListLoaded));
             EventManager.RegisterClassHandler(typeof(TextBlock), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnTextLoaded));
             var tvBackup = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "fullscreenConfig.tv.json");
@@ -1077,14 +1078,12 @@ namespace Selene
         private const string SampleUrl = "https://cdn.akamai.steamstatic.com/steam/apps/1903340/library_hero.jpg";
         private static Grid previewLayer;
 
+        private static ImageSource samplePic;
         private static bool SampleArtForPreview(Panel art)
         {
             var file = System.IO.Path.Combine(SelenePaths.Media("Sample"), "expedition33-hero.jpg");
-            if (System.IO.File.Exists(file))
-            {
-                var pic = Wallpapers.Load(file);
-                if (pic != null) { PutPreviewArt(art, pic, true); return true; }
-            }
+            if (samplePic == null && System.IO.File.Exists(file)) samplePic = Wallpapers.Load(file);   // decoded once, kept
+            if (samplePic != null) { PutPreviewArt(art, samplePic, true); return true; }
             var ui = Application.Current.Dispatcher;
             System.Threading.Tasks.Task.Factory.StartNew(() =>
             {

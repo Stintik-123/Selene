@@ -43,6 +43,7 @@ namespace Selene
 
         // puts a wallpaper behind Selene; the one already showing is left alone (a reloaded copy flickered)
         private static string shown;
+        public static string Current { get { return shown; } }   // the wallpaper behind Selene now
 
         public static void Show(string file)
         {

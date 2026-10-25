@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Session card: back from a game, a card with its cover and logo says how long you played this time and in total (switch: Games, Session card).
+- Progress notifications are drawn inside Playnite's window: no black box flashing as the card appears, and no stutter while it shows (as a window of its own over the full-screen one, it slowed every frame).
 - Screens in the menu and profile steps slide smoothly: each new screen is set up before its slide starts, and the sliding pages are no longer drawn as one big picture (their own little animations redrew it every frame).
 - Profile steps: no lag opening Change theme or going back and forth between the theme and background steps (every avatar picture loaded as the screen opened, the background grid was rebuilt and reloaded on each return, the theme re-applied, and quick moves stacked slides).
 - The glint that sweeps over the focused card shows in every color theme (it took the focus color and vanished in themes where that is dark or colored).

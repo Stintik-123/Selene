@@ -5,6 +5,7 @@
 // it. The card slides in from beyond the right edge with a sound, stays at least a few seconds so it can be read (the bar
 // runs to the end when the task is done), and slides back out. Tasks that come one after another share the card.
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -30,10 +31,15 @@ namespace Selene
         private static DateTime busyUntil = DateTime.MinValue;
 
         // a progress task is being shown as a card (or just was): focus moving around then is Playnite's own business
-        public static bool Busy { get { return source != null || hiddenProgress != null || DateTime.Now < busyUntil || (toast != null && toast.IsVisible); } }
+        public static bool Busy { get { return source != null || hiddenProgress != null || DateTime.Now < busyUntil || (layer != null && layer.Visibility == Visibility.Visible); } }
 
         // the card (one at a time)
-        private static Window toast;
+        // the card's layer inside Playnite's own window (a window of its own flashed a black box as it appeared, and overlapping
+        // the full-screen window made Windows present Playnite's frames the slow way: everything stuttered while it showed)
+        private static Grid layer;
+        private static Border icon;
+        private static TextBlock downloadGlyph;
+        private static ContentControl titleLine;
         private static Border card, track, fill;
         private static TextBlock words;
         private static TranslateTransform slideIn, sweep;
@@ -96,7 +102,7 @@ namespace Selene
             bool any = false;
             foreach (Window w in Application.Current.Windows)
             {
-                if (ReferenceEquals(w, main) || ReferenceEquals(w, toast) || !w.IsVisible && w.GetType().Name != "ProgressWindow") continue;
+                if (ReferenceEquals(w, main) || !w.IsVisible && w.GetType().Name != "ProgressWindow") continue;
                 if (!(w.GetType().Namespace ?? "").StartsWith("Playnite")) continue;   // Selene's own windows don't count
                 if (w.GetType().Name != "ProgressWindow") return false;
                 any = true;
@@ -146,19 +152,18 @@ namespace Selene
         private static void Show(Window main, object vm)
         {
             source = vm;
-            if (toast == null) Build();
+            if (layer == null) Build();
+            icon.Background = Ink.Brush("GlyphColor", 0.18);
+            icon.Child = downloadGlyph;
+            titleLine.Visibility = Visibility.Collapsed;
             if (leaveTimer != null) leaveTimer.Stop();
             barShown = -1;
             Place(main);
-            if (!toast.IsVisible || leaving)
+            if (layer.Visibility != Visibility.Visible || leaving)
             {
-                // in: from beyond the right edge of the screen, easing into place, with a sound
                 leaving = false;
                 shownAt = DateTime.Now;
-                // owned by Playnite's window: above Playnite only, behind other programs after Alt+Tab, back with Playnite (it
-                // stayed over everything as a topmost window)
-                if (!toast.IsVisible && !ReferenceEquals(toast.Owner, main)) toast.Owner = main;
-                if (!toast.IsVisible) toast.Show();
+                layer.Visibility = Visibility.Visible;
                 // in, as a console does it: a quick fade with a short drift from the right
                 slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
                 card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
@@ -168,13 +173,17 @@ namespace Selene
             poll.Start();
         }
 
-        // the window spans from the card to the screen's right edge, so the card can slide in from beyond it
+        // the top layer of Playnite's own window, at the top right under the bar (the clock and the profile), not over it
         private static void Place(Window main)
         {
-            toast.Width = CardWidth + ShadowRoom + Edge;
-            toast.Left = main.Left + main.ActualWidth - toast.Width;
-            // under the top bar (the clock and the profile), not over it: the bar is ~100 of the home's 1080 pixels high
-            toast.Top = main.Top + main.ActualHeight * 112 / 1080.0 - ShadowRoom;
+            var host = HomeNav.FindByName(main, "PART_MainHost") as Grid;
+            if (host == null || ReferenceEquals(layer.Parent, host)) return;
+            var old = layer.Parent as Panel;
+            if (old != null) old.Children.Remove(layer);
+            Grid.SetRowSpan(layer, 99);
+            Grid.SetColumnSpan(layer, 99);
+            Panel.SetZIndex(layer, 9998);
+            host.Children.Add(layer);
         }
 
         private static void Build()
@@ -196,17 +205,20 @@ namespace Selene
             track.Child = fill;
             // like a console's notification: an icon tile on the left, the task's words beside it (the bar is kept, unshown, so
             // the task's progress code has somewhere to go)
-            var icon = new Border
+            downloadGlyph = new TextBlock { Text = Ui.Icon(0xE2C4 /* file_download */), FontFamily = Ui.Icons, FontSize = 28, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            icon = new Border
             {
-                Width = 48, Height = 48, CornerRadius = new CornerRadius(8), Background = Ink.Brush("GlyphColor", 0.18), VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 16, 0),
-                Child = new TextBlock { Text = Ui.Icon(0xE2C4 /* file_download */), FontFamily = Ui.Icons, FontSize = 28, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+                Width = 56, Height = 56, CornerRadius = new CornerRadius(8), Background = Ink.Brush("GlyphColor", 0.18), VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 16, 0), Child = downloadGlyph, ClipToBounds = true
             };
-            words.VerticalAlignment = VerticalAlignment.Center;
+            titleLine = new ContentControl { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 0, 0, 4), HorizontalAlignment = HorizontalAlignment.Left };
+            var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            text.Children.Add(titleLine);
+            text.Children.Add(words);
             var row = new DockPanel();
             DockPanel.SetDock(icon, Dock.Left);
             row.Children.Add(icon);
-            row.Children.Add(words);
+            row.Children.Add(text);
             slideIn = new TranslateTransform();
             card = new Border
             {
@@ -216,27 +228,17 @@ namespace Selene
                 Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(ShadowRoom, ShadowRoom, Edge, ShadowRoom), RenderTransform = slideIn
             };
-            var root = new Grid { Background = Brushes.Transparent, ClipToBounds = true, IsHitTestVisible = false };
-            root.Children.Add(card);
-            toast = new Window
+            layer = new Grid
             {
-                WindowStyle = WindowStyle.None, AllowsTransparency = true, Background = Brushes.Transparent, ResizeMode = ResizeMode.NoResize,
-                Topmost = false, ShowInTaskbar = false, ShowActivated = false, Focusable = false, SizeToContent = SizeToContent.Height,
-                Title = "SeleneNotification", Content = root
+                IsHitTestVisible = false, ClipToBounds = true, Visibility = Visibility.Collapsed,
+                HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
+                Width = CardWidth + ShadowRoom + Edge, Margin = new Thickness(0, 112 - ShadowRoom, 0, 0)
             };
-            toast.SourceInitialized += (s, e) =>
-            {
-                var h = new WindowInteropHelper(toast).Handle;
-                SetWindowLong(h, -20, GetWindowLong(h, -20) | 0x08000000 /* NOACTIVATE */ | 0x80 /* TOOLWINDOW */ | 0x20 /* TRANSPARENT: clicks go through */);
-            };
+            layer.Children.Add(card);
             poll = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
             poll.Tick += (s, e) =>
             {
                 HideProgress(); Update();
-                // Playnite hidden (the tray) or minimized: the card goes with it, back if the task still runs when it returns
-                var owner = Application.Current.MainWindow;
-                if (owner != null && (!owner.IsVisible || owner.WindowState == WindowState.Minimized)) { if (toast.IsVisible) toast.Hide(); }
-                else if (owner != null && source != null && !toast.IsVisible && !leaving) toast.Show();
                 var mainNow = Application.Current.MainWindow;
                 if (mainNow != null) { UndimNow(mainNow); HoldDim(mainNow, OnlyProgressOpen(mainNow)); }   // a real dialog: Playnite's dim back
                 // never a blank home behind the card: if it was blanked anyway, it comes back
@@ -288,7 +290,7 @@ namespace Selene
         {
             var m0 = Application.Current.MainWindow;
             if (m0 != null) m0.Dispatcher.BeginInvoke(new Action(() => { if (!Busy || source == null) HoldDim(m0, false); }), DispatcherPriority.Background);
-            if (!ReferenceEquals(vm, source) || toast == null) return;
+            if (!ReferenceEquals(vm, source) || layer == null) return;
             source = null;
             poll.Stop();
             if (track.ActualWidth > 1) Bar(track.ActualWidth);
@@ -300,7 +302,7 @@ namespace Selene
 
         private static void Leave()
         {
-            if (source != null || toast == null) return;
+            if (source != null || layer == null) return;
             leaving = true;
             var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
             var slide = new DoubleAnimation(Drift, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn };
@@ -308,7 +310,7 @@ namespace Selene
             {
                 if (!leaving) return;   // a new task brought it back meanwhile
                 leaving = false;
-                toast.Hide();
+                layer.Visibility = Visibility.Collapsed;
                 sweeping = false;
                 sweep.BeginAnimation(TranslateTransform.XProperty, null); sweep.X = 0;
                 fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = 0;
@@ -345,11 +347,87 @@ namespace Selene
             catch { }
         }
 
-        private static void KeepOnTop()
+        // ---- a game just closed: its cover, its logo (or name) and how long it was played, like a console's "you played" card ----
+        public static void ShowSession(Playnite.SDK.Models.Game game, ulong seconds)
         {
-            if (toast == null) return;
-            var h = new WindowInteropHelper(toast).Handle;
-            if (h != IntPtr.Zero) SetWindowPos(h, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010 /* NOSIZE NOMOVE NOACTIVATE */);
+            var main = Application.Current.MainWindow;
+            if (main == null || game == null) return;
+            // a progress card up now: this one waits its turn
+            if (source != null) { Later(1500, () => ShowSession(game, seconds)); return; }
+            if (layer == null) Build();
+            Place(main);
+            var api = HomeNav.Api;
+            // the cover in the icon tile
+            ImageSource cover = null;
+            try
+            {
+                var file = !string.IsNullOrEmpty(game.CoverImage) ? api.Database.GetFullFilePath(game.CoverImage) : !string.IsNullOrEmpty(game.Icon) ? api.Database.GetFullFilePath(game.Icon) : null;
+                if (file != null && System.IO.File.Exists(file)) cover = Wallpapers.Load(file, 160);
+            }
+            catch { }
+            icon.Child = null;
+            icon.Background = cover != null ? (Brush)new ImageBrush(cover) { Stretch = Stretch.UniformToFill } : Ink.Brush("GlyphColor", 0.18);
+            if (cover == null) icon.Child = new TextBlock { Text = Ui.Icon(0xE338 /* videogame_asset */), FontFamily = Ui.Icons, FontSize = 30, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            // its logo (Extra Metadata's), else its name
+            FrameworkElement title = null;
+            try
+            {
+                var logo = System.IO.Path.Combine(api.Paths.ConfigurationPath, "ExtraMetadata", "games", game.Id.ToString(), "logo.png");
+                var pic = System.IO.File.Exists(logo) ? Wallpapers.Load(logo, 400) : null;
+                if (pic != null) title = new Image { Source = pic, MaxHeight = 30, MaxWidth = 300, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left };
+            }
+            catch { }
+            if (title == null) title = new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 19, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 110 };
+            titleLine.Content = title;
+            titleLine.Visibility = Visibility.Visible;
+            var line = "You played " + Duration(seconds);
+            if (game.Playtime >= 3600) line += "  \u00B7  " + Duration(game.Playtime) + " in total";
+            words.Text = line;
+            // in, held for a few seconds, out (no task behind it)
+            if (leaveTimer != null) leaveTimer.Stop();
+            leaving = false;
+            shownAt = DateTime.Now;
+            layer.Visibility = Visibility.Visible;
+            slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            Ui.NotifySound();
+            leaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5500) };
+            leaveTimer.Tick += (s, e) => { leaveTimer.Stop(); Leave(); };
+            leaveTimer.Start();
+            HomeNav.Log("session card: " + game.Name + ", " + seconds + " s");
+        }
+
+        private static string Duration(ulong seconds)
+        {
+            if (seconds < 60) return "less than a minute";
+            ulong h = seconds / 3600, m = seconds % 3600 / 60;
+            if (h == 0) return m + (m == 1 ? " minute" : " minutes");
+            return h + " h" + (m > 0 ? " " + m + " min" : "");
+        }
+
+        private static void Later(int ms, Action act)
+        {
+            var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
+            t.Tick += (s, e) => { t.Stop(); act(); };
+            t.Start();
+        }
+
+        // dev: %TEMP%\selene-dev-session makes a pretend session card a few seconds after start (a game from the library, else a
+        // stand-in), then the file goes
+        public static void DevSessionLater()
+        {
+            var flag = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-session");
+            if (!System.IO.File.Exists(flag)) return;
+            try { System.IO.File.Delete(flag); } catch { }
+            Later(6000, () =>
+            {
+                var api = HomeNav.Api;
+                Playnite.SDK.Models.Game game = null;
+                try { game = api != null ? api.Database.Games.OrderByDescending(g => g.Playtime).FirstOrDefault() : null; } catch { }
+                if (game == null) game = new Playnite.SDK.Models.Game("Clair Obscur: Expedition 33") { Playtime = 45 * 3600 + 20 * 60 };
+                HomeNav.Log("dev: session card preview");
+                ShowSession(game, 5040);   // 1 h 24 min
+            });
         }
 
         private static object Prop(object o, string name)
