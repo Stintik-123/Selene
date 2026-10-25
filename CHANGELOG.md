@@ -4,10 +4,14 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Dark wallpapers with bright detail (a dotted map, stars): the console gradient and the readable-text halo now notice the detail behind the words (it was averaged away), and the gradient is always at least a little there.
+- Profile preview: the row shows real games' covers around the sample game (fetched from Steam once), and the sample's cover shows its logo; Change theme from the menu has no step dots.
+- Choose your theme / background: the preview is a sample home drawn in the theme's colors (Expedition 33 picked, its logo, Play / Details, the tabs and hints over the art or your wallpaper), not a picture of the real home; it changes at once with the theme, the wallpaper and the look.
+- Collection with no games: no dotted focus lines, and its message in Selene's text color (it could come out black).
 - Choose your background: the preview shows the look you picked (Game art / Background only showed the other one after the last speed-up).
 - Captures: the blurred picture behind the grid crossfades from one capture to the next (it blinked to black and back), and smoothly.
 - Captures: clips play with sound (the browser kept them muted; it now gets a click it counts as yours).
-- Session card: the game's logo big and centred over the line, on a narrower, taller card than the other notifications; all notification cards are more see-through.
+- Session card as in Selene Legacy: "Session ended", the game's logo (or name), what you played this time and the total play time, on a wide card; all notification cards are more see-through.
 - Captures viewer: a paused clip shows a big see-through pause sign in the middle, at once on the press (it waited for the player); it is gone the moment the clip plays again.
 - Captures and Surprise me: the LB / RB badges on their tabs look like Spotlight's and Collection's; Captures drops the LB RB Filter hint (the tabs show it).
 - Profile steps keep up when you go back and forth quickly (the preview was pictured again on every step change, and the sample art faded in and out under the screen; both only happen now when something changed).

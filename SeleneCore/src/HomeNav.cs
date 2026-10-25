@@ -1006,6 +1006,7 @@ namespace Selene
             var w = Application.Current.MainWindow;
             var art = w != null ? FindByName(w, "SeleneHubArt") : null;
             if (art == null) return;
+            if (LoginScene.IsActive) { art.BeginAnimation(UIElement.OpacityProperty, null); return; }   // hidden under the profile screen: at once
             var fade = new DoubleAnimation(art.Opacity, to, TimeSpan.FromMilliseconds(380)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
             fade.Completed += (s, e) => art.BeginAnimation(UIElement.OpacityProperty, null);
             art.BeginAnimation(UIElement.OpacityProperty, fade);
@@ -1086,7 +1087,56 @@ namespace Selene
         private const string SampleUrl = "https://cdn.akamai.steamstatic.com/steam/apps/1903340/library_hero.jpg";
         private static Grid previewLayer;
 
-        private static ImageSource samplePic;
+        private static ImageSource samplePic, sampleCover, sampleLogo;
+        public static ImageSource SamplePicture { get { return samplePic ?? (samplePic = LoadSample("expedition33-hero.jpg", 1920)); } }
+        public static ImageSource SampleCover { get { return sampleCover ?? (sampleCover = LoadSample("expedition33-cover.jpg", 300)); } }
+        public static ImageSource SampleLogo { get { return sampleLogo ?? (sampleLogo = LoadSample("expedition33-logo.png", 700)); } }
+
+        // the preview's row: a few well-known games' covers beside the sample (Steam's, fetched once)
+        private static readonly string[] RowGames = { "1145350", "1030300", "1086940", "1245620", "1091500" };   // Hades II, Silksong, Baldur's Gate 3, Elden Ring, Cyberpunk 2077
+        private static ImageSource[] rowCovers;
+        public static ImageSource[] SampleRowCovers
+        {
+            get
+            {
+                if (rowCovers == null || rowCovers.Any(c => c == null)) rowCovers = RowGames.Select(id => LoadSample("cover-" + id + ".jpg", 240)).ToArray();
+                return rowCovers;
+            }
+        }
+
+        private static ImageSource LoadSample(string name, int width)
+        {
+            var f = System.IO.Path.Combine(SelenePaths.Media("Sample"), name);
+            return System.IO.File.Exists(f) ? Wallpapers.Load(f, width) : null;
+        }
+
+        // the sample game's pictures from Steam (once; kept in Selene's media folder, not shipped), then `ready` on the UI thread
+        private static bool fetchingSample;
+        public static void FetchSample(Action ready)
+        {
+            if (fetchingSample) return;
+            fetchingSample = true;
+            var ui = Application.Current.Dispatcher;
+            System.Threading.Tasks.Task.Factory.StartNew(() =>
+            {
+                try { System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12; } catch { }
+                var wanted = new List<string[]> { new[] { "1903340", "library_hero.jpg", "expedition33-hero.jpg" }, new[] { "1903340", "library_600x900.jpg", "expedition33-cover.jpg" }, new[] { "1903340", "logo.png", "expedition33-logo.png" } };
+                foreach (var id in RowGames) wanted.Add(new[] { id, "library_600x900.jpg", "cover-" + id + ".jpg" });
+                foreach (var w in wanted)
+                {
+                    var pair = new[] { w[1], w[2] };
+                    var file = System.IO.Path.Combine(SelenePaths.Media("Sample"), pair[1]);
+                    if (System.IO.File.Exists(file)) continue;
+                    try
+                    {
+                        using (var web = new System.Net.WebClient()) web.DownloadFile("https://cdn.akamai.steamstatic.com/steam/apps/" + w[0] + "/" + pair[0], file + ".part");
+                        System.IO.File.Move(file + ".part", file);
+                    }
+                    catch (Exception ex) { Log("sample: " + pair[0] + " failed: " + ex.Message); }
+                }
+                ui.BeginInvoke(new Action(() => { fetchingSample = false; samplePic = sampleCover = sampleLogo = null; rowCovers = null; ready(); }));
+            });
+        }
         private static bool SampleArtForPreview(Panel art)
         {
             var file = System.IO.Path.Combine(SelenePaths.Media("Sample"), "expedition33-hero.jpg");

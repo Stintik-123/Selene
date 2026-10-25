@@ -340,7 +340,7 @@
                                 </Border>
 
                                 <!-- the whole library: one row of big covers, close together -->
-                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="0,0,0,0" Background="Transparent" BorderThickness="0"
+                                <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="0,0,0,0" Background="Transparent" BorderThickness="0" FocusVisualStyle="{x:Null}"
                                            ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Item"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
                                 <!-- nothing to show: Playnite's message in the middle of the screen (Selene Core sets its readable glow) -->
@@ -355,7 +355,7 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
-                                    <TextBlock FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center" Margin="48,26,48,28" Style="{StaticResource TextBlockBaseStyle}"/>
+                                    <TextBlock FontSize="34" Text="{DynamicResource LOCNoGamesFound}" TextAlignment="Center" Margin="48,26,48,28" Style="{StaticResource TextBlockBaseStyle}" Foreground="{DynamicResource SeleneInkBrush}" FontFamily="{StaticResource FontMain}"/>
                                 </StackPanel>
 
                                 <!-- Playnite's filter panels open over the left side -->

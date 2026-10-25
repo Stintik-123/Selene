@@ -41,22 +41,22 @@ namespace Selene
         private static TextBlock downloadGlyph;
         private static ContentControl titleLine;
         private static StackPanel text;
-        private const double SessionWidth = 400, SessionHeight = 182;   // the session card: narrower and taller, the logo big and centred
+        private const double SessionWidth = 470;   // the session card: Selene Legacy's, a wide card as tall as its lines
 
         // a progress card's shape (wide, one row: icon tile and words) or the session card's (the logo over the words, centred)
         private static void Shape(bool session)
         {
             card.Width = session ? SessionWidth : CardWidth;
-            card.Height = session ? SessionHeight : CardHeight;
-            card.Padding = session ? new Thickness(24, 16, 24, 18) : new Thickness(16, 0, 22, 0);
+            card.Height = session ? double.NaN : CardHeight;
+            card.Padding = session ? new Thickness(20, 14, 22, 16) : new Thickness(16, 0, 22, 0);
             layer.Width = card.Width + ShadowRoom + Edge;
-            var centre = session ? HorizontalAlignment.Center : HorizontalAlignment.Left;
-            text.HorizontalAlignment = centre;
-            titleLine.HorizontalAlignment = centre;
-            words.HorizontalAlignment = centre;
-            words.TextAlignment = session ? TextAlignment.Center : TextAlignment.Left;
-            words.MaxWidth = session ? SessionWidth - 48 : CardWidth - 100;
-            titleLine.Margin = session ? new Thickness(0, 0, 0, 12) : new Thickness(0, 0, 0, 4);
+            text.HorizontalAlignment = HorizontalAlignment.Left;
+            titleLine.HorizontalAlignment = HorizontalAlignment.Left;
+            words.HorizontalAlignment = HorizontalAlignment.Left;
+            words.TextAlignment = TextAlignment.Left;
+            words.MaxWidth = CardWidth - 100;
+            words.Visibility = session ? Visibility.Collapsed : Visibility.Visible;
+            titleLine.Margin = session ? new Thickness(0) : new Thickness(0, 0, 0, 4);
         }
         private static Border card, track, fill;
         private static TextBlock words;
@@ -413,17 +413,20 @@ namespace Selene
                 var logo = System.IO.Path.Combine(api.Paths.ConfigurationPath, "ExtraMetadata", "games", game.Id.ToString(), "logo.png");
                 if (!System.IO.File.Exists(logo) && appId != null) logo = SteamFile(appId, "logo.png");
                 var pic = System.IO.File.Exists(logo) ? Wallpapers.Load(logo, 400) : null;
-                if (pic != null) title = new Image { Source = pic, MaxHeight = 92, MaxWidth = SessionWidth - 80, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center };
+                if (pic != null) title = new Image { Source = pic, MaxHeight = 52, MaxWidth = 260, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 6) };
             }
             catch { }
-            if (title == null) title = new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 19, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 110 };
-            titleLine.Content = title;
+            if (title == null) title = new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 20, FontWeight = FontWeights.Bold, Foreground = Ink.Brush("SeleneInkColor", 0.9), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = SessionWidth - 50, Margin = new Thickness(0, 2, 0, 4) };
+            // as Selene Legacy had it: "Session ended", the game, what was played now, the total
+            var body = new StackPanel();
+            body.Children.Add(new TextBlock { Text = "Session ended", FontFamily = Ui.Body, FontSize = 17, Foreground = Ink.Brush("SeleneInkColor", 0.8) });
+            body.Children.Add(title);
+            body.Children.Add(SessionLine(0xEA28 /* sports_esports */, Duration(seconds) + " played"));
+            if (game.Playtime > 0) body.Children.Add(SessionLine(0xE8B5 /* schedule */, "Total play time " + Duration(game.Playtime)));
+            titleLine.Content = body;
             titleLine.Visibility = Visibility.Visible;
-            if (title is Image) icon.Visibility = Visibility.Collapsed;
-            Shape(title is Image);   // logo: the big centred card; no logo: the usual row with the cover and the name
-            var line = "You played " + Duration(seconds);
-            if (game.Playtime >= 3600) line += "  \u00B7  " + Duration(game.Playtime) + " in total";
-            words.Text = line;
+            icon.Visibility = Visibility.Collapsed;   // Legacy's card: words only, no picture tile
+            Shape(true);
             // in, held for a few seconds, out (no task behind it)
             if (leaveTimer != null) leaveTimer.Stop();
             leaving = false;
@@ -461,6 +464,14 @@ namespace Selene
                 System.IO.File.Move(file + ".part", file);
             }
             catch (Exception ex) { HomeNav.Log("session card: no " + name + " for " + appId + " (" + ex.Message + ")"); try { System.IO.File.Delete(file + ".part"); } catch { } }
+        }
+
+        private static FrameworkElement SessionLine(int glyph, string what)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 0) };
+            sp.Children.Add(new TextBlock { Text = Ui.Icon(glyph), FontFamily = Ui.Icons, FontSize = 18, Foreground = Ink.Brush("SeleneInkColor", 0.85), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            sp.Children.Add(new TextBlock { Text = what, FontFamily = Ui.Body, FontSize = 17, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+            return sp;
         }
 
         private static string Duration(ulong seconds)

@@ -254,7 +254,7 @@ namespace Selene
             if (y + h > src.PixelHeight) h = src.PixelHeight - y;
             if (w < 1 || h < 1) return 0;
             BitmapSource part = new CroppedBitmap(src, new Int32Rect(x, y, w, h));
-            double scale = Math.Min(1, 40.0 / Math.Max(w, h));
+            double scale = Math.Min(1, 96.0 / Math.Max(w, h));   // fine bright detail stays visible
             if (scale < 1) part = new TransformedBitmap(part, new ScaleTransform(scale, scale));
             part = new FormatConvertedBitmap(part, PixelFormats.Bgra32, null, 0);
             int pw = part.PixelWidth, ph = part.PixelHeight;
@@ -263,7 +263,7 @@ namespace Selene
             var lums = new List<double>(pw * ph);
             for (int i = 0; i < px.Length; i += 4) lums.Add((0.0722 * px[i] + 0.7152 * px[i + 1] + 0.2126 * px[i + 2]) / 255.0);
             lums.Sort();
-            return lums[(int)(lums.Count * 0.8)];
+            return lums[Math.Min(lums.Count - 1, (int)(lums.Count * 0.92))];   // the brightest bits behind the words decide
         }
     }
 }

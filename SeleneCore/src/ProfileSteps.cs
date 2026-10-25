@@ -46,6 +46,7 @@ namespace Selene
                 dots.Children.Add(new Border { Height = 8, Width = 8, CornerRadius = new CornerRadius(4), Margin = new Thickness(5, 0, 5, 0), Background = Ink.Brush("SeleneInkColor", 0.3) });
             Root.Children.Add(dots);
             chrome.Add(dots);
+            if (startAt > 0) dots.Opacity = 0;   // opened from the menu on one step (Change theme): no step dots
             var backHint = Ui.Prompts(false, Ui.Prompt("B", "Back"));
             chrome.Add(backHint);
             Root.Children.Add(backHint);
@@ -251,7 +252,7 @@ namespace Selene
         // frame (its dust never stops moving) and the steps crawled.
         // every preview box (the theme step and the background step have one each: a single shared one left the theme step's
         // box empty, since the steps are all built up front and the last one took it)
-        private sealed class PreviewBox { public Image Back, Front; public double Width; public int Version = -1; }
+        private sealed class PreviewBox { public Border Back, Front; public double Width; public int Version = -1; }
         private static readonly List<PreviewBox> previews = new List<PreviewBox>();
 
         internal static FrameworkElement Preview(double width)
@@ -260,17 +261,15 @@ namespace Selene
             var box = new PreviewBox { Width = width };
             var host = new Grid { Width = width, Height = height, Clip = new RectangleGeometry(new Rect(0, 0, width, height), 15, 15) };
             host.Children.Add(new Border { Background = Ink.Brush("SeleneGlassColor", 0.7) });
-            host.Children.Add(Ui.Text("The home shows here once it has loaded", 18, 0.6));
-            box.Back = new Image { Stretch = Stretch.Fill };
-            box.Front = new Image { Stretch = Stretch.Fill };
+            box.Back = new Border();
+            box.Front = new Border();
             host.Children.Add(box.Back);
             host.Children.Add(box.Front);
             previews.Add(box);
-            box.Front.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) RefreshPreviewLater(); };   // a step coming up gets a fresh picture
+            box.Front.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) RefreshPreviewLater(); };   // a step coming up: up to date
             var frame = new Border
             {
                 Child = host, CornerRadius = new CornerRadius(16), BorderBrush = Ink.Brush("SeleneInkColor", 0.25), BorderThickness = new Thickness(1),
-                CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false },   // its big shadow drawn once, not on every frame of a slide
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black }
             };
             var col = new StackPanel();
@@ -280,76 +279,141 @@ namespace Selene
             return col;
         }
 
-        // a new picture of the home, once the change has been drawn, and again a moment later for anything that fades in
+        // the preview is drawn again (soon; after a slide) when the theme, the wallpaper or the look changed
         internal static void RefreshPreviewLater()
         {
             if (previews.Count == 0) return;
-            Application.Current.Dispatcher.BeginInvoke(new Action(() => Ui.AfterHold(() => RefreshPreview())), DispatcherPriority.Loaded);
-            // again a moment later (anything fading in), and up to a few more times while no picture could be taken
-            int tries = 0;
-            var again = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(520) };
-            again.Tick += (s, e) =>
-            {
-                tries++;
-                // the second picture is always taken: the first can catch a change mid-fade (game art / background only fade),
-                // and skipping this one as "nothing changed" left the preview showing the other choice
-                bool ok = RefreshPreview(tries == 1 && (DateTime.Now - HomeNav.PreviewChangedAt).TotalMilliseconds < 1500);
-                if (tries >= 1 && (ok || tries >= 5)) again.Stop();
-            };
-            again.Start();
+            Application.Current.Dispatcher.BeginInvoke(new Action(() => Ui.AfterHold(() => RefreshPreview())), DispatcherPriority.Background);
         }
 
-        private static bool RefreshPreview() { return RefreshPreview(false); }
-
-        private static bool RefreshPreview(bool force)
+        private static bool RefreshPreview()
         {
             try
             {
-                previews.RemoveAll(b => b.Front == null || PresentationSource.FromVisual(b.Front) == null && !b.Front.IsLoaded && b.Front.Parent == null);
-                var shown = previews.Where(b => b.Front.IsLoaded && b.Front.IsVisible).ToList();
-                if (shown.Count == 0) return false;
-                // a picture of this very state already: nothing to take (each one cost a frame or more, and quick moves between the
-                // steps stacked them into the next slide)
-                shown = shown.Where(b => force || b.Version != HomeNav.PreviewVersion || b.Front.Source == null).ToList();
-                if (shown.Count == 0) return true;
-                var main = Application.Current.MainWindow;
-                var viewHost = main != null ? HomeNav.FindByName(main, "PART_ViewHost") : null;
-                if (viewHost == null || viewHost.ActualWidth < 1) { HomeNav.Log("preview: no view host yet"); return false; }
-                // the home must be up under the profile screen to be pictured (opened from the menu in Collection it wasn't)
-                var hubNow = HomeNav.FindByName(main, "WelcomeHubOverlay") as UIElement;
-                if (hubNow != null && !hubNow.IsVisible) { HomeNav.Log("preview: the home is hidden -> shown under the profile screen"); SeleneShell.ShowHome(true); viewHost.UpdateLayout(); }
-                if (hubNow != null && hubNow.Opacity < 0.05) { HomeNav.Log("preview: the home is faded out"); return false; }
-                var dv = new DrawingVisual();
-                using (var dc = dv.RenderOpen())
-                {
-                    foreach (var n in new[] { "WelcomeHubOverlay", "HubTopBarBackground" })
-                    {
-                        var el = HomeNav.FindByName(main, n);
-                        if (el == null || !el.IsVisible) continue;
-                        var at = el.TranslatePoint(new Point(0, 0), viewHost);
-                        dc.DrawRectangle(new VisualBrush(el) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top },
-                                         null, new Rect(at.X, at.Y, el.ActualWidth, el.ActualHeight));
-                    }
-                }
+                previews.RemoveAll(b => b.Front == null);
+                var shown = previews.Where(b => b.Front.IsLoaded && b.Front.IsVisible && (b.Version != HomeNav.PreviewVersion || b.Front.Child == null)).ToList();
                 foreach (var box in shown)
                 {
-                    double scale = box.Width / viewHost.ActualWidth;
-                    int w = (int)Math.Round(viewHost.ActualWidth * scale), h = (int)Math.Round(viewHost.ActualHeight * scale);
-                    if (w < 2 || h < 2) continue;
-                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96 * scale, 96 * scale, PixelFormats.Pbgra32);
-                    rtb.Render(dv);
-                    rtb.Freeze();
-                    // the old picture stays under the new one as it fades in: a soft change, not a cut
-                    if (box.Front.Source != null) { box.Back.Source = box.Front.Source; box.Back.Opacity = 1; }
-                    box.Front.Source = rtb;
+                    var mock = new Viewbox { Stretch = Stretch.Fill, Child = SampleHome() };
+                    // the old drawing stays under the new one as it fades in: a soft change, not a cut
+                    var old = box.Front.Child;
+                    box.Front.Child = null;
+                    box.Back.Child = old;
+                    box.Front.Child = mock;
                     box.Version = HomeNav.PreviewVersion;
                     box.Front.BeginAnimation(UIElement.OpacityProperty, null);
                     box.Front.Opacity = 0;
-                    Ui.Fade(box.Front, 1, 260);
+                    Ui.Fade(box.Front, 1, 160);
                 }
                 return true;
             }
             catch (Exception ex) { HomeNav.Log("preview: " + ex.Message); return false; }
+        }
+
+        // ---- the default preview: a sample home drawn in the current theme (not a picture of the real home, which with no games
+        // was mostly empty cards). Clair Obscur: Expedition 33 is the sample game; its art, logo and cover come from Steam once. ----
+        private static FrameworkElement SampleHome()
+        {
+            var res = Application.Current.Resources;
+            var root = new Grid { Width = 1920, Height = 1080, ClipToBounds = true };
+            var baseFill = new Border();
+            baseFill.Background = res["SeleneBaseBrush"] as Brush ?? Ink.Brush("SeleneScrimColor");
+            root.Children.Add(baseFill);
+            var wall = res["SeleneWallpaper"] as ImageSource;
+            if (wall != null) root.Children.Add(new Image { Source = wall, Stretch = Stretch.UniformToFill });
+            var artOff = res["SeleneArtOpacity"] is double && (double)res["SeleneArtOpacity"] < 0.05;
+            var art = HomeNav.SamplePicture;
+            if (art != null && !artOff) root.Children.Add(new Image { Source = art, Stretch = Stretch.UniformToFill });
+            // the home's shading: from the left, the top and the bottom
+            var scrim = Ink.Of("SeleneScrimColor");
+            Func<double, Color> sa = a => { var c = scrim; c.A = (byte)(255 * a); return c; };
+            root.Children.Add(new Border { Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(sa(0.8), 0), new GradientStop(sa(0.45), 0.5), new GradientStop(sa(0.1), 1) }, new Point(0, 0), new Point(1, 0)) });
+            root.Children.Add(new Border { Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(sa(0.75), 0), new GradientStop(sa(0), 0.26) }, new Point(0, 0), new Point(0, 1)) });
+            root.Children.Add(new Border { Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(sa(0), 0.55), new GradientStop(sa(0.8), 1) }, new Point(0, 0), new Point(0, 1)) });
+
+            Func<string, double, double, TextBlock> text = (t, size, alpha) => new TextBlock { Text = t, FontSize = size, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor", alpha), VerticalAlignment = VerticalAlignment.Center };
+            // the top bar: the tabs (the first one picked) and the clock
+            var tabs = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 34, 0, 0) };
+            tabs.Children.Add(Badge("LB"));
+            var names = new[] { "All games", "Installed", "Recently played", "Favorites" };
+            for (int i = 0; i < names.Length; i++)
+            {
+                var t = text(names[i], 21, i == 0 ? 1 : 0.75);
+                if (i == 0) { t.Foreground = Ink.Brush("SeleneOnFocusColor"); t.FontWeight = FontWeights.SemiBold; }
+                tabs.Children.Add(new Border { Child = t, Padding = new Thickness(20, 8, 20, 10), CornerRadius = new CornerRadius(22), Margin = new Thickness(4, 0, 4, 0), Background = i == 0 ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent });
+            }
+            tabs.Children.Add(Badge("RB"));
+            root.Children.Add(tabs);
+            var clock = text(DateTime.Now.ToString("h:mm tt"), 32, 1);
+            clock.HorizontalAlignment = HorizontalAlignment.Right; clock.VerticalAlignment = VerticalAlignment.Top; clock.Margin = new Thickness(0, 36, 70, 0);
+            root.Children.Add(clock);
+
+            // the row: three cards, then games, the sample game picked (bigger, its ring glowing)
+            var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(80, 140, 0, 0) };
+            foreach (var code in new[] { 0xE3F4 /* image */, 0xE6E1 /* show_chart */, 0xF1CC /* shopping_bag */ })
+                row.Children.Add(Tile(160, null, code, false));
+            row.Children.Add(Tile(220, HomeNav.SampleCover, 0, true));
+            foreach (var cover in HomeNav.SampleRowCovers) row.Children.Add(Tile(160, cover, 0, false));
+            root.Children.Add(row);
+
+            // the picked game: its logo, Play / Details, a line about it
+            var info = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(80, 430, 0, 0) };
+            var logo = HomeNav.SampleLogo;
+            if (logo != null) info.Children.Add(new Image { Source = logo, MaxWidth = 620, MaxHeight = 230, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left });
+            else info.Children.Add(text("Clair Obscur: Expedition 33", 64, 1));
+            var pills = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 34, 0, 0) };
+            var play = text("Play", 24, 1); play.Foreground = Ink.Brush("SeleneOnFocusColor"); play.FontWeight = FontWeights.SemiBold;
+            pills.Children.Add(new Border { Child = play, Padding = new Thickness(54, 12, 54, 14), CornerRadius = new CornerRadius(30), Background = Ink.Brush("SeleneFocusColor"), Margin = new Thickness(0, 0, 16, 0) });
+            pills.Children.Add(new Border { Child = text("Details", 24, 1), Padding = new Thickness(44, 12, 44, 14), CornerRadius = new CornerRadius(30), Background = Ink.Brush("SeleneGlassColor", 0.72), BorderBrush = Ink.Brush("SeleneInkColor", 0.22), BorderThickness = new Thickness(1) });
+            info.Children.Add(pills);
+            var line = text("Playtime 45 h   ·   Last played Today", 22, 0.85);
+            line.Margin = new Thickness(4, 26, 0, 0);
+            info.Children.Add(line);
+            root.Children.Add(info);
+
+            // the hints along the bottom
+            var left = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(80, 0, 0, 44) };
+            left.Children.Add(Hint("☰", "Collection")); left.Children.Add(Hint("≡", "Menu"));
+            var right = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 70, 44) };
+            right.Children.Add(Hint("X", "Details")); right.Children.Add(Hint("A", "Play"));
+            root.Children.Add(left); root.Children.Add(right);
+            if (art == null || logo == null || HomeNav.SampleCover == null || HomeNav.SampleRowCovers.Any(c => c == null)) HomeNav.FetchSample(() => { HomeNav.PreviewChanged(); RefreshPreviewLater(); });
+            return root;
+        }
+
+        private static FrameworkElement Tile(double size, ImageSource cover, int icon, bool picked)
+        {
+            var face = new Border
+            {
+                Width = size, Height = size, CornerRadius = new CornerRadius(14), Margin = new Thickness(0, 0, 18, 0), VerticalAlignment = VerticalAlignment.Top,
+                // a tall cover in a square tile: its top (where the logo is), not its middle (the logo was cut off)
+                Background = cover != null ? (Brush)new ImageBrush(cover) { Stretch = Stretch.UniformToFill, AlignmentY = AlignmentY.Top } : Ink.Brush("SeleneGlassColor", 0.72),
+                BorderBrush = picked ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(picked ? 4 : 1)
+            };
+            if (picked) face.Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.9, Color = Ink.Of("SeleneFocusColor") };
+            if (icon != 0) face.Child = new TextBlock { Text = Ui.Icon(icon), FontFamily = Ui.Icons, FontSize = 64, Foreground = Ink.Brush("SeleneInkColor", 0.9), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            return face;
+        }
+
+        private static FrameworkElement Badge(string label)
+        {
+            return new Border
+            {
+                Width = 44, Height = 30, CornerRadius = new CornerRadius(9), Margin = new Thickness(10, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center, Background = Ink.Brush("SeleneInkColor"),
+                Child = new TextBlock { Text = label, FontSize = 14, FontWeight = FontWeights.Bold, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+            };
+        }
+
+        private static FrameworkElement Hint(string key, string label)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 34, 0) };
+            sp.Children.Add(new Border
+            {
+                Width = 40, Height = 40, CornerRadius = new CornerRadius(20), Background = Ink.Brush("SeleneInkColor"), Margin = new Thickness(0, 0, 12, 0),
+                Child = new TextBlock { Text = key, FontSize = 18, FontWeight = FontWeights.Bold, Foreground = Ink.Brush("SeleneScrimColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+            });
+            sp.Children.Add(new TextBlock { Text = label, FontSize = 24, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+            return sp;
         }
 
         // a debounced action: moving quickly through choices only applies the one you stop on
@@ -901,6 +965,7 @@ namespace Selene
                 look.Root.Margin = new Thickness(4, 20, 0, 0);
                 right.Children.Add(look.Root);
                 lookNote.Foreground = Ink.Brush("SeleneInkColor", 0.6);
+                lookNote.Visibility = Visibility.Collapsed;   // (no note under the choices: the preview shows what each does)
                 right.Children.Add(lookNote);
                 row.Children.Add(right);
                 Root.Children.Add(row);
@@ -956,7 +1021,7 @@ namespace Selene
 
             public override void Shown()
             {
-                hasArt = HomeNav.ShowArtForPreview(true);
+                hasArt = false;   // (the preview draws its own sample home; nothing is put on the real one)
                 Fill();
                 RefreshPreviewLater();
                 look.Select(Owner.Look == "wallpaper" ? 1 : 0, false);
