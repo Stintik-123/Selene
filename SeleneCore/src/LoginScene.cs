@@ -367,7 +367,30 @@ namespace Selene
             HomeNav.Log("backdrop fade-in: cover " + (cover.Ready ? "ready" : "NOT ready") + ", scene " + (scene != null && scene.IsLoaded ? "loaded" : "not loaded") + " " + (scene != null ? (int)scene.ActualWidth + "x" + (int)scene.ActualHeight : ""));
             scenePanel.Children.Insert(scenePanel.Children.IndexOf(host) + 1, cover);   // over the backdrop, under the logo
             host.Opacity = 1;
-            host.Dispatcher.BeginInvoke(new Action(() => cover.FadeOut(900)), DispatcherPriority.ApplicationIdle);
+            // the fade starts once the scene has its size and its first frame has been drawn: started earlier (at idle), on a
+            // big library the first frame came only after the layout, when the cover had faded already (the wallpaper snapped in)
+            AfterFirstFrame(scene, () => cover.FadeOut(900));
+        }
+
+        private static void AfterFirstFrame(FrameworkElement el, Action act)
+        {
+            if (el == null) { act(); return; }
+            Action whenSized = () =>
+            {
+                int frames = 0;
+                EventHandler tick = null;
+                tick = (s, e) => { if (++frames < 2) return; CompositionTarget.Rendering -= tick; HomeNav.Log("backdrop fade-in: starting after the first frame"); act(); };
+                CompositionTarget.Rendering += tick;
+            };
+            if (el.ActualWidth > 1) { whenSized(); return; }
+            bool done = false;
+            SizeChangedEventHandler sized = null;
+            sized = (s, e) => { if (done || el.ActualWidth <= 1) return; done = true; el.SizeChanged -= sized; whenSized(); };
+            el.SizeChanged += sized;
+            // and never stuck: if no size comes (an odd start), the cover goes after a while anyway
+            var guard = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+            guard.Tick += (s, e) => { guard.Stop(); if (done) return; done = true; el.SizeChanged -= sized; act(); };
+            guard.Start();
         }
         private static Grid BuildScene()
         {
