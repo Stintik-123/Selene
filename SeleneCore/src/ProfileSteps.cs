@@ -232,14 +232,24 @@ namespace Selene
                 Viewport.OpacityMask = mask;
             }
 
+            private double offset;   // how far the grid is scrolled now
+
             public void Reveal(int index)
             {
                 int rows = (Panel.Children.Count + columns - 1) / columns;
                 double total = rows * rowHeight;
                 Panel.Width = Viewport.Width;
                 double rowTop = (index / columns) * rowHeight;
-                double y = -Math.Max(0, Math.Min(rowTop - rowHeight, total + 20 - height + 110));   // the last row can rise above the fade
-                if (total <= height) y = 0;
+                // scrolls only when the focused row is out of view (keeping it one row from the top slid the whole grid on
+                // every move between the first rows); the fades at the top (140) and bottom (150) count as out of view
+                double cur = offset;
+                double viewTop = cur + (cur > 0 ? 140 : 0), viewBottom = cur + height - 150;
+                if (rowTop < viewTop) cur = rowTop <= rowHeight ? 0 : rowTop - 140;
+                else if (rowTop + rowHeight > viewBottom) cur = rowTop + rowHeight - (height - 150);
+                cur = Math.Max(0, Math.Min(cur, total + 20 - height + 110));   // the last row can rise above the fade
+                if (total <= height) cur = 0;
+                offset = cur;
+                double y = -cur;
                 // at the top nothing fades; scrolled, the row above melts away under the title like the bottom does
                 topSolid.BeginAnimation(GradientStop.OffsetProperty, new DoubleAnimation(y < 0 ? 140 / height : 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() });
                 var glide = new DoubleAnimation(y, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ui.Out() };
