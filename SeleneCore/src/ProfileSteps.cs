@@ -124,7 +124,6 @@ namespace Selene
             {
                 if (ReferenceEquals(page, steps[step].Root)) continue;
                 page.BeginAnimation(UIElement.OpacityProperty, null);
-                page.CacheMode = null;
                 body.Children.Remove(page);
             }
             var old = steps[step].Root;
@@ -141,10 +140,10 @@ namespace Selene
             var oldStep = old;
             body.Dispatcher.BeginInvoke(new Action(() =>
             {
-                oldStep.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
-                now.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
-                Ui.Slide(oldStep, 0, -dir * 70, 1, 0, 220, () => { body.Children.Remove(oldStep); oldStep.CacheMode = null; });
-                Ui.Slide(now, dir * 70, 0, 0, 1, 300, () => now.CacheMode = null);
+                // (no page-wide cache: the pages animate inside while sliding (the focused tile, the chips, the grid), and each of those
+                // redrew the whole cached page every frame; the tiles and the preview are cached on their own)
+                Ui.Slide(oldStep, 0, -dir * 70, 1, 0, 220, () => body.Children.Remove(oldStep));
+                Ui.Slide(now, dir * 70, 0, 0, 1, 300);
                 Ui.MeasureFrames("profile step slide", 340);
             }), DispatcherPriority.Background);
         }
@@ -271,6 +270,7 @@ namespace Selene
             var frame = new Border
             {
                 Child = host, CornerRadius = new CornerRadius(16), BorderBrush = Ink.Brush("SeleneInkColor", 0.25), BorderThickness = new Thickness(1),
+                CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false },   // its big shadow drawn once, not on every frame of a slide
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black }
             };
             var col = new StackPanel();

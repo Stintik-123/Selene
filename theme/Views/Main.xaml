@@ -427,7 +427,7 @@
                                         </FadeImage.Style>
                                     </FadeImage>
                                     </Grid>
-                                    <Border x:Name="SeleneHubShadeLeft" Background="{DynamicResource SeleneScrimBrush}" Opacity="0">
+                                    <Border x:Name="SeleneHubShadeLeft" Background="{DynamicResource SeleneScrimBrush}" Opacity="0.3">
                                         <Border.OpacityMask>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                                 <GradientStop Color="#E0000000" Offset="0"/>

@@ -16,6 +16,18 @@ namespace Selene
         private const double Base = 0.3, Max = 0.88;
         private static double wallpaperNeed = 0;
         private static ImageSource wallpaperImg;
+        private static double shadeStrength = Base;
+
+        // how much the home's shading darkens the spot at (x, y), both 0..1 across the screen (the three shades' masks)
+        public static double ShadeAt(double x, double y)
+        {
+            Func<double, double, double, double, double, double> ramp = (v, a, av, b, bv) => v <= a ? av : v >= b ? bv : av + (bv - av) * (v - a) / (b - a);
+            double left = x < 0.5 ? ramp(x, 0, 0.88, 0.5, 0.5) : ramp(x, 0.5, 0.5, 1, 0.15);
+            double bottom = ramp(y, 0.4, 0, 1, 0.9);
+            double top = y < 0.1 ? ramp(y, 0, 0.9, 0.1, 0.44) : ramp(y, 0.1, 0.44, 0.26, 0);
+            double s = shadeStrength;
+            return 1 - (1 - left * s) * (1 - bottom * s) * (1 - top * s);
+        }
         // the background changed (another wallpaper, game art came or went): text that adapts to it measures again
         public static event Action Changed;
         public static ImageSource WallpaperImage { get { return wallpaperImg; } }
@@ -96,11 +108,12 @@ namespace Selene
             {
                 var shade = HomeNav.FindByName(w, name) as UIElement;
                 if (shade == null) continue;
-                // like a console: soft shading at the top (the bar, the clock) and the bottom (the hints) only, as deep as the picture
-                // needs; nothing from the left (the middle is open, readable text has its own halo)
-                double to = name == "SeleneHubShadeLeft" ? 0 : strength;
+                // like the PS5's home: a gradient from the left fading out to the right, plus soft shading at the top (the bar, the
+                // clock) and the bottom (the hints), all as deep as the picture needs
+                double to = strength;
                 shade.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(450)) { EasingFunction = ease });
             }
+            shadeStrength = strength;
             var changed = Changed;
             if (changed != null) changed();
         }

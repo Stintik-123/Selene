@@ -261,16 +261,20 @@ namespace Selene
             current = next;
             ApplyOverlay(next.Overlay, next.OverlayShade);
             if (!next.Overlay) HomeNav.ClearSelectedGame();
+            // the new screen is set up first (its grids, pictures, preview), then both slide: set up inside the slide's first frame,
+            // the work made it stutter (Selene settings -> Change theme)
+            next.Root.Opacity = 0;
             stage.Children.Add(next.Root);
-            if (old != null)
-            {
-                old.Hidden();
-                var r = old.Root;
-                r.IsHitTestVisible = false;
-                Ui.Slide(r, 0, -dir * 90, r.Opacity, 0, 240, () => stage.Children.Remove(r));
-            }
-            Ui.Slide(next.Root, dir * 90, 0, 0, 1, 320);
+            if (old != null) { old.Hidden(); old.Root.IsHitTestVisible = false; }
+            Ui.HoldVisuals(400);
             next.Shown();
+            var leaving = old != null ? old.Root : null;
+            stage.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (leaving != null) Ui.Slide(leaving, 0, -dir * 90, leaving.Opacity, 0, 240, () => stage.Children.Remove(leaving));
+                Ui.Slide(next.Root, dir * 90, 0, 0, 1, 320);
+                Ui.MeasureFrames("screen slide", 360);
+            }), System.Windows.Threading.DispatcherPriority.Background);
             if (!scene.IsKeyboardFocusWithin) scene.Dispatcher.BeginInvoke(new Action(() => { if (IsActive) Keyboard.Focus(scene); }), System.Windows.Threading.DispatcherPriority.Input);
         }
 

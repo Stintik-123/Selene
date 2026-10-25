@@ -84,14 +84,14 @@ namespace Selene
             {
                 if (t.Effect is DropShadowEffect) t.Effect = null;   // (the earlier halo made the text itself soft)
                 if (!Features.On("textshadow")) { Plain(t); return; }
-                double bright = BrightnessBehind(t, PictureBehind(t));
+                double bright = BrightnessBehind(t, PictureBehind(t)) * (1 - ShadingBehind(t));   // as it shows, under the home's shading
                 // 0 = reads fine .. 1 = bright behind it
                 double k = Math.Max(0, Math.Min(1, (bright - 0.32) / 0.40));
                 var q = quiet.GetValue(t, x => { var b = x.Foreground as SolidColorBrush; return new Quiet { Opacity = b != null && b.Opacity < 0.8 ? b.Opacity : -1 }; });
                 double was = q.Opacity;
                 if (was >= 0) t.Foreground = Ink.Brush("SeleneInkColor", was + (0.95 - was) * k);
                 if (k < 0.08 || !HaloOn) { Plain(t); return; }   // readable as it is (or the halo off): nothing added
-                Halo(t, 10 + 26 * k, 0.55 + 0.45 * k, 1 + (int)Math.Round(2 * k * k));   // wider, darker and denser over brighter spots
+                Halo(t, 8 + 18 * k, 0.35 + 0.4 * k, 1 + (int)Math.Round(k * k));   // a light touch, a little more over brighter spots
             }
             catch (Exception ex) { HomeNav.Log("readable: " + ex.Message); }
         }
@@ -172,6 +172,24 @@ namespace Selene
         // each text's own quietness (a grey hint's opacity; -1 for full-strength text), remembered before it is brightened
         private sealed class Quiet { public double Opacity; }
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TextBlock, Quiet> quiet = new System.Runtime.CompilerServices.ConditionalWeakTable<TextBlock, Quiet>();
+
+        // how much the home's own shading (the left gradient, the top and bottom) already darkens the spot behind a text on the home
+        private static double ShadingBehind(TextBlock t)
+        {
+            for (DependencyObject d = t; d != null; d = VisualTreeHelper.GetParent(d))
+            {
+                var fe = d as FrameworkElement;
+                if (fe == null) continue;
+                if (fe.Name == "SeleneLibrary") return 0;
+                if (fe.Name != "WelcomeHubOverlay") continue;
+                var main = Application.Current.MainWindow;
+                var root = main != null ? main.Content as FrameworkElement : null;
+                if (root == null || root.ActualWidth < 1 || !t.IsDescendantOf(root)) return 0;
+                var r = t.TransformToVisual(root).TransformBounds(new Rect(0, 0, t.ActualWidth, t.ActualHeight));
+                return Contrast.ShadeAt((r.Left + r.Width / 2) / root.ActualWidth, (r.Top + r.Height / 2) / root.ActualHeight);
+            }
+            return 0;
+        }
 
         // the picture behind a text: Collection's own (the wallpaper while it has no games), else the home's
         private static ImageSource PictureBehind(TextBlock t)
