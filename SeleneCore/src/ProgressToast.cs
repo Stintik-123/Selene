@@ -155,8 +155,10 @@ namespace Selene
                 // in: from beyond the right edge of the screen, easing into place, with a sound
                 leaving = false;
                 shownAt = DateTime.Now;
+                // owned by Playnite's window: above Playnite only, behind other programs after Alt+Tab, back with Playnite (it
+                // stayed over everything as a topmost window)
+                if (!toast.IsVisible && !ReferenceEquals(toast.Owner, main)) toast.Owner = main;
                 if (!toast.IsVisible) toast.Show();
-                KeepOnTop();
                 // in, as a console does it: a quick fade with a short drift from the right
                 slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
                 card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
@@ -219,7 +221,7 @@ namespace Selene
             toast = new Window
             {
                 WindowStyle = WindowStyle.None, AllowsTransparency = true, Background = Brushes.Transparent, ResizeMode = ResizeMode.NoResize,
-                Topmost = true, ShowInTaskbar = false, ShowActivated = false, Focusable = false, SizeToContent = SizeToContent.Height,
+                Topmost = false, ShowInTaskbar = false, ShowActivated = false, Focusable = false, SizeToContent = SizeToContent.Height,
                 Title = "SeleneNotification", Content = root
             };
             toast.SourceInitialized += (s, e) =>
@@ -230,7 +232,11 @@ namespace Selene
             poll = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
             poll.Tick += (s, e) =>
             {
-                HideProgress(); KeepOnTop(); Update();
+                HideProgress(); Update();
+                // Playnite hidden (the tray) or minimized: the card goes with it, back if the task still runs when it returns
+                var owner = Application.Current.MainWindow;
+                if (owner != null && (!owner.IsVisible || owner.WindowState == WindowState.Minimized)) { if (toast.IsVisible) toast.Hide(); }
+                else if (owner != null && source != null && !toast.IsVisible && !leaving) toast.Show();
                 var mainNow = Application.Current.MainWindow;
                 if (mainNow != null) { UndimNow(mainNow); HoldDim(mainNow, OnlyProgressOpen(mainNow)); }   // a real dialog: Playnite's dim back
                 // never a blank home behind the card: if it was blanked anyway, it comes back

@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Progress notifications stay with Playnite: after Alt+Tab to another program the card goes behind it with Playnite (it stayed on top of everything).
 - Readable text: the soft halo around the letters is drawn behind the words as a picture, so the text itself stays sharp (as an effect on the letters it made them look blurry).
 - No games at all: the filter tabs are hidden on Spotlight and in Collection.
 - Progress notifications: no flicker before the card (Playnite's own dim layer is held off while it shows).
