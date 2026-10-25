@@ -48,7 +48,8 @@ namespace Selene
         private readonly DispatcherTimer hideControls = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         private readonly DispatcherTimer playerClock = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
         private MediaElement video;
-        private WebTrailer clip;   // the browser playing a clip Playnite's own player couldn't (AV1, VP9)
+        private WebTrailer clip;
+        private ClipAudio clipSound;   // its sound, played alongside (the browser can't decode a clip's AAC sound)   // the browser playing a clip Playnite's own player couldn't (AV1, VP9)
         private int index, firstRow;
         private bool viewing, closed, paused, controlsShown;
         private double clipAt, clipLength;
@@ -232,6 +233,7 @@ namespace Selene
             {
                 // the sign follows the press at once (it waited for the player's next report, half a second away)
                 clip.TogglePause();
+                if (clipSound != null) clipSound.Toggle();
                 paused = !paused;
                 pressDecides = DateTime.Now.AddMilliseconds(700);
                 PausedLook(paused);
@@ -428,7 +430,8 @@ namespace Selene
                     var path = c.Path;
                     clip = WebTrailer.CreateFile(path, null);
                     if (clip == null) { viewerDate.Text = "This clip can't be played here."; return; }
-                    clip.Progress = (at, length, isPaused) => { if (viewing && clip != null) ShowProgress(at, length, isPaused); };
+                    clipSound = ClipAudio.For(path);
+                    clip.Progress = (at, length, isPaused) => { if (viewing && clip != null) { ShowProgress(at, length, isPaused); if (clipSound != null) clipSound.Sync(at, isPaused); } };
                     viewer.Children.Insert(1, clip.View);
                 };
                 viewer.Children.Insert(1, me);
@@ -460,6 +463,7 @@ namespace Selene
         {
             playerClock.Stop();
             if (clip != null) { clip.Stop(); clip = null; }
+            if (clipSound != null) { clipSound.Stop(); clipSound = null; }
             if (video == null) return;
             try { video.Stop(); video.Close(); } catch { }
             viewer.Children.Remove(video);

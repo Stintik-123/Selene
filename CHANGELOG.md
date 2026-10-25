@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Clips have sound: the browser that plays the NVIDIA app's AV1 clips can't decode their AAC sound, so Windows decodes the sound track once (kept in the temp folder for two days) and Selene plays it in step with the picture: pause, play, seeking and looping follow it.
 - Notification cards are sharp: on whole pixels (a card as wide as its words had soft text); the new-version card fits its words.
 - New version notice (switch: Start-up): once a day Selene checks GitHub for a newer release and says so in a notification, with where to get it (GitHub: Playnite's add-on updates don't list Selene yet). Each version is mentioned once; nothing is downloaded by itself.
 - Add-ons' progress tasks (Extra Metadata downloading logos and trailers...) now run behind Selene's notification card directly (every add-on, also when it starts the task right after a library update, and Playnite's own tasks): Playnite no longer builds and shows its progress window for each one, which froze everything moving for a moment just before the card.
