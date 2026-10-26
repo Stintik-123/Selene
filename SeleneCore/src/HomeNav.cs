@@ -1261,7 +1261,9 @@ namespace Selene
                     if (row.SelectedIndex == idx) { again.Stop(); return; }   // (stops at once once right: a move of yours isn't undone)
                     Log("find a game: the selection went back (" + row.SelectedIndex + "), again");
                     wantedFocusIndex = idx;
-                    try { PlaceAtLeft(row, idx); } finally { wantedFocusIndex = -1; }
+                    try { PlaceAtLeft(row, idx); }
+                    catch (Exception ex) { again.Stop(); Log("find a game: again failed: " + ex.Message); }
+                    finally { wantedFocusIndex = -1; }
                 };
                 again.Start();
             }), System.Windows.Threading.DispatcherPriority.Background);
@@ -1289,8 +1291,7 @@ namespace Selene
             var panel = FindChild<VirtualizingStackPanel>(row);
             var shift = panel != null ? panel.RenderTransform as TranslateTransform : null;
             if (shift != null && !shift.IsFrozen) { shift.BeginAnimation(TranslateTransform.XProperty, null); shift.X = 0; }   // no glide left over
-            row.SelectedIndex = idx;   // (the focus alone didn't take while another screen still held it)
-            if (c != null) c.Focus();
+            if (c != null) c.Focus(); else row.SelectedIndex = idx;   // (never set while the row's own selection is changing: that crashed Playnite)
             if (sv != null && Math.Abs(sv.HorizontalOffset - offset) > 0.5) { sv.ScrollToHorizontalOffset(offset); row.UpdateLayout(); }   // once more with the focus in the row
             ScheduleTitle(row, 230);
             EnsureTileCaches(row);
@@ -3544,7 +3545,7 @@ namespace Selene
             {
                 if ((DateTime.Now - lastLibraryRefresh).TotalMinutes < 10) return;
                 // the automatic ones never under the login / profile setup (add-ons' progress screens would cover it)
-                if (why != "menu" && LoginScene.IsActive) { Log("library refresh (" + why + ") skipped: login is up"); return; }
+                if (why != "menu" && LoginScene.InSetup) { Log("library refresh (" + why + ") skipped: login is up"); return; }
                 LocalGames.Scan();  // games installed outside a store (the game folders) -> library, before the refresh's new-game setup
                 var w = Application.Current.MainWindow;
                 var vm = w != null ? w.DataContext : null;

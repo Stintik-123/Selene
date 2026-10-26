@@ -22,6 +22,7 @@ namespace Selene
         private readonly List<List<Tile>> tiles = new List<List<Tile>>();
         private readonly List<string> rowNames = new List<string>();
         private readonly List<TranslateTransform> rowShift = new List<TranslateTransform>();
+        private readonly List<int> rowAlong = new List<int>();   // covers each row has slid by (kept when the focus leaves it)
         private readonly Grid page = new Grid { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
         private readonly TranslateTransform pageShift = new TranslateTransform();
         private readonly Image hero = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
@@ -116,6 +117,7 @@ namespace Selene
             double h = Visible * RowPitch + 60;
             var fade = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(0, h) };
             fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0));
+            fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 22 / h));
             fade.GradientStops.Add(new GradientStop(Colors.Black, 30 / h));
             fade.GradientStops.Add(new GradientStop(Colors.Black, (h - 50) / h));
             fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1));
@@ -198,6 +200,7 @@ namespace Selene
             tiles.Add(list);
             rowNames.Add(title);
             rowShift.Add(shift);
+            rowAlong.Add(0);
             GameFacts.FillCovers(games, list, 300);
         }
 
@@ -214,11 +217,19 @@ namespace Selene
                 firstRow = first;
                 pageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-first * RowPitch, TimeSpan.FromMilliseconds(animate ? 280 : 0)) { EasingFunction = Ui.Out() });
             }
-            // the focused row slides along once the focus nears its right end
+            // the focused row slides only when the focus reaches an edge of what's on screen (one cover kept beyond it), and
+            // keeps where it was when the focus leaves it
             if (zone < rowShift.Count)
             {
-                int along = Math.Max(0, Math.Min(col - (Across - 2), rows[zone].Count - Across));
-                rowShift[zone].BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-along * Pitch, TimeSpan.FromMilliseconds(animate ? 240 : 0)) { EasingFunction = Ui.Out() });
+                int along = rowAlong[zone], last = Math.Max(0, rows[zone].Count - Across);
+                if (col - along > Across - 2) along = col - (Across - 2);
+                else if (col - along < 1) along = col - 1;
+                along = Math.Max(0, Math.Min(along, last));
+                if (along != rowAlong[zone] || !animate)
+                {
+                    rowAlong[zone] = along;
+                    rowShift[zone].BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-along * Pitch, TimeSpan.FromMilliseconds(animate ? 240 : 0)) { EasingFunction = Ui.Out() });
+                }
             }
             heroLater.Stop();
             heroLater.Start();
@@ -272,8 +283,10 @@ namespace Selene
                 {
                     int next = zone + (b == "DPadDown" ? 1 : -1);
                     if (next < 0 || next >= rows.Count) return;
+                    // the cover in the same place on screen in the next row (no sideways jump while the page glides)
+                    int slot = col - rowAlong[zone];
                     zone = next;
-                    col = Math.Min(col, rows[zone].Count - 1);
+                    col = Math.Max(0, Math.Min(rowAlong[zone] + slot, rows[zone].Count - 1));
                     Ui.Tick();
                     ShowFocus(true);
                     return;
