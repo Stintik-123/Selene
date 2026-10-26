@@ -306,7 +306,7 @@ namespace Selene
         // ---- removing, uninstalling: asked first ----
         private void AskRemove()
         {
-            ask = new Dialog(Ui.Icon(0xe5cd), "Remove " + game.Name + "?", "It leaves your library. The game itself stays installed; a library update may bring it back.", "Remove", "Keep it", () =>
+            ask = new Dialog(Ui.Icon(0xE711) /* Segoe MDL2: cancel */, "Remove " + game.Name + "?", "It leaves your library. The game itself stays installed; a library update may bring it back.", "Remove", "Keep it", () =>
             {
                 ask = null;
                 var id = game.Id;
@@ -317,7 +317,7 @@ namespace Selene
 
         private void AskUninstall()
         {
-            ask = new Dialog(Ui.Icon(0xe872), "Uninstall " + game.Name + "?", "Its store or launcher takes it off this PC.", "Uninstall", "Keep it", () =>
+            ask = new Dialog(Ui.Icon(0xE74D) /* Segoe MDL2: delete */, "Uninstall " + game.Name + "?", "Its store or launcher takes it off this PC.", "Uninstall", "Keep it", () =>
             {
                 ask = null;
                 var id = game.Id;
