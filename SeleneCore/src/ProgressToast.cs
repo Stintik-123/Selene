@@ -50,13 +50,15 @@ namespace Selene
         // a progress card's shape (wide, one row: icon tile and words) or the session card's (Legacy's: words left, logo right)
         private static void Shape(bool session)
         {
-            card.Width = session ? SessionWidth : CardWidth;
+            // a task's card is as wide as its words (a fixed width left a long empty end after short ones), up to the usual width
+            card.Width = session ? SessionWidth : double.NaN;
+            card.MaxWidth = session ? double.PositiveInfinity : CardWidth;
             card.Height = session ? SessionHeight : CardHeight;
-            card.Padding = session ? new Thickness(0) : new Thickness(16, 0, 22, 0);
+            card.Padding = session ? new Thickness(0) : new Thickness(16, 0, 28, 0);
             card.CornerRadius = new CornerRadius(session ? 14 : 10);
             card.Background = session ? sessionGlass : glass;
             if (!session && !ReferenceEquals(card.Child, row)) card.Child = row;
-            layer.Width = card.Width + ShadowRoom + Edge;
+            layer.Width = session ? card.Width + ShadowRoom + Edge : double.NaN;
             text.HorizontalAlignment = HorizontalAlignment.Left;
             titleLine.HorizontalAlignment = HorizontalAlignment.Left;
             words.HorizontalAlignment = HorizontalAlignment.Left;

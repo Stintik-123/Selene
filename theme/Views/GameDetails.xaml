@@ -53,6 +53,19 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="FontFamily" Value="Segoe UI"/>
     </Style>
+    <Style x:Key="SeleneHltbValue" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource SeleneInkBrush}"/>
+        <Setter Property="FontSize" Value="17"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
+    </Style>
+    <Style x:Key="SeleneHltbLabel" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource SeleneInk60Brush}"/>
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
+    </Style>
     <Style x:Key="SeleneStatValue" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource SeleneInkBrush}"/>
         <Setter Property="FontSize" Value="21"/>
@@ -243,8 +256,9 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <!-- how long it takes to beat (the HowLongToBeat add-on's numbers for this game; hidden without the add-on or data) -->
-                                <StackPanel x:Name="SeleneHltb" Orientation="Horizontal" Margin="4,22,0,0">
+                                <!-- how long it takes to beat (the HowLongToBeat add-on's times for this game; hidden without the add-on or data):
+                                     one quiet line under the stats, each time with its words after it -->
+                                <StackPanel x:Name="SeleneHltb" Margin="4,20,0,0">
                                     <StackPanel.Style>
                                         <Style TargetType="StackPanel">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -255,7 +269,9 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
-                                    <StackPanel Margin="0,0,28,0">
+                                    <TextBlock Text="TIME TO BEAT" Style="{StaticResource SeleneStatLabel}" Margin="0,0,0,6"/>
+                                    <StackPanel Orientation="Horizontal">
+                                    <StackPanel Orientation="Horizontal">
                                         <StackPanel.Style>
                                             <Style TargetType="StackPanel">
                                                 <Style.Triggers>
@@ -264,10 +280,10 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </StackPanel.Style>
-                                        <TextBlock Text="MAIN STORY" Style="{StaticResource SeleneStatLabel}"/>
-                                        <TextBlock Text="{PluginSettings Plugin=HowLongToBeat, Path=MainStoryFormat}" Style="{StaticResource SeleneStatValue}"/>
+                                        <TextBlock Text="{PluginSettings Plugin=HowLongToBeat, Path=MainStoryFormat}" Style="{StaticResource SeleneHltbValue}"/>
+                                        <TextBlock Text="main story" Style="{StaticResource SeleneHltbLabel}" Margin="7,0,0,0"/>
                                     </StackPanel>
-                                    <StackPanel Margin="0,0,28,0">
+                                    <StackPanel Orientation="Horizontal">
                                         <StackPanel.Style>
                                             <Style TargetType="StackPanel">
                                                 <Style.Triggers>
@@ -276,10 +292,11 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </StackPanel.Style>
-                                        <TextBlock Text="MAIN + EXTRA" Style="{StaticResource SeleneStatLabel}"/>
-                                        <TextBlock Text="{PluginSettings Plugin=HowLongToBeat, Path=MainExtraFormat}" Style="{StaticResource SeleneStatValue}"/>
+                                        <TextBlock Text="&#x00B7;" Style="{StaticResource SeleneHltbLabel}" Margin="14,0,14,0"/>
+                                        <TextBlock Text="{PluginSettings Plugin=HowLongToBeat, Path=MainExtraFormat}" Style="{StaticResource SeleneHltbValue}"/>
+                                        <TextBlock Text="with extras" Style="{StaticResource SeleneHltbLabel}" Margin="7,0,0,0"/>
                                     </StackPanel>
-                                    <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
                                         <StackPanel.Style>
                                             <Style TargetType="StackPanel">
                                                 <Style.Triggers>
@@ -288,8 +305,10 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </StackPanel.Style>
-                                        <TextBlock Text="COMPLETIONIST" Style="{StaticResource SeleneStatLabel}"/>
-                                        <TextBlock Text="{PluginSettings Plugin=HowLongToBeat, Path=CompletionistFormat}" Style="{StaticResource SeleneStatValue}"/>
+                                        <TextBlock Text="&#x00B7;" Style="{StaticResource SeleneHltbLabel}" Margin="14,0,14,0"/>
+                                        <TextBlock Text="{PluginSettings Plugin=HowLongToBeat, Path=CompletionistFormat}" Style="{StaticResource SeleneHltbValue}"/>
+                                        <TextBlock Text="completionist" Style="{StaticResource SeleneHltbLabel}" Margin="7,0,0,0"/>
+                                    </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
 
