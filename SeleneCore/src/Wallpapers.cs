@@ -25,6 +25,12 @@ namespace Selene
             if (string.IsNullOrEmpty(file) || !File.Exists(file)) return null;
             try
             {
+                // never enlarged while decoding (a 64 px icon decoded at 300 came out smeared); the screen scales it instead
+                using (var fs = File.OpenRead(file))
+                {
+                    var head = System.Windows.Media.Imaging.BitmapFrame.Create(fs, System.Windows.Media.Imaging.BitmapCreateOptions.DelayCreation, System.Windows.Media.Imaging.BitmapCacheOption.None);
+                    if (head.PixelWidth > 0 && head.PixelWidth <= width) width = 0;
+                }
                 var bmp = new System.Windows.Media.Imaging.BitmapImage();
                 bmp.BeginInit();
                 bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;

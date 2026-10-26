@@ -92,7 +92,7 @@ namespace Selene
             var l = new Level { Title = "Game options" };
             if (game.IsInstalled) l.Entries.Add(new Entry { Label = "Play", Icon = 0xe037, Run = () => { var id = game.Id; LoginScene.FinishThen(() => HomeNav.StartGameNow(id)); } });
             else l.Entries.Add(new Entry { Label = "Install", Icon = 0xe2c4, Run = () => { var id = game.Id; LoginScene.FinishThen(() => api.InstallGame(id)); } });
-            if (move != null) { var m = move; l.Entries.Add(new Entry { Label = "Move", Sub = "Arrange it on Spotlight's row: Left / Right, then A.", Icon = 0xe89f, Run = () => LoginScene.FinishThen(m) }); }
+            if (move != null) { var m = move; l.Entries.Add(new Entry { Label = "Move", Sub = "Change its place on Spotlight.", Icon = 0xe8d4, Run = () => LoginScene.FinishThen(m) }); }
             l.Entries.Add(new Entry { Label = "Favorite", Sub = "On your Favorites tab.", Icon = 0xe838, Toggle = () => game.Favorite, Run = () => { game.Favorite = !game.Favorite; Save(); } });
             l.Entries.Add(new Entry { Label = "Hidden", Sub = "Hidden games stay out of your lists.", Icon = 0xe8f5, Toggle = () => game.Hidden, Run = () => { game.Hidden = !game.Hidden; Save(); } });
             l.Entries.Add(new Entry { Label = "HDR", Sub = "Windows' HDR switched on while this game runs.", Icon = 0xe3ee, Toggle = () => game.EnableSystemHdr, Run = () => { game.EnableSystemHdr = !game.EnableSystemHdr; Save(); } });

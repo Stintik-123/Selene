@@ -95,10 +95,21 @@ namespace Selene
             var g = new Grid { Margin = new Thickness(22) };
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            var icon = new Border { Width = 150, Height = 150, CornerRadius = new CornerRadius(16), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Background = Ink.Brush("SeleneInkColor", 0.08) };
-            icon.Child = AchievementsData.TrophyIcon(e.Grade ?? "Bronze", 64);
+            // 128: a whole multiple of the 64 px icons many stores give, so those are doubled pixel for pixel, sharp
+            var icon = new Border { Width = 128, Height = 128, CornerRadius = new CornerRadius(14), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Background = Ink.Brush("SeleneInkColor", 0.08) };
+            icon.Child = AchievementsData.TrophyIcon(e.Grade ?? "Bronze", 56);
             ((TextBlock)icon.Child).HorizontalAlignment = HorizontalAlignment.Center;
-            if (e.Icon != null) Ui.LoadInOrder(new List<string> { e.Icon }, 300, (k, pic) => icon.Child = new Border { Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } });
+            if (e.Icon != null) Ui.LoadInOrder(new List<string> { e.Icon }, 256, (k, pic) =>
+            {
+                var bmp = pic as System.Windows.Media.Imaging.BitmapSource;
+                var brush = new ImageBrush(pic) { Stretch = Stretch.UniformToFill };
+                var face = new Border { Background = brush };
+                bool doubled = bmp != null && bmp.PixelWidth < 128 && 128 % bmp.PixelWidth == 0;
+                var mode = doubled ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality;
+                RenderOptions.SetBitmapScalingMode(brush, mode);
+                RenderOptions.SetBitmapScalingMode(face, mode);
+                icon.Child = face;
+            });
             g.Children.Add(icon);
             var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(20, 0, 0, 0) };
             Grid.SetColumn(words, 1);
