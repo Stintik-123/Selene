@@ -86,12 +86,19 @@ namespace Selene
             this.back = back;
             this.shot = shot;
             includeShot = shot != null;
-            var head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(120, 90, 0, 0) };
-            head.Children.Add(new TextBlock { Text = "Report a problem", FontSize = 42, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor") });
-            stepLine = new TextBlock { FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(2, 6, 0, 0) };
+            var head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(120, 80, 0, 0) };
+            // Selene's mark, glowing, beside the title (as on Selene settings)
+            var titleRow = new StackPanel { Orientation = Orientation.Horizontal };
+            var mark = Brand.Mark(64, true);
+            mark.Margin = new Thickness(0, 0, 16, 0);
+            mark.VerticalAlignment = VerticalAlignment.Center;
+            titleRow.Children.Add(mark);
+            titleRow.Children.Add(new TextBlock { Text = "Report a problem", FontSize = 42, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+            head.Children.Add(titleRow);
+            stepLine = new TextBlock { FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(82, 4, 0, 0) };
             head.Children.Add(stepLine);
             if (shot == null && Features.On("reportchord"))
-                head.Children.Add(new TextBlock { Text = "Tip: click both sticks in together anywhere to report with a picture of the screen.", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.45), Margin = new Thickness(2, 6, 0, 0) });
+                head.Children.Add(new TextBlock { Text = "Tip: click both sticks in together anywhere to report with a picture of the screen.", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.45), Margin = new Thickness(82, 6, 0, 0) });
             header = head;
             Root.Children.Add(head);
             Root.Children.Add(stage);
@@ -178,15 +185,15 @@ namespace Selene
 
             // or type on a phone: its code, ready as the page opens
             var side = new StackPanel { Width = 300, Margin = new Thickness(56, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            var head = new StackPanel { Orientation = Orientation.Horizontal };
+            var head = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
             head.Children.Add(new TextBlock { Text = Ui.Icon(0xe32c), FontFamily = Ui.Icons, FontSize = 26, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
             head.Children.Add(new TextBlock { Text = "Or type on your phone", FontSize = 22, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
             side.Children.Add(head);
             phoneCode = new Image { Width = 220, Height = 220 };
             RenderOptions.SetEdgeMode(phoneCode, EdgeMode.Aliased);
-            phoneTile = new Border { Child = phoneCode, Background = Brushes.White, CornerRadius = new CornerRadius(18), Padding = new Thickness(8), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 18, 0, 0), Opacity = 0 };
+            phoneTile = new Border { Child = phoneCode, Background = Brushes.White, CornerRadius = new CornerRadius(18), Padding = new Thickness(8), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 18, 0, 0), Opacity = 0 };
             side.Children.Add(phoneTile);
-            phoneLine = new TextBlock { FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 14, 0, 0) };
+            phoneLine = new TextBlock { FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 14, 0, 0) };
             side.Children.Add(phoneLine);
             Grid.SetColumn(side, 1);
             page.Children.Add(side);

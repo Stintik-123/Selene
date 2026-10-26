@@ -53,6 +53,7 @@ namespace Selene
         private int index, firstRow;
         private bool viewing, closed, paused, controlsShown;
         private double clipAt, clipLength;
+        private StackPanel words;   // the game's name and date over the viewer
         private readonly string openPath;   // opened from the card's pictures: straight to this one
         private readonly Image hero = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
         private readonly Image heroBack = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
@@ -131,7 +132,7 @@ namespace Selene
             viewer.Children.Add(picture);
             var shade = new Border { IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Bottom, Height = 300, Background = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Color.FromArgb(0, 0, 0, 0), 0), new GradientStop(Color.FromArgb(0xB8, 0, 0, 0), 1) }, 90) };
             controls.Children.Add(shade);
-            var words = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(Side, 0, 0, 150) };
+            words = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(Side, 0, 0, 150) };
             viewerName = new TextBlock { FontSize = 30, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Brushes.White, MaxWidth = 1200, TextTrimming = TextTrimming.CharacterEllipsis };
             viewerDate = new TextBlock { FontSize = 17, FontFamily = Ui.Body, Foreground = new SolidColorBrush(Color.FromArgb(0xB3, 0xFF, 0xFF, 0xFF)), Margin = new Thickness(1, 4, 0, 0) };
             words.Children.Add(viewerName);
@@ -380,6 +381,7 @@ namespace Selene
             scrubTime.Visibility = Visibility.Collapsed;
             jumpHint.Visibility = Visibility.Collapsed;
             if (clip != null) clip.HidePreview();
+            if (words.Opacity < 1) Ui.Fade(words, 1, 160);
         }
 
         private void StartScrubClock()
@@ -439,6 +441,8 @@ namespace Selene
             {
                 double h = viewer.ActualHeight > 0 ? viewer.ActualHeight : 1080, vw = viewer.ActualWidth > 0 ? viewer.ActualWidth : 1920;
                 clip.Preview(t, x / vw, (h - BarBottom - 6 - 40) / h);   // its bottom just over the time above the bar
+                // the preview is drawn in the player, under the game's name and date: those step aside while it shows
+                if (words.Opacity > 0.99) Ui.Fade(words, 0, 120);
             }
             ShowControls(true);
         }

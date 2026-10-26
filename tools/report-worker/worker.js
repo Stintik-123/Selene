@@ -18,7 +18,7 @@ const PLACES = [
 const MAX_REQUEST = 3_000_000;    // bytes, logs and picture included
 const MAX_PICTURE = 2_000_000;    // base64 characters
 const MAX_BODY = 60_000;          // GitHub allows 65,536 characters in an issue body
-const PER_IP_HOUR = 3;
+const PER_IP_HOUR = 5;
 const PER_DAY = 60;
 const DRAFTS_PER_IP_HOUR = 10;
 
@@ -182,64 +182,86 @@ async function phonePage(env, id) {
   const done = saved ? null : await env.STORE.get("done:" + id);
   const r = saved ? JSON.parse(saved) : null;
   const state = JSON.stringify({ id, category: r ? r.category : null, place: r ? r.place : null, done: done ? JSON.parse(done) : null });
-  return new Response(PAGE.replace("__STATE__", state.replace(/</g, "\\u003c")), { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+  return new Response(PAGE.replace("__MARK__", JSON.stringify(MARK)).replace("__STATE__", state.replace(/</g, "\\u003c")), { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
 }
 
+const MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="14 24 72 72" aria-hidden="true"><path fill="currentColor" d="M23.109 44.577 A31 31 0 1 0 76.891 44.577 A27 27 0 1 1 23.109 44.577 Z"/><circle cx="50" cy="42" r="9" fill="none" stroke="currentColor" stroke-width="3.2"/><circle cx="50" cy="42" r="3.2" fill="currentColor"/></svg>`;
+
 const PAGE = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1f">
 <title>Report a problem · Selene</title>
 <style>
-  :root { color-scheme: dark; }
-  body { margin: 0; font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: #0b1020; color: #eef1f8; }
-  main { max-width: 560px; margin: 0 auto; padding: 28px 20px 40px; }
-  h1 { font-size: 28px; font-weight: 600; margin: 0 0 6px; }
-  .sub { color: #a9b1c6; margin: 0 0 20px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-  .chip { background: #1b2238; border-radius: 999px; padding: 6px 14px; font-size: 15px; }
-  textarea { box-sizing: border-box; width: 100%; min-height: 170px; resize: vertical; border-radius: 16px; border: 2px solid #3a4566;
-             background: #121a2e; color: inherit; font: inherit; padding: 14px 16px; outline: none; }
-  textarea:focus { border-color: #8fb4ff; }
-  button { margin-top: 16px; width: 100%; border: 0; border-radius: 999px; padding: 15px; font: inherit; font-weight: 600;
-           background: #eef1f8; color: #0b1020; }
+  :root { color-scheme: dark; --ink: #eef1f8; --soft: #a9b1c6; --faint: #7d869c; --glass: rgba(255,255,255,.06); --line: rgba(255,255,255,.12); --focus: #9dbbff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink);
+         background: radial-gradient(120% 70% at 50% -10%, #23315c 0%, #121a35 45%, #0a0f1f 80%) fixed; }
+  main { max-width: 560px; margin: 0 auto; padding: 36px 20px calc(36px + env(safe-area-inset-bottom)); animation: rise .45s ease-out both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .mark { width: 46px; height: 46px; color: #fff; filter: drop-shadow(0 0 12px rgba(170,195,255,.55)); }
+  .mark svg { width: 100%; height: 100%; display: block; }
+  .word { font-size: 22px; font-weight: 600; letter-spacing: .02em; }
+  h1 { font-size: 30px; font-weight: 600; margin: 0 0 6px; letter-spacing: -.01em; }
+  .sub { color: var(--soft); margin: 0 0 22px; }
+  .card { background: var(--glass); border: 1px solid var(--line); border-radius: 22px; padding: 18px; backdrop-filter: blur(12px); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip { background: rgba(255,255,255,.09); border-radius: 999px; padding: 6px 14px; font-size: 15px; }
+  textarea { width: 100%; min-height: 180px; resize: vertical; border-radius: 16px; border: 2px solid var(--line);
+             background: rgba(5,9,20,.55); color: inherit; font: inherit; padding: 14px 16px; outline: none; transition: border-color .2s; }
+  textarea:focus { border-color: var(--focus); }
+  .count { text-align: right; color: var(--faint); font-size: 13px; margin-top: 6px; }
+  button { margin-top: 14px; width: 100%; border: 0; border-radius: 999px; padding: 16px; font: inherit; font-weight: 600; cursor: pointer;
+           background: var(--ink); color: #0a0f1f; box-shadow: 0 0 24px rgba(170,195,255,.25); transition: transform .15s, opacity .2s; }
+  button:active { transform: scale(.98); }
   button:disabled { opacity: .6; }
-  .note { color: #8e97ad; font-size: 14px; margin-top: 16px; }
-  .done { text-align: center; padding-top: 40px; }
-  .check { width: 84px; height: 84px; border-radius: 50%; background: #eef1f8; color: #0b1020; display: grid; place-items: center;
-           font-size: 44px; margin: 0 auto 20px; }
-  a { color: #8fb4ff; }
+  .note { color: var(--faint); font-size: 14px; margin: 16px 4px 0; }
+  .done { text-align: center; padding-top: 24px; }
+  .done .mark { width: 72px; height: 72px; margin: 0 auto 18px; }
+  .check { width: 86px; height: 86px; border-radius: 50%; background: var(--ink); color: #0a0f1f; display: grid; place-items: center;
+           font-size: 44px; margin: 8px auto 22px; box-shadow: 0 0 30px rgba(170,195,255,.35); animation: pop .35s ease-out both; }
+  @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+  a.button { display: inline-block; margin-top: 10px; padding: 12px 22px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--ink); text-decoration: none; }
 </style></head>
 <body><main id="app"></main>
 <script>
 const state = __STATE__;
+const MARK = __MARK__;
 const app = document.getElementById("app");
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function brand() { const b = el("div", "brand"); const m = el("div", "mark"); m.innerHTML = MARK; b.append(m, el("div", "word", "Selene")); return b; }
 function showDone(result) {
   app.replaceChildren();
   const box = el("div", "done");
-  box.append(el("div", "check", "✓"), el("h1", null, "Thanks, report #" + result.number + " is sent"));
-  const p = el("p", "sub"); const a = el("a", null, "See it on GitHub"); a.href = result.url; p.append(a);
-  box.append(p, el("p", "note", "You can close this page. Adding screenshots or comments on GitHub needs a free account."));
+  box.append(brand(), el("div", "check", "\u2713"), el("h1", null, "Thanks, report #" + result.number + " is sent"),
+             el("p", "sub", "It helps make Selene better. You can close this page."));
+  const a = el("a", "button", "See it on GitHub"); a.href = result.url;
+  box.append(a, el("p", "note", "Adding screenshots or comments on GitHub needs a free account."));
   app.append(box);
 }
 if (state.done) showDone(state.done);
-else if (!state.category) { app.append(el("h1", null, "This report has expired"), el("p", "sub", "Start it again from Selene (Settings > Advanced > Report a problem).")); }
-else {
-  app.append(el("h1", null, "Report a problem"), el("p", "sub", "Selene sends this with your logs. No account needed."));
+else if (!state.category) {
+  app.append(brand(), el("h1", null, "This report has expired"), el("p", "sub", "Start it again from Selene: Settings, Advanced, Report a problem."));
+} else {
+  app.append(brand(), el("h1", null, "Report a problem"), el("p", "sub", "Tell us what happened. Selene sends it with your logs, no account needed."));
+  const card = el("div", "card");
   const chips = el("div", "chips"); chips.append(el("span", "chip", state.category)); if (state.place) chips.append(el("span", "chip", state.place));
   const box = document.createElement("textarea"); box.placeholder = "What happened? What did you expect instead?"; box.maxLength = 2000;
+  const count = el("div", "count", "0 / 2000");
+  box.oninput = () => { count.textContent = box.value.length + " / 2000"; };
   const send = el("button", null, "Send report");
-  const note = el("p", "note", "It shows up publicly on GitHub, with names, folders and emails taken out of the logs.");
   send.onclick = async () => {
     send.disabled = true; send.textContent = "Sending...";
     try {
       const res = await fetch(location.pathname, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: box.value }) });
       const result = await res.json();
       if (result.ok) return showDone(result);
-      send.textContent = result.error === "slow down" ? "Too many reports, try again in an hour" : result.error === "gone" ? "This report has expired" : "Couldn't send, try again";
+      send.textContent = result.error === "slow down" ? "Too many reports for now, try again later" : result.error === "gone" ? "This report has expired" : "Couldn't send, try again";
     } catch { send.textContent = "Couldn't send, try again"; }
     send.disabled = false;
   };
-  app.append(chips, box, send, note);
+  card.append(chips, box, count, send);
+  app.append(card, el("p", "note", "It shows up publicly on GitHub, with names, folders and emails taken out of the logs."));
   box.focus();
 }
 </script></body></html>`;
