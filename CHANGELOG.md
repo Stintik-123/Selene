@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Trailers without any setup: Selene downloads a game's trailer from Steam (its first minute, 720p, with sound) the first time you look at it, into the same place Extra Metadata Loader keeps trailers, so trailer cards and Collection play it. Selene settings > Spotlight > Download trailers: games you look at, the whole library, or off (#12, #13).
+- Taken out: HowLongToBeat times on a game's page (they stay on Spotlight and Collection), the song title in the top bar, and animations following the screen's refresh rate (back to 144 frames a second).
 - The menu has Extensions again: your add-ons' own menu items (an audio output switcher, metadata tools...) as in Playnite's menu, in their sections (#11).
 
 ## 1.2.1 - 2026-10-26

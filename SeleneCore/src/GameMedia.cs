@@ -36,6 +36,7 @@ namespace Selene
 
         public static void OnSelected(object game, System.Collections.IList neighbours)
         {
+            TrailerFetch.Want(game, neighbours);
             pending = game;
             pendingNeighbours = neighbours;
             if (debounce == null)
@@ -330,6 +331,8 @@ namespace Selene
             }
             return list;
         }
+
+        internal static string SteamAppIdByName(string name) { return SearchAppId(name); }
 
         private static string SearchAppId(string name)
         {

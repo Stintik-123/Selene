@@ -115,9 +115,6 @@ namespace Selene
                 if (IntroRunning && (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Space) && FocusOnHome()) { e.Handled = true; return; }
                 // the Store card's game pictures (Down from the card goes into them)
                 var asPad = e.Key == Key.Down ? "DPadDown" : e.Key == Key.Up ? "DPadUp" : e.Key == Key.Left ? "DPadLeft" : e.Key == Key.Right ? "DPadRight" : e.Key == Key.Enter ? "A" : e.Key == Key.Escape || e.Key == Key.Back ? "B" : null;
-                // (not under one of Playnite's dialogs, a game's options menu above the details page: the keys, and the pad's
-                // copies as keys, are the dialog's, the page behind must not move)
-                if (DialogUp()) return;
                 // a stray Enter as the layer closes over the details page (a capture) reopened it; pad presses come the other way
                 if (asPad == "A" && (DateTime.Now - LoginScene.ClosedAt).TotalMilliseconds < 1500) { Log("keys: Enter right after the layer closed, ignored"); e.Handled = true; return; }
                 if (asPad != null && !e.Handled && (StoreShowcase.Handle(asPad) || CardShowcase.Handle(asPad) || DetailsStage.Handle(asPad))) { e.Handled = true; return; }
@@ -392,7 +389,7 @@ namespace Selene
             CompositionTarget.Rendering += OnGlideFrame;
             // WPF renders at 60 fps unless an animation asks for more: keep a dummy one running at the screen refresh rate
             var clock = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(1)) { RepeatBehavior = RepeatBehavior.Forever };
-            Timeline.SetDesiredFrameRate(clock, Ui.RefreshHz);
+            Timeline.SetDesiredFrameRate(clock, 144);
             glideClock.BeginAnimation(TranslateTransform.XProperty, clock);
         }
 
@@ -401,7 +398,7 @@ namespace Selene
             var shift = glideShift;
             var now = ((RenderingEventArgs)e).RenderingTime;
             if (now == glideLast) return;           // Rendering can fire more than once per frame
-            double dt = glideLast == TimeSpan.Zero ? 1.0 / Ui.RefreshHz : Math.Min(0.05, (now - glideLast).TotalSeconds);
+            double dt = glideLast == TimeSpan.Zero ? 1.0 / 144 : Math.Min(0.05, (now - glideLast).TotalSeconds);
             glideLast = now;
             if (shift == null) { StopGlide(); return; }
             // exact critically damped step: x(t) = (x0 + (v0 + w x0) t) e^-wt
@@ -1651,14 +1648,9 @@ namespace Selene
             {
                 if (previewShowing || !row.IsVisible || !row.IsKeyboardFocusWithin || movingCard != null || movingGame != null || LoginScene.IsActive) return;
                 var game = row.SelectedItem;
-                // the silent clip when there is one; else the game's ExtraMetadata trailer, muted (its sound is R3's) and
-                // started past its logo, as the clips are
-                var clip = game is string ? null : TrailerPath(game);
-                var full = game is string ? null : FullTrailerPath(game);
-                var path = previewSound ? full ?? clip : clip ?? full;
+                var path = CardVideo(game);
                 var item = row.ItemContainerGenerator.ContainerFromItem(game) as ListBoxItem;
                 if (path == null || item == null) return;
-                if (path == full && !previewSound) pendingSeek = TimeSpan.FromSeconds(4);
                 var tile = FindByName(item, "Tile");
                 var video = TileVideo(item, true);
                 var scale = item.Template.FindName("TileScale", item) as ScaleTransform;
@@ -1700,7 +1692,7 @@ namespace Selene
                     tileGrid.SizeChanged += follow;
                 }
                 ApplyVideoPause();
-                video.IsMuted = !previewSound;
+                video.IsMuted = !previewSound;   // a silent clip has nothing to mute; the trailer's sound waits for R3
                 video.Source = new Uri(path);
                 video.Opacity = 0;
                 video.MediaOpened -= OnPreviewOpened;
@@ -1794,18 +1786,17 @@ namespace Selene
             var game = item.DataContext;
             var full = FullTrailerPath(game); var clip = TrailerPath(game);
             if (full == null) return;
-            if (clip == null)   // no silent clip: the trailer itself is playing, so the sound is just switched
+            previewSound = !previewSound;
+            video.IsMuted = !previewSound;
+            if (CardVideo(game) == video.Source.LocalPath || clip == null)
             {
-                previewSound = !previewSound;
-                video.IsMuted = !previewSound;
+                // the trailer stays (it was playing already): only its sound changes
                 ApplyVideoPause();
                 ShowSoundBadge(item, true);
                 Log("trailer sound " + (previewSound ? "on" : "off"));
                 return;
             }
             var pos = video.Position;
-            previewSound = !previewSound;
-            video.IsMuted = !previewSound;
             // the silent clip starts 4 s into the trailer
             pendingSeek = previewSound ? pos + TimeSpan.FromSeconds(4) : (pos > TimeSpan.FromSeconds(4) ? pos - TimeSpan.FromSeconds(4) : TimeSpan.Zero);
             ApplyVideoPause();
@@ -3243,15 +3234,7 @@ namespace Selene
             {
                 var main = Application.Current.MainWindow;
                 foreach (Window w in Application.Current.Windows)
-                {
-                    if (ReferenceEquals(w, main) || !w.IsVisible) continue;
-                    if (w.IsActive) return true;
-                    // Playnite's own dialogs (a game's options menu, a question) count while they're up even when Windows hasn't
-                    // made them the active window: the press is theirs, not the page behind's (the details page moved under the
-                    // options menu). Its hidden progress windows are Selene's cards, not dialogs.
-                    var type = w.GetType();
-                    if ((type.Namespace ?? "").StartsWith("Playnite") && type.Name != "ProgressWindow" && w.Opacity > 0.01) return true;
-                }
+                    if (!ReferenceEquals(w, main) && w.IsVisible && w.IsActive) return true;
             }
             catch { }
             return false;
@@ -3641,7 +3624,27 @@ namespace Selene
         // for the home's button hints
         internal static bool Moving { get { return movingCard != null || movingGame != null; } }
         internal static bool InRow(DependencyObject d) { return IsInRow(d); }
-        internal static bool HasTrailer(object game) { return game != null && !(game is string) && (TrailerPath(game) != null || FullTrailerPath(game) != null); }
+        internal static bool HasTrailer(object game) { return CardVideo(game) != null; }
+
+        // a trailer just downloaded for the selected game: its card opens after the usual wait, and its hints learn R3
+        public static void TrailerReady(Guid id)
+        {
+            var row = LiveRow();
+            if (row == null || previewShowing || !row.IsVisible || row.SelectedItem == null) return;
+            var gid = Prop(row.SelectedItem, "Id");
+            if (gid == null || !id.Equals(gid)) return;
+            ArmPreview(row);
+            HomeHints.Update();
+        }
+
+        // what a trailer card plays: a silent preview clip while the sound is off, if one was made; else the game's
+        // trailer (Selene's download or Extra Metadata Loader's), its sound following the R3 switch
+        private static string CardVideo(object game)
+        {
+            if (game == null || game is string) return null;
+            var clip = TrailerPath(game);
+            return clip != null && !previewSound ? clip : FullTrailerPath(game) ?? clip;
+        }
 
         private static void SetMoveVisual(ListBoxItem item, bool on)
         {

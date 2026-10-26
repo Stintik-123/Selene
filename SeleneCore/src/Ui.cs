@@ -19,9 +19,6 @@ namespace Selene
         public static readonly FontFamily Glyphs = new FontFamily("Segoe MDL2 Assets");
         private static FontFamily icons;
 
-        // the screen's refresh rate: WPF renders at 60 fps unless an animation asks for more, so every animation that
-        // wants a smooth move asks for this (a fixed 144 capped a 360 Hz screen at 144); 144 when Windows does not say
-        public static int RefreshHz { get { int r = ScreenRate(); return r >= 30 && r <= 1000 ? r : 144; } }
 
         // solid icons: Google's Material Icons (theme\Fonts\MaterialIcons-Regular.ttf); Segoe's thin ones when it's missing
         public static FontFamily Icons
@@ -192,7 +189,7 @@ namespace Selene
         public static IEasingFunction Out() { return new CubicEase { EasingMode = EasingMode.EaseOut }; }
 
         // at the screen's own speed (WPF caps an animation near 60 frames a second unless told otherwise; the TV runs at 120 / 144)
-        public static T Fast<T>(T t) where T : Timeline { Timeline.SetDesiredFrameRate(t, RefreshHz); return t; }
+        public static T Fast<T>(T t) where T : Timeline { Timeline.SetDesiredFrameRate(t, 144); return t; }
 
         public static void Fade(UIElement el, double to, int ms, int delay = 0, Action done = null)
         {

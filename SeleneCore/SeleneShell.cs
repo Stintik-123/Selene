@@ -183,7 +183,6 @@ namespace Selene
 
         public static void ApplyNowPlaying()
         {
-            Switch(Part("SeleneNowPlaying"), "nowplaying");
             Switch(Part("SeleneHltbStatHub"), "hltb");
             Switch(Part("SeleneHltbStatLibrary"), "hltb");
             Switch(Part("SeleneAchievementsStatHub"), "achievements");
