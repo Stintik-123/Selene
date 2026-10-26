@@ -281,7 +281,8 @@ namespace Selene
         // Playnite Achievements checks nothing on its own until its first-time page (desktop mode only) is gone through; from
         // the couch it never is, so only games played since showed up. Once: that page is marked done and every game it has
         // nothing for is checked in the background (the stores it's signed in to; Steam through Playnite's Steam sign-in),
-        // then its own update every few hours keeps the list current. Selene's note of having done it: achievements-setup.txt
+        // then its own update every few hours keeps the list current. Selene's note of it: achievements-setup.txt, "done" once
+        // the check ended; anything else (Playnite closed mid-check) and it's started again at the next start
         private static string SetupFile { get { return Path.Combine(SelenePaths.DataFolder, "achievements-setup.txt"); } }
 
         public static void SetUpLater()
@@ -297,7 +298,9 @@ namespace Selene
             try
             {
                 var p = Plugin();
-                if (p == null || File.Exists(SetupFile)) return;
+                if (p == null) return;
+                bool resuming = File.Exists(SetupFile);
+                if (resuming && File.ReadAllText(SetupFile).Trim() == "done") return;
                 var settings = p.GetType().GetProperty("Settings").GetValue(p, null);
                 var persisted = settings.GetType().GetProperty("Persisted").GetValue(settings, null);
                 var done = persisted.GetType().GetProperty("FirstTimeSetupCompleted");
@@ -324,14 +327,15 @@ namespace Selene
                 {
                     HomeNav.Log("achievements: every game checked, " + (ok ? "done" : "with errors"));
                     cachedAt = DateTime.MinValue;   // read again on the next look
+                    try { File.WriteAllText(SetupFile, "done"); } catch { }
                     if (ok) ProgressToast.ShowNote("Achievements are in", "Every game's trophies are on the Achievements card.", 0xea23);
                 }));
                 pt.GetProperty("OnRefreshCompleted").SetValue(policy, finished, null);
                 const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;   // (the add-on keeps these to itself)
                 var entry = p.GetType().GetProperty("RefreshEntryPoint", any).GetValue(p, null);
                 entry.GetType().GetMethod("ExecuteAsync", any, null, new[] { request.GetType(), pt }, null).Invoke(entry, new[] { request, policy });
-                File.WriteAllText(SetupFile, DateTime.UtcNow.ToString("o"));
-                HomeNav.Log("achievements: Playnite Achievements set up, checking every game");
+                File.WriteAllText(SetupFile, "started");
+                HomeNav.Log("achievements: " + (resuming ? "the check cut short last time, again" : "Playnite Achievements set up, checking every game"));
                 ProgressToast.ShowNote("Checking your achievements", "This might take a while.", 0xea23);
             }
             catch (Exception ex) { HomeNav.Log("achievements: setting up failed: " + (ex.InnerException ?? ex).Message); }
