@@ -80,7 +80,7 @@ namespace Selene
             if (!pretend && !IsNewer(newest)) return;
             Available = newest; Notes = notes; Preview = pretend;
             if (!pretend && newest == told) return;   // (told once; the menu's Update item stays)
-            ProgressToast.ShowNote("Selene " + newest, "Start, then Update", 0xE923 /* update */, true);   // (before any task's card)
+            ProgressToast.ShowNote("Selene " + newest, "Update ready", 0xE923 /* update */, true);   // (before any task's card; the menu's Update item carries the dot)
         }
 
         // Selene settings > Check for updates: looks now; the Update screen when there's one, else a note
