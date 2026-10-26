@@ -252,9 +252,14 @@ namespace Selene
         }
 
         // a row of covers with a caption each; bar: a share of the longest (most played), shown as a line under the cover
+        // the rows below the first two: made once the screen has slid in (all of them, a hundred covers, held the slide)
+        private readonly List<Action> laterRows = new List<Action>();
+        private bool rowsOpen;
+
         private void AddRow(string title, List<Game> games, Func<Game, string> caption, Func<Game, double> bar, string about = null)
         {
             if (games.Count == 0) return;
+            if (!rowsOpen && rows.Count >= Visible) { laterRows.Add(() => AddRow(title, games, caption, bar, about)); return; }
             int r = rows.Count;
             var list = new List<Tile>();
             var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, r * RowPitch, 0, 0) };
@@ -362,7 +367,19 @@ namespace Selene
             });
         }
 
-        public override void Shown() { ShowFocus(false); }
+        public override void Shown()
+        {
+            ShowFocus(false);
+            var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ShowMs + 80) };
+            t.Tick += (s, e) =>
+            {
+                t.Stop();
+                rowsOpen = true;
+                foreach (var make in laterRows) { var m = make; Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => { if (!closed) m(); }), DispatcherPriority.Background); }
+                laterRows.Clear();
+            };
+            t.Start();
+        }
         public override void Hidden() { closed = true; heroLater.Stop(); }
 
         public override void Handle(string b)

@@ -238,6 +238,7 @@ namespace Selene
             list.Opacity = 0; Ui.Fade(list, 1, 180);   // (a quick fade: the rows rising again left them soft)
             zone = 1; row = 0;
             scroller.ScrollToVerticalOffset(0);
+            PeekScroller.Refresh(scroller);
             ShowFocus(false);
         }
 

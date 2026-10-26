@@ -43,15 +43,30 @@ namespace Selene
                     var fe = row as FrameworkElement;
                     if (fe == null || fe.ActualHeight < 1) continue;
                     double top = fe.TranslatePoint(new Point(0, 0), scroller).Y, bottom = top + fe.ActualHeight;
-                    bool soft = (more && bottom > h - Band * 0.5) || (above && top < Band * 0.3);
+                    // only a row across an edge: the ones wholly past it are out of sight (blurring every row below the list,
+                    // hundreds in a long one, made it slow)
+                    bool soft = (more && bottom > h - Band * 0.5 && top < h) || (above && top < Band * 0.3 && bottom > 0);
                     Soften(fe, soft);
                 }
             };
+            updates.Add(scroller, update);
             scroller.ScrollChanged += (s, e) => update();
             scroller.SizeChanged += (s, e) => update();
             scroller.Loaded += (s, e) => update();
             rows.SizeChanged += (s, e) => update();
             return host;
+        }
+
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ScrollViewer, Action> updates = new System.Runtime.CompilerServices.ConditionalWeakTable<ScrollViewer, Action>();
+
+        // the rows rearranged (an order change): which are at an edge, worked out again once they're laid out in their new
+        // places (measured before, the old places left the wrong rows blurred)
+        public static void Refresh(ScrollViewer scroller)
+        {
+            Action update;
+            if (!updates.TryGetValue(scroller, out update)) return;
+            scroller.UpdateLayout();
+            update();
         }
 
         // which rows are blurred now (kept here: a row's Tag belongs to its screen)

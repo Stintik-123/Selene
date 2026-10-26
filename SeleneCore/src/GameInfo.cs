@@ -53,7 +53,6 @@ namespace Selene
                 if (due.Count == 0) return;
                 var order = SourceOrder(api, plugins);
                 var ui = Dispatcher.CurrentDispatcher;
-                ProgressToast.ShowNote("Completing your games' details", due.Count == 1 ? "1 game is missing some." : due.Count + " games are missing some.", 0xe88e);
                 Task.Factory.StartNew(() =>
                 {
                     int filled = 0;
@@ -71,7 +70,6 @@ namespace Selene
                     ui.BeginInvoke(new Action(() =>
                     {
                         HomeNav.Log("game info: filled in " + done + " of " + due.Count);
-                        if (done > 0) ProgressToast.ShowNote("Game details completed", done == 1 ? "1 game filled in." : done + " games filled in.", 0xe88e);
                     }));
                 });
             }
