@@ -42,6 +42,7 @@ namespace Selene
         private readonly Border checkFill = new Border { Height = 4, CornerRadius = new CornerRadius(2), HorizontalAlignment = HorizontalAlignment.Left, Width = 0 };
         private readonly DispatcherTimer checkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         private bool wasChecking;
+        private int lastTotal;   // the games the check went through (its "of N"), for the line when it's over
         private const double CheckBar = 420;
         private string heroShown;
 
@@ -129,6 +130,7 @@ namespace Selene
             bool on = AchievementsData.Checking(out done, out total, out share, out id);
             if (on)
             {
+                if (total > 0) lastTotal = total;
                 checkLine.Inlines.Clear();
                 checkLine.Inlines.Add(new System.Windows.Documents.Run(total > 0 ? "Checking your games  ·  " + done + " of " + total : "Checking your games") { FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.85) });
                 var g = id.HasValue ? GameFacts.Find(id.Value) : null;
@@ -142,7 +144,7 @@ namespace Selene
             if (!wasChecking) return;
             wasChecking = false;
             checkLine.Inlines.Clear();
-            checkLine.Inlines.Add(new System.Windows.Documents.Run("Every game checked") { FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.85) });
+            checkLine.Inlines.Add(new System.Windows.Documents.Run(lastTotal > 0 ? (lastTotal == 1 ? "1 game checked" : lastTotal + " games checked") : "Check finished") { FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.85) });
             checkFill.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(CheckBar, TimeSpan.FromMilliseconds(300)) { EasingFunction = Ui.Out() });
             Ui.Fade(checking, 0, 400, 2500, () => { if (!wasChecking) checking.Visibility = Visibility.Collapsed; });
             AchievementsData.Reread(sets => { if (!closed) Rebuild(sets); });

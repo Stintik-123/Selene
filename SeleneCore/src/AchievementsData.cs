@@ -354,11 +354,10 @@ namespace Selene
                 var lines = File.Exists(SetupFile) ? File.ReadAllLines(SetupFile) : new string[0];
                 bool resuming = lines.Length > 0;
                 // done before: only the games played last, unless the add-on was updated since (a new version can read games the
-                // old one couldn't: Steam's new achievement pages came with 4.1); a note without a version gets this one
+                // old one couldn't: Steam's new achievement pages came with 4.1)
                 string version = AddonVersion(p);
                 bool recentOnly = resuming && lines[0].Trim().StartsWith("done");
-                if (recentOnly && lines[0].Trim() == "done") { try { File.WriteAllText(SetupFile, "done " + version); } catch { } }
-                else if (recentOnly && lines[0].Trim() != "done " + version) { HomeNav.Log("achievements: Playnite Achievements now " + version + " (was " + lines[0].Trim().Substring(4).Trim() + "), every game it has nothing for checked again"); recentOnly = false; lines = new string[0]; }
+                if (recentOnly && lines[0].Trim() != "done " + version)   // (a note without a version too: checked again once) { HomeNav.Log("achievements: Playnite Achievements now " + version + " (was " + lines[0].Trim().Substring(4).Trim() + "), every game it has nothing for checked again"); recentOnly = false; lines = new string[0]; }
                 lock (trackLock)
                 {
                     checkedIds.Clear(); trackGame = null; trackTotal = 0;
