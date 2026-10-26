@@ -488,7 +488,7 @@ namespace Selene
             var number = ok ? url.Substring(url.LastIndexOf('/') + 1) : null;
             var card = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             var badge = new Border { Width = 96, Height = 96, CornerRadius = new CornerRadius(48), HorizontalAlignment = HorizontalAlignment.Center, Background = ok ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneInkColor", 0.14) };
-            badge.Child = new TextBlock { Text = Ui.Icon(ok ? 0xe876 : 0xe000), FontFamily = Ui.Icons, FontSize = 52, Foreground = ok ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            badge.Child = Ui.Glyph(Ui.Icon(ok ? 0xe876 : 0xe000), Ui.Icons, 52, ok ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor"));
             card.Children.Add(badge);
             card.Children.Add(new TextBlock { Text = ok ? "Thanks, report #" + number + " is sent" : "Couldn't send it", FontSize = 38, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 26, 0, 0) });
             card.Children.Add(new TextBlock

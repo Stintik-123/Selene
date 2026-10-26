@@ -792,7 +792,7 @@ namespace Selene
             displayed = title;
             noteHeldUntil = DateTime.Now.AddMilliseconds(NoteHoldMs);
             icon.Background = Ink.Brush("GlyphColor", 0.18);
-            icon.Child = new TextBlock { Text = Ui.Icon(glyph), FontFamily = Ui.Icons, FontSize = 22, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            icon.Child = Ui.Glyph(Ui.Icon(glyph), Ui.Icons, 22, Ink.Brush("GlyphColor"));
             icon.Visibility = Visibility.Visible;
             titleLine.Content = new TextBlock { Text = title, FontFamily = Ui.Display, FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 96 };
             titleLine.Visibility = Visibility.Visible;

@@ -309,8 +309,9 @@ namespace Selene
             medal.Children.Add(glow);
             var ring = new System.Windows.Shapes.Ellipse { Width = 128, Height = 128, StrokeThickness = 3, Stroke = new SolidColorBrush(Color.FromArgb(0xCC, gold.R, gold.G, gold.B)), Fill = new SolidColorBrush(Color.FromArgb(0x30, gold.R, gold.G, gold.B)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             medal.Children.Add(ring);
-            medal.Children.Add(new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 68, Foreground = new SolidColorBrush(gold), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
-                Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = gold, BlurRadius = 24, ShadowDepth = 0, Opacity = 0.7 } });
+            var trophy = Ui.Glyph(Ui.Icon(0xea23), Ui.Icons, 68, new SolidColorBrush(gold));
+            trophy.Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = gold, BlurRadius = 24, ShadowDepth = 0, Opacity = 0.7 };
+            medal.Children.Add(trophy);
             // sparkles around it, each twinkling on its own beat
             var spots = new[] { new Point(-96, -58), new Point(100, -66), new Point(-118, 22), new Point(116, 30), new Point(-62, 74), new Point(70, 80), new Point(4, -96) };
             var rnd = new Random();
@@ -364,7 +365,7 @@ namespace Selene
                 var icon = new Border { Width = IconSize, Height = IconSize, CornerRadius = new CornerRadius(10), Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
                 if (!it.Unlocked) icon.Opacity = 0.55;
                 if (it.Icon != null) { files.Add(it.Icon); targets.Add(Tuple.Create(icon, !it.Unlocked)); }
-                else icon.Child = new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 30, Foreground = Ink.Brush("SeleneInkColor", 0.5), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+                else icon.Child = Ui.Glyph(Ui.Icon(0xea23), Ui.Icons, 30, Ink.Brush("SeleneInkColor", 0.5));
 
                 var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
                 var name = new TextBlock { FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", it.Unlocked ? 1 : 0.8), TextTrimming = TextTrimming.CharacterEllipsis };
@@ -503,7 +504,7 @@ namespace Selene
                     if (!it.Unlocked && src != null) { try { var grey = new FormatConvertedBitmap(src, PixelFormats.Gray8, null, 0); grey.Freeze(); pic = grey; } catch { } }
                     icon.Child = new Border { Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } };
                 });
-            else icon.Child = new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 72, Foreground = Ink.Brush("SeleneInkColor", 0.5), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            else icon.Child = Ui.Glyph(Ui.Icon(0xea23), Ui.Icons, 72, Ink.Brush("SeleneInkColor", 0.5));
             if (!it.Unlocked) icon.Opacity = 0.6;
             card.Children.Add(icon);
             card.Children.Add(new TextBlock { Text = secret ? "Hidden achievement" : it.Name, FontSize = 34, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 26, 0, 0) });

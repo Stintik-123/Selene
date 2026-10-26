@@ -106,7 +106,7 @@ namespace Selene
                 var ring = new Ellipse { StrokeThickness = 3, Stroke = Ink.Brush("SeleneInkColor"), Fill = Ink.Brush("SeleneInkColor", 0.12), Opacity = 0 };
                 dot.Children.Add(ring);
                 if (item.Picture != null) { item.Picture.HorizontalAlignment = HorizontalAlignment.Center; item.Picture.VerticalAlignment = VerticalAlignment.Center; dot.Children.Add(item.Picture); }
-                else dot.Children.Add(new TextBlock { Text = item.Icon, FontFamily = Ui.Icons, FontSize = 34, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+                else dot.Children.Add(Ui.Glyph(item.Icon, Ui.Icons, 34, Ink.Brush("SeleneInkColor")));
                 if (item.Badge)
                 {
                     // the red of a console's notice dot (the same in every theme, as the trophies' metals), ringed in the dark so it

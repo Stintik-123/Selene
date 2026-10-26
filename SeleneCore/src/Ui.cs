@@ -51,6 +51,28 @@ namespace Selene
         // a Material Icons character from its code point (the font's codepoints list)
         public static string Icon(int code) { return ((char)code).ToString(); }
 
+        // An icon centred by its ink, not its line box: a text box centred in a circle put every icon high or low (a font's line
+        // box has room above and below the glyph, and a different amount per font), and each circle got its own nudge. The glyph's
+        // outline, moved so its own bounds start at 0,0, centres exactly. The text box, nudged, when the outline can't be had.
+        public static FrameworkElement Glyph(string text, FontFamily font, double size, Brush fill)
+        {
+            try
+            {
+                var typeface = new Typeface(font, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+                var ft = new FormattedText(text, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, size, Brushes.Black, 1.0);
+                var geo = ft.BuildGeometry(new Point(0, 0));
+                var b = geo.Bounds;
+                if (b.IsEmpty || b.Width < 1 || b.Height < 1) throw new InvalidOperationException("no outline");
+                geo.Transform = new TranslateTransform(-b.X, -b.Y);
+                geo.Freeze();
+                return new System.Windows.Shapes.Path { Data = geo, Fill = fill, Width = b.Width, Height = b.Height, Stretch = Stretch.None, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            }
+            catch
+            {
+                return new TextBlock { Text = text, FontFamily = font, FontSize = size, Foreground = fill, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, size * 0.12) };
+            }
+        }
+
         // ---------------- text ----------------
         public static TextBlock Text(string text, double size, double alpha = 1, FontFamily font = null)
         {
@@ -799,9 +821,9 @@ namespace Selene
             var col = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
             var badge = new Grid { Width = 84, Height = 84, HorizontalAlignment = HorizontalAlignment.Center };
             badge.Children.Add(new Ellipse { Fill = warning ? (Brush)new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0x6B, 0x6B)) : Ink.Brush("GlyphColor", 0.19) });
-            // icon glyphs sit a little low in their box: nudged to the circle's middle
-            var glyph = new TextBlock { Text = icon, FontFamily = material ? Ui.Icons : Ui.Glyphs, FontSize = 36,   /* material: a Material Icons code (else Segoe MDL2) */ HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 5) };
-            if (warning) glyph.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush"); else glyph.Foreground = Ink.Brush("GlyphColor");
+            // the icon centred by its ink (material: a Material Icons code, else Segoe MDL2)
+            var glyph = Ui.Glyph(icon, material ? Ui.Icons : Ui.Glyphs, 36, Ink.Brush("GlyphColor"));
+            if (warning) glyph.SetResourceReference(glyph is System.Windows.Shapes.Shape ? System.Windows.Shapes.Shape.FillProperty : TextBlock.ForegroundProperty, "WarningBrush");
             badge.Children.Add(glyph);
             col.Children.Add(badge);
             col.Children.Add(new TextBlock { Text = title, FontSize = 34, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 0) });

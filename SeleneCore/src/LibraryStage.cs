@@ -41,8 +41,6 @@ namespace Selene
                 foreach (UIElement child in grid.Children)
                     if (child.GetType().Name == "FadeImage") { art = child; break; }
             wallpaper = HomeNav.FindByName(library, "SeleneLibraryWallpaper") as UIElement;
-            shadeLeft = HomeNav.FindByName(library, "SeleneLibraryShadeLeft") as FrameworkElement;
-            shadeRight = HomeNav.FindByName(library, "SeleneLibraryShadeRight") as FrameworkElement;
             baseLayer = HomeNav.FindByName(library, "SeleneLibraryBase") as UIElement;
             HomeNav.Log("library stage: art " + (art != null) + ", wallpaper " + (wallpaper != null));
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
@@ -107,13 +105,7 @@ namespace Selene
         // the row's edges: a cover cut by the screen dissolves over the last 200 px (an opacity mask on the row, its end stops
         // animated clear or solid), so nothing is a black slab; a side with nothing cut off (the row's start or end) stays solid
         private static GradientStop maskLeft, maskRight, maskLeftIn, maskRightIn;
-        private static FrameworkElement shadeLeft, shadeRight;   // the dark under each end (theme), with the dissolve
 
-        private static void Shade(FrameworkElement el, bool show)
-        {
-            if (el == null) return;
-            el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(show ? 1 : 0, TimeSpan.FromMilliseconds(260)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-        }
         private const double EdgePx = 200;
 
         private static void EnsureMask()
@@ -172,8 +164,6 @@ namespace Selene
             bool left = sv.HorizontalOffset > 1, right = sv.HorizontalOffset < sv.ScrollableWidth - 1;
             SetEdge(maskLeft, left);
             SetEdge(maskRight, right);
-            Shade(shadeLeft, left);
-            Shade(shadeRight, right);
         }
 
         // the row's scroll viewer watched for its one-cover steps (hooked again if the list got a new one)
