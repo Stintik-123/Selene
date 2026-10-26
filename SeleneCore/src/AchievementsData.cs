@@ -250,5 +250,59 @@ namespace Selene
             var pct = i.Rarity.Value < 1 ? i.Rarity.Value.ToString("0.0") : Math.Round(i.Rarity.Value).ToString("0");
             return (i.Tier.Length > 0 ? i.Tier + "  ·  " : "") + pct + "%";
         }
+
+        // ---- the add-on set up without its desktop page ----
+        // Playnite Achievements checks nothing on its own until its first-time page (desktop mode only) is gone through; from
+        // the couch it never is, so only games played since showed up. Once: that page is marked done and every game is
+        // checked in the background (the stores it's signed in to; Steam through Playnite's Steam sign-in), then its own
+        // update every few hours keeps the list current
+        public static void SetUpLater()
+        {
+            if (!Features.On("achsetup") || (!Features.On("achievements") && !Features.On("cardachievements"))) return;
+            var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
+            t.Tick += (s, e) => { t.Stop(); SetUp(); };
+            t.Start();
+        }
+
+        private static void SetUp()
+        {
+            try
+            {
+                var p = Plugin();
+                if (p == null) return;
+                var settings = p.GetType().GetProperty("Settings").GetValue(p, null);
+                var persisted = settings.GetType().GetProperty("Persisted").GetValue(settings, null);
+                var done = persisted.GetType().GetProperty("FirstTimeSetupCompleted");
+                if (done == null || (bool)done.GetValue(persisted, null)) return;
+                done.SetValue(persisted, true, null);
+                // (its theme-integration question: nothing for Selene to move over; left unanswered it held the updates too)
+                var seen = persisted.GetType().GetProperty("SeenThemeMigration");
+                if (seen != null) seen.SetValue(persisted, true, null);
+                typeof(Playnite.SDK.Plugins.Plugin).GetMethod("SavePluginSettings").MakeGenericMethod(settings.GetType()).Invoke(p, new[] { settings });
+
+                var asm = p.GetType().Assembly;
+                var request = Activator.CreateInstance(asm.GetType("PlayniteAchievements.Models.RefreshRequest"));
+                request.GetType().GetProperty("Mode").SetValue(request, Enum.Parse(asm.GetType("PlayniteAchievements.Models.RefreshModeType"), "Full"), null);
+                var policy = Activator.CreateInstance(asm.GetType("PlayniteAchievements.Services.Refresh.RefreshExecutionPolicy"));
+                var pt = policy.GetType();
+                pt.GetProperty("ValidateAuthentication").SetValue(policy, false, null);   // (true asks to sign in, in a desktop window)
+                pt.GetProperty("UseProgressWindow").SetValue(policy, false, null);
+                pt.GetProperty("SwallowExceptions").SetValue(policy, true, null);
+                pt.GetProperty("ErrorLogMessage").SetValue(policy, "Selene: checking every game failed.", null);
+                var dispatcher = Dispatcher.CurrentDispatcher;
+                Action<bool> finished = ok => dispatcher.BeginInvoke(new Action(() =>
+                {
+                    HomeNav.Log("achievements: every game checked, " + (ok ? "done" : "with errors"));
+                    cachedAt = DateTime.MinValue;   // read again on the next look
+                    if (ok) ProgressToast.ShowNote("Achievements are in", "Every game's trophies are on the Achievements card.", 0xea23);
+                }));
+                pt.GetProperty("OnRefreshCompleted").SetValue(policy, finished, null);
+                var entry = p.GetType().GetProperty("RefreshEntryPoint").GetValue(p, null);
+                entry.GetType().GetMethod("ExecuteAsync").Invoke(entry, new[] { request, policy });
+                HomeNav.Log("achievements: Playnite Achievements set up, checking every game");
+                ProgressToast.ShowNote("Checking your achievements", "Every game in your library, the first time takes a while.", 0xea23);
+            }
+            catch (Exception ex) { HomeNav.Log("achievements: setting up failed: " + (ex.InnerException ?? ex).Message); }
+        }
     }
 }

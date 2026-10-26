@@ -5,6 +5,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Spotlight and Collection take the same buttons on a game: A plays, X opens its details, Y its game options (from Spotlight with a Move option to arrange the row; Favorite is a switch there and on the heart). The questions before removing, uninstalling, resetting settings and power actions show their icons again.
+- Playnite Achievements sets itself up: its first-time page (desktop only) is done for you and every game is checked once in the background, instead of only the games played since it was installed. Stores still need signing in to once in its settings; Steam uses Playnite's Steam sign-in. Switch: "Achievements: set up on its own".
 - Achievement pictures on the Achievements card are sharp: small store icons are no longer stretched while they load.
 - Nothing shakes any more at the end of a list or on a press that goes nowhere.
 - Game options (Y in Collection, Game Options on a game's page) are a Selene screen: the cover beside glass rows, switches for Favorite, Hidden and HDR, the completion status, Edit details (your score, categories, tags, genres... with tick lists), Extensions (every add-on's and script's actions for the game, in their sections), Remove and Uninstall with a question first. Switch: Games > "Game options, Selene's way" (off: Playnite's menu). Playnite's own pop-up menus are dark glass instead of blue.
