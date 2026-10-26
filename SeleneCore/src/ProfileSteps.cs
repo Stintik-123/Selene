@@ -677,7 +677,12 @@ namespace Selene
                 var steamPrint = !string.IsNullOrEmpty(steam) && System.IO.File.Exists(steam) ? Profiles.Fingerprint(steam) : null;
                 files.AddRange(Profiles.KeptPictures().Where(f => steamPrint == null || Profiles.Fingerprint(f) != steamPrint));
                 if (!string.IsNullOrEmpty(steam) && System.IO.File.Exists(steam)) files.Add(steam);
-                files.AddRange(Profiles.BuiltInAvatars());
+                // the shipped ones, except a picture already there (a GIF picked before as your own is the same file: it showed twice)
+                var already = files.Where(f => f != null && System.IO.File.Exists(f)).ToList();
+                var sizes = new HashSet<long>(already.Select(f => new System.IO.FileInfo(f).Length));   // (only same-size files are compared)
+                var seen = new HashSet<string>(already.Select(f => Profiles.Fingerprint(f)));
+                foreach (var f in Profiles.BuiltInAvatars())
+                    if (!sizes.Contains(new System.IO.FileInfo(f).Length) || seen.Add(Profiles.Fingerprint(f))) files.Add(f);
                 grid = new ScrollingGrid(Columns, 118, 560);
                 grid.Viewport.Width = Columns * 118;
                 grid.Viewport.HorizontalAlignment = HorizontalAlignment.Center;
