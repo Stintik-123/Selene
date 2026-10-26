@@ -56,6 +56,44 @@ namespace Selene
             return prop != null && prop.GetValue(item, null) is bool && (bool)prop.GetValue(item, null);
         }
 
+        // ---- the add-on's own "fetch new games" setting (AutoImport), for its row in Selene settings ----
+        private static object Plugin() { return HomeNav.Api != null ? HomeNav.Api.Addons.Plugins.FirstOrDefault(p => p.Id == AddonId) : null; }
+
+        public static bool Installed() { return Plugin() != null; }
+
+        private static object Settings(object plugin)
+        {
+            var vm = plugin.GetType().GetProperty("PluginSettingsViewModel", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var model = vm != null ? vm.GetValue(plugin, null) : null;
+            var settings = model != null ? model.GetType().GetProperty("Settings") : null;
+            return settings != null ? settings.GetValue(model, null) : null;
+        }
+
+        public static bool AutoImport()
+        {
+            var plugin = Plugin();
+            var settings = plugin != null ? Settings(plugin) : null;
+            var prop = settings != null ? settings.GetType().GetProperty("AutoImport") : null;
+            return prop != null && (bool)prop.GetValue(settings, null);
+        }
+
+        public static void SetAutoImport(bool on)
+        {
+            try
+            {
+                var plugin = Plugin();
+                var settings = plugin != null ? Settings(plugin) : null;
+                var prop = settings != null ? settings.GetType().GetProperty("AutoImport") : null;
+                if (prop == null) { HomeNav.Log("hltb: AutoImport setting not found"); return; }
+                prop.SetValue(settings, on, null);
+                // saved the way the add-on saves its own settings page
+                var save = typeof(Playnite.SDK.Plugins.Plugin).GetMethod("SavePluginSettings").MakeGenericMethod(settings.GetType());
+                save.Invoke(plugin, new[] { settings });
+                HomeNav.Log("hltb: fetch new games " + (on ? "on" : "off"));
+            }
+            catch (Exception ex) { HomeNav.Log("hltb: changing AutoImport failed: " + (ex.InnerException ?? ex).Message); }
+        }
+
         // the add-on's database: a static PluginDatabase on its plugin's base class
         private static object Database()
         {

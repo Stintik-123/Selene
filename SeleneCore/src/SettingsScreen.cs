@@ -97,7 +97,7 @@ namespace Selene
         // the switches of the chosen group, rising in
         private void ShowGroup(bool animate)
         {
-            options = Features.All.Where(o => o.Group == Features.Groups[group]).ToList();
+            options = Features.All.Where(o => o.Group == Features.Groups[group] && (o.Available == null || o.Available())).ToList();
             groupTitle.Text = Features.Groups[group].ToUpperInvariant();
             optionList.Children.Clear(); rows.Clear(); knobs.Clear(); tracks.Clear(); values.Clear(); sliders.Clear();
             for (int i = 0; i < options.Count; i++)

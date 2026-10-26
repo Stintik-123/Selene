@@ -184,7 +184,7 @@ namespace Selene
             panel.Children.Add(new TextBlock { Text = "Features (also in Selene's menu under Selene settings):", FontWeight = FontWeights.SemiBold });
             foreach (var f in Features.All)
             {
-                if (f.IsChoice || f.Action != null) continue;   // (action rows only do something in Selene settings)
+                if (f.IsChoice || f.Action != null || f.Get != null) continue;   // (action rows and other add-ons' settings: in Selene settings only)
                 var key = f.Key;
                 var box = new CheckBox { Content = f.Label + "  -  " + f.About, IsChecked = Features.On(key), Margin = new Thickness(0, 6, 0, 0) };
                 box.Checked += (o, e) => Features.Mark(s, key, true);
@@ -248,6 +248,10 @@ namespace Selene
             public bool IsChoice { get { return Choices != null; } }
             public bool Slider;   // a number along a line (Left / Right) instead of a list to pick from
             public string Action; // a row that does something on A (its button's label) instead of a switch
+            // a switch that is another add-on's setting: read and written there (not in Selene's settings), shown only when
+            // that add-on is there
+            public Func<bool> Get, Available;
+            public Action<bool> Put;
         }
 
         // the groups Selene settings shows, in order (each option names its group)
@@ -292,6 +296,7 @@ namespace Selene
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
             new Option { Group = "Look", Key = "nowplaying", Label = "Now playing in the top bar", About = "The song UniPlaySong is playing, beside the clock.", DefaultOn = false },
             new Option { Group = "Games", Key = "hltb", Label = "HowLongToBeat times", About = "How long a game takes to beat, on its page (with the HowLongToBeat add-on)." },
+            new Option { Group = "Games", Key = "hltbauto", Label = "HowLongToBeat: fetch new games", About = "HowLongToBeat's own setting: times for games as they're added to your library.", Get = HltbFetch.AutoImport, Put = HltbFetch.SetAutoImport, Available = HltbFetch.Installed },
             new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
             new Option { Group = "Look", Key = "textshadow", Label = "Readable text", About = "A soft halo behind text over bright pictures." },
             new Option { Group = "Look", Key = "dialogs", Label = "Selene dialogs", About = "Playnite's questions and errors as Selene cards." },
@@ -348,6 +353,8 @@ namespace Selene
 
         public static bool On(string key)
         {
+            var external = Find(key);
+            if (external != null && external.Get != null) { try { return external.Get(); } catch { return false; } }
             if (DefaultOn(key)) return settings == null || settings.TurnedOff == null || !settings.TurnedOff.Contains(key);
             return settings != null && settings.TurnedOn != null && settings.TurnedOn.Contains(key);
         }
@@ -365,6 +372,8 @@ namespace Selene
 
         public static void Set(string key, bool on)
         {
+            var external = Find(key);
+            if (external != null && external.Put != null) { external.Put(on); return; }
             if (settings == null) return;
             Mark(settings, key, on);
             if (save != null) save();
