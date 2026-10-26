@@ -14,7 +14,7 @@ namespace Selene
         public static List<Game> Games()
         {
             if (HomeNav.Api == null) return new List<Game>();
-            try { return HomeNav.Api.Database.Games.Where(g => g != null && !g.Hidden && !string.IsNullOrEmpty(g.Name)).ToList(); }
+            try { return HomeNav.Api.Database.Games.Where(g => g != null && !string.IsNullOrEmpty(g.Name) && HomeNav.OnSpotlight(g)).ToList(); }   // (as Spotlight: a pick from a card lands there)
             catch (Exception ex) { HomeNav.Log("games: " + ex.Message); return new List<Game>(); }
         }
 

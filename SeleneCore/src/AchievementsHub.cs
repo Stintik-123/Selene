@@ -228,9 +228,13 @@ namespace Selene
             Ui.Key();
             sortLabel.Text = Sorts[sort];
             Ui.Pop(sortLabel);
-            games.Clear(); gameRows.Clear(); list.Children.Clear();
-            games.AddRange(Order(allSets));
-            BuildGames();
+            // the rows already made, put in the new order (building them and their covers again took a moment with hundreds)
+            var rowOf = new Dictionary<AchievementsData.GameSet, Border>();
+            for (int i = 0; i < games.Count && i < gameRows.Count; i++) rowOf[games[i]] = gameRows[i];
+            var ordered = Order(allSets).Where(rowOf.ContainsKey).ToList();
+            list.Children.Clear(); games.Clear(); gameRows.Clear();
+            foreach (var g in ordered) { games.Add(g); gameRows.Add(rowOf[g]); list.Children.Add(rowOf[g]); }
+            for (int i = 0; i < Math.Min(5, gameRows.Count); i++) Ui.Rise(gameRows[i], i * 35, 10, 220);
             zone = 1; row = 0;
             scroller.ScrollToVerticalOffset(0);
             ShowFocus(false);

@@ -8,6 +8,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Playnite Achievements sets itself up: its first-time page (desktop only) is done for you and every game is checked once in the background (if Playnite is closed before it finishes, the next start goes on from the game it reached), instead of only the games played since it was installed; after that, each start checks the games you played last, and an update of Playnite Achievements gets every game it has nothing for checked again. Stores still need signing in to once in its settings; Steam uses Playnite's Steam sign-in. Switch: "Achievements: set up on its own".
 - The Achievements screen shows when Playnite Achievements is checking your games: how many of how many, the game it's on, and a bar; when it finishes, the list fills in with what it found.
 - Achievements: "Recently unlocked" moves from the Achievements screen into each game's own list, under its logo (Up from the top of the list goes into it, A opens a trophy); the Achievements screen's game list moves up in its place.
+- Activity, Surprise me and the other cards list only games Spotlight shows (in TV mode, games in the Handheld category stay off, checked across all a game's categories), so a pick always lands.
+- A game's page says "No description for this game yet." instead of a blank space.
 - Achievements: Y orders your games (last unlocked, most or least complete, name A-Z or Z-A, most trophies).
 - A game's page: the description takes only the room left above the screenshots (no more overlapping), and Released is left out for games without a date.
 - Surprise me waits for its covers before spinning, so the first spin no longer flicks past bare names or lands on an empty card.

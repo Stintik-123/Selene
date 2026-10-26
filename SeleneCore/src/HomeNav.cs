@@ -457,18 +457,21 @@ namespace Selene
             var t = game.GetType();
             var hidden = t.GetProperty("Hidden");
             if (hidden != null && Equals(hidden.GetValue(game, null), true)) return false;
+            // in TV mode, the games in the "Handheld" category stay off (any of its categories: only the first was looked at)
+            if (RowMode == "all") return true;
             var cats = t.GetProperty("Categories");
             var list = cats != null ? cats.GetValue(game, null) as IEnumerable : null;
             if (list != null)
-            {
                 foreach (var c in list)
                 {
                     var name = c != null ? c.GetType().GetProperty("Name") : null;
-                    return RowMode == "all" || !(name != null && Equals(name.GetValue(c, null), "Handheld"));
+                    if (name != null && Equals(name.GetValue(c, null), "Handheld")) return false;
                 }
-            }
             return true;
         }
+
+        // a game Spotlight shows (not hidden, not a Handheld game in TV mode): the cards list only these, so a pick lands
+        public static bool OnSpotlight(object game) { return IsShownBase(game); }
 
         // console boot-in: whenever the row becomes visible, each on-screen tile flies out from the centre of the
         // row to its slot, one after another, with a small overshoot.

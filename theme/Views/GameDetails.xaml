@@ -376,6 +376,23 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
+                                <!-- no description in the library (a game added by hand): a quiet line instead of a blank -->
+                                <TextBlock DockPanel.Dock="Top" Text="No description for this game yet." Margin="4,20,0,0" FontSize="17" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk60Brush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Description}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Description}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
                                 <!-- the description: the room left above the screenshots (the block ends at a fixed line), five 26 px lines at most,
                                      the last fading out so a long one trails off; the right stick / page keys scroll it -->
                                 <Border Margin="2,18,0,0" MaxHeight="130" VerticalAlignment="Top" BorderThickness="0" Padding="0,0,26,0" HorizontalAlignment="Left" MinWidth="700">
