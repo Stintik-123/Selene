@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Updating Selene takes one press: when a newer version is out, the menu shows Update (and a notification says so); it shows what's new, downloads the theme and the add-on and hands them to Playnite's installer, then restarts Playnite. Settings, profiles and your theme stay. Selene settings > Advanced > Check for updates looks at once.
+
 ## 1.2.0 - 2026-10-26
 
 - Spotlight and Collection take the same buttons on a game: A plays, X opens its details, Y its game options (from Spotlight with a Move option to arrange the row; Favorite is a switch there and on the heart). The questions before removing, uninstalling, resetting settings and power actions show their icons again.
