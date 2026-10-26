@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- The trailer fade behind Collection and the Store is Selene's own now (`tools/make_trailer_mask.py`); nothing from the Aniki ReMake theme is left.
 - HowLongToBeat times come in: Selene's lookup went through the add-on's "pick the right game" window, which only exists in desktop mode, so in fullscreen it never found a game. It now uses the add-on's automatic match, for the game you rest on in Spotlight, Collection or its page.
 - New installs look like the screenshots in more places: the game menu, dialogs and Playnite's settings use Selene's font; the closing screen shows the game's art (it was black); the loading screen shows the game's name when it has no logo; Achievements shows covers instead of tiny icons.
 - Sleep sleeps (without the optional helper it could hibernate on PCs with hibernation on).

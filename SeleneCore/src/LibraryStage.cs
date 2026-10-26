@@ -44,7 +44,7 @@ namespace Selene
             baseLayer = HomeNav.FindByName(library, "SeleneLibraryBase") as UIElement;
             HomeNav.Log("library stage: art " + (art != null) + ", wallpaper " + (wallpaper != null));
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
-            arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(4000) };   // like Aniki: the art first, the trailer about 4 s in
+            arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(4000) };   // the art first, the trailer about 4 s in
             arm.Tick += (s, e) => { arm.Stop(); Play(); };
             list.SelectionChanged += (s, e) =>
             {

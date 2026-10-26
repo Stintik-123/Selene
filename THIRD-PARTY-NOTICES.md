@@ -36,9 +36,6 @@ The profile pictures in `theme/Avatars` are Xbox gamer pictures from Microsoft's
 (`<pack>-<number>.jpg` matches the original file names). They remain the property of Microsoft and the respective
 game publishers and are not covered by Selene's MIT license. Rights holders can ask for removal by opening an issue.
 
-## Collection trailer mask
-`theme/Images/TrailerMask.png` comes from the Aniki ReMake theme (its trailer mask), used as is.
-
 ## Background video
 `theme/Media/selene-background.mp4` is the looping background from the maintainer's legacy setup (origin not recorded); it will be replaced if asked.
 
