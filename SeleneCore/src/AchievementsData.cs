@@ -424,7 +424,7 @@ namespace Selene
                     cachedAt = DateTime.MinValue;   // read again on the next look
                     if (recentOnly) return;
                     try { File.WriteAllText(SetupFile, "done " + version); } catch { }
-                    if (ok) ProgressToast.ShowNote("Achievements are in", "Every game's trophies are on the Achievements card.", 0xea23);
+                    if (ok) ProgressToast.ShowNote("Achievements", "Ready", 0xea23);
                 }));
                 pt.GetProperty("OnRefreshCompleted").SetValue(policy, finished, null);
                 int n, all; double part; Guid? on;
@@ -441,7 +441,7 @@ namespace Selene
                 entry.GetType().GetMethod("ExecuteAsync", any, null, new[] { request.GetType(), pt }, null).Invoke(entry, new[] { request, policy });
                 if (recentOnly) { HomeNav.Log("achievements: checking the games played last"); return; }
                 HomeNav.Log("achievements: " + (resumeFrom > 0 ? "going on with the check cut short, " + resumeFrom + " games done before" : "Playnite Achievements set up, checking every game"));
-                ProgressToast.ShowNote("Checking your achievements", "This might take a while.", 0xea23);
+                ProgressToast.ShowNote("Achievements", "Checking", 0xea23);
             }
             catch (Exception ex) { HomeNav.Log("achievements: setting up failed: " + (ex.InnerException ?? ex).Message); }
         }

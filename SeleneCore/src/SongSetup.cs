@@ -43,7 +43,7 @@ namespace Selene
                 {
                     System.Threading.Thread.Sleep(20000);   // after the start-up's own work
                     bool fresh = !File.Exists(YtDlp) || !File.Exists(Ffmpeg);
-                    if (fresh) dispatcher.BeginInvoke(new Action(() => ProgressToast.ShowNote("Getting game songs ready", "A one-time download for UniPlaySong, about 130 MB", 0xE405)));
+                    if (fresh) dispatcher.BeginInvoke(new Action(() => ProgressToast.ShowNote("Game songs", "Setting up", 0xE405)));
                     Download();
                     dispatcher.BeginInvoke(new Action(() => PointAndFetch(plugin, service)));
                 }
@@ -110,7 +110,7 @@ namespace Selene
                     // couple of seconds, the games that have a song skipped
                     System.Threading.Tasks.Task.Run(() => { try { fetch.Invoke(plugin, new object[] { games }); } catch (Exception ex) { HomeNav.Log("songs: " + (ex.InnerException ?? ex).Message); } });
                     HomeNav.Log("songs: UniPlaySong is getting songs for " + games.Count + " games");
-                    ProgressToast.ShowNote("Game songs are on their way", "Each game gets its song in the background", 0xE405);
+                    ProgressToast.ShowNote("Game songs", "On their way", 0xE405);
                 }
                 else
                 {
