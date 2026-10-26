@@ -2902,8 +2902,12 @@ namespace Selene
                     }
                     if (pressed == "Y")
                     {
-                        // Game options, as the hint says (Playnite's own Y opened its search box)
-                        try { PlayniteMenu.Main("OpenGameMenuCommand"); } catch (Exception ex) { Log("game options in Collection: " + ex.Message); }
+                        // Game options, as the hint says (Playnite's own Y opened its search box): Selene's screen, or Playnite's menu
+                        var ydc = item.DataContext;
+                        var yid = Prop(ydc, "Id");
+                        if (!(yid is Guid)) { var yg = Prop(ydc, "Game"); if (yg != null) yid = Prop(yg, "Id"); }
+                        if (!(yid is Guid && GameOptionsScreen.Open((Guid)yid)))
+                            try { PlayniteMenu.Main("OpenGameMenuCommand"); } catch (Exception ex) { Log("game options in Collection: " + ex.Message); }
                         e.Cancel();
                         return;
                     }

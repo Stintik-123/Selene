@@ -64,10 +64,7 @@
         <GradientStop Color="#FFEDE7E1" Offset="0" />
         <GradientStop Color="#AAE1DBD5" Offset="1.0" />
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="OverlayMenuBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,1.5">
-        <GradientStop Color="#F2F2E9E1" Offset="0" />
-        <GradientStop Color="#F2E1DBD5" Offset="1.0" />
-    </LinearGradientBrush>
+    <SolidColorBrush x:Key="OverlayMenuBackgroundBrush" Color="#F7302D43" />
     <LinearGradientBrush x:Key="GameDetailsBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,0.4">
         <GradientStop Color="#00EDE7E1" Offset="0.0" />
         <GradientStop Color="#EEE1DBD5" Offset="0.8" />

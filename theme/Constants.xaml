@@ -113,10 +113,8 @@
         <GradientStop Color="#AA0B1027" Offset="1.0"/>
     </LinearGradientBrush>
 
-    <LinearGradientBrush x:Key="OverlayMenuBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,1.5" >
-        <GradientStop Color="#F2102A5C" Offset="0"/>
-        <GradientStop Color="#F203081A" Offset="1.0"/>
-    </LinearGradientBrush>
+    <!-- Playnite's own pop-up menus (edit fields, extensions, notifications...): Selene's dark glass, not Playnite's blue -->
+    <SolidColorBrush x:Key="OverlayMenuBackgroundBrush" Color="{DynamicResource SeleneGlassColor}" Opacity="0.97" />
 
     <LinearGradientBrush x:Key="SelectionBrush" StartPoint="0.5,-0.5" EndPoint="1,1.5" >
         <GradientStop Color="{DynamicResource SeleneFocusColor}" Offset="0"/>

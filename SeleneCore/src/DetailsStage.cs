@@ -23,7 +23,8 @@ namespace Selene
         private static readonly List<Action>[] opens = { new List<Action>(), new List<Action>(), new List<Action>() };
         private static readonly int[] at = new int[3];
         private static int zone;   // 0: the pills (Playnite's focus), 1..3: the bands
-        private static Border sink;   // the keyboard focus while a band has Selene's focus (on a pill, that pill lit up too)
+        private static Border sink;
+        private static System.Windows.Input.ICommand playniteOptions;   // Playnite's own Game Options, kept for when Selene's is off   // the keyboard focus while a band has Selene's focus (on a pill, that pill lit up too)
 
         public static bool InBand { get { return details != null && details.IsVisible && zone > 0; } }
 
@@ -62,6 +63,14 @@ namespace Selene
                 if (page == null) { HomeNav.Log("details stage: no page in the template"); return; }
                 SeleneShell.Switch(Part<UIElement>("SeleneHltb"), "hltb");
                 HltbFetch.ForPage(g);
+                // Game Options: Selene's screen (Playnite's own menu when that's switched off)
+                var options = Part<System.Windows.Controls.Primitives.ButtonBase>("PART_ButtonOptions");
+                if (options != null)
+                {
+                    if (playniteOptions == null && !(options.Command is SeleneShell.Relay)) playniteOptions = options.Command;
+                    var gid = g.Id;
+                    options.Command = new SeleneShell.Relay(() => { if (!GameOptionsScreen.Open(gid) && playniteOptions != null && playniteOptions.CanExecute(null)) playniteOptions.Execute(null); });
+                }
                 SeleneShell.Switch(Part<UIElement>("SeleneAchievementsStat"), "achievements");
                 SeleneShell.Switch(Part<UIElement>("SeleneAchievementsHint"), "achievements");
                 if (sink == null || !ReferenceEquals(sink.Parent, page))

@@ -168,10 +168,8 @@ def xaml(theme_id, name, c, wallpaper):
         f'        <GradientStop Color="{argb(dark)}" Offset="0" />',
         f'        <GradientStop Color="{argb(darker, "AA")}" Offset="1.0" />',
         "    </LinearGradientBrush>",
-        '    <LinearGradientBrush x:Key="OverlayMenuBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,1.5">',
-        f'        <GradientStop Color="{argb(top, "F2")}" Offset="0" />',
-        f'        <GradientStop Color="{argb(darker, "F2")}" Offset="1.0" />',
-        "    </LinearGradientBrush>",
+        # Playnite's own pop-up menus (edit fields, extensions...): the theme's glass, solid (a blue-ish gradient looked foreign)
+        f'    <SolidColorBrush x:Key="OverlayMenuBackgroundBrush" Color="{argb(glass, "F7")}" />',
         '    <LinearGradientBrush x:Key="GameDetailsBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,0.4">',
         f'        <GradientStop Color="{argb(dark, "00")}" Offset="0.0" />',
         f'        <GradientStop Color="{argb(darker, "EE")}" Offset="0.8" />',
