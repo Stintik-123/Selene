@@ -364,8 +364,16 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <!-- the description: whole lines only (the page's CSS sets 26 px lines, so six of them fit; the right stick / page keys scroll it) -->
-                                <Border Margin="2,18,0,0" Height="156" BorderThickness="0" Padding="0,0,26,0" HorizontalAlignment="Left" MinWidth="700">
+                                <!-- the description: five 26 px lines (the page's CSS), the last fading out so a long one trails off instead of
+                                     running into the screenshots; the right stick / page keys scroll it -->
+                                <Border Margin="2,18,0,0" Height="130" BorderThickness="0" Padding="0,0,26,0" HorizontalAlignment="Left" MinWidth="700">
+                                    <Border.OpacityMask>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="Black" Offset="0"/>
+                                            <GradientStop Color="Black" Offset="0.72"/>
+                                            <GradientStop Color="Transparent" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.OpacityMask>
                                     <ScrollViewerEx x:Name="PART_ScrollHtmlDescription" CustomScrollAmount="42" VerticalScrollBarVisibility="Hidden">
                                         <HtmlTextView x:Name="PART_HtmlDescription" HtmlFontSize="17"
                                                       HtmlForeground="{DynamicResource SeleneInkColor}" LinkForeground="{DynamicResource GlyphColor}" FocusVisualStyle="{x:Null}"/>
