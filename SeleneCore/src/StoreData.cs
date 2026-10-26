@@ -187,6 +187,7 @@ namespace Selene
         // when the lists shown were saved (offline: from the disk copy), MinValue while nothing is loaded
         public static DateTime LoadedAt { get { return loadedAt; } }
         public static bool FromDisk { get; private set; }
+        public static bool Busy { get { return loading; } }   // lists being fetched (the first time, or again after a currency change)
 
         // loads (or refreshes after 30 minutes) every list; `arrived(key)` runs on the UI thread as each one comes in
         public static void Load(Action<string> arrived)

@@ -1241,6 +1241,9 @@ namespace Selene
                     ApplyRowFilter(row);
                     idx = RowIndexOf(row, id);
                 }
+                // not by its id: the same game by name (DuplicateHider shows one copy of a game you have twice, and the pick may be
+                // the other copy)
+                if (idx < 0) idx = RowIndexOfName(row, id);
                 Log("find a game: " + (idx >= 0 ? "picked on Spotlight (tile " + idx + ")" : "not on Spotlight's row"));
                 // (Spotlight's row is Playnite's own list, its filter can leave a game out: its options then, Play among them)
                 if (idx < 0) { GameOptionsScreen.Open(id); return; }
@@ -1295,6 +1298,19 @@ namespace Selene
             if (sv != null && Math.Abs(sv.HorizontalOffset - offset) > 0.5) { sv.ScrollToHorizontalOffset(offset); row.UpdateLayout(); }   // once more with the focus in the row
             ScheduleTitle(row, 230);
             EnsureTileCaches(row);
+        }
+
+        private static int RowIndexOfName(ListBox row, Guid id)
+        {
+            var g = GameFacts.Find(id);
+            if (g == null || string.IsNullOrEmpty(g.Name)) return -1;
+            for (int i = 0; i < row.Items.Count; i++)
+            {
+                var item = row.Items[i];
+                if (item is string || item is RowPad) continue;
+                if (string.Equals(Convert.ToString(Prop(item, "Name")), g.Name, StringComparison.OrdinalIgnoreCase)) return i;
+            }
+            return -1;
         }
 
         private static int RowIndexOf(ListBox row, Guid id)

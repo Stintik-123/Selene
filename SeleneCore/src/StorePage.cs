@@ -136,10 +136,9 @@ namespace Selene
             status = new TextBlock { FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(98, 640, 0, 0) };
             Root.Children.Add(status);
             // nothing to show yet (first open, or the currency just changed): a loading card in the middle, not a bare dark page
-            var ring = new System.Windows.Shapes.Ellipse { Width = 54, Height = 54, StrokeThickness = 4, Stroke = Ink.Brush("GlyphColor"), StrokeDashArray = new DoubleCollection { 22, 14 }, StrokeDashCap = PenLineCap.Round, RenderTransformOrigin = new Point(0.5, 0.5), HorizontalAlignment = HorizontalAlignment.Center };
-            var spin = new RotateTransform();
-            ring.RenderTransform = spin;
-            spin.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1.6)) { RepeatBehavior = RepeatBehavior.Forever });
+            // Selene's own loading: the mark with its breathing glow (as on the start-up screen), not a spinning ring
+            var ring = Brand.Mark(96, true);
+            ring.HorizontalAlignment = HorizontalAlignment.Center;
             var loadingWords = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             loadingWords.Children.Add(ring);
             loadingWords.Children.Add(new TextBlock { Text = "Loading the store…", FontSize = 26, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 0) });
@@ -464,8 +463,8 @@ namespace Selene
         private void ShowStatus()
         {
             bool any = rows.Count > 0;
-            bool fetching = StoreData.LoadedAt == DateTime.MinValue;
-            if (!any) status.Text = fetching ? "" : "Nothing here right now.";
+            bool fetching = StoreData.LoadedAt == DateTime.MinValue || StoreData.Busy;   // (Busy: a currency change empties the page while it reloads)
+            if (!any) status.Text = "";
             if (loading != null) loading.Visibility = !any && fetching ? Visibility.Visible : Visibility.Collapsed;
             else if (StoreData.FromDisk)
             {
