@@ -667,6 +667,10 @@ namespace Selene
                 // Selene's library is one row under the trailer stage
                 var rows = fs.GetType().GetProperty("Rows");
                 if (rows != null && rows.PropertyType == typeof(int) && !Equals(rows.GetValue(fs, null), 1)) { rows.SetValue(fs, 1, null); Log("library rows -> 1"); }
+                // Playnite draws only "Columns" + 1 tiles, as if each were the screen's width / Columns; Selene's covers are a fixed
+                // size, so the default 4 left the row empty after the fifth game. Enough for any screen
+                var cols = fs.GetType().GetProperty("Columns");
+                if (cols != null && cols.PropertyType == typeof(int) && (int)cols.GetValue(fs, null) < 16) { cols.SetValue(fs, 16, null); Log("library columns -> 16"); }
             }
             catch (Exception ex) { Log("horizontal: " + ex.Message); }
         }

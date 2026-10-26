@@ -68,7 +68,7 @@ namespace Selene
 
             var layout = new Section { Name = "Layout", Icon = 0xe871 };
             layout.Rows.Add(Slider("Rows", "Rows in Collection", "How many rows of tiles Collection shows.", new[] { "1", "2", "3", "4", "5", "6" }, null));
-            layout.Rows.Add(Slider("Columns", "Columns in Collection", "How many tiles across.", new[] { "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" }, null));
+            // (no Columns: on Selene it doesn't size the covers, and a low value left Collection's row empty past a few games)
             layout.Rows.Add(Switch("HorizontalLayout", "Scroll sideways", "Collection scrolls left and right instead of up and down."));
             list.Add(layout);
 
