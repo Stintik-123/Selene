@@ -1246,7 +1246,7 @@ namespace Selene
                 if (idx < 0) idx = RowIndexOfName(row, id);
                 Log("find a game: " + (idx >= 0 ? "picked on Spotlight (tile " + idx + ")" : "not on Spotlight's row"));
                 // (Spotlight's row is Playnite's own list, its filter can leave a game out: its options then, Play among them)
-                if (idx < 0) { GameOptionsScreen.Open(id); return; }
+                if (idx < 0) { LogMissing(id); GameOptionsScreen.Open(id); return; }
                 int cur = row.SelectedIndex >= 0 && row.SelectedIndex < row.Items.Count ? row.SelectedIndex : 0;
                 // the focus comes from outside the row (the search layer): the row's guard would send it back to the old
                 // selection, so it's told which tile is wanted
@@ -1298,6 +1298,22 @@ namespace Selene
             if (sv != null && Math.Abs(sv.HorizontalOffset - offset) > 0.5) { sv.ScrollToHorizontalOffset(offset); row.UpdateLayout(); }   // once more with the focus in the row
             ScheduleTitle(row, 230);
             EnsureTileCaches(row);
+        }
+
+        // why a game isn't on Spotlight's row: what the row is made from, and the game's own facts
+        private static void LogMissing(Guid id)
+        {
+            try
+            {
+                var g = GameFacts.Find(id);
+                int source = 0; bool inSource = false;
+                if (gameSource != null) foreach (var o in gameSource) { source++; var gid = Prop(o, "Id"); if (gid is Guid && (Guid)gid == id) inSource = true; }
+                bool inFiltered = Api != null && Api.MainView.FilteredGames.Any(x => x.Id == id);
+                Log("find a game: missing " + (g != null ? g.Name : id.ToString()) + ": in Playnite's list " + inSource + " (" + source + " games), in its filtered games " + inFiltered
+                    + " (" + (Api != null ? Api.MainView.FilteredGames.Count : 0) + "), preset " + (Api != null ? Api.MainView.GetActiveFilterPreset().ToString() : "?")
+                    + (g != null ? ", hidden " + g.Hidden + ", source " + (g.Source != null ? g.Source.Name : "none") + ", platforms " + (g.Platforms != null ? string.Join("/", g.Platforms.Select(x => x.Name)) : "none") + ", installed " + g.IsInstalled : ""));
+            }
+            catch (Exception ex) { Log("find a game: missing: " + ex.Message); }
         }
 
         private static int RowIndexOfName(ListBox row, Guid id)
