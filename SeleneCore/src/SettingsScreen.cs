@@ -260,10 +260,13 @@ namespace Selene
         private class WorkBar
         {
             public readonly DockPanel Root = new DockPanel { Margin = new Thickness(0, 9, 0, 2), Visibility = Visibility.Collapsed, LastChildFill = true };
-            private readonly ColumnDefinition done = new ColumnDefinition(), left = new ColumnDefinition();
+            private readonly Grid bar;
+            private readonly Border fill;
             private readonly TextBlock percent;
             private readonly TranslateTransform slide = new TranslateTransform(-1.2, 0);
             private bool running;
+            private double share = -1;   // where it stands (the fill glides there)
+            private int shownPercent = -1;
 
             public WorkBar()
             {
@@ -271,13 +274,9 @@ namespace Selene
                 percent = new TextBlock { FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right, MinWidth = 36, Margin = new Thickness(12, 0, 0, 3) };
                 DockPanel.SetDock(percent, Dock.Right);
                 Root.Children.Add(percent);
-                var bar = new Grid { Height = 4, ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center };
-                bar.ColumnDefinitions.Add(done);
-                bar.ColumnDefinitions.Add(left);
-                var track = new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.14) };
-                Grid.SetColumnSpan(track, 2);
-                bar.Children.Add(track);
-                var fill = new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("GlyphColor"), MinWidth = 6, ClipToBounds = true };
+                bar = new Grid { Height = 4, ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center };
+                bar.Children.Add(new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.14) });
+                fill = new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("GlyphColor"), Width = 6, HorizontalAlignment = HorizontalAlignment.Left, ClipToBounds = true };
                 // the light: a soft band of white gliding along the filled part
                 fill.Child = new Border
                 {
@@ -289,20 +288,53 @@ namespace Selene
                 };
                 bar.Children.Add(fill);
                 Root.Children.Add(bar);
+                bar.SizeChanged += (s, e) => Place(false);   // its width known (or changed): the fill set straight there
                 Root.Loaded += (s, e) => { if (Root.Visibility == Visibility.Visible) Start(); };
                 Root.Unloaded += (s, e) => Stop();   // (nothing ticking for a row gone)
             }
 
-            // how far: 0..1 shows it so, below 0 takes it away
-            public void Set(double share)
+            // how far: 0..1 shows it so (the fill gliding on to it, the figure counting to it), below 0 takes it away
+            public void Set(double next)
             {
-                if (share < 0) { Root.Visibility = Visibility.Collapsed; Stop(); return; }
-                share = Math.Max(0, Math.Min(1, share));
-                done.Width = new GridLength(Math.Max(0.004, share), GridUnitType.Star);
-                left.Width = new GridLength(Math.Max(0, 1 - share), GridUnitType.Star);
-                percent.Text = (int)Math.Round(share * 100) + "%";
+                if (next < 0) { Root.Visibility = Visibility.Collapsed; Stop(); share = -1; return; }
+                next = Math.Max(0, Math.Min(1, next));
+                bool first = share < 0 || Root.Visibility != Visibility.Visible;
+                share = next;
                 Root.Visibility = Visibility.Visible;
+                Place(!first);
+                Count((int)Math.Round(share * 100), !first);
                 if (Root.IsLoaded) Start();
+            }
+
+            // the fill to where it stands: gliding there (eased, 600 ms), or set at once (first shown, or the bar resized)
+            private void Place(bool glide)
+            {
+                if (share < 0 || bar.ActualWidth < 1) return;
+                double to = Math.Max(6, Math.Round(bar.ActualWidth * share));
+                if (!glide) { fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = to; return; }
+                if (Math.Abs(to - fill.Width) < 0.5) return;
+                var move = new DoubleAnimation(to, TimeSpan.FromMilliseconds(600)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                move.Completed += (s, e) => { fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = to; };   // settled: the next glide starts from here
+                fill.BeginAnimation(FrameworkElement.WidthProperty, move);
+            }
+
+            // the figure counts to the new one (a step every few frames) rather than jumping
+            private System.Windows.Threading.DispatcherTimer counter;
+            private void Count(int to, bool glide)
+            {
+                if (!glide || shownPercent < 0) { if (counter != null) counter.Stop(); shownPercent = to; percent.Text = to + "%"; return; }
+                if (counter == null)
+                {
+                    counter = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+                    counter.Tick += (s, e) =>
+                    {
+                        int goal = (int)Math.Round(Math.Max(0, share) * 100);
+                        if (shownPercent == goal) { counter.Stop(); return; }
+                        shownPercent += Math.Sign(goal - shownPercent);
+                        percent.Text = shownPercent + "%";
+                    };
+                }
+                if (to != shownPercent) counter.Start();
             }
 
             private void Start()
@@ -316,6 +348,7 @@ namespace Selene
             {
                 running = false;
                 slide.BeginAnimation(TranslateTransform.XProperty, null);
+                if (counter != null) counter.Stop();
             }
         }
 
