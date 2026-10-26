@@ -356,6 +356,22 @@ namespace Selene
             return "";
         }
 
+        // the add-on has a Steam account to read from
+        private static bool SteamUserSet(object persisted)
+        {
+            try
+            {
+                var dict = persisted.GetType().GetProperty("ProviderSettings").GetValue(persisted, null) as System.Collections.IDictionary;
+                var steam = dict != null && dict.Contains("Steam") ? dict["Steam"] : null;
+                if (steam == null) return false;
+                var prop = steam.GetType().GetProperty("SteamUserId");
+                if (prop != null) return !string.IsNullOrEmpty(prop.GetValue(steam, null) as string);
+                var token = steam.GetType().GetMethod("GetValue", new[] { typeof(string) }).Invoke(steam, new object[] { "SteamUserId" });
+                return token != null && !string.IsNullOrEmpty(token.ToString());
+            }
+            catch { return false; }
+        }
+
         // the add-on's Steam account (ProviderSettings["Steam"].SteamUserId) set to this PC's Steam user when empty; true when set
         private static bool FillSteamUser(object persisted)
         {
@@ -398,9 +414,14 @@ namespace Selene
                 // done before: only the games played last, unless the add-on was updated since (a new version can read games the
                 // old one couldn't: Steam's new achievement pages came with 4.1)
                 string version = AddonVersion(p);
-                bool recentOnly = resuming && lines[0].Trim().StartsWith("done");
+                // the note: "done <version> steam" (steam: the full pass ran with a Steam account in place)
+                string head = resuming ? lines[0].Trim() : "";
+                bool recentOnly = head.StartsWith("done");
+                bool steamTagged = head.EndsWith(" steam");
+                string doneVersion = recentOnly ? head.Substring(4).Replace(" steam", "").Trim() : "";
+                bool fullAgain = false;   // every game once more, whatever the add-on has for it (its Missing pass skips a game it looked at before)
                 // (a note without a version too: checked again once)
-                if (recentOnly && lines[0].Trim() != "done " + version) { HomeNav.Log("achievements: Playnite Achievements now " + version + " (was " + lines[0].Trim().Substring(4).Trim() + "), every game it has nothing for checked again"); recentOnly = false; lines = new string[0]; }
+                if (recentOnly && doneVersion != version) { HomeNav.Log("achievements: Playnite Achievements now " + version + " (was " + doneVersion + "), every game it has nothing for checked again"); recentOnly = false; lines = new string[0]; }
                 lock (trackLock)
                 {
                     checkedIds.Clear(); trackGame = null; trackTotal = 0;
@@ -421,8 +442,12 @@ namespace Selene
                 if (FillSteamUser(persisted))
                 {
                     typeof(Playnite.SDK.Plugins.Plugin).GetMethod("SavePluginSettings").MakeGenericMethod(settings.GetType()).Invoke(p, new[] { settings });
-                    if (recentOnly) { recentOnly = false; resuming = false; lines = new string[0]; lock (trackLock) { checkedIds.Clear(); trackTotal = 0; resumeFrom = 0; } }
+                    fullAgain = true;
                 }
+                // the account was there but the one full pass ran before it (a Missing pass after found nothing to do, every game
+                // having been looked at already): the whole library once more, in the background
+                else if (recentOnly && !steamTagged && SteamUserSet(persisted)) { HomeNav.Log("achievements: a Steam account is set but every game was checked before it: all of them once more"); fullAgain = true; }
+                if (fullAgain) { recentOnly = false; resuming = false; lines = new string[0]; lock (trackLock) { checkedIds.Clear(); trackTotal = 0; resumeFrom = 0; } }
                 var done = persisted.GetType().GetProperty("FirstTimeSetupCompleted");
                 // (its theme-integration question: nothing for Selene to move over; left unanswered it held the updates too)
                 var seen = persisted.GetType().GetProperty("SeenThemeMigration");
@@ -435,7 +460,7 @@ namespace Selene
 
                 var asm = p.GetType().Assembly;
                 var request = Activator.CreateInstance(asm.GetType("PlayniteAchievements.Models.RefreshRequest"));
-                request.GetType().GetProperty("Mode").SetValue(request, Enum.Parse(asm.GetType("PlayniteAchievements.Models.RefreshModeType"), recentOnly ? "Recent" : "Missing"), null);
+                request.GetType().GetProperty("Mode").SetValue(request, Enum.Parse(asm.GetType("PlayniteAchievements.Models.RefreshModeType"), fullAgain ? "Full" : recentOnly ? "Recent" : "Missing"), null);
                 if (resumeFrom > 0)
                 {
                     // going on from where it was cut short: the games it hadn't got to (hidden ones as the add-on's setting says)
@@ -462,7 +487,7 @@ namespace Selene
                     HomeNav.Log("achievements: " + (recentOnly ? "games played last" : "every game") + " checked, " + (ok ? "done" : "with errors"));
                     cachedAt = DateTime.MinValue;   // read again on the next look
                     if (recentOnly) return;
-                    try { File.WriteAllText(SetupFile, "done " + version); } catch { }
+                    try { File.WriteAllText(SetupFile, "done " + version + (SteamUserSet(persisted) ? " steam" : "")); } catch { }
                     if (ok) ProgressToast.ShowNote("Achievements", "Ready", 0xea23);
                 }));
                 pt.GetProperty("OnRefreshCompleted").SetValue(policy, finished, null);
@@ -479,7 +504,7 @@ namespace Selene
                 var entry = p.GetType().GetProperty("RefreshEntryPoint", any).GetValue(p, null);
                 entry.GetType().GetMethod("ExecuteAsync", any, null, new[] { request.GetType(), pt }, null).Invoke(entry, new[] { request, policy });
                 if (recentOnly) { HomeNav.Log("achievements: checking the games played last"); return; }
-                HomeNav.Log("achievements: " + (resumeFrom > 0 ? "going on with the check cut short, " + resumeFrom + " games done before" : "Playnite Achievements set up, checking every game"));
+                HomeNav.Log("achievements: " + (resumeFrom > 0 ? "going on with the check cut short, " + resumeFrom + " games done before" : fullAgain ? "checking every game in full" : "Playnite Achievements set up, checking every game"));
                 ProgressToast.ShowNote("Achievements", "Checking", 0xea23);
             }
             catch (Exception ex) { HomeNav.Log("achievements: setting up failed: " + (ex.InnerException ?? ex).Message); }
