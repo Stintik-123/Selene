@@ -228,7 +228,7 @@ namespace Selene
                 if (what >= 0 && Features.On("powerconfirm"))
                 {
                     ask = new Dialog(Ui.Icon((int)PowerItems[powerIndex][0]), label + "?", what == 0 ? "The PC goes to sleep." : what == 1 ? "The PC restarts. Anything unsaved is lost." : "The PC shuts down. Anything unsaved is lost.",
-                        label, "Cancel", () => { ask = null; run(); }, () => ask = null, what != 0);
+                        label, "Cancel", () => { ask = null; run(); }, () => ask = null, what != 0, true);
                     ask.Open(Root);
                     return;
                 }

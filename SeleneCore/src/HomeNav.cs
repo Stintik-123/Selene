@@ -2849,7 +2849,16 @@ namespace Selene
                 {
                     var hr = LiveRow();
                     var sel = hr != null ? hr.SelectedItem : null;
-                    if (sel != null && !(sel is string) && !(sel is RowPad)) { ToggleFavorite(sel); e.Cancel(); return; }
+                    var xRunning = sel != null ? Prop(sel, "IsRunning") : null;
+                    bool closes = xRunning is bool && (bool)xRunning && CanReturnToGame();
+                    if (sel != null && !(sel is string) && !(sel is RowPad) && !closes)
+                    {
+                        // X: the game's details, as in Collection (Favorite is in Game options and on the heart)
+                        HidePreview();
+                        OpenDetailsFromHome(hr, sel, Window.GetWindow(hr));
+                        e.Cancel();
+                        return;
+                    }
                 }
                 if (pressed == "X" && item != null && IsInRow(item)) returnToHub = true;
                 if (pressed == "B" && item != null && IsInRow(item) && (movingCard != null || movingGame != null))
@@ -2967,7 +2976,13 @@ namespace Selene
                 }
                 else if (item.DataContext != null)
                 {
-                    if (RowFilters[RowFilter] == "recent") { e.Cancel(); return; }  // order there is last played, not arranged
+                    bool canMove = RowFilters[RowFilter] != "recent";   // order there is last played, not arranged
+                    var moveItem = item;
+                    Action move = canMove ? (Action)(() => { movingGame = moveItem.DataContext; SetMoveVisual(moveItem, true); Ui.Tick(); }) : null;
+                    var yid = Prop(item.DataContext, "Id");
+                    if (movingGame == null && yid is Guid && GameOptionsScreen.Open((Guid)yid, move)) { e.Cancel(); return; }
+                    // (Selene's game options off, or ending a move: Y moves, as before)
+                    if (!canMove) { e.Cancel(); return; }
                     movingGame = movingGame == null ? item.DataContext : null;
                     SetMoveVisual(item, movingGame != null);
                 }
@@ -3091,6 +3106,14 @@ namespace Selene
                 return true;
             }
             if (isRunning) { CloseGame(game); return true; }
+            OpenDetailsFromHome(row, game, w);
+            return true;
+        }
+
+        // a game's details page from Spotlight (the Details pill, X): the home overlay closes first (as the Library card does),
+        // then details open; closing them brings the home back (WatchDetails)
+        private static void OpenDetailsFromHome(ListBox row, object game, Window w)
+        {
             PushSelected(row);
             var vm = row.DataContext;
             var cmd = vm != null ? vm.GetType().GetProperty("ToggleGameDetailsCommand") : null;
@@ -3109,7 +3132,6 @@ namespace Selene
                     Log("details button -> " + game);
                 }), System.Windows.Threading.DispatcherPriority.Background);
             }
-            return true;
         }
 
         // the old theme's navigation reacts to the same Down first and moves focus to the news a moment later (deferred), which

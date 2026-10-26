@@ -760,7 +760,7 @@ namespace Selene
         private readonly bool warning;
 
         // warning: a red badge and a red Yes (Remove...); otherwise the theme's accent (Install all, Restart)
-        public Dialog(string icon, string title, string text, string yesLabel, string noLabel, Action onYes, Action onNo, bool warning = true)
+        public Dialog(string icon, string title, string text, string yesLabel, string noLabel, Action onYes, Action onNo, bool warning = true, bool material = false)
         {
             this.onYes = onYes;
             this.onNo = onNo;
@@ -770,7 +770,7 @@ namespace Selene
             var badge = new Grid { Width = 84, Height = 84, HorizontalAlignment = HorizontalAlignment.Center };
             badge.Children.Add(new Ellipse { Fill = warning ? (Brush)new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0x6B, 0x6B)) : Ink.Brush("GlyphColor", 0.19) });
             // icon glyphs sit a little low in their box: nudged to the circle's middle
-            var glyph = new TextBlock { Text = icon, FontFamily = Ui.Glyphs, FontSize = 36, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 5) };
+            var glyph = new TextBlock { Text = icon, FontFamily = material ? Ui.Icons : Ui.Glyphs, FontSize = 36,   /* material: a Material Icons code (else Segoe MDL2) */ HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 5) };
             if (warning) glyph.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush"); else glyph.Foreground = Ink.Brush("GlyphColor");
             badge.Children.Add(glyph);
             col.Children.Add(badge);

@@ -45,18 +45,24 @@ namespace Selene
         public override Brush OverlayShade { get { return Ink.Brush("SeleneScrimColor", 0.92); } }
 
         // Selene's game options for a game, or false (switched off, or no game) so Playnite's own menu opens instead
-        public static bool Open(Guid id)
+        public static bool Open(Guid id) { return Open(id, null); }
+
+        // move: from Spotlight's row, a Move option that arranges the game there
+        public static bool Open(Guid id, Action move)
         {
             if (!Features.On("gameoptions") || HomeNav.Api == null) return false;
             var g = HomeNav.Api.Database.Games.Get(id);
             if (g == null) return false;
-            LoginScene.OpenWith(() => new GameOptionsScreen(g));
+            LoginScene.OpenWith(() => new GameOptionsScreen(g, move));
             return true;
         }
 
-        public GameOptionsScreen(Game game)
+        private readonly Action move;
+
+        public GameOptionsScreen(Game game, Action move = null)
         {
             this.game = game;
+            this.move = move;
             // one column in the middle (the game's name is in the title above the rows)
             var layout = new Grid { Margin = new Thickness(0, 90, 0, 110), Width = 1040, HorizontalAlignment = HorizontalAlignment.Center };
             var right = new StackPanel();
@@ -86,6 +92,7 @@ namespace Selene
             var l = new Level { Title = "Game options" };
             if (game.IsInstalled) l.Entries.Add(new Entry { Label = "Play", Icon = 0xe037, Run = () => { var id = game.Id; LoginScene.FinishThen(() => HomeNav.StartGameNow(id)); } });
             else l.Entries.Add(new Entry { Label = "Install", Icon = 0xe2c4, Run = () => { var id = game.Id; LoginScene.FinishThen(() => api.InstallGame(id)); } });
+            if (move != null) { var m = move; l.Entries.Add(new Entry { Label = "Move", Sub = "Arrange it on Spotlight's row: Left / Right, then A.", Icon = 0xe89f, Run = () => LoginScene.FinishThen(m) }); }
             l.Entries.Add(new Entry { Label = "Favorite", Sub = "On your Favorites tab.", Icon = 0xe838, Toggle = () => game.Favorite, Run = () => { game.Favorite = !game.Favorite; Save(); } });
             l.Entries.Add(new Entry { Label = "Hidden", Sub = "Hidden games stay out of your lists.", Icon = 0xe8f5, Toggle = () => game.Hidden, Run = () => { game.Hidden = !game.Hidden; Save(); } });
             l.Entries.Add(new Entry { Label = "HDR", Sub = "Windows' HDR switched on while this game runs.", Icon = 0xe3ee, Toggle = () => game.EnableSystemHdr, Run = () => { game.EnableSystemHdr = !game.EnableSystemHdr; Save(); } });
@@ -306,23 +313,23 @@ namespace Selene
         // ---- removing, uninstalling: asked first ----
         private void AskRemove()
         {
-            ask = new Dialog(Ui.Icon(0xE711) /* Segoe MDL2: cancel */, "Remove " + game.Name + "?", "It leaves your library. The game itself stays installed; a library update may bring it back.", "Remove", "Keep it", () =>
+            ask = new Dialog(Ui.Icon(0xe5cd), "Remove " + game.Name + "?", "It leaves your library. The game itself stays installed; a library update may bring it back.", "Remove", "Keep it", () =>
             {
                 ask = null;
                 var id = game.Id;
                 LoginScene.FinishThen(() => { try { HomeNav.Api.Database.Games.Remove(id); } catch (Exception ex) { HomeNav.Log("game options: remove failed: " + ex.Message); } });
-            }, () => ask = null);
+            }, () => ask = null, true, true);
             ask.Open(Root);
         }
 
         private void AskUninstall()
         {
-            ask = new Dialog(Ui.Icon(0xE74D) /* Segoe MDL2: delete */, "Uninstall " + game.Name + "?", "Its store or launcher takes it off this PC.", "Uninstall", "Keep it", () =>
+            ask = new Dialog(Ui.Icon(0xe872), "Uninstall " + game.Name + "?", "Its store or launcher takes it off this PC.", "Uninstall", "Keep it", () =>
             {
                 ask = null;
                 var id = game.Id;
                 LoginScene.FinishThen(() => { try { HomeNav.Api.UninstallGame(id); } catch (Exception ex) { HomeNav.Log("game options: uninstall failed: " + ex.Message); } });
-            }, () => ask = null);
+            }, () => ask = null, true, true);
             ask.Open(Root);
         }
 
