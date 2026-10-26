@@ -253,9 +253,11 @@ namespace Selene
 
         // ---- the add-on set up without its desktop page ----
         // Playnite Achievements checks nothing on its own until its first-time page (desktop mode only) is gone through; from
-        // the couch it never is, so only games played since showed up. Once: that page is marked done and every game is
-        // checked in the background (the stores it's signed in to; Steam through Playnite's Steam sign-in), then its own
-        // update every few hours keeps the list current
+        // the couch it never is, so only games played since showed up. Once: that page is marked done and every game it has
+        // nothing for is checked in the background (the stores it's signed in to; Steam through Playnite's Steam sign-in),
+        // then its own update every few hours keeps the list current. Selene's note of having done it: achievements-setup.txt
+        private static string SetupFile { get { return Path.Combine(SelenePaths.DataFolder, "achievements-setup.txt"); } }
+
         public static void SetUpLater()
         {
             if (!Features.On("achsetup") || (!Features.On("achievements") && !Features.On("cardachievements"))) return;
@@ -269,20 +271,22 @@ namespace Selene
             try
             {
                 var p = Plugin();
-                if (p == null) return;
+                if (p == null || File.Exists(SetupFile)) return;
                 var settings = p.GetType().GetProperty("Settings").GetValue(p, null);
                 var persisted = settings.GetType().GetProperty("Persisted").GetValue(settings, null);
                 var done = persisted.GetType().GetProperty("FirstTimeSetupCompleted");
-                if (done == null || (bool)done.GetValue(persisted, null)) return;
-                done.SetValue(persisted, true, null);
                 // (its theme-integration question: nothing for Selene to move over; left unanswered it held the updates too)
                 var seen = persisted.GetType().GetProperty("SeenThemeMigration");
-                if (seen != null) seen.SetValue(persisted, true, null);
-                typeof(Playnite.SDK.Plugins.Plugin).GetMethod("SavePluginSettings").MakeGenericMethod(settings.GetType()).Invoke(p, new[] { settings });
+                if (done != null && (!(bool)done.GetValue(persisted, null) || (seen != null && !(bool)seen.GetValue(persisted, null))))
+                {
+                    done.SetValue(persisted, true, null);
+                    if (seen != null) seen.SetValue(persisted, true, null);
+                    typeof(Playnite.SDK.Plugins.Plugin).GetMethod("SavePluginSettings").MakeGenericMethod(settings.GetType()).Invoke(p, new[] { settings });
+                }
 
                 var asm = p.GetType().Assembly;
                 var request = Activator.CreateInstance(asm.GetType("PlayniteAchievements.Models.RefreshRequest"));
-                request.GetType().GetProperty("Mode").SetValue(request, Enum.Parse(asm.GetType("PlayniteAchievements.Models.RefreshModeType"), "Full"), null);
+                request.GetType().GetProperty("Mode").SetValue(request, Enum.Parse(asm.GetType("PlayniteAchievements.Models.RefreshModeType"), "Missing"), null);
                 var policy = Activator.CreateInstance(asm.GetType("PlayniteAchievements.Services.Refresh.RefreshExecutionPolicy"));
                 var pt = policy.GetType();
                 pt.GetProperty("ValidateAuthentication").SetValue(policy, false, null);   // (true asks to sign in, in a desktop window)
@@ -297,10 +301,12 @@ namespace Selene
                     if (ok) ProgressToast.ShowNote("Achievements are in", "Every game's trophies are on the Achievements card.", 0xea23);
                 }));
                 pt.GetProperty("OnRefreshCompleted").SetValue(policy, finished, null);
-                var entry = p.GetType().GetProperty("RefreshEntryPoint").GetValue(p, null);
-                entry.GetType().GetMethod("ExecuteAsync").Invoke(entry, new[] { request, policy });
+                const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;   // (the add-on keeps these to itself)
+                var entry = p.GetType().GetProperty("RefreshEntryPoint", any).GetValue(p, null);
+                entry.GetType().GetMethod("ExecuteAsync", any, null, new[] { request.GetType(), pt }, null).Invoke(entry, new[] { request, policy });
+                File.WriteAllText(SetupFile, DateTime.UtcNow.ToString("o"));
                 HomeNav.Log("achievements: Playnite Achievements set up, checking every game");
-                ProgressToast.ShowNote("Checking your achievements", "Every game in your library, the first time takes a while.", 0xea23);
+                ProgressToast.ShowNote("Checking your achievements", "Every game in your library. The first time takes a while.", 0xea23);
             }
             catch (Exception ex) { HomeNav.Log("achievements: setting up failed: " + (ex.InnerException ?? ex).Message); }
         }
