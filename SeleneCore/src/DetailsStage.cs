@@ -152,10 +152,14 @@ namespace Selene
         private static void FillDescription(Game g)
         {
             var view = Part<FrameworkElement>("PART_HtmlDescription");
-            if (view == null || string.IsNullOrEmpty(g.Description)) return;
+            if (view == null) return;
             var prop = System.ComponentModel.DependencyPropertyDescriptor.FromName("HtmlText", view.GetType(), view.GetType());
             if (prop == null) return;
-            view.SetValue(prop.DependencyProperty, WordsOnly(g.Description));
+            var words = string.IsNullOrEmpty(g.Description) ? "" : WordsOnly(g.Description);   // (none: empty, not the last game's)
+            if (Equals(view.GetValue(prop.DependencyProperty), words)) return;
+            view.SetValue(prop.DependencyProperty, words);
+            var scroller = Part<ScrollViewer>("PART_ScrollHtmlDescription");
+            if (scroller != null) scroller.ScrollToTop();   // a new game's words from their start
         }
 
         internal static string WordsOnly(string html)
