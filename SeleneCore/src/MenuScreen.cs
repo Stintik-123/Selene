@@ -182,8 +182,10 @@ namespace Selene
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black }
             };
             // over the Power icon, its right edge lined up with the icon's
-            var at = cells[index].TranslatePoint(new Point(Cell, 0), Root);
-            powerList.Margin = new Thickness(Math.Max(20, at.X - 260), 0, 0, Root.ActualHeight - at.Y + 16);
+            // centred over the Power button
+            var at = cells[index].TranslatePoint(new Point(Cell / 2, 0), Root);
+            powerList.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            powerList.Margin = new Thickness(Math.Max(20, at.X - powerList.DesiredSize.Width / 2), 0, 0, Root.ActualHeight - at.Y + 16);
             Root.Children.Add(powerList);
             Ui.Rise(powerList, 0, 12, 200);
             Ui.Play("OpenPanel.wav", 0.8);

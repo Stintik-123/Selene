@@ -1,6 +1,7 @@
-// Selene's "Send report": takes a report from Selene Core and opens a GitHub issue with it, so players can report a
-// problem without a GitHub account. Secrets and bindings (see wrangler.toml): GITHUB_TOKEN (fine-grained, Issues
-// read/write on the repo only), REPO ("owner/name"), LIMITS (KV namespace for the rate limits).
+// Selene's "Report a problem": takes a report from Selene Core and opens a GitHub issue with it, so players can report a
+// problem without a GitHub account. A report can also start in Selene and be finished on a phone (POST /draft, then the
+// page at /r/<id> adds the words and sends it). Secrets and bindings (see wrangler.toml): GITHUB_TOKEN (fine-grained,
+// Issues read/write on the repo only), REPO ("owner/name"), LIMITS (KV, rate limits), STORE (KV, pictures and drafts).
 
 const CATEGORIES = [
   "Something doesn't work",
@@ -10,69 +11,140 @@ const CATEGORIES = [
   "Sound or music",
   "Other",
 ];
-const MAX_REQUEST = 400_000;      // bytes, logs included
+const PLACES = [
+  "Starting Playnite", "Spotlight", "Collection", "A game's page", "Store", "Captures", "Settings or menu",
+  "Starting or playing a game", "Quitting", "Somewhere else",
+];
+const MAX_REQUEST = 3_000_000;    // bytes, logs and picture included
+const MAX_PICTURE = 2_000_000;    // base64 characters
 const MAX_BODY = 60_000;          // GitHub allows 65,536 characters in an issue body
 const PER_IP_HOUR = 3;
 const PER_DAY = 60;
+const DRAFTS_PER_IP_HOUR = 10;
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (request.method === "GET") return text("Selene report service", 200);
-    if (request.method !== "POST" || url.pathname !== "/report") return text("Not found", 404);
-
-    const length = Number(request.headers.get("content-length") || 0);
-    if (length > MAX_REQUEST) return json({ ok: false, error: "too big" }, 413);
-    let report;
-    try {
-      const raw = await request.text();
-      if (raw.length > MAX_REQUEST) return json({ ok: false, error: "too big" }, 413);
-      report = JSON.parse(raw);
-    } catch {
-      return json({ ok: false, error: "bad request" }, 400);
-    }
-    if (!report || typeof report !== "object" || !CATEGORIES.includes(report.category)) return json({ ok: false, error: "bad request" }, 400);
-
-    // a few reports per address an hour, and a daily ceiling for the whole service
-    const ip = request.headers.get("cf-connecting-ip") || "unknown";
-    const ipKey = "ip:" + (await sha256(ip)).slice(0, 32);
-    const dayKey = "day:" + new Date().toISOString().slice(0, 10);
-    const [ipCount, dayCount] = await Promise.all([env.LIMITS.get(ipKey), env.LIMITS.get(dayKey)]);
-    if (Number(ipCount || 0) >= PER_IP_HOUR || Number(dayCount || 0) >= PER_DAY) return json({ ok: false, error: "slow down" }, 429);
-
-    const issue = build(report);
-    const response = await fetch(`https://api.github.com/repos/${env.REPO}/issues`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "selene-report-worker",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(issue),
-    });
-    if (!response.ok) {
-      console.log("github", response.status, await response.text());
-      return json({ ok: false, error: "github" }, 502);
-    }
-    const created = await response.json();
-    await Promise.all([
-      env.LIMITS.put(ipKey, String(Number(ipCount || 0) + 1), { expirationTtl: 3600 }),
-      env.LIMITS.put(dayKey, String(Number(dayCount || 0) + 1), { expirationTtl: 172800 }),
-    ]);
-    return json({ ok: true, number: created.number, url: created.html_url }, 200);
+    const path = url.pathname;
+    if (request.method === "GET" && path === "/") return text("Selene report service", 200);
+    if (request.method === "GET" && path.startsWith("/shot/")) return picture(env, path.slice(6));
+    if (request.method === "POST" && path === "/report") return report(request, env, url.origin);
+    if (request.method === "POST" && path === "/draft") return draft(request, env, url.origin);
+    const m = path.match(/^\/r\/([0-9a-f-]{36})(\/status)?$/);
+    if (m && request.method === "GET" && m[2]) return status(env, m[1]);
+    if (m && request.method === "GET") return phonePage(env, m[1]);
+    if (m && request.method === "POST" && !m[2]) return finish(request, env, m[1], url.origin);
+    return text("Not found", 404);
   },
 };
 
-function build(r) {
+// ---- straight from Selene ----
+async function report(request, env, origin) {
+  const r = await readReport(request);
+  if (!r) return json({ ok: false, error: "bad request" }, 400);
+  return send(r, request, env, origin);
+}
+
+// ---- started in Selene, finished on a phone ----
+async function draft(request, env, origin) {
+  const r = await readReport(request);
+  if (!r) return json({ ok: false, error: "bad request" }, 400);
+  const key = "drafts:" + (await ipKey(request));
+  const count = Number((await env.LIMITS.get(key)) || 0);
+  if (count >= DRAFTS_PER_IP_HOUR) return json({ ok: false, error: "slow down" }, 429);
+  await env.LIMITS.put(key, String(count + 1), { expirationTtl: 3600 });
+  const id = crypto.randomUUID();
+  await env.STORE.put("draft:" + id, JSON.stringify(r), { expirationTtl: 3600 });
+  return json({ ok: true, id, url: `${origin}/r/${id}` }, 200);
+}
+
+async function finish(request, env, id, origin) {
+  const saved = await env.STORE.get("draft:" + id);
+  if (!saved) return json({ ok: false, error: "gone" }, 404);
+  let note = "";
+  try { note = String((await request.json()).note || ""); } catch { return json({ ok: false, error: "bad request" }, 400); }
+  const r = JSON.parse(saved);
+  r.note = note.slice(0, 2000);
+  const response = await send(r, request, env, origin);
+  const result = await response.clone().json();
+  if (result.ok) {
+    await env.STORE.delete("draft:" + id);
+    await env.STORE.put("done:" + id, JSON.stringify(result), { expirationTtl: 3600 });
+  }
+  return response;
+}
+
+async function status(env, id) {
+  const done = await env.STORE.get("done:" + id);
+  return json(done ? JSON.parse(done) : { ok: false, waiting: true }, 200);
+}
+
+// ---- the issue ----
+async function send(r, request, env, origin) {
+  // a few reports per address an hour, and a daily ceiling for the whole service
+  const ipCountKey = "ip:" + (await ipKey(request));
+  const dayKey = "day:" + new Date().toISOString().slice(0, 10);
+  const [ipCount, dayCount] = await Promise.all([env.LIMITS.get(ipCountKey), env.LIMITS.get(dayKey)]);
+  if (Number(ipCount || 0) >= PER_IP_HOUR || Number(dayCount || 0) >= PER_DAY) return json({ ok: false, error: "slow down" }, 429);
+
+  let shotUrl = null;
+  if (typeof r.screenshot === "string" && r.screenshot.length > 100 && r.screenshot.length <= MAX_PICTURE && r.screenshot.startsWith("/9j/")) {
+    const id = crypto.randomUUID();
+    await env.STORE.put("shot:" + id, base64ToBytes(r.screenshot));
+    shotUrl = `${origin}/shot/${id}`;
+  }
+
+  const issue = build(r, shotUrl);
+  const response = await fetch(`https://api.github.com/repos/${env.REPO}/issues`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "selene-report-worker",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(issue),
+  });
+  if (!response.ok) {
+    console.log("github", response.status, await response.text());
+    return json({ ok: false, error: "github" }, 502);
+  }
+  const created = await response.json();
+  await Promise.all([
+    env.LIMITS.put(ipCountKey, String(Number(ipCount || 0) + 1), { expirationTtl: 3600 }),
+    env.LIMITS.put(dayKey, String(Number(dayCount || 0) + 1), { expirationTtl: 172800 }),
+  ]);
+  return json({ ok: true, number: created.number, url: created.html_url }, 200);
+}
+
+async function readReport(request) {
+  const length = Number(request.headers.get("content-length") || 0);
+  if (length > MAX_REQUEST) return null;
+  try {
+    const raw = await request.text();
+    if (raw.length > MAX_REQUEST) return null;
+    const r = JSON.parse(raw);
+    if (!r || typeof r !== "object" || !CATEGORIES.includes(r.category)) return null;
+    if (r.place != null && !PLACES.includes(r.place)) return null;
+    return r;
+  } catch {
+    return null;
+  }
+}
+
+function build(r, shotUrl) {
   const field = (v, max) => scrub(String(v ?? "").slice(0, max)).trim();
   const note = field(r.note, 2000);
+  const where = field(r.place, 60);
   const lines = [
-    `**${r.category}**${field(r.place, 60) ? "  ·  " + field(r.place, 60) : ""}`,
+    `**${r.category}**${where ? "  ·  " + where : ""}`,
     "",
     note ? note : "_No description given._",
     "",
+  ];
+  if (shotUrl) lines.push(`![The screen when this was reported](${shotUrl})`, "");
+  lines.push(
     "| | |",
     "|---|---|",
     `| Selene | ${cell(field(r.selene, 40))} |`,
@@ -80,11 +152,12 @@ function build(r) {
     `| Windows | ${cell(field(r.windows, 80))} |`,
     "",
     "_Sent from Selene's Report a problem screen._",
-  ];
+  );
   let body = lines.join("\n");
   // the logs fill what's left, newest lines kept
-  const logs = [["Problems in selene.log", r.seleneProblems], ["selene.log (recent)", r.seleneLog], ["playnite.log (warnings and errors)", r.playniteLog]].filter(([, v]) => typeof v === "string" && v.length);
-  const room = Math.max(0, MAX_BODY - body.length - 400);
+  const logs = [["Problems in selene.log", r.seleneProblems], ["selene.log (recent)", r.seleneLog], ["playnite.log (warnings and errors)", r.playniteLog]]
+    .filter(([, v]) => typeof v === "string" && v.length);
+  const room = Math.max(0, MAX_BODY - body.length - 600);
   const each = logs.length ? Math.floor(room / logs.length) : 0;
   for (const [name, content] of logs) {
     let log = scrub(content).replace(/````/g, "'''");
@@ -92,10 +165,86 @@ function build(r) {
     body += `\n\n<details><summary>${name}</summary>\n\n\`\`\`\`\n${log}\n\`\`\`\`\n</details>`;
   }
   const short = note.replace(/\s+/g, " ").slice(0, 60);
-  const where = field(r.place, 60);
   return { title: `[Report] ${r.category}${where ? " (" + where + ")" : ""}${short ? ": " + short : ""}`, body, labels: ["bug"] };
 }
 
+// ---- the picture, shown in the issue ----
+async function picture(env, id) {
+  if (!/^[0-9a-f-]{36}$/.test(id)) return text("Not found", 404);
+  const bytes = await env.STORE.get("shot:" + id, "arrayBuffer");
+  if (!bytes) return text("Not found", 404);
+  return new Response(bytes, { headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable" } });
+}
+
+// ---- the phone page ----
+async function phonePage(env, id) {
+  const saved = await env.STORE.get("draft:" + id);
+  const done = saved ? null : await env.STORE.get("done:" + id);
+  const r = saved ? JSON.parse(saved) : null;
+  const state = JSON.stringify({ id, category: r ? r.category : null, place: r ? r.place : null, done: done ? JSON.parse(done) : null });
+  return new Response(PAGE.replace("__STATE__", state.replace(/</g, "\\u003c")), { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+}
+
+const PAGE = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report a problem · Selene</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: #0b1020; color: #eef1f8; }
+  main { max-width: 560px; margin: 0 auto; padding: 28px 20px 40px; }
+  h1 { font-size: 28px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #a9b1c6; margin: 0 0 20px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip { background: #1b2238; border-radius: 999px; padding: 6px 14px; font-size: 15px; }
+  textarea { box-sizing: border-box; width: 100%; min-height: 170px; resize: vertical; border-radius: 16px; border: 2px solid #3a4566;
+             background: #121a2e; color: inherit; font: inherit; padding: 14px 16px; outline: none; }
+  textarea:focus { border-color: #8fb4ff; }
+  button { margin-top: 16px; width: 100%; border: 0; border-radius: 999px; padding: 15px; font: inherit; font-weight: 600;
+           background: #eef1f8; color: #0b1020; }
+  button:disabled { opacity: .6; }
+  .note { color: #8e97ad; font-size: 14px; margin-top: 16px; }
+  .done { text-align: center; padding-top: 40px; }
+  .check { width: 84px; height: 84px; border-radius: 50%; background: #eef1f8; color: #0b1020; display: grid; place-items: center;
+           font-size: 44px; margin: 0 auto 20px; }
+  a { color: #8fb4ff; }
+</style></head>
+<body><main id="app"></main>
+<script>
+const state = __STATE__;
+const app = document.getElementById("app");
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function showDone(result) {
+  app.replaceChildren();
+  const box = el("div", "done");
+  box.append(el("div", "check", "✓"), el("h1", null, "Thanks, report #" + result.number + " is sent"));
+  const p = el("p", "sub"); const a = el("a", null, "See it on GitHub"); a.href = result.url; p.append(a);
+  box.append(p, el("p", "note", "You can close this page. Adding screenshots or comments on GitHub needs a free account."));
+  app.append(box);
+}
+if (state.done) showDone(state.done);
+else if (!state.category) { app.append(el("h1", null, "This report has expired"), el("p", "sub", "Start it again from Selene (Settings > Advanced > Report a problem).")); }
+else {
+  app.append(el("h1", null, "Report a problem"), el("p", "sub", "Selene sends this with your logs. No account needed."));
+  const chips = el("div", "chips"); chips.append(el("span", "chip", state.category)); if (state.place) chips.append(el("span", "chip", state.place));
+  const box = document.createElement("textarea"); box.placeholder = "What happened? What did you expect instead?"; box.maxLength = 2000;
+  const send = el("button", null, "Send report");
+  const note = el("p", "note", "It shows up publicly on GitHub, with names, folders and emails taken out of the logs.");
+  send.onclick = async () => {
+    send.disabled = true; send.textContent = "Sending...";
+    try {
+      const res = await fetch(location.pathname, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: box.value }) });
+      const result = await res.json();
+      if (result.ok) return showDone(result);
+      send.textContent = result.error === "slow down" ? "Too many reports, try again in an hour" : result.error === "gone" ? "This report has expired" : "Couldn't send, try again";
+    } catch { send.textContent = "Couldn't send, try again"; }
+    send.disabled = false;
+  };
+  app.append(chips, box, send, note);
+  box.focus();
+}
+</script></body></html>`;
+
+// ---- helpers ----
 // no names or home folders in a public issue
 function scrub(s) {
   return s
@@ -106,6 +255,18 @@ function scrub(s) {
 
 function cell(s) {
   return (s || "-").replace(/\|/g, "/").replace(/\r?\n/g, " ");
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function ipKey(request) {
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  return (await sha256(ip)).slice(0, 32);
 }
 
 async function sha256(s) {

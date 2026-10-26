@@ -10,6 +10,7 @@ using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Selene
 {
@@ -40,18 +41,57 @@ namespace Selene
         private Border noteBox;
         private string note = "";
         private bool sending;
+        private readonly byte[] shot;   // the screen as it was (both sticks), JPEG
+        private bool includeShot;
+        private int onTop = -1;   // Up from the keys: the chips you can press (the picture, typing on a phone)
+        private readonly List<Border> tops = new List<Border>();
+        private Border shotChip, phoneChip;
+        private TextBlock shotLabel;
 
         public override bool Overlay { get { return true; } }
         public override Brush OverlayShade { get { return Ink.Brush("SeleneScrimColor", 0.94); } }
-        public override bool WantsText { get { return step == 2 && !sending; } }
+        public override bool WantsText { get { return step == 2 && !sending && !phoneMode; } }
 
-        public ReportScreen(Func<Screen> back)
+        // both sticks anywhere: a picture of the screen first, then the report over it
+        public static void OpenFromShortcut()
+        {
+            var picture = Capture();
+            Ui.Confirm();
+            HomeNav.Log("report: opened with both sticks" + (picture != null ? " (picture " + picture.Length / 1024 + " KB)" : " (no picture)"));
+            if (LoginScene.IsActive) LoginScene.Show(new ReportScreen(null, picture), 1);
+            else LoginScene.OpenWith(() => new ReportScreen(null, picture));
+        }
+
+        private static byte[] Capture()
+        {
+            try
+            {
+                var w = Application.Current.MainWindow;
+                var root = w != null ? w.Content as FrameworkElement : null;
+                if (root == null || root.ActualWidth < 10) return null;
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap((int)root.ActualWidth, (int)root.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+                rtb.Render(root);
+                System.Windows.Media.Imaging.BitmapSource image = rtb;
+                double scale = Math.Min(1, 1600 / root.ActualWidth);
+                if (scale < 1) image = new System.Windows.Media.Imaging.TransformedBitmap(rtb, new ScaleTransform(scale, scale));
+                var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder { QualityLevel = 82 };
+                encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image));
+                using (var ms = new MemoryStream()) { encoder.Save(ms); return ms.ToArray(); }
+            }
+            catch (Exception ex) { HomeNav.Log("report: picture failed: " + ex.Message); return null; }
+        }
+
+        public ReportScreen(Func<Screen> back, byte[] shot = null)
         {
             this.back = back;
+            this.shot = shot;
+            includeShot = shot != null;
             var head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(120, 90, 0, 0) };
             head.Children.Add(new TextBlock { Text = "Report a problem", FontSize = 42, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor") });
             stepLine = new TextBlock { FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(2, 6, 0, 0) };
             head.Children.Add(stepLine);
+            if (shot == null && Features.On("reportchord"))
+                head.Children.Add(new TextBlock { Text = "Tip: click both sticks in together anywhere to report with a picture of the screen.", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.45), Margin = new Thickness(2, 6, 0, 0) });
             header = head;
             Root.Children.Add(head);
             Root.Children.Add(stage);
@@ -113,6 +153,13 @@ namespace Selene
             var chips = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 16) };
             chips.Children.Add(Chip(KindIcons[kind], Kinds[kind]));
             chips.Children.Add(Chip(PlaceIcons[place], Places[place]));
+            tops.Clear();
+            if (shot != null) { chips.Children.Add(ShotChip()); tops.Add(shotChip); }
+            phoneChip = Chip(0xe32c, "Type on your phone");
+            phoneChip.BorderThickness = new Thickness(2);
+            phoneChip.BorderBrush = Brushes.Transparent;
+            chips.Children.Add(phoneChip);
+            tops.Add(phoneChip);
             col.Children.Add(chips);
             noteText = new TextBlock { FontSize = 21, FontFamily = Ui.Body, TextWrapping = TextWrapping.Wrap };
             noteBox = new Border { Child = noteText, MinHeight = 96, CornerRadius = new CornerRadius(18), Padding = new Thickness(24, 18, 24, 18), Background = Ink.Brush("SeleneInkColor", 0.08), BorderBrush = Ink.Brush("SeleneFocusColor", 0.7), BorderThickness = new Thickness(2) };
@@ -141,6 +188,32 @@ namespace Selene
             line.Children.Add(new TextBlock { Text = Ui.Icon(icon), FontFamily = Ui.Icons, FontSize = 20, Foreground = Ink.Brush("SeleneInkColor", 0.85), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
             line.Children.Add(new TextBlock { Text = text, FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), VerticalAlignment = VerticalAlignment.Center });
             return new Border { Child = line, CornerRadius = new CornerRadius(18), Padding = new Thickness(14, 7, 16, 8), Margin = new Thickness(0, 0, 10, 0), Background = Ink.Brush("SeleneInkColor", 0.1) };
+        }
+
+        // the picture going with it, which Up from the keys reaches: A leaves it out or puts it back
+        private Border ShotChip()
+        {
+            var image = new System.Windows.Media.Imaging.BitmapImage();
+            image.BeginInit();
+            image.StreamSource = new MemoryStream(shot);
+            image.DecodePixelWidth = 160;
+            image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            image.EndInit();
+            var line = new StackPanel { Orientation = Orientation.Horizontal };
+            line.Children.Add(new Border { Width = 80, Height = 45, CornerRadius = new CornerRadius(6), Background = new ImageBrush(image) { Stretch = Stretch.UniformToFill }, Margin = new Thickness(0, 0, 10, 0) });
+            shotLabel = new TextBlock { FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), VerticalAlignment = VerticalAlignment.Center };
+            line.Children.Add(shotLabel);
+            shotChip = new Border { Child = line, CornerRadius = new CornerRadius(14), Padding = new Thickness(6, 6, 16, 6), Background = Ink.Brush("SeleneInkColor", 0.1), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent };
+            shotLabel.Text = "Picture of the screen included";
+            return shotChip;
+        }
+
+        private void ShowTops()
+        {
+            for (int i = 0; i < tops.Count; i++) tops[i].BorderBrush = i == onTop ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
+            if (shotChip == null) return;
+            shotLabel.Text = includeShot ? "Picture of the screen included" : "Picture left out";
+            shotChip.Opacity = includeShot ? 1 : 0.55;
         }
 
         private void ShowNote()
@@ -180,16 +253,38 @@ namespace Selene
         public override void Handle(string b)
         {
             if (sending) return;
-            if (step == 3) { if (b == "A" || b == "B") { Ui.Back(); LoginScene.Show(back(), -1); } return; }
+            if (step == 3) { if (b == "A" || b == "B") { Ui.Back(); Leave(); } return; }
             if (b == "B")
             {
                 Ui.Back();
-                if (step == 0) LoginScene.Show(back(), -1); else Go(step - 1, -1);
+                if (step == 2 && phoneMode) { StopPhone(); return; }
+                if (step == 0) Leave(); else Go(step - 1, -1);
                 return;
             }
             if (step == 2)
             {
-                if (b.StartsWith("DPad")) { if (!pad.Move(b)) Ui.Shake(noteBox); return; }
+                if (phoneMode) return;   // (B, above, goes back to the keys)
+                if (onTop >= 0)
+                {
+                    var chip = tops[onTop];
+                    if (b == "A" && ReferenceEquals(chip, shotChip)) { includeShot = !includeShot; Ui.Key(); Ui.Pop(chip); ShowTops(); }
+                    else if (b == "A" && ReferenceEquals(chip, phoneChip)) { Ui.Confirm(); StartPhone(); }
+                    else if (b == "DPadLeft" || b == "DPadRight")
+                    {
+                        int next = onTop + (b == "DPadRight" ? 1 : -1);
+                        if (next < 0 || next >= tops.Count) { Ui.Shake(chip); return; }
+                        onTop = next; Ui.Tick(); ShowTops();
+                    }
+                    else if (b == "DPadDown") { onTop = -1; Ui.Tick(); ShowTops(); pad.Focus(true); }
+                    else if (b == "Start") pad.Press(b);
+                    return;
+                }
+                if (b.StartsWith("DPad"))
+                {
+                    if (pad.Move(b)) return;
+                    onTop = tops.Count - 1; Ui.Tick(); pad.Focus(false); ShowTops();
+                    return;
+                }
                 pad.Press(b);
                 return;
             }
@@ -207,22 +302,35 @@ namespace Selene
             if (b == "A") { Ui.Confirm(); Go(step + 1, 1); }
         }
 
+        private void Leave()
+        {
+            if (back == null) LoginScene.Finish(); else LoginScene.Show(back(), -1);
+        }
+
         // ---- sending ----
         private void Send()
         {
-            if (sending) return;
+            if (sending || phoneMode) return;
             sending = true;
             Ui.Confirm();
             pad.DoneText = "Sending...";
+            Post("/report", Scrub(note.Trim()), (result, error) => Done(result != null ? result["url"] as string : null, error));
+        }
+
+        // the report as it stands (the logs read off the UI thread) to the service; done gets its answer (or an error)
+        private void Post(string path, string text, Action<Dictionary<string, object>, string> done)
+        {
             var report = new Dictionary<string, object>
             {
-                { "category", Kinds[kind] }, { "place", Places[place] }, { "note", Scrub(note.Trim()) },
+                { "category", Kinds[kind] }, { "place", Places[place] }, { "note", text },
                 { "selene", Brand.Version }, { "playnite", PlayniteVersion() }, { "windows", WindowsName() },
             };
+            if (shot != null && includeShot) report["screenshot"] = Convert.ToBase64String(shot);
             var dispatcher = Root.Dispatcher;
             Task.Factory.StartNew(() =>
             {
-                string url = null, error = null;
+                Dictionary<string, object> answer = null;
+                string error = null;
                 try
                 {
                     var seleneLog = ReadLines(Path.Combine(Path.GetTempPath(), "selene.log"));
@@ -233,26 +341,108 @@ namespace Selene
                     report["seleneLog"] = Scrub(string.Join("\n", Last(session.Where(l => !Noise(l)), 350)));
                     report["seleneProblems"] = Scrub(string.Join("\n", Grouped(session.Where(Problem))));
                     report["playniteLog"] = Scrub(string.Join("\n", Last(playniteLog.Where(l => l.Contains("|ERROR") || l.Contains("|WARN") || l.StartsWith("   ") || l.StartsWith("System.")), 120)));
-                    try { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; } catch { }
-                    var js = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
-                    var body = Encoding.UTF8.GetBytes(js.Serialize(report));
-                    var request = (HttpWebRequest)WebRequest.Create(Service);
-                    request.Method = "POST";
-                    request.ContentType = "application/json";
-                    request.UserAgent = "Selene/" + Brand.Version;
-                    request.Timeout = 20000;
-                    using (var s = request.GetRequestStream()) s.Write(body, 0, body.Length);
-                    string text;
-                    try { using (var response = request.GetResponse()) using (var r = new StreamReader(response.GetResponseStream())) text = r.ReadToEnd(); }
-                    catch (WebException ex) { if (ex.Response == null) throw; using (var r = new StreamReader(ex.Response.GetResponseStream())) text = r.ReadToEnd(); }
-                    var result = js.Deserialize<Dictionary<string, object>>(text);
-                    object ok, link, err;
-                    if (result.TryGetValue("ok", out ok) && ok is bool && (bool)ok && result.TryGetValue("url", out link)) url = link as string;
+                    var result = Call(path, report);
+                    object ok, err;
+                    if (result.TryGetValue("ok", out ok) && ok is bool && (bool)ok) answer = result;
                     else error = result.TryGetValue("error", out err) ? err as string : "unknown";
                 }
                 catch (Exception ex) { error = ex.Message; }
-                dispatcher.BeginInvoke(new Action(() => Done(url, error)));
+                dispatcher.BeginInvoke(new Action(() => done(answer, error)));
             });
+        }
+
+        // one request to the service (null body: a GET)
+        private static Dictionary<string, object> Call(string path, Dictionary<string, object> body)
+        {
+            try { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; } catch { }
+            var js = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+            var request = (HttpWebRequest)WebRequest.Create(Service + path);
+            request.UserAgent = "Selene/" + Brand.Version;
+            request.Timeout = 20000;
+            if (body != null)
+            {
+                var bytes = Encoding.UTF8.GetBytes(js.Serialize(body));
+                request.Method = "POST";
+                request.ContentType = "application/json";
+                using (var s = request.GetRequestStream()) s.Write(bytes, 0, bytes.Length);
+            }
+            string text;
+            try { using (var response = request.GetResponse()) using (var r = new StreamReader(response.GetResponseStream())) text = r.ReadToEnd(); }
+            catch (WebException ex) { if (ex.Response == null) throw; using (var r = new StreamReader(ex.Response.GetResponseStream())) text = r.ReadToEnd(); }
+            return js.Deserialize<Dictionary<string, object>>(text);
+        }
+
+        // ---- finishing on a phone: the report goes up as a draft, the phone's page adds the words and sends it ----
+        private bool phoneMode;
+        private Border phoneCard;
+        private DispatcherTimer phoneWatch;
+
+        private void StartPhone()
+        {
+            phoneMode = true;
+            onTop = -1;
+            ShowTops();
+            pad.Focus(false);
+            foreach (var el in new UIElement[] { noteBox, noteHint, pad.Root }) { var e2 = el; Ui.Fade(e2, 0, 160, 0, () => { if (phoneMode) e2.Visibility = Visibility.Collapsed; }); }
+            var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(34, 0, 0, 0), MaxWidth = 520 };
+            var title = new TextBlock { Text = "Getting it ready...", FontSize = 28, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor") };
+            var line = new TextBlock { Text = "Your phone's camera opens a page to type on. Send it from there and this screen follows. B types here instead.", FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) };
+            words.Children.Add(title);
+            words.Children.Add(line);
+            var code = new Image { Width = 230, Height = 230 };
+            RenderOptions.SetEdgeMode(code, EdgeMode.Aliased);
+            var tile = new Border { Child = code, Background = Brushes.White, CornerRadius = new CornerRadius(18), Padding = new Thickness(8), Opacity = 0 };
+            var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 30, 0, 0) };
+            row.Children.Add(tile);
+            row.Children.Add(words);
+            phoneCard = new Border { Child = row };
+            var holder = (Panel)noteBox.Parent;
+            holder.Children.Insert(holder.Children.IndexOf(noteBox), phoneCard);
+            Ui.Rise(phoneCard, 120, 14, 300);
+            Post("/draft", "", (result, error) =>
+            {
+                if (!phoneMode) return;
+                if (result == null)
+                {
+                    title.Text = "Couldn't get it ready";
+                    line.Text = error == "slow down" ? "That's a lot of reports in a row. Try again in an hour." : "No internet, maybe. Press B and send it from here instead.";
+                    HomeNav.Log("report: phone draft failed: " + error);
+                    return;
+                }
+                var id = result["id"] as string;
+                try { code.Source = new QrCode(result["url"] as string).Picture(); } catch (Exception ex) { HomeNav.Log("report: code: " + ex.Message); }
+                Ui.Fade(tile, 1, 260);
+                title.Text = "Scan to type on your phone";
+                HomeNav.Log("report: waiting for the phone (" + id + ")");
+                phoneWatch = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+                phoneWatch.Tick += (s, e) =>
+                {
+                    if (!phoneMode || step != 2) { phoneWatch.Stop(); return; }
+                    var dispatcher = Root.Dispatcher;
+                    Task.Factory.StartNew(() =>
+                    {
+                        try
+                        {
+                            var answer = Call("/r/" + id + "/status", null);
+                            object ok;
+                            if (answer.TryGetValue("ok", out ok) && ok is bool && (bool)ok)
+                                dispatcher.BeginInvoke(new Action(() => { if (phoneMode && step == 2) { phoneWatch.Stop(); phoneMode = false; Done(answer["url"] as string, null); } }));
+                        }
+                        catch { }
+                    });
+                };
+                phoneWatch.Start();
+            });
+        }
+
+        private void StopPhone()
+        {
+            phoneMode = false;
+            if (phoneWatch != null) phoneWatch.Stop();
+            if (phoneCard != null) { var card = phoneCard; phoneCard = null; ((Panel)card.Parent).Children.Remove(card); }
+            foreach (var el in new UIElement[] { noteBox, noteHint, pad.Root }) { el.Visibility = Visibility.Visible; Ui.Fade(el, 1, 200); }
+            ShowNote();
+            pad.Focus(true);
         }
 
         // the frame timings and polling lines fill a log without saying what happened

@@ -2666,6 +2666,7 @@ namespace Selene
             };
         }
 
+        private static readonly HashSet<string> padHeld = new HashSet<string>();
         private static string lastPadButton, lastPadRaw;
         private static DateTime lastPadAt;
 
@@ -2704,7 +2705,7 @@ namespace Selene
                 {
                     var relProp = ke.GetType().GetProperty("Button");
                     var rel = relProp != null ? relProp.GetValue(ke, null) : null;
-                    if (rel != null) Ui.Released(Ui.Normalize(rel.ToString()));
+                    if (rel != null) { Ui.Released(Ui.Normalize(rel.ToString())); padHeld.Remove(rel.ToString()); }
                 }
                 else Ui.PadPressAt = DateTime.Now;
                 // Start / View released: a short press does its usual thing (a hold already did its own)
@@ -2732,6 +2733,16 @@ namespace Selene
                 }
                 lastPadButton = same; lastPadRaw = pressed; lastPadAt = now;
                 HideCursorForController();
+                // both sticks clicked together: Report a problem, with a picture of the screen as it is (View + Start is often
+                // taken: Steam and others put the PC to sleep with it)
+                if (((pressed == "LeftStick" && padHeld.Contains("RightStick")) || (pressed == "RightStick" && padHeld.Contains("LeftStick"))) && Features.On("reportchord"))
+                {
+                    e.Cancel();
+                    padHeld.Clear();
+                    ReportScreen.OpenFromShortcut();
+                    return;
+                }
+                padHeld.Add(pressed);
                 // one of Playnite's dialogs is up (a yes / no box, an add-on install): the press is the dialog's alone (it moved
                 // the screen behind too)
                 if (DialogUp())

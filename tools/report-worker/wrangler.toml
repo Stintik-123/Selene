@@ -11,3 +11,8 @@ binding = "LIMITS"
 id = "8ca34546671d4ac9a371a5d324bc4496"
 
 # GITHUB_TOKEN is a secret: `npx wrangler secret put GITHUB_TOKEN` (never in this file)
+
+# pictures in reports and drafts finished on a phone
+[[kv_namespaces]]
+binding = "STORE"
+id = "8b8bfa5d43ef41ba8a0ecf3908222fb1"
