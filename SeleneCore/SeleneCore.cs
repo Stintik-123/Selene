@@ -307,6 +307,7 @@ namespace Selene
             new Option { Group = "Games", Key = "hltbauto", Label = "HowLongToBeat: fetch new games", About = "HowLongToBeat's own setting: times for games as they're added to your library.", Get = HltbFetch.AutoImport, Put = HltbFetch.SetAutoImport, Available = HltbFetch.Installed },
             new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
             new Option { Group = "Look", Key = "textshadow", Label = "Readable text", About = "A soft halo behind text over bright pictures." },
+            new Option { Group = "Look", Key = "smoothswitch", Label = "Soft way back", About = "Leaving a game's page fades back to Spotlight instead of cutting." },
             new Option { Group = "Look", Key = "dialogs", Label = "Selene dialogs", About = "Playnite's questions and errors as Selene cards." },
             new Option { Group = "Look", Key = "hints", Label = "Button hints", About = "What each button does, along the bottom." },
             new Option { Group = "Look", Key = "prompts", Label = "Button names", About = "Which controller's buttons the hints name.", Choices = new[] { "playnite", "xbox", "playstation" }, Names = new[] { "As Playnite's setting", "Xbox", "PlayStation" }, Default = "playnite" },

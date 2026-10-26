@@ -2708,6 +2708,8 @@ namespace Selene
             returnToHub = false;
             try
             {
+                var w = Application.Current.MainWindow;
+                SeleneShell.FadeFromDetails(w != null ? FindByName(w, "PART_ElemGameDetails") : null, 280);
                 SeleneShell.ShowHome(true);
                 PlayniteMenu.Main("ToggleGameDetailsCommand");
             }

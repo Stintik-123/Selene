@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Leaving a game's page (B) fades back to Spotlight instead of cutting (switch: Look > Soft way back).
 - Selene settings > Sound & music: "Sound volume" is called Interface sounds volume (it was never the music); Clip volume is set in Captures only (Up / Down).
 - A game's page: going down to the screenshots no longer leaves Play lit; the developer reads without its company ending (IO Interactive, not IO Interactive A/S).
 - Backgrounds Selene downloads are cut to the screen's shape (Steam's are wide banners: a game's page showed a blown-up slice of the middle), from Steam's sharper art; logos and backgrounds come from Steam's library cache on your PC first, which has logos the store page doesn't.

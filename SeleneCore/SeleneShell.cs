@@ -391,6 +391,13 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("crossfade still: " + ex.Message); return false; }
         }
 
+        // B on a game's page opened from Spotlight: a still of the page lies over everything while Spotlight comes back under
+        // it, then melts away (the page cut straight to Spotlight)
+        public static void FadeFromDetails(UIElement details, int ms)
+        {
+            if (details != null && Features.On("smoothswitch") && Crossfade(details, ms, 40)) HomeNav.Log("shell: details fade out over " + ms + " ms");
+        }
+
         private static void ReleaseStill(Image img, int holdMs = 0)
         {
             if (img == null || !(img.Tag is int)) return;
