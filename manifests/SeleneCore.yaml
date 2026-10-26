@@ -1,5 +1,22 @@
 AddonId: SeleneCore_cd424c29-97f4-4dd0-aa66-4d8e01cc8724
 Packages:
+  - Version: 1.2.1
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2026-10-26
+    PackageUrl: https://github.com/mattxslv/Selene/releases/download/v1.2.1/SeleneCore.pext
+    Changelog:
+      - >-
+        The new-version card comes first: Selene looks for an update right at start, and a progress card (the library update...) steps aside for it and comes back after.
+      - >-
+        When a newer Selene is out, the menu's Update icon carries a red dot. On the Update screen the right stick scrolls a long list of what's new.
+      - >-
+        The right stick scrolls a game's description smoothly (on every frame, easing in and out; it moved in uneven steps).
+      - >-
+        Notification cards are slimmer (lower, narrower, a smaller icon and words), and a note (a new version, achievements...) stays 6 seconds before a progress card takes its place (the library update's card replaced the new-version note within a second).
+      - >-
+        The menu: Update sits where Setup check was (it opens a newer Selene, or looks for one); Setup check moved to Selene settings > Advanced; Update library shows only when the library update at start is off.
+      - >-
+        Updating Selene takes one press: when a newer version is out, the menu shows Update (and a notification says so); it shows what's new, downloads the theme and the add-on and hands them to Playnite's installer, then restarts Playnite. Settings, profiles and your theme stay. Selene settings > Advanced > Check for updates looks at once.
   - Version: 1.2.0
     RequiredApiVersion: 6.0.0
     ReleaseDate: 2026-10-26

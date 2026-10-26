@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+## 1.2.1 - 2026-10-26
+
 - The new-version card comes first: Selene looks for an update right at start, and a progress card (the library update...) steps aside for it and comes back after.
 - When a newer Selene is out, the menu's Update icon carries a red dot. On the Update screen the right stick scrolls a long list of what's new.
 - The right stick scrolls a game's description smoothly (on every frame, easing in and out; it moved in uneven steps).
