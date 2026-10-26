@@ -113,6 +113,8 @@ namespace Selene
                 startKey = null;
             }
             ShowFocus();
+            // landing on a row far down (back from Adjust): the list has no size yet here, so the scroll to it is done again once laid out
+            if (inOptions) Root.Dispatcher.BeginInvoke(new Action(ShowFocus), System.Windows.Threading.DispatcherPriority.Loaded);
             if (liveTimer == null) { liveTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) }; liveTimer.Tick += Live; }
             liveTimer.Start();
         }
