@@ -57,6 +57,64 @@ namespace Selene
             };
             library.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Rearm(false); else Stop(); };
             HookArtCrossfade(grid);
+            HookGlide();
+        }
+
+        // ---- the row glides: Playnite scrolls it a whole cover at a time (a jump); the covers are shifted back by that much
+        // and slide into place on the same spring as Spotlight's row ----
+        private static DateTime lastStep = DateTime.MinValue;
+
+        private static void HookGlide()
+        {
+            list.Loaded += (s, e) => AttachGlide();
+            AttachGlide();
+        }
+
+        private static bool glideAttached;
+
+        private static void AttachGlide()
+        {
+            if (glideAttached) return;
+            var sv = FindChild<ScrollViewer>(list);
+            if (sv == null) return;
+            glideAttached = true;
+            sv.ScrollChanged += (s, e) =>
+            {
+                if (Math.Abs(e.HorizontalChange) < 0.001 || !library.IsVisible || !list.IsKeyboardFocusWithin || !Features.On("collectionglide")) return;
+                var presenter = FindChild<ItemsPresenter>(list);
+                double pitch = Pitch();
+                if (presenter == null || pitch <= 0 || Math.Abs(e.HorizontalChange) > 12) return;   // (a long jump: as it is)
+                var shift = presenter.RenderTransform as TranslateTransform;
+                if (shift == null || shift.IsFrozen) { shift = new TranslateTransform(); presenter.RenderTransform = shift; }
+                double since = (DateTime.Now - lastStep).TotalMilliseconds;
+                lastStep = DateTime.Now;
+                HomeNav.Glide(shift, e.HorizontalChange * pitch, since < 260);   // (a held stick glides on at one speed)
+            };
+        }
+
+        // the distance from one cover to the next (the scroll moves in whole covers)
+        private static double Pitch()
+        {
+            var gen = list.ItemContainerGenerator;
+            for (int i = 0; i < list.Items.Count - 1; i++)
+            {
+                var a = gen.ContainerFromIndex(i) as FrameworkElement;
+                var b = gen.ContainerFromIndex(i + 1) as FrameworkElement;
+                if (a != null && b != null && a.IsVisible && b.IsVisible) return Math.Abs(b.TranslatePoint(new Point(0, 0), a).X);
+            }
+            return 0;
+        }
+
+        private static T FindChild<T>(DependencyObject root) where T : DependencyObject
+        {
+            if (root == null) return null;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var child = VisualTreeHelper.GetChild(root, i);
+                var found = child as T ?? FindChild<T>(child);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         // ---- the art from game to game: a crossfade of Selene's own ----

@@ -377,7 +377,7 @@ namespace Selene
         private static bool glideHooked;
         private static readonly TranslateTransform glideClock = new TranslateTransform();
 
-        private static void Glide(TranslateTransform shift, double delta, bool chained)
+        internal static void Glide(TranslateTransform shift, double delta, bool chained)
         {
             if (glideShift != shift) { glideV = 0; glideShift = shift; }
             shift.BeginAnimation(TranslateTransform.XProperty, null);
