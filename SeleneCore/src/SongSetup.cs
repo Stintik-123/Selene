@@ -23,6 +23,27 @@ namespace Selene
         private static string Ffmpeg { get { return Path.Combine(Tools, "ffmpeg.exe"); } }
         private static bool started;
 
+        // how far the songs are, for the setting's row: "57 of 358 games have a song" (UniPlaySong keeps each game's song in
+        // its own folder under ExtraMetadata / UniPlaySong / Games; a folder with one is a game with a song)
+        public static string Status()
+        {
+            try
+            {
+                if (HomeNav.Api == null) return null;
+                var root = Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "UniPlaySong", "Games");
+                int total = HomeNav.Api.Database.Games.Count(g => !g.Hidden);
+                if (total == 0) return null;
+                var audio = new[] { ".mp3", ".m4a", ".ogg", ".opus", ".wav", ".flac" };
+                int have = 0;
+                if (Directory.Exists(root))
+                    foreach (var dir in Directory.GetDirectories(root))
+                        if (Directory.EnumerateFiles(dir).Any(f => audio.Any(x => f.EndsWith(x, StringComparison.OrdinalIgnoreCase)))) have++;
+                bool fetching = started && File.Exists(YtDlp) && File.Exists(Ffmpeg) && have < total;
+                return have >= total ? "Every game has a song" : have + " of " + total + " games have a song" + (fetching ? ", more on the way" : "");
+            }
+            catch { return null; }
+        }
+
         // a little after start, in the background
         public static void StartLater()
         {

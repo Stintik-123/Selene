@@ -1261,58 +1261,75 @@ namespace Selene
                 int cur = row.SelectedIndex >= 0 && row.SelectedIndex < row.Items.Count ? row.SelectedIndex : 0;
                 // the focus comes from outside the row (the search layer): the row's guard would send it back to the old
                 // selection, so it's told which tile is wanted
-                wantedFocusIndex = idx;
-                var rowSv = FindChild<ScrollViewer>(row);
-                double fromOffset = rowSv != null ? rowSv.HorizontalOffset : 0;
-                try { PlaceAtLeft(row, idx); }   // the game you went looking for, first on the row
-                finally { wantedFocusIndex = -1; }
-                if (rowSv != null) RideTo(row, rowSv.HorizontalOffset - fromOffset);
-                Log("find a game: row focused=" + row.IsKeyboardFocusWithin + " selected=" + row.SelectedIndex);
                 // a screen still closing (a card's) can take the focus back with the old tile: looked at again, a few times
-                int tries = 0;
-                var again = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-                again.Tick += (s2, e2) =>
+                Action settle = () =>
                 {
-                    if (++tries > 6) { again.Stop(); return; }
-                    if (LoginScene.IsActive) return;
-                    if (row.SelectedIndex == idx) { again.Stop(); return; }   // (stops at once once right: a move of yours isn't undone)
-                    Log("find a game: the selection went back (" + row.SelectedIndex + "), again");
-                    wantedFocusIndex = idx;
-                    try { PlaceAtLeft(row, idx); }
-                    catch (Exception ex) { again.Stop(); Log("find a game: again failed: " + ex.Message); }
-                    finally { wantedFocusIndex = -1; }
+                    Log("find a game: row focused=" + row.IsKeyboardFocusWithin + " selected=" + row.SelectedIndex);
+                    int tries = 0;
+                    var again = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+                    again.Tick += (s2, e2) =>
+                    {
+                        if (++tries > 6) { again.Stop(); return; }
+                        if (LoginScene.IsActive) return;
+                        if (row.SelectedIndex == idx) { again.Stop(); return; }   // (stops at once once right: a move of yours isn't undone)
+                        Log("find a game: the selection went back (" + row.SelectedIndex + "), again");
+                        wantedFocusIndex = idx;
+                        try { PlaceAtLeft(row, idx); }
+                        catch (Exception ex) { again.Stop(); Log("find a game: again failed: " + ex.Message); }
+                        finally { wantedFocusIndex = -1; }
+                    };
+                    again.Start();
                 };
-                again.Start();
+                if (!RideTo(row, cur, idx, settle))
+                {
+                    wantedFocusIndex = idx;
+                    try { PlaceAtLeft(row, idx); }   // the game you went looking for, first on the row
+                    finally { wantedFocusIndex = -1; }
+                    settle();
+                }
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
-        // the row arrives at a picked game by scrolling to it: it starts up to seven covers back the way it came and slides there,
-        // quick and easing out (it was just there at once). Switch: Spotlight > Scroll to a picked game
-        private static void RideTo(ListBox row, double movedCovers)
+        // The row walks to a picked game the way a held stick would: the ring steps tile to tile, each step with its tick and
+        // the row's glide, until it lands on it (it used to be there at once). From far away it lands six tiles short first,
+        // then walks the rest. False when it doesn't apply (the switch off, nothing to walk): the caller places it at once.
+        // Switch: Spotlight > Scroll to a picked game
+        private static bool RideTo(ListBox row, int from, int idx, Action done)
         {
             try
             {
-                if (Math.Abs(movedCovers) < 0.5 || Lite || !Features.On("pickscroll")) return;
-                var panel = FindChild<VirtualizingStackPanel>(row);
-                if (panel == null) return;
-                double pitch = 0;
-                for (int i = 0; i < row.Items.Count - 1 && pitch <= 0; i++)
+                if (Lite || !Features.On("pickscroll") || from < 0 || from == idx || idx < 0 || idx >= row.Items.Count) return false;
+                int dir = idx > from ? 1 : -1;
+                const int walk = 6;
+                if (Math.Abs(idx - from) > walk)
                 {
-                    var a = row.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
-                    var b = row.ItemContainerGenerator.ContainerFromIndex(i + 1) as FrameworkElement;
-                    if (a != null && b != null && a.IsVisible && b.IsVisible) pitch = Math.Abs(b.TranslatePoint(new Point(0, 0), a).X);
+                    int start = idx - dir * walk;
+                    wantedFocusIndex = start;
+                    try { PlaceAtLeft(row, start); }
+                    finally { wantedFocusIndex = -1; }
                 }
-                if (pitch <= 0) return;
-                double covers = Math.Min(7, Math.Abs(movedCovers));
-                var shift = panel.RenderTransform as TranslateTransform;
-                if (shift == null || shift.IsFrozen) { shift = new TranslateTransform(); panel.RenderTransform = shift; }
-                StopGlide();
-                var ride = new DoubleAnimation(Math.Sign(movedCovers) * covers * pitch, 0, TimeSpan.FromMilliseconds(260 + covers * 40)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-                Timeline.SetDesiredFrameRate(ride, 144);
-                ride.Completed += (s, e) => { shift.BeginAnimation(TranslateTransform.XProperty, null); shift.X = 0; };
-                shift.BeginAnimation(TranslateTransform.XProperty, ride);
+                var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(115) };
+                int steps = 0, waits = 0;
+                EventHandler tick = null;
+                tick = (s, e) =>
+                {
+                    if (LoginScene.IsActive) { if (++waits < 20) return; step.Stop(); done(); return; }   // (the screen it was picked on still closing: a moment)
+                    int cur = row.SelectedIndex;
+                    if (cur == idx || cur < 0 || ++steps > walk + 2) { step.Stop(); done(); return; }
+                    int next = -1;
+                    for (int i = cur + dir; i >= 0 && i < row.Items.Count; i += dir)
+                        if (IsShown(row.Items[i])) { next = i; break; }
+                    if (next < 0 || (dir > 0 ? next > idx : next < idx)) { step.Stop(); done(); return; }
+                    wantedFocusIndex = next;
+                    try { MoveTo(row, cur, next); }
+                    finally { wantedFocusIndex = -1; }
+                };
+                step.Tick += tick;
+                tick(null, null);   // the first step now
+                if (row.SelectedIndex != idx) step.Start();
+                return true;
             }
-            catch (Exception ex) { Log("find a game: ride: " + ex.Message); }
+            catch (Exception ex) { Log("find a game: ride: " + ex.Message); return false; }
         }
 
         // a tile at the left edge of the row, focused (a pick from a search or a card): the usual move keeps the third slot and,
@@ -1962,6 +1979,7 @@ namespace Selene
         // VideoIsPlaying hold, so its player is turned down, gets a pause source of its own, and is paused again if it starts
         private static object upsPlayer;
         private static System.Windows.Threading.DispatcherTimer quietWatch;
+        private static bool pausedManually;
 
         public static void QuietStartup(bool on)
         {
@@ -2000,6 +2018,7 @@ namespace Selene
                                 if (paused != null && loaded != null && (bool)loaded.GetValue(upsPlayer, null) && !(bool)paused.GetValue(upsPlayer, null))
                                 {
                                     type.GetMethod("PauseImmediate").Invoke(upsPlayer, null);
+                                    pausedManually = true;   // (that pause is UniPlaySong's "Manual" one: lifted with the hold)
                                     Log("start-up: UniPlaySong started its music, paused it");
                                 }
                             }
@@ -2013,6 +2032,9 @@ namespace Selene
                 {
                     if (quietWatch != null) quietWatch.Stop();
                     remove.Invoke(upsPlayer, new[] { source });
+                    // the pause put on it while held is UniPlaySong's "Manual" one: left on, the music stayed silent the whole
+                    // session (the home's and every game's song)
+                    if (pausedManually) { remove.Invoke(upsPlayer, new[] { Enum.Parse(add.GetParameters()[0].ParameterType, "Manual") }); pausedManually = false; Log("start-up: the hold's pause lifted"); }
                     if (volume != null) volume.Invoke(upsPlayer, new object[] { 1.0 });
                     Log("start-up: music released");
                 }

@@ -77,10 +77,20 @@ namespace Selene
         private static void AttachGlide()
         {
             if (glideAttached) return;
-            var sv = FindChild<ScrollViewer>(list);
-            if (sv == null) { HomeNav.Log("collection glide: no scroll viewer yet"); return; }
+            var sv = RowScroller();
+            if (sv == null) { HomeNav.Log("collection glide: no scroll viewer yet (list children " + VisualTreeHelper.GetChildrenCount(list) + ", template " + (list.Template != null) + ")"); return; }
+            HookScroll(sv);
+        }
+
+        private static ScrollViewer hooked;
+
+        // the row's scroll viewer watched for its one-cover steps (hooked again if the list got a new one)
+        private static void HookScroll(ScrollViewer sv)
+        {
+            if (sv == null || ReferenceEquals(hooked, sv)) return;
+            hooked = sv;
             glideAttached = true;
-            HomeNav.Log("collection glide: attached (" + sv.GetType().Name + ", panel " + (FindChild<VirtualizingPanel>(list) != null ? FindChild<VirtualizingPanel>(list).GetType().Name : "?") + ")");
+            HomeNav.Log("collection glide: attached (" + sv.GetType().Name + ")");
             int told = 0;
             sv.ScrollChanged += (s, e) =>
             {
@@ -107,9 +117,10 @@ namespace Selene
             {
                 try
                 {
-                    var sv = FindChild<ScrollViewer>(list);
+                    var sv = RowScroller();
                     int idx = list.SelectedIndex;
                     if (sv == null || idx < 0) return;
+                    HookScroll(sv);   // (found here when the earlier looks came up empty)
                     bool itemUnits = Math.Abs(sv.ExtentWidth - list.Items.Count) < 2;   // (item scrolling counts in covers)
                     double want = Math.Max(0, idx - 1);
                     if (!itemUnits) { double pitch = Pitch(); if (pitch <= 0) return; want *= pitch; }
@@ -118,6 +129,20 @@ namespace Selene
                 }
                 catch { }
             }), DispatcherPriority.Loaded);
+        }
+
+        // the row's scroll viewer: in the list's own parts, else up from a cover (the list's parts weren't found that way once)
+        private static ScrollViewer RowScroller()
+        {
+            var sv = FindChild<ScrollViewer>(list);
+            if (sv != null) return sv;
+            var item = list.SelectedIndex >= 0 ? list.ItemContainerGenerator.ContainerFromIndex(list.SelectedIndex) as DependencyObject : null;
+            for (var d = item; d != null; d = VisualTreeHelper.GetParent(d))
+            {
+                var found = d as ScrollViewer;
+                if (found != null) return found;
+            }
+            return null;
         }
 
         // the distance from one cover to the next (the scroll moves in whole covers)
