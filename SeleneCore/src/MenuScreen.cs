@@ -382,12 +382,19 @@ namespace Selene
             new[] { "power-restart", "shutdown.exe", "/r /t 0" },
             new[] { "power-off", "shutdown.exe", "/s /t 0" } };
 
+        [System.Runtime.InteropServices.DllImport("powrprof.dll", SetLastError = true)]
+        private static extern bool SetSuspendState(bool hibernate, bool forceCritical, bool disableWakeEvent);
+
         public static void Run(int i)
         {
             var item = Items[i];
             HomeNav.Log("power: " + item[0]);
             var helper = SelenePaths.Helper;
-            var start = !string.IsNullOrEmpty(helper) && System.IO.File.Exists(helper)
+            bool viaHelper = !string.IsNullOrEmpty(helper) && System.IO.File.Exists(helper);
+            // sleep straight through Windows: "rundll32 powrprof.dll,SetSuspendState" hibernates instead on a PC with
+            // hibernation on (rundll32 hands the function the wrong arguments)
+            if (i == 0 && !viaHelper) { System.Threading.Tasks.Task.Run(() => SetSuspendState(false, false, false)); return; }
+            var start = viaHelper
                 ? new System.Diagnostics.ProcessStartInfo(helper, item[0])
                 : new System.Diagnostics.ProcessStartInfo(item[1], item[2]);
             start.UseShellExecute = false;

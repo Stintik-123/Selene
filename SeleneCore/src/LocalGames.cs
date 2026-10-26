@@ -279,7 +279,7 @@ namespace Selene
         // While it runs, its processes are checked; after it closes, a scheduled task "Selene\<name>" with highest
         // privileges is created (one Windows admin prompt, once per game) and Play goes through it from then on: no UAC
         // prompt over the TV on every launch, the controller keeps working.
-        private const string Schtasks = @"C:\Windows\System32\schtasks.exe";
+        private static readonly string Schtasks = Path.Combine(Environment.SystemDirectory, "schtasks.exe");   // (Windows isn't always on C:)
         private static readonly HashSet<Guid> ranAsAdmin = new HashSet<Guid>();
         private static readonly HashSet<Guid> declined = new HashSet<Guid>();
 

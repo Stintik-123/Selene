@@ -556,6 +556,8 @@ namespace Selene
             if (Tier() > 0 || !PlayniteOnScreen() || GameRunning()) { softwareSeconds = 0; return; }
             if (++softwareSeconds < 8) return;
             restarting = true;
+            // the restart is the optional helper's job: without one, said once and left (it was tried, and logged, every few seconds)
+            if (string.IsNullOrEmpty(SelenePaths.Helper) || !System.IO.File.Exists(SelenePaths.Helper)) { HomeNav.Log("smooth: Playnite is drawing without the GPU (software rendering); no helper set to restart it"); return; }
             HomeNav.Log("smooth: Playnite is drawing without the GPU (software rendering) -> restarting it");
             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SelenePaths.Helper, "restart-playnite") { UseShellExecute = false }); }
             catch (Exception ex) { HomeNav.Log("smooth: restart failed " + ex.Message); restarting = false; }

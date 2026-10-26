@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- New installs look like the screenshots in more places: the game menu, dialogs and Playnite's settings use Selene's font; the closing screen shows the game's art (it was black); the loading screen shows the game's name when it has no logo; Achievements shows covers instead of tiny icons.
+- Sleep sleeps (without the optional helper it could hibernate on PCs with hibernation on).
+- The Background music and HowLongToBeat switches show only when their add-on is there; games in a category named "Handheld" are no longer hidden unless the streaming device switch is set up.
 - Logos and backgrounds without any setup: Selene gets a game's logo and wide background from Steam when it has none, gently in the background for the whole library (Selene settings > Spotlight > Download logos and backgrounds).
 - Selene brings its own text font (Lato): words that used Playnite's font setting were Trebuchet MS on a new install, so screens like Activity, the buttons and the page facts looked different from the screenshots.
 - A game's page: the right stick only scrolls the description, at a pace you can read (it also moved the focus to Play).

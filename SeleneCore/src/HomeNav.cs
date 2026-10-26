@@ -455,8 +455,9 @@ namespace Selene
             var t = game.GetType();
             var hidden = t.GetProperty("Hidden");
             if (hidden != null && Equals(hidden.GetValue(game, null), true)) return false;
-            // in TV mode, the games in the "Handheld" category stay off (any of its categories: only the first was looked at)
-            if (RowMode == "all") return true;
+            // in TV mode, the games in the "Handheld" category stay off (any of its categories: only the first was looked at);
+            // only with the streaming device switch set up (a "Handheld" category of anyone else's stays as it is)
+            if (RowMode == "all" || SelenePaths.StreamLogs.Length == 0) return true;
             var cats = t.GetProperty("Categories");
             var list = cats != null ? cats.GetValue(game, null) as IEnumerable : null;
             if (list != null)
@@ -4712,10 +4713,19 @@ namespace Selene
             {
                 if (string.IsNullOrWhiteSpace(SelenePaths.HelperTask)) return;
                 System.IO.File.AppendAllLines(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-elevated.txt"), lines);
-                var psi = new System.Diagnostics.ProcessStartInfo(@"C:\Windows\System32\schtasks.exe", "/run /tn \"" + SelenePaths.HelperTask + "\"") { UseShellExecute = false, CreateNoWindow = true };
+                var psi = new System.Diagnostics.ProcessStartInfo(System.IO.Path.Combine(Environment.SystemDirectory, "schtasks.exe"), "/run /tn \"" + SelenePaths.HelperTask + "\"") { UseShellExecute = false, CreateNoWindow = true };
                 System.Diagnostics.Process.Start(psi);
             }
             catch (Exception ex) { Log("admin helper request failed: " + ex.Message); }
+        }
+
+        // the closing screen's backdrop: Selene's wide art when there is some, else the game's own background (a new install has
+        // no wide art: the screen was plain black there)
+        private static string ClosingArt(Playnite.SDK.Models.Game g)
+        {
+            if (g == null) return null;
+            var hero = System.IO.Path.Combine(SelenePaths.Media("Hero"), g.Id + ".jpg");
+            return System.IO.File.Exists(hero) ? hero : GameFacts.BackgroundPath(g);
         }
 
         private static void ShowClosingScreen(Window main, Playnite.SDK.Models.Game g, string name)
@@ -4733,10 +4743,10 @@ namespace Selene
                     root.Children.Add(me);
                     me.Play();
                 }
-                else if (g != null && System.IO.File.Exists(System.IO.Path.Combine(SelenePaths.Media("Hero"), g.Id + ".jpg")))
+                else if (ClosingArt(g) != null)
                 {
                     // no theme video: the game's own art, soft and dark, behind the closing tile
-                    var art = new Image { Source = LoadNow(System.IO.Path.Combine(SelenePaths.Media("Hero"), g.Id + ".jpg"), 1280), Stretch = Stretch.UniformToFill,
+                    var art = new Image { Source = LoadNow(ClosingArt(g), 1280), Stretch = Stretch.UniformToFill,
                                           Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 40 }, Opacity = 0.55,
                                           RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = new ScaleTransform(1.1, 1.1) };
                     root.Children.Add(art);
@@ -5036,6 +5046,23 @@ namespace Selene
                     };
                     RenderOptions.SetBitmapScalingMode(logoEl, BitmapScalingMode.HighQuality);
                     root.Children.Add(logoEl);
+                }
+                else
+                {
+                    // no logo (none downloaded yet, or the store has none): the game's name, large, in its place
+                    var g = Api != null && gameId != Guid.Empty ? Api.Database.Games.Get(gameId) : null;
+                    if (g != null && !string.IsNullOrEmpty(g.Name))
+                    {
+                        logoEl = new TextBlock
+                        {
+                            Text = g.Name, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, FontSize = 76, Foreground = Brushes.White,
+                            TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = Math.Min(1200, main.ActualWidth * 0.7),
+                            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                            Opacity = 0, RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = logoScale,
+                            Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.6 }
+                        };
+                        root.Children.Add(logoEl);
+                    }
                 }
                 coverBlack = new Border { Background = Brushes.Black, Opacity = 0, IsHitTestVisible = false };
                 root.Children.Add(coverBlack);

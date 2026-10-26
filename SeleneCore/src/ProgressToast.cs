@@ -820,7 +820,7 @@ namespace Selene
         private static string SteamAppId(Playnite.SDK.Models.Game game)
         {
             if (game.PluginId.ToString().Equals(SteamPlugin, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(game.GameId)) return game.GameId;
-            if (game.Id == Guid.Empty || game.Name == "Clair Obscur: Expedition 33") return game.PluginId == Guid.Empty ? (game.GameId ?? "1903340") : null;
+            if (game.Id == Guid.Empty) return game.GameId ?? "1903340";   // (the stand-in only: a game of yours by that name has its own id)
             return null;
         }
 

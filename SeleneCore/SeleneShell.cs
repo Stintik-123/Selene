@@ -50,6 +50,7 @@ namespace Selene
             app.Resources["SeleneMediaRoot"] = System.IO.Path.GetDirectoryName(SelenePaths.Media("Hero"));
             ApplyArtRoots();
             app.Resources["SeleneIconFont"] = Ui.Icons;
+            app.Resources["FontMaterialIcons"] = Ui.Icons;   // the game menu's and settings menus' icons (the theme's relative font path may not load there)
             app.Resources["FontFamily"] = Ui.TextFont;   // Playnite's font setting, for every text that names none   // solid icons for the theme (a font path in the theme's XAML didn't load)
             if (!app.Resources.Contains("SeleneRowMode")) app.Resources["SeleneRowMode"] = "tv";
             // the main screen's template is applied a moment after start: retry until its parts exist

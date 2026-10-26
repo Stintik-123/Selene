@@ -22,9 +22,6 @@
                           d:DesignWidth="{StaticResource DesignWidth}"
                           d:DesignHeight="{StaticResource DesignHeight}"
                           d:DataContext="{x:Static DesignMainViewModel.DesignIntance}">
-                        <Grid.Resources>
-                            <FontFamily x:Key="FontMain">Segoe UI Variable Display, Segoe UI</FontFamily>
-                        </Grid.Resources>
                         <Grid x:Name="PART_ViewHost" Background="{DynamicResource SeleneScrimBrush}">
 
                             <!-- ================= LIBRARY ================= -->

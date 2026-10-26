@@ -8,6 +8,9 @@
 
     <!-- Google's Material Icons, for the menus Playnite builds (game options, its settings) -->
     <FontFamily x:Key="FontMaterialIcons">./Fonts/#Material Icons</FontFamily>
+    <!-- Selene's display font, for every window (it lived in the main screen only: the game menu, dialogs and settings
+         fell back to Playnite's font setting) -->
+    <FontFamily x:Key="FontMain">Segoe UI Variable Display, Segoe UI</FontFamily>
 
     <!-- the button names in the hints: Selene Core swaps them for PlayStation's when Playnite's "Button prompts" says so -->
     <sys:String x:Key="SelenePromptA">A</sys:String>
