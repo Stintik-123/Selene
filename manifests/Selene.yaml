@@ -1,5 +1,104 @@
 AddonId: Selene_a98e0027-fa6a-4f5e-a087-bad8d69f2443
 Packages:
+  - Version: 1.2.2
+    RequiredApiVersion: 2.10.0
+    ReleaseDate: 2026-10-27
+    PackageUrl: https://github.com/mattxslv/Selene/releases/download/v1.2.2/Selene.pthm
+    Changelog:
+      - >-
+        Sound in the Start menu: Windows' volume (Left / Right, X mutes) and which speakers or headset play (Left / Right switches the default device), in a card over the menu like Power's (switch: Sound & music > Sound in the menu) (#15).
+      - >-
+        A card with the controller's battery as Selene starts and another as it runs low, read as exactly as Windows allows: the pad's own report (DualSense, DualShock 4, Switch Pro: a percentage), Windows' Bluetooth figure (Xbox and 8BitDo pads over Bluetooth), the Xbox adapter's report, XInput's four levels last; a pad on a cable or a 2.4 GHz dongle has nothing to read (switch: Look > Controller battery) (#15).
+      - >-
+        A game's page: captures named the way Game Bar writes them ("Onimusha_ Way of the Sword 10_25_2026 9_45_56 PM") are matched to the game (the short date is stripped, names are compared as a filename carries them), ScreenshotsVisualizer's own index is used when it's installed, and a drive's $RECYCLE.BIN no longer shows as a source (#16).
+      - >-
+        A game's page opened from Collection showed the game before's screenshots until reopened; it shows the right ones, loaded at once (#17).
+      - >-
+        Shade over the art runs from Off to 100% and covers Collection's two gradients as well as Spotlight's; from the menu's settings, Adjust sets it with the home in full view, the shades following the slider as it moves (#18).
+      - >-
+        Collection: switches for the details under the logo and for the button hints along the bottom (#19).
+      - >-
+        Translating: the phrases file goes to the Desktop as you see it (OneDrive's when it's redirected), a translation is also read from Selene Core's data folder (ExtensionsData\cd424c29-...\Localization, which a theme update leaves alone), and the log says which file was looked for, loaded, or couldn't be written (#20).
+      - >-
+        Settings, Advanced: Report a problem comes first; the Check for updates row is gone (the menu's Update item checks on its own).
+      - >-
+        Settings: backing out of a group's options to the groups leaves the list where it was (it jumped to the top), and A goes back to the row left.
+      - >-
+        Spotlight: the name beside the selected card (Achievements, Captures, Activity) sits clear of the card again.
+      - >-
+        Settings: the red dot also marks the option whose work still runs, with where it's at (games to go, achievements checked so far) and a bar of how far it has got, with the percentage; the dots, lines and bars move on while the screen is up.
+      - >-
+        The menu opened from a game's details page shows the page dimmed underneath instead of a black screen.
+      - >-
+        A red dot on the menu's Selene settings while something still runs behind the scenes (songs, trailers or art coming in, the achievements check), and on the settings group that owns it.
+      - >-
+        Logos taken from Steam's own cache are cut to the logo itself (they come on a whole 1280 x 720 canvas, so the logo landed small or off to one side); the ones saved before are cut on the next pass.
+      - >-
+        Spotlight's row runs to both edges of the screen once scrolled (the left end stopped 80 px in while the right ran off the screen), and a tile cut by the edge dissolves at the edge, as in Collection (switch: Spotlight > Row to the edges).
+      - >-
+        Notification cards as a console's: a compact strip (84 px, a 48 px icon, the title at 18 px and the line at 15 px) as wide as its words, between 360 and 520 px; the session card alone stays a panel (560 x 128, its figures on one line).
+      - >-
+        Icons in circles (dialogs, the menu, notification cards, achievements, the report's badge) sit exactly in the middle: centred by the glyph's own outline, not its text box.
+      - >-
+        Back from Setup check, Report a problem or the Store region lands on that row in Selene settings, not on the group list.
+      - >-
+        Collection's row: scrolled to its end, the last cover and its ring sit inside the screen (the last one was cut off); a cover cut by the screen's edge dissolves at the edge; a held stick moves at Spotlight's pace (Playnite's list dropped every other repeat).
+      - >-
+        Music plays again: the hold that keeps UniPlaySong quiet during start-up left its pause on, so the home music and every game's song stayed silent all session.
+      - >-
+        A picked game is reached the way a held stick would get there: from the row's first game, slow over the first slots, quick through the middle, easing down onto it, with the tick along the way. Selene settings > Sound & music > Get game songs shows how many games have a song.
+      - >-
+        Collection: the ring walks along the row and, once only one cover is left beyond it, the row glides instead, so what's next is always in view (Playnite waited for the very edge); the achievements above the covers sit higher, clear of the chosen cover.
+      - >-
+        The avatar picker shows the moving GIFs first.
+      - >-
+        Collection's covers glide from game to game instead of jumping, on the same spring as Spotlight's row (switch: Collection > Gliding row).
+      - >-
+        Steam achievements on a new install: Selene gives Playnite Achievements the Steam account signed in on this PC when it has none (it never fetched a Steam game's achievements without one), then checks every game once.
+      - >-
+        A game with every achievement unlocked gets a little celebration on its Locked tab: a gold medal, sparkles and a line to be proud of (switch: Games > Achievements: celebrate 100%).
+      - >-
+        Collection's covers: as many as fit across the row (about seven on a 1920 px screen), so the row is full and big on any screen. A game's page: the right stick scrolls the description from anywhere on the page, and the hints show RS Scroll. Logos for newer games come from Steam's app info.
+      - >-
+        Game songs without any setup: UniPlaySong needs yt-dlp and ffmpeg to find songs and doesn't bring them, so a new install had none. Selene downloads both once (about 130 MB), points UniPlaySong at them and asks it for a song for every game; new games get theirs from UniPlaySong itself (Selene settings > Sound & music > Get game songs).
+      - >-
+        Leaving a game's page (B) fades back to Spotlight instead of cutting (switch: Look > Soft way back).
+      - >-
+        Selene settings > Sound & music: "Sound volume" is called Interface sounds volume (it was never the music); Clip volume is set in Captures only (Up / Down).
+      - >-
+        A game's page: going down to the screenshots no longer leaves Play lit; the developer reads without its company ending (IO Interactive, not IO Interactive A/S).
+      - >-
+        Backgrounds Selene downloads are cut to the screen's shape (Steam's are wide banners: a game's page showed a blown-up slice of the middle), from Steam's sharper art; logos and backgrounds come from Steam's library cache on your PC first, which has logos the store page doesn't.
+      - >-
+        A game's description scrolls smoothly with the right stick (Playnite's own scroll box eased every move itself and fought it).
+      - >-
+        The trailer fade behind Collection and the Store is Selene's own now (`tools/make_trailer_mask.py`); nothing from the Aniki ReMake theme is left.
+      - >-
+        HowLongToBeat times come in: Selene's lookup went through the add-on's "pick the right game" window, which only exists in desktop mode, so in fullscreen it never found a game. It now uses the add-on's automatic match, for the game you rest on in Spotlight, Collection or its page.
+      - >-
+        New installs look like the screenshots in more places: the game menu, dialogs and Playnite's settings use Selene's font; the closing screen shows the game's art (it was black); the loading screen shows the game's name when it has no logo; Achievements shows covers instead of tiny icons.
+      - >-
+        Sleep sleeps (without the optional helper it could hibernate on PCs with hibernation on).
+      - >-
+        The Background music and HowLongToBeat switches show only when their add-on is there; games in a category named "Handheld" are no longer hidden unless the streaming device switch is set up.
+      - >-
+        Logos and backgrounds without any setup: Selene gets a game's logo and wide background from Steam when it has none, gently in the background for the whole library (Selene settings > Spotlight > Download logos and backgrounds).
+      - >-
+        Selene brings its own text font (Lato): words that used Playnite's font setting were Trebuchet MS on a new install, so screens like Activity, the buttons and the page facts looked different from the screenshots.
+      - >-
+        A game's page: the right stick only scrolls the description, at a pace you can read (it also moved the focus to Play).
+      - >-
+        A game's page opens on the game you picked: right after start, the library update moved Playnite's selection to the first game and the page showed that one instead.
+      - >-
+        A game's description is words only (store banners, GIFs and videos are left out) and never takes the focus: the right stick scrolls it smoothly, Up / Down go between the buttons and the rows below (the focus went back and forth between Play and the text, which jumped around).
+      - >-
+        Fewer warnings in Playnite's log: Selene no longer asks for tile and background art from its media folder when there is none.
+      - >-
+        Trailers without any setup: Selene downloads a game's trailer from Steam (its first minute, 720p, with sound) the first time you look at it, into the same place Extra Metadata Loader keeps trailers, so trailer cards and Collection play it. Selene settings > Spotlight > Download trailers: games you look at, the whole library, or off (#12, #13).
+      - >-
+        Taken out: HowLongToBeat times on a game's page (they stay on Spotlight and Collection), the song title in the top bar, and animations following the screen's refresh rate (back to 144 frames a second).
+      - >-
+        The menu has Extensions again: your add-ons' own menu items (an audio output switcher, metadata tools...) as in Playnite's menu, in their sections (#11).
   - Version: 1.2.1
     RequiredApiVersion: 2.10.0
     ReleaseDate: 2026-10-26
