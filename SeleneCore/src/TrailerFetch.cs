@@ -29,6 +29,9 @@ namespace Selene
 
         private static string Mode { get { return Features.Value("trailerdownload"); } }
 
+        // trailers, logos or backgrounds still coming (for the red dot on the menu and the Spotlight group)
+        public static bool Busy { get { lock (gate) return worker != null && queue.Count > 0; } }
+
         public static string PathFor(Guid id)
         {
             return System.IO.Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "games", id.ToString(), "VideoTrailer.mp4");

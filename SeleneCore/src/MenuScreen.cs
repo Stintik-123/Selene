@@ -73,7 +73,7 @@ namespace Selene
             items.Add(new Item { Icon = Ui.Icon(0xe853), Label = profile != null ? profile.Name : "Switch profile", Sub = profile != null ? "Switch profile" : null, Picture = profile != null ? WhoScreen.Avatar(profile, 52) : null, Run = () => LoginScene.Show(new WhoScreen(null), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe3c9), Label = "Edit profile", Run = EditProfile });
             items.Add(new Item { Icon = Ui.Icon(0xe40a), Label = "Theme", Run = ChangeTheme });
-            items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Run = () => LoginScene.Show(new SettingsScreen(true), 1) });
+            items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Badge = Background.Any, Run = () => LoginScene.Show(new SettingsScreen(true), 1) });   // (the dot: something still running behind the scenes)
             items.Add(new Item { Icon = Ui.Icon(0xe8ac), Label = "Power", Run = OpenPower });
             // the add-ons' own menus (Playnite's Extensions menu): audio switchers, metadata tools...
             items.Add(new Item { Icon = Ui.Icon(0xe87b), Label = "Extensions", Run = () => LoginScene.Show(GameOptionsScreen.Extensions(), 1) });

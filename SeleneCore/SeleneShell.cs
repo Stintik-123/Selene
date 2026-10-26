@@ -434,6 +434,7 @@ namespace Selene
         // over the page, and everything in it but the layer is masked out, so the page stays underneath as the layer fades in
         private static readonly List<Tuple<UIElement, Brush>> masked = new List<Tuple<UIElement, Brush>>();
         private static UIElement raised;
+        private static Brush raisedBackground;   // the raised grid's own dark fill, lifted meanwhile (it covered the page: black under the menu)
 
         private static void Raise(UIElement login, bool on)
         {
@@ -442,6 +443,9 @@ namespace Selene
                 foreach (var m in masked) m.Item1.OpacityMask = m.Item2;
                 masked.Clear();
                 if (raised != null) Panel.SetZIndex(raised, 0);
+                var lowered = raised as Panel;
+                if (lowered != null && raisedBackground != null) lowered.Background = raisedBackground;
+                raisedBackground = null;
                 raised = null;
                 return;
             }
@@ -458,6 +462,8 @@ namespace Selene
             if (details == null || !details.IsVisible || !(child is UIElement) || raised != null) return;
             raised = (UIElement)child;
             Panel.SetZIndex(raised, 1);
+            var grid = raised as Panel;
+            if (grid != null && grid.Background != null) { raisedBackground = grid.Background; grid.Background = Brushes.Transparent; }
             for (DependencyObject at = login; at != child; )
             {
                 var up = VisualTreeHelper.GetParent(at);
