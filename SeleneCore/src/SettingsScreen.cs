@@ -254,6 +254,7 @@ namespace Selene
                 Features.Set(key, !Features.On(key));
                 if (key == "brand") Brand.Apply();
                 if (key == "topprofile") TopProfile.Refresh();
+                if (key == "nowplaying") SeleneShell.ApplyNowPlaying();
                 Ui.Key();
                 ShowSwitch(index, true);
                 if (key == "hints") HomeHints.Update();
@@ -281,7 +282,7 @@ namespace Selene
         {
             try
             {
-                Brand.Apply(); TopProfile.Refresh(); HomeHints.Update(); LoginScene.RefreshBackdrop(); Contrast.Apply();
+                Brand.Apply(); TopProfile.Refresh(); SeleneShell.ApplyNowPlaying(); HomeHints.Update(); LoginScene.RefreshBackdrop(); Contrast.Apply();
                 HomeNav.ApplyValueSettings(); Ui.FullRateChanged(); Profiles.ApplyLook(); IdleScreen.Restart();
                 GameFacts.CardStats(); CapturesScreen.CountInBackground();
             }

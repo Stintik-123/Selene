@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- From amogh-w (#3): animations follow the screen's refresh rate (no longer capped at 144), Spotlight trailer cards play a game's full trailer when there's no preview clip, a game's page shows HowLongToBeat times (with that add-on; switch: Games > HowLongToBeat times), the top bar can show what UniPlaySong is playing (off by default: Look > Now playing in the top bar), the page behind a game's options menu stays still, and Collection's first and last games stay fully in view.
 - Report a problem: click both sticks in together anywhere to report with a picture of the screen (you see it and can leave it out), and "Type on your phone" opens a page on your phone to type and send from. The Power menu opens centred over Power.
 - Selene settings: Up from the first group goes round to the last (Advanced), Down from the last back to the first.
 - Report a problem (Selene settings > Advanced), no GitHub account needed: three quick steps (what went wrong, where you were, a few words with the on-screen keys or a keyboard), then it's sent as a GitHub issue with your versions and Selene's logs (names, folders and emails taken out), and a code to scan follows it.
