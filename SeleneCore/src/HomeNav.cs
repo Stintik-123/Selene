@@ -2464,7 +2464,7 @@ namespace Selene
                     scale.BeginAnimation(ScaleTransform.ScaleYProperty, Keys(0.35, 1, delay, 0.65, glide));
                     k++;
                 }
-                introUntil = DateTime.Now.AddSeconds(0.30 + Math.Max(0, k - 1) * 0.045 + 0.65);
+                introUntil = DateTime.Now.AddSeconds(0.15 + Math.Min(6, Math.Max(0, k - 1)) * 0.03 + 0.25);   // moving is free once the first tiles have landed (the rest finish as you go)
                 Log("intro played on " + k + " tiles");
                 // an empty tab's message comes in with them, just after the last card lands
                 RowEmptyIn(0.30 + k * 0.045 + 0.2);
