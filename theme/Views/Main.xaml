@@ -974,7 +974,7 @@
                                                     </StackPanel>
                                                     <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
                                                     <StackPanel Margin="0,0,26,0">
-                                                        <TextBlock Text="COMPLETED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="PLATINUMS" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                         <TextBlock Text="{DynamicResource SeleneStatAchDone}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
                                                 </StackPanel>

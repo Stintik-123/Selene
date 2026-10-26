@@ -34,6 +34,17 @@ namespace Selene
             }
         }
 
+        // a trophy of a grade, its metal shading down from light to its colour (as a console's trophies)
+        public static System.Windows.Controls.TextBlock TrophyIcon(string grade, double size)
+        {
+            var c = ((System.Windows.Media.SolidColorBrush)GradeBrush(grade)).Color;
+            var light = System.Windows.Media.Color.FromRgb((byte)Math.Min(255, c.R + 55), (byte)Math.Min(255, c.G + 55), (byte)Math.Min(255, c.B + 55));
+            var dark = System.Windows.Media.Color.FromRgb((byte)(c.R * 0.72), (byte)(c.G * 0.72), (byte)(c.B * 0.72));
+            var metal = new System.Windows.Media.LinearGradientBrush(new System.Windows.Media.GradientStopCollection { new System.Windows.Media.GradientStop(light, 0), new System.Windows.Media.GradientStop(c, 0.5), new System.Windows.Media.GradientStop(dark, 1) }, 90);
+            metal.Freeze();
+            return new System.Windows.Controls.TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = size, Foreground = metal, VerticalAlignment = System.Windows.VerticalAlignment.Center };
+        }
+
         // the metals' colours (a trophy's grade is the same in every theme)
         public static System.Windows.Media.Brush GradeBrush(string grade)
         {
@@ -61,6 +72,7 @@ namespace Selene
             public int Percent { get { return Total > 0 ? (int)Math.Floor(100.0 * Unlocked / Total) : 0; } }
             public bool Platinum { get { return Total > 0 && Unlocked == Total; } }   // every one earned, as a console's platinum
             public int Earned(string grade) { return Items.Count(i => i.Unlocked && i.Grade == grade); }
+            public int Count(string grade) { return Items.Count(i => i.Grade == grade); }
         }
 
         private static object plugin;

@@ -138,28 +138,35 @@ namespace Selene
             header.Children.Add(left);
             if (set == null || set.Total == 0) return;
 
-            // the ring and the numbers at the right
-            var right = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
-            right.Children.Add(Ring(set.Unlocked / (double)set.Total, 112));
-            var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(22, 0, 0, 0) };
-            words.Children.Add(new TextBlock { Text = set.Unlocked + " of " + set.Total, FontSize = 30, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
-            words.Children.Add(new TextBlock { Text = set.Completed || set.Unlocked == set.Total ? "Every achievement earned" : "unlocked", FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65) });
-            var counts = GradeCounts(set, 17);
-            counts.Margin = new Thickness(0, 8, 0, 0);
-            words.Children.Add(counts);
-            var last = set.LastUnlock;
-            if (last.HasValue) words.Children.Add(new TextBlock { Text = "Last one " + GameFacts.Ago(last).ToLowerInvariant(), FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), Margin = new Thickness(0, 6, 0, 0) });
-            if (set.Platinum)
+            // at the right, as a console's trophy list: the share large with a line under it, then the trophies, earned of
+            // all of each grade (platinum: every one earned)
+            var right = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
+            var top = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            var share = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Width = 190, Margin = new Thickness(0, 0, 18, 0) };
+            share.Children.Add(new TextBlock { Text = set.Percent + "%", FontSize = 56, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Right });
+            var track = new Border { Height = 4, CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.2), Margin = new Thickness(30, 2, 0, 0) };
+            track.Child = new Border { Height = 4, CornerRadius = new CornerRadius(2), Background = Ink.Brush(set.Platinum ? "GlyphColor" : "SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(3, 160.0 * set.Unlocked / Math.Max(1, set.Total)) };
+            share.Children.Add(track);
+            top.Children.Add(share);
+            foreach (var grade in new[] { "Platinum", "Gold", "Silver", "Bronze" })
             {
-                var plat = AchievementsData.GradeBrush("Platinum");
-                var badge = new Border { CornerRadius = new CornerRadius(14), Padding = new Thickness(12, 4, 14, 5), Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, BorderBrush = plat, BorderThickness = new Thickness(1.5) };
-                var bl = new StackPanel { Orientation = Orientation.Horizontal };
-                bl.Children.Add(new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 18, Foreground = plat, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
-                bl.Children.Add(new TextBlock { Text = "Platinum", FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = plat, VerticalAlignment = VerticalAlignment.Center });
-                badge.Child = bl;
-                words.Children.Add(badge);
+                bool platinum = grade == "Platinum";
+                var cell = new StackPanel { Margin = new Thickness(22, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, MinWidth = 64 };
+                var icon = AchievementsData.TrophyIcon(grade, 40);
+                icon.HorizontalAlignment = HorizontalAlignment.Center;
+                if (platinum && !set.Platinum) icon.Opacity = 0.3;
+                cell.Children.Add(icon);
+                var count = new TextBlock { FontSize = 17, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 4, 0, 0) };
+                count.Inlines.Add(new System.Windows.Documents.Run(platinum ? (set.Platinum ? "1" : "0") : set.Earned(grade).ToString()) { FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
+                count.Inlines.Add(new System.Windows.Documents.Run(" / " + (platinum ? "1" : set.Count(grade).ToString())) { Foreground = Ink.Brush("SeleneInkColor", 0.5) });
+                cell.Children.Add(count);
+                top.Children.Add(cell);
             }
-            right.Children.Add(words);
+            right.Children.Add(top);
+            var lineText = set.Unlocked + " of " + set.Total + " unlocked";
+            var last = set.LastUnlock;
+            if (last.HasValue) lineText += "  \u00B7  last one " + GameFacts.Ago(last).ToLowerInvariant();
+            right.Children.Add(new TextBlock { Text = lineText, FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) });
             header.Children.Add(right);
             Ui.Rise(right, 80, 12, 320);
         }
