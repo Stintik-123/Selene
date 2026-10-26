@@ -118,6 +118,13 @@ namespace Selene
         }
 
         // the switches of the chosen group, rising in
+        // a row's button, when it has one: its own (Setup check...), or Shade over the art's "Adjust" when the home is behind the
+        // settings (set with the home in view, in ShadePreviewScreen); elsewhere that row keeps its slider
+        private string ActionOf(Features.Option o)
+        {
+            return o.Action ?? (o.Key == "shade" && fromMenu ? "Adjust" : null);
+        }
+
         private void ShowGroup(bool animate)
         {
             options = Features.All.Where(o => o.Group == Features.Groups[group] && (o.Available == null || o.Available())).ToList();
@@ -145,10 +152,11 @@ namespace Selene
                 var track = new Border { Width = 56, Height = 30, CornerRadius = new CornerRadius(15), VerticalAlignment = VerticalAlignment.Center, Child = knob, Margin = new Thickness(24, 0, 0, 0) };
                 TextBlock value = null;
                 SliderBar slider = null;
-                if (f.Action != null)
+                var action = ActionOf(f);
+                if (action != null)
                 {
                     // a row that does something: its button's label in a pill
-                    track = new Border { CornerRadius = new CornerRadius(17), Padding = new Thickness(16, 4, 16, 5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24, 0, 0, 0), Background = Ink.Brush("SeleneInkColor", 0.12), Child = new TextBlock { Text = f.Action, FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor") } };
+                    track = new Border { CornerRadius = new CornerRadius(17), Padding = new Thickness(16, 4, 16, 5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24, 0, 0, 0), Background = Ink.Brush("SeleneInkColor", 0.12), Child = new TextBlock { Text = action, FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor") } };
                     knob = null;
                 }
                 else if (f.IsChoice && f.Slider)
@@ -181,7 +189,7 @@ namespace Selene
 
         private void ShowSwitch(int i, bool animate)
         {
-            if (options[i].Action != null) return;
+            if (ActionOf(options[i]) != null) return;
             if (options[i].IsChoice)
             {
                 var o = options[i];
@@ -373,8 +381,9 @@ namespace Selene
                 return;
             }
             var opt = options[index];
-            if (b == "B" || (b == "DPadLeft" && !(opt.IsChoice && opt.Slider))) { inOptions = false; Ui.Back(); ShowFocus(); return; }
-            if (opt.IsChoice && opt.Slider && (b == "DPadLeft" || b == "DPadRight"))
+            bool acts = ActionOf(opt) != null;
+            if (b == "B" || (b == "DPadLeft" && !(opt.IsChoice && opt.Slider && !acts))) { inOptions = false; Ui.Back(); ShowFocus(); return; }
+            if (opt.IsChoice && opt.Slider && !acts && (b == "DPadLeft" || b == "DPadRight"))
             {
                 int at = Math.Max(0, Array.IndexOf(opt.Choices, Features.Value(opt.Key))) + (b == "DPadLeft" ? -1 : 1);
                 if (at < 0 || at >= opt.Choices.Length) return;   // the end of the line
@@ -384,7 +393,7 @@ namespace Selene
                 AfterChoice(opt);
                 return;
             }
-            if (opt.IsChoice && b == "A" && !opt.Slider)
+            if (opt.IsChoice && b == "A" && !opt.Slider && !acts)
             {
                 int row = index;
                 var names = opt.Names ?? opt.Choices;
@@ -396,12 +405,13 @@ namespace Selene
                 });
                 return;
             }
-            if (opt.IsChoice && (b == "DPadRight" || b == "A")) return;   // (A on a number row: nothing; Right: nothing)
-            if (opt.Action != null)
+            if (opt.IsChoice && !acts && (b == "DPadRight" || b == "A")) return;   // (A on a number row: nothing; Right: nothing)
+            if (acts)
             {
                 if (b != "A") { MoveRow(b); return; }
                 Ui.Confirm();
-                if (opt.Key == "setupcheck") { bool back = fromMenu; LoginScene.Show(new SetupScreen(false) { Back = () => new SettingsScreen(back, "Advanced", "setupcheck") }, 1); }
+                if (opt.Key == "shade") LoginScene.Show(new ShadePreviewScreen(fromMenu), 1);   // set with the home in view
+                else if (opt.Key == "setupcheck") { bool back = fromMenu; LoginScene.Show(new SetupScreen(false) { Back = () => new SettingsScreen(back, "Advanced", "setupcheck") }, 1); }
                 else if (opt.Key == "report") { bool back = fromMenu; LoginScene.Show(new ReportScreen(() => new SettingsScreen(back, "Advanced", "report")), 1); }
                 else if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false, () => new SettingsScreen(true, "Games", "storeregion")), 1);
                 else if (opt.Key == "reset")
