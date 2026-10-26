@@ -34,7 +34,18 @@ namespace Selene
             var current = service != null ? Prop(service, "Current") : null;
             if (current == null) { HomeNav.Log("songs: UniPlaySong's settings not found (a newer version?)"); return; }
             string yt = Prop(current, "YtDlpPath") as string, ff = Prop(current, "FFmpegPath") as string;
-            if (!string.IsNullOrEmpty(yt) && File.Exists(yt) && !string.IsNullOrEmpty(ff) && File.Exists(ff)) return;   // set up already (by hand or before)
+            if (!string.IsNullOrEmpty(yt) && File.Exists(yt) && !string.IsNullOrEmpty(ff) && File.Exists(ff))
+            {
+                // set up already. By Selene: the songs still missing are asked for again (the list UniPlaySong works through
+                // ends with Playnite; games that have a song are skipped). By hand: UniPlaySong's own business
+                if (string.Equals(Path.GetFullPath(yt), Path.GetFullPath(YtDlp), StringComparison.OrdinalIgnoreCase))
+                {
+                    var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+                    later.Tick += (s, e) => { later.Stop(); Fetch(plugin, false); };
+                    later.Start();
+                }
+                return;
+            }
 
             var dispatcher = Application.Current.Dispatcher;
             var worker = new System.Threading.Thread(() =>
@@ -102,17 +113,7 @@ namespace Selene
                 HomeNav.ForgetUps();   // Selene's music control looks the new settings object up
                 HomeNav.Log("songs: UniPlaySong set up with yt-dlp and ffmpeg");
 
-                var games = HomeNav.Api.Database.Games.Where(g => !g.Hidden).OrderByDescending(g => g.LastActivity ?? DateTime.MinValue).ToList();
-                var fetch = plugin.GetType().GetMethod("AutoDownloadMusicForGamesAsync", BindingFlags.Instance | BindingFlags.NonPublic);
-                if (fetch != null)
-                {
-                    // off the UI thread, as UniPlaySong starts it (its search runs a while before it first yields); one game every
-                    // couple of seconds, the games that have a song skipped
-                    System.Threading.Tasks.Task.Run(() => { try { fetch.Invoke(plugin, new object[] { games }); } catch (Exception ex) { HomeNav.Log("songs: " + (ex.InnerException ?? ex).Message); } });
-                    HomeNav.Log("songs: UniPlaySong is getting songs for " + games.Count + " games");
-                    ProgressToast.ShowNote("Game songs", "On their way", 0xE405);
-                }
-                else
+                if (!Fetch(plugin, true))
                 {
                     // older/newer UniPlaySong: its next library update does every game added since "never"
                     Set(next, "LastAutoLibUpdateAssetsDownload", DateTime.MinValue);
@@ -121,6 +122,21 @@ namespace Selene
                 }
             }
             catch (Exception ex) { HomeNav.Log("songs: pointing UniPlaySong failed: " + (ex.InnerException ?? ex).Message); }
+        }
+
+        // a song for every game without one, the last played first, through UniPlaySong's own automatic download; false when
+        // this UniPlaySong has no such method
+        private static bool Fetch(object plugin, bool note)
+        {
+            var fetch = plugin.GetType().GetMethod("AutoDownloadMusicForGamesAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (fetch == null) return false;
+            var games = HomeNav.Api.Database.Games.Where(g => !g.Hidden).OrderByDescending(g => g.LastActivity ?? DateTime.MinValue).ToList();
+            // off the UI thread, as UniPlaySong starts it (its search runs a while before it first yields); one game every
+            // couple of seconds, the games that have a song skipped
+            System.Threading.Tasks.Task.Run(() => { try { fetch.Invoke(plugin, new object[] { games }); } catch (Exception ex) { HomeNav.Log("songs: " + (ex.InnerException ?? ex).Message); } });
+            HomeNav.Log("songs: UniPlaySong is getting songs for the games without one (" + games.Count + " games)");
+            if (note) ProgressToast.ShowNote("Game songs", "On their way", 0xE405);
+            return true;
         }
 
         private static object Field(object o, string name)
