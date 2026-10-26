@@ -1304,31 +1304,44 @@ namespace Selene
             try
             {
                 if (Lite || !Features.On("pickscroll") || idx < 0 || idx >= row.Items.Count) return false;
-                const int walk = 7;   // the ring crosses the first slots, then the row moves: about half a second
-                int start = Math.Max(FirstGameIndex(row), idx - walk);
+                int start = Math.Max(0, FirstGameIndex(row));   // from the row's first game, as a held stick from the start would
                 if (start >= idx) return false;
+                int span = idx - start;
+                // the whole way in under two seconds however far: slow over the first slots, quick through the middle, easing
+                // down onto the game (a held stick's pace, then its speed)
+                double seconds = Math.Min(1.6, 0.45 + span * 0.01);
                 rideFirst = start;
                 wantedFocusIndex = start;
-                try { PlaceAtLeft(row, start); }   // the walk's start at the row's left edge, as a row's start is
+                try { PlaceAtLeft(row, start); }   // the first game at the row's left edge
                 finally { wantedFocusIndex = -1; }
-                var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(70) };   // (a held stick's pace)
-                int steps = 0, waits = 0;
+                var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(15) };
+                int waits = 0;
+                DateTime began = DateTime.MinValue, lastTick = DateTime.MinValue;
                 Action finish = () => { step.Stop(); rideFirst = -1; done(); };
-                EventHandler tick = null;
-                tick = (s, e) =>
+                step.Tick += (s, e) =>
                 {
-                    if (LoginScene.IsActive) { if (++waits < 30) return; finish(); return; }   // (the screen it was picked on still closing: a moment)
+                    if (LoginScene.IsActive) { if (++waits < 120) return; finish(); return; }   // (the screen it was picked on still closing: a moment)
+                    var now = DateTime.Now;
+                    if (began == DateTime.MinValue) began = now;
+                    double p = Math.Min(1, (now - began).TotalSeconds / seconds);
+                    double eased = p < 0.5 ? 4 * p * p * p : 1 - Math.Pow(-2 * p + 2, 3) / 2;
+                    int want = start + (int)Math.Round(span * eased);
                     int cur = row.SelectedIndex;
-                    if (cur == idx || cur < 0 || ++steps > walk + 2) { finish(); return; }
-                    int next = -1;
-                    for (int i = cur + 1; i < row.Items.Count; i++)
-                        if (IsShown(row.Items[i])) { next = i; break; }
-                    if (next < 0 || next > idx) { finish(); return; }
-                    wantedFocusIndex = next;
-                    try { MoveTo(row, cur, next); Ui.Tick(); }   // (the tick plays on real presses only: here by hand)
-                    finally { wantedFocusIndex = -1; }
+                    if (cur >= 0 && want > cur)
+                    {
+                        int next = want;
+                        while (next < idx && !IsShown(row.Items[next])) next++;
+                        if (next > idx) next = idx;
+                        wantedFocusIndex = next;
+                        try
+                        {
+                            MoveTo(row, cur, next);
+                            if ((now - lastTick).TotalMilliseconds >= 55) { Ui.Tick(); lastTick = now; }   // (the tick plays on real presses only: here by hand)
+                        }
+                        finally { wantedFocusIndex = -1; }
+                    }
+                    if (p >= 1 || row.SelectedIndex == idx) finish();
                 };
-                step.Tick += tick;
                 step.Start();
                 return true;
             }

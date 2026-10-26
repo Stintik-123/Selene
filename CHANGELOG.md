@@ -6,7 +6,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 - Collection's row: scrolled to its end, the last cover and its ring sit inside the screen (the last one was cut off), and a cover cut by the screen's edge fades into the dark on either side.
 - Music plays again: the hold that keeps UniPlaySong quiet during start-up left its pause on, so the home music and every game's song stayed silent all session.
-- A picked game is reached the way a held stick would get there: the row starts a few games before it, the ring crosses the first slots with its tick, then the row glides up to it. Selene settings > Sound & music > Get game songs shows how many games have a song.
+- A picked game is reached the way a held stick would get there: from the row's first game, slow over the first slots, quick through the middle, easing down onto it, with the tick along the way. Selene settings > Sound & music > Get game songs shows how many games have a song.
 - Collection: the ring walks along the row and, once only one cover is left beyond it, the row glides instead, so what's next is always in view (Playnite waited for the very edge); the achievements above the covers sit higher, clear of the chosen cover.
 - The avatar picker shows the moving GIFs first.
 - Collection's covers glide from game to game instead of jumping, on the same spring as Spotlight's row (switch: Collection > Gliding row).

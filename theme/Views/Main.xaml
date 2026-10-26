@@ -372,20 +372,26 @@
                                            KeyboardNavigation.DirectionalNavigation="Once" />
                                 <!-- the row's ends: a cover cut by the screen's edge fades into the dark (Selene Core shows each only while
                                      something is cut off on that side, with the Gliding row switch) -->
-                                <Border x:Name="SeleneLibraryFadeLeft" Grid.Row="2" Width="130" HorizontalAlignment="Left" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}" Panel.ZIndex="5" Opacity="0">
+                                <Border x:Name="SeleneLibraryFadeLeft" Grid.Row="2" Width="210" HorizontalAlignment="Left" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}" Panel.ZIndex="5" Opacity="0">
                                     <Border.OpacityMask>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                            <GradientStop Color="#F2000000" Offset="0"/>
-                                            <GradientStop Color="#7A000000" Offset="0.45"/>
+                                            <GradientStop Color="#FF000000" Offset="0"/>
+                                            <GradientStop Color="#E6000000" Offset="0.18"/>
+                                            <GradientStop Color="#A6000000" Offset="0.4"/>
+                                            <GradientStop Color="#55000000" Offset="0.62"/>
+                                            <GradientStop Color="#1A000000" Offset="0.82"/>
                                             <GradientStop Color="#00000000" Offset="1"/>
                                         </LinearGradientBrush>
                                     </Border.OpacityMask>
                                 </Border>
-                                <Border x:Name="SeleneLibraryFadeRight" Grid.Row="2" Width="130" HorizontalAlignment="Right" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}" Panel.ZIndex="5" Opacity="0">
+                                <Border x:Name="SeleneLibraryFadeRight" Grid.Row="2" Width="210" HorizontalAlignment="Right" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}" Panel.ZIndex="5" Opacity="0">
                                     <Border.OpacityMask>
                                         <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
-                                            <GradientStop Color="#F2000000" Offset="0"/>
-                                            <GradientStop Color="#7A000000" Offset="0.45"/>
+                                            <GradientStop Color="#FF000000" Offset="0"/>
+                                            <GradientStop Color="#E6000000" Offset="0.18"/>
+                                            <GradientStop Color="#A6000000" Offset="0.4"/>
+                                            <GradientStop Color="#55000000" Offset="0.62"/>
+                                            <GradientStop Color="#1A000000" Offset="0.82"/>
                                             <GradientStop Color="#00000000" Offset="1"/>
                                         </LinearGradientBrush>
                                     </Border.OpacityMask>
