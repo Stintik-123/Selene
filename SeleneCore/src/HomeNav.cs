@@ -2211,7 +2211,7 @@ namespace Selene
         private static DateTime lastIntro;
         // the cards' fly-in is still going: moves wait for it (a move mid-flight left the row half-landed, a gap in it)
         private static DateTime introUntil = DateTime.MinValue;
-        private static bool IntroRunning { get { return DateTime.Now < introUntil; } }
+        internal static bool IntroRunning { get { return DateTime.Now < introUntil; } }
 
         // Playnite plays its move sound whenever anything gets keyboard focus, so focus Selene moves itself (signing in,
         // the home's intro, Play) sounded like moving. For a moment its move sound is emptied (Playnite skips an empty

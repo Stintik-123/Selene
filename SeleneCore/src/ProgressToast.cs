@@ -50,9 +50,8 @@ namespace Selene
         // a progress card's shape (wide, one row: icon tile and words) or the session card's (Legacy's: words left, logo right)
         private static void Shape(bool session)
         {
-            // a task's card is as wide as its words (a fixed width left a long empty end after short ones), up to the usual width
-            card.Width = session ? SessionWidth : double.NaN;
-            card.MaxWidth = session ? double.PositiveInfinity : CardWidth;
+            card.Width = session ? SessionWidth : Widths[0];   // a task's or note's width is set by Size() (one of three)
+            card.MaxWidth = double.PositiveInfinity;
             card.Height = session ? SessionHeight : CardHeight;
             card.Padding = session ? new Thickness(0) : new Thickness(16, 0, 28, 0);
             card.CornerRadius = new CornerRadius(session ? 14 : 10);
@@ -215,11 +214,25 @@ namespace Selene
             return true;
         }
 
+        // a task's card. Like a console's: it waits for the home to have come up (no card over the start-up and the intro), it
+        // keeps one of three widths for as long as it's up (its words change in place), and a different task doesn't reshape
+        // the card on screen: that one slides away first and the new one slides in.
+        private static object displayed;   // the task (or note) the card on screen belongs to
+
         private static void Show(Window main, object vm)
         {
+            bool swap = layer != null && layer.Visibility == Visibility.Visible && !leaving && displayed != null && !ReferenceEquals(displayed, vm);
             source = vm;
             shownText = null;
             if (layer == null) Build();
+            if (!Ready) { WhenReady(() => { if (ReferenceEquals(source, vm)) Show(main, vm); }); return; }
+            if (swap) { SwapOut(() => { if (ReferenceEquals(source, vm)) Present(main, vm, true); }); return; }
+            Present(main, vm, layer.Visibility != Visibility.Visible || leaving);
+        }
+
+        private static void Present(Window main, object vm, bool enter)
+        {
+            displayed = vm;
             icon.Background = Ink.Brush("GlyphColor", 0.18);
             icon.Child = downloadGlyph;
             icon.Visibility = Visibility.Visible;
@@ -228,20 +241,90 @@ namespace Selene
             words.Foreground = Ink.Brush("SeleneInkColor", 0.95);
             words.TextWrapping = TextWrapping.Wrap;
             Shape(false);
+            var text = TaskText(vm);
+            if (text.Length > 0) { shownText = text; ShowWords(text); IconFor(text); }
+            Size(Need(titleLine.Visibility == Visibility.Visible ? ((TextBlock)titleLine.Content).Text : "", words.Text, 14, 17));
             if (leaveTimer != null) leaveTimer.Stop();
             barShown = -1;
             Place(main);
-            if (layer.Visibility != Visibility.Visible || leaving)
+            if (enter)
             {
                 leaving = false;
                 shownAt = DateTime.Now;
                 layer.Visibility = Visibility.Visible;
-                // in, as a console does it: a quick fade with a short drift from the right
                 SlideIn();   // solid all the way: in from beyond the right edge (a fade showed the art through it)
                 Ui.NotifySound();
             }
             Update();
             poll.Start();
+        }
+
+        private static string TaskText(object vm)
+        {
+            var t = Prop(Prop(vm, "ProgressArgs"), "Text") as string;
+            return t != null ? t.Trim() : "";
+        }
+
+        // ---- the three widths a card comes in: the smallest its words fit, kept while it's up ----
+        private static readonly double[] Widths = { 380, 470, 560 };
+        private const double Around = 116;   // the icon tile, its gap and the card's padding
+
+        private static double Need(string head, string line, double headSize, double lineSize)
+        {
+            return Math.Max(Measure(head, Ui.Display, headSize, FontWeights.SemiBold), Measure(line, Ui.Body, lineSize, FontWeights.Normal)) + Around;
+        }
+
+        private static double Measure(string text, FontFamily font, double size, FontWeight weight)
+        {
+            if (string.IsNullOrEmpty(text)) return 0;
+#pragma warning disable 618
+            var ft = new FormattedText(text, System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface(font, FontStyles.Normal, weight, FontStretches.Normal), size, Brushes.White);
+#pragma warning restore 618
+            return Math.Ceiling(ft.WidthIncludingTrailingWhitespace);
+        }
+
+        private static void Size(double need)
+        {
+            double w = Widths[Widths.Length - 1];
+            foreach (var option in Widths) if (option >= need) { w = option; break; }
+            card.Width = w;
+            card.MaxWidth = double.PositiveInfinity;
+            words.MaxWidth = w - Around;
+        }
+
+        // the card on screen out past the right edge, then the next one
+        private static bool swapping;
+        private static void SwapOut(Action then)
+        {
+            if (swapping) return;
+            swapping = true;
+            if (leaveTimer != null) leaveTimer.Stop();
+            var slide = new DoubleAnimation(OffEdge, TimeSpan.FromMilliseconds(200)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+            slide.Completed += (s, e) => { swapping = false; layer.Visibility = Visibility.Collapsed; then(); };
+            slideIn.BeginAnimation(TranslateTransform.XProperty, slide);
+        }
+
+        // ---- not over the start-up: the home up and its intro done ----
+        public static bool Ready { get { return !LoginScene.StartingUp && !HomeNav.IntroRunning && (DateTime.Now - LoginScene.ClosedAt).TotalMilliseconds > 900; } }
+
+        private static DispatcherTimer readyWatch;
+        private static Action whenReady;
+        private static void WhenReady(Action then)
+        {
+            whenReady = then;
+            if (readyWatch == null)
+            {
+                readyWatch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                readyWatch.Tick += (s, e) =>
+                {
+                    if (!Ready) return;
+                    readyWatch.Stop();
+                    var go = whenReady;
+                    whenReady = null;
+                    if (go != null) go();
+                };
+            }
+            readyWatch.Start();
         }
 
         // the top layer of Playnite's own window, at the top right under the bar (the clock and the profile), not over it
@@ -345,7 +428,7 @@ namespace Selene
                 var args = Prop(source, "ProgressArgs");
                 var text = Prop(args, "Text") as string;
                 if (text != null) text = text.Trim();   // Playnite's texts can start with spaces (they sat indented)
-                if (!string.IsNullOrEmpty(text) && shownText != text) { shownText = text; ShowWords(text); IconFor(text); }
+                if (!string.IsNullOrEmpty(text) && shownText != text) { shownText = text; ShowWords(text); IconFor(text); }   // (same width: words change in place)
                 bool indeterminate = Equals(Prop(args, "IsIndeterminate"), true);
                 double max = ToDouble(Prop(args, "ProgressMaxValue")), value = ToDouble(Prop(args, "CurrentProgressValue"));
                 double width = track.ActualWidth;
@@ -505,6 +588,7 @@ namespace Selene
                 if (!leaving) return;   // a new task brought it back meanwhile
                 leaving = false;
                 layer.Visibility = Visibility.Collapsed;
+                displayed = null;
                 sweeping = false;
                 sweep.BeginAnimation(TranslateTransform.XProperty, null); sweep.X = 0;
                 fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = 0;
@@ -647,14 +731,12 @@ namespace Selene
         {
             var main = Application.Current.MainWindow;
             if (main == null) return;
-            if (source != null) { Later(1500, () => ShowNote(title, line, glyph)); return; }   // a task's card up now: after it
+            if (source != null || !Ready || swapping) { Later(1500, () => ShowNote(title, line, glyph)); return; }   // a task's card up, or the start-up: after it
             if (layer == null) Build();
+            if (layer.Visibility == Visibility.Visible && !leaving) { SwapOut(() => ShowNote(title, line, glyph)); return; }
             Place(main);
             Shape(false);
-            // as wide as its words (the task cards' fixed width left a gap on the right of a short note)
-            card.Width = double.NaN;
-            card.Padding = new Thickness(16, 0, 28, 0);
-            layer.Width = double.NaN;
+            displayed = title;
             icon.Background = Ink.Brush("GlyphColor", 0.18);
             icon.Child = new TextBlock { Text = Ui.Icon(glyph), FontFamily = Ui.Icons, FontSize = 28, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             icon.Visibility = Visibility.Visible;
@@ -666,6 +748,7 @@ namespace Selene
             words.FontSize = 15;
             words.Foreground = Ink.Brush("SeleneInkColor", 0.65);
             words.TextWrapping = TextWrapping.NoWrap;
+            Size(Need(title, line, 19, 15));
             if (leaveTimer != null) leaveTimer.Stop();
             leaving = false;
             shownAt = DateTime.Now;

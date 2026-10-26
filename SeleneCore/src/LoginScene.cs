@@ -33,6 +33,7 @@ namespace Selene
         public static bool CoversHome { get { return IsActive && !current.Overlay; } }
         private static Screen current;
         private static bool startupQuiet;   // from launch until the home first shows
+        public static bool StartingUp { get { return startupQuiet; } }
         private static bool keysHooked, introPlayed;
         // what to show the next time the layer opens (set by the menu), instead of Who's playing?
         private static Func<Screen> pending;
