@@ -54,7 +54,9 @@ namespace Selene
         // An icon centred by its ink, not its line box: a text box centred in a circle put every icon high or low (a font's line
         // box has room above and below the glyph, and a different amount per font), and each circle got its own nudge. The glyph's
         // outline, moved so its own bounds start at 0,0, centres exactly. The text box, nudged, when the outline can't be had.
-        public static FrameworkElement Glyph(string text, FontFamily font, double size, Brush fill)
+        // byMass: centred on the shape's weight rather than its box, for a lopsided one (the puzzle piece: its knobs stick out of
+        // one side and the top, and centred by the box its body sat off to a corner)
+        public static FrameworkElement Glyph(string text, FontFamily font, double size, Brush fill, bool byMass = false)
         {
             try
             {
@@ -63,9 +65,25 @@ namespace Selene
                 var geo = ft.BuildGeometry(new Point(0, 0));
                 var b = geo.Bounds;
                 if (b.IsEmpty || b.Width < 1 || b.Height < 1) throw new InvalidOperationException("no outline");
+                double dx = 0, dy = 0;
+                if (byMass)
+                {
+                    // the filled area's middle, found on a grid of points over the box
+                    double sx = 0, sy = 0; int n = 0;
+                    for (int iy = 0; iy < 32; iy++)
+                        for (int ix = 0; ix < 32; ix++)
+                        {
+                            var pt = new Point(b.X + (ix + 0.5) / 32 * b.Width, b.Y + (iy + 0.5) / 32 * b.Height);
+                            if (geo.FillContains(pt)) { sx += pt.X; sy += pt.Y; n++; }
+                        }
+                    if (n > 0) { dx = sx / n - (b.X + b.Width / 2); dy = sy / n - (b.Y + b.Height / 2); }
+                }
                 geo.Transform = new TranslateTransform(-b.X, -b.Y);
                 geo.Freeze();
-                return new System.Windows.Shapes.Path { Data = geo, Fill = fill, Width = b.Width, Height = b.Height, Stretch = Stretch.None, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+                var path = new System.Windows.Shapes.Path { Data = geo, Fill = fill, Width = b.Width, Height = b.Height, Stretch = Stretch.None, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+                // (the shape moved so its weight sits at the centre: a margin twice the offset on the far side)
+                if (dx != 0 || dy != 0) path.Margin = new Thickness(Math.Max(0, -2 * dx), Math.Max(0, -2 * dy), Math.Max(0, 2 * dx), Math.Max(0, 2 * dy));
+                return path;
             }
             catch
             {

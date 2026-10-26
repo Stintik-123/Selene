@@ -76,7 +76,7 @@ namespace Selene
             items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Badge = Background.Any, Run = () => LoginScene.Show(new SettingsScreen(true), 1) });   // (the dot: something still running behind the scenes)
             items.Add(new Item { Icon = Ui.Icon(0xe8ac), Label = "Power", Run = OpenPower });
             // the add-ons' own menus (Playnite's Extensions menu): audio switchers, metadata tools...
-            items.Add(new Item { Icon = Ui.Icon(0xe87b), Label = "Extensions", Run = () => LoginScene.Show(GameOptionsScreen.Extensions(), 1) });
+            items.Add(new Item { Icon = Ui.Icon(0xe87b), Picture = Ui.Glyph(Ui.Icon(0xe87b), Ui.Icons, 34, Ink.Brush("SeleneInkColor"), true), Label = "Extensions", Run = () => LoginScene.Show(GameOptionsScreen.Extensions(), 1) });   // (the piece centred by its body, not its knobs)
             items.Add(new Item { Icon = Ui.Icon(0xe8b8), Label = "Playnite settings", Run = () => { if (Features.On("playnitesettings")) LoginScene.Show(new PlayniteSettingsScreen(), 1); else Later(PlayniteMenu.OpenSettings); } });
             if (!Features.On("startrefresh")) items.Add(new Item { Icon = Ui.Icon(0xe627), Label = "Update library", Run = UpdateLibrary });   // (it updates at every start otherwise)
             items.Add(new Item { Icon = Ui.Icon(0xe30c), Label = "Desktop mode", Run = () => Later(() => PlayniteMenu.Main("SwitchToDesktopCommand")) });
