@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -146,8 +147,31 @@ namespace Selene
         }
 
         // ---- filling ----
+        // the description as words only: store pages put banners, GIFs and videos in it, which in this small glass box were
+        // cut pieces of pictures (and loaded from the web as it scrolled, so it jumped). Playnite's own text is replaced.
+        private static void FillDescription(Game g)
+        {
+            var view = Part<FrameworkElement>("PART_HtmlDescription");
+            if (view == null || string.IsNullOrEmpty(g.Description)) return;
+            var prop = System.ComponentModel.DependencyPropertyDescriptor.FromName("HtmlText", view.GetType(), view.GetType());
+            if (prop == null) return;
+            view.SetValue(prop.DependencyProperty, WordsOnly(g.Description));
+        }
+
+        internal static string WordsOnly(string html)
+        {
+            var s = Regex.Replace(html, @"<(video|iframe|object|picture|svg)\b.*?</\1\s*>", "", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            s = Regex.Replace(s, @"<(img|source|embed|video|iframe)\b[^>]*>", "", RegexOptions.IgnoreCase);
+            s = Regex.Replace(s, @"<a\b[^>]*>\s*</a>", "", RegexOptions.IgnoreCase);   // links that only held a picture
+            s = Regex.Replace(s, @"<span\b[^>]*>\s*</span>", "", RegexOptions.IgnoreCase);   // the boxes pictures sat in
+            s = Regex.Replace(s, @"(\s*<br\s*/?>\s*){3,}", "<br><br>", RegexOptions.IgnoreCase);   // the gaps the pictures left
+            s = Regex.Replace(s, @"<p\b[^>]*>\s*(<br\s*/?>\s*)*</p>", "", RegexOptions.IgnoreCase);
+            return Regex.Replace(s, @"^(\s*<br\s*/?>)+", "", RegexOptions.IgnoreCase).Trim();
+        }
+
         private static void Fill(Game g)
         {
+            FillDescription(g);
             FillShots();
             FillCaptures(g);
             FillActivity(g);
@@ -413,14 +437,17 @@ namespace Selene
             if (b == "B" && HomeNav.CloseDetailsToHub()) { zone = 0; return true; }
             if (zone == 0)
             {
+                // in the description, Up / Down scroll it a few lines, eased (at its ends they go on: Up to the buttons,
+                // Down to the next band)
+                var inText = Keyboard.FocusedElement as DependencyObject;
+                if ((b == "DPadDown" || b == "DPadUp") && inText != null && InDescription(inText)
+                    && StickScroll.Step(Part<ScrollViewer>("PART_ScrollHtmlDescription"), b == "DPadDown" ? 78 : -78)) return true;
                 if (b != "DPadDown") return false;
                 int z = NextBand(0, 1);
                 HomeNav.Log("details stage: Down from the top, next band " + z + " (bands " + tiles[0].Count + "/" + tiles[1].Count + "/" + tiles[2].Count + "), focus " + (Keyboard.FocusedElement is FrameworkElement ? ((FrameworkElement)Keyboard.FocusedElement).Name + "/" + Keyboard.FocusedElement.GetType().Name : "none"));
                 if (z < 0) return false;
                 // from anywhere on the page but the description (Down there scrolls it); opened from Collection the focus
                 // sometimes sat on nothing at all, and Down did nothing
-                var focused = Keyboard.FocusedElement as DependencyObject;
-                if (focused != null && InDescription(focused)) return false;
                 zone = z;
                 Ui.Tick();
                 Glide();

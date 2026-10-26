@@ -27,12 +27,28 @@ namespace Selene
         private static ICommand seleneMenu;
         private static System.Windows.Threading.DispatcherTimer attachTimer;
 
+        // the media folder for the theme's Square / Hero art, or "" when that folder has none (a new install never has
+        // any: without this every tile and every move asked Playnite for a missing file, a warning each in its log)
+        public static void ApplyArtRoots()
+        {
+            var app = Application.Current;
+            if (app == null) return;
+            foreach (var sub in new[] { "Square", "Hero" })
+            {
+                var dir = SelenePaths.Media(sub);
+                bool any = false;
+                try { any = System.IO.Directory.EnumerateFiles(dir, "*.jpg").Any(); } catch { }
+                app.Resources["Selene" + sub + "Root"] = any ? System.IO.Path.GetDirectoryName(dir) : "";
+            }
+        }
+
         public static void Start()
         {
             var app = Application.Current;
             if (app == null) return;
             // the theme reads the media folder from here (tile squares, hero art)
             app.Resources["SeleneMediaRoot"] = System.IO.Path.GetDirectoryName(SelenePaths.Media("Hero"));
+            ApplyArtRoots();
             app.Resources["SeleneIconFont"] = Ui.Icons;   // solid icons for the theme (a font path in the theme's XAML didn't load)
             if (!app.Resources.Contains("SeleneRowMode")) app.Resources["SeleneRowMode"] = "tv";
             // the main screen's template is applied a moment after start: retry until its parts exist

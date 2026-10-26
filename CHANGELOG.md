@@ -4,6 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- A game's page opens on the game you picked: right after start, the library update moved Playnite's selection to the first game and the page showed that one instead.
+- A game's description is words only (store banners, GIFs and videos are left out), and Up / Down scroll it smoothly instead of jumping.
+- Fewer warnings in Playnite's log: Selene no longer asks for tile and background art from its media folder when there is none.
 - Trailers without any setup: Selene downloads a game's trailer from Steam (its first minute, 720p, with sound) the first time you look at it, into the same place Extra Metadata Loader keeps trailers, so trailer cards and Collection play it. Selene settings > Spotlight > Download trailers: games you look at, the whole library, or off (#12, #13).
 - Taken out: HowLongToBeat times on a game's page (they stay on Spotlight and Collection), the song title in the top bar, and animations following the screen's refresh rate (back to 144 frames a second).
 - The menu has Extensions again: your add-ons' own menu items (an audio output switcher, metadata tools...) as in Playnite's menu, in their sections (#11).

@@ -435,13 +435,24 @@
                                     <!-- the game's art; the wallpaper shows where there is none (or always, for a profile that wants that) -->
                                     <Grid x:Name="SeleneHubArt" Opacity="{DynamicResource SeleneArtOpacity}">
                                     <FadeImage Source="{Binding SelectedGame.DisplayBackgroundImage}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
-                                    <TextBlock x:Name="SeleneHeroPath" Tag="{DynamicResource SeleneMediaRoot}" Visibility="Collapsed">
-                                        <TextBlock.Text>
-                                            <MultiBinding StringFormat="{}{0}\Hero\{1}.jpg">
-                                                <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
-                                                <Binding Path="SelectedGame.Id"/>
-                                            </MultiBinding>
-                                        </TextBlock.Text>
+                                    <TextBlock x:Name="SeleneHeroPath" Tag="{DynamicResource SeleneHeroRoot}" Visibility="Collapsed">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text">
+                                                    <Setter.Value>
+                                                        <MultiBinding StringFormat="{}{0}\Hero\{1}.jpg">
+                                                            <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
+                                                            <Binding Path="SelectedGame.Id"/>
+                                                        </MultiBinding>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <!-- no such art at all (a new install), or no Selene Core: nothing to look up (each missing file was a warning in Playnite's log) -->
+                                                <Style.Triggers>
+                                                    <Trigger Property="Tag" Value=""><Setter Property="Text" Value=""/></Trigger>
+                                                    <Trigger Property="Tag" Value="{x:Null}"><Setter Property="Text" Value=""/></Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
                                     </TextBlock>
                                     <!-- no game selected (a card): no hero picture at all; a path to a missing file kept the last game's art up -->
                                     <FadeImage SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant">
@@ -535,13 +546,24 @@
                                                                                 </Border.Background>
                                                                             </Border>
                                                                             <!-- square tile art from Selene's media folder; the cover stays underneath as the fallback -->
-                                                                            <TextBlock x:Name="SquarePath" Tag="{DynamicResource SeleneMediaRoot}" Visibility="Collapsed">
-                                                                                <TextBlock.Text>
-                                                                                    <MultiBinding StringFormat="{}{0}\Square\{1}.jpg">
-                                                                                        <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
-                                                                                        <Binding Path="Id"/>
-                                                                                    </MultiBinding>
-                                                                                </TextBlock.Text>
+                                                                            <TextBlock x:Name="SquarePath" Tag="{DynamicResource SeleneSquareRoot}" Visibility="Collapsed">
+                                                                                <TextBlock.Style>
+                                                                                    <Style TargetType="TextBlock">
+                                                                                        <Setter Property="Text">
+                                                                                            <Setter.Value>
+                                                                                                <MultiBinding StringFormat="{}{0}\Square\{1}.jpg">
+                                                                                                    <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
+                                                                                                    <Binding Path="Id"/>
+                                                                                                </MultiBinding>
+                                                                                            </Setter.Value>
+                                                                                        </Setter>
+                                                                                        <!-- no such art at all (a new install), or no Selene Core: nothing to look up (each missing file was a warning in Playnite's log) -->
+                                                                                        <Style.Triggers>
+                                                                                            <Trigger Property="Tag" Value=""><Setter Property="Text" Value=""/></Trigger>
+                                                                                            <Trigger Property="Tag" Value="{x:Null}"><Setter Property="Text" Value=""/></Trigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </TextBlock.Style>
                                                                             </TextBlock>
                                                                             <Border CornerRadius="12">
                                                                                 <Border.Background>

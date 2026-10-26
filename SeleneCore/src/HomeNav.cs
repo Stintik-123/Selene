@@ -3176,10 +3176,42 @@ namespace Selene
                 if (close != null && close.Command != null && close.Command.CanExecute(null)) close.Command.Execute(null);
                 w.Dispatcher.BeginInvoke(new Action(() =>
                 {
+                    HoldSelection(vm, game);
                     try { command.Execute(null); } finally { openingDetails = false; }
                     Log("details button -> " + game);
                 }), System.Windows.Threading.DispatcherPriority.Background);
             }
+        }
+
+        // The details page shows Playnite's selected game, and a library update reloading the list (the one at start, a few
+        // seconds in) puts that selection back on the list's first game: the page opened on another game than the one asked
+        // for. For a few seconds after opening, the selection is put back on the game asked for whenever it moves away.
+        private static void HoldSelection(object vm, object game)
+        {
+            var prop = vm != null ? vm.GetType().GetProperty("SelectedGame") : null;
+            var notify = vm as System.ComponentModel.INotifyPropertyChanged;
+            if (prop == null || !prop.CanWrite || game == null || game is string) return;
+            var wantId = Prop(game, "Id");
+            Func<bool> wrong = () => { var now = prop.GetValue(vm, null); return now == null || !Equals(Prop(now, "Id"), wantId); };
+            if (wrong()) prop.SetValue(vm, game, null);
+            if (notify == null) return;
+            var until = DateTime.Now.AddSeconds(4);
+            System.ComponentModel.PropertyChangedEventHandler watch = null;
+            watch = (s, e) =>
+            {
+                if (e.PropertyName != "SelectedGame") return;
+                if (DateTime.Now > until) { notify.PropertyChanged -= watch; return; }
+                var main = Application.Current.MainWindow;
+                var page = main != null ? FindByName(main, "PART_ElemGameDetails") : null;
+                if (page != null && !page.IsVisible && DateTime.Now > until.AddSeconds(-3.5)) { notify.PropertyChanged -= watch; return; }   // left the page: the next pick is the user's
+                if (!wrong()) return;
+                Log("details: the selection moved to " + prop.GetValue(vm, null) + ", back to " + game);
+                Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (wrong()) prop.SetValue(vm, game, null); }));
+            };
+            notify.PropertyChanged += watch;
+            var stop = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(4.2) };
+            stop.Tick += (s, e) => { stop.Stop(); notify.PropertyChanged -= watch; };
+            stop.Start();
         }
 
         // the old theme's navigation reacts to the same Down first and moves focus to the news a moment later (deferred), which

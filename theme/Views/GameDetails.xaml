@@ -101,13 +101,24 @@
 
                         <!-- art: Playnite's background, Selene's hero art over it when there is one -->
                         <FadeImage x:Name="PART_ImageBackground" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant"/>
-                        <TextBlock x:Name="HeroPath" Tag="{DynamicResource SeleneMediaRoot}" Visibility="Collapsed">
-                            <TextBlock.Text>
-                                <MultiBinding StringFormat="{}{0}\Hero\{1}.jpg">
-                                    <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
-                                    <Binding Path="Id"/>
-                                </MultiBinding>
-                            </TextBlock.Text>
+                        <TextBlock x:Name="HeroPath" Tag="{DynamicResource SeleneHeroRoot}" Visibility="Collapsed">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text">
+                                        <Setter.Value>
+                                            <MultiBinding StringFormat="{}{0}\Hero\{1}.jpg">
+                                                <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
+                                                <Binding Path="Id"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <!-- no such art at all (a new install), or no Selene Core: nothing to look up (each missing file was a warning in Playnite's log) -->
+                                    <Style.Triggers>
+                                        <Trigger Property="Tag" Value=""><Setter Property="Text" Value=""/></Trigger>
+                                        <Trigger Property="Tag" Value="{x:Null}"><Setter Property="Text" Value=""/></Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
                         </TextBlock>
                         <FadeImage Source="{Binding Text, ElementName=HeroPath}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant"/>
                         <!-- the words' side dark, the bottom dark, a soft vignette at the edges -->
