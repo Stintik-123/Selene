@@ -166,6 +166,7 @@ namespace Selene
                     share = steps > 0 ? Math.Min(1.0, (double)step / steps) : 0;
                     var m = System.Text.RegularExpressions.Regex.Match(t.GetProperty("Message").GetValue(report, null) as string ?? "", @"(\d+)\s*/\s*(\d+)");
                     if (m.Success) { done = int.Parse(m.Groups[1].Value); total = int.Parse(m.Groups[2].Value); }
+                    lock (trackLock) if (tracking && trackTotal > 0 && m.Success) { done += resumeFrom; total = trackTotal; share = (double)done / total; }
                     game = t.GetProperty("CurrentGameId").GetValue(report, null) as Guid?;
                 }
                 return true;
@@ -297,14 +298,58 @@ namespace Selene
             t.Start();
         }
 
+        // the games the long check got through, so one cut short goes on from there; in SetupFile: "started", "total <n>",
+        // then a checked game's id a line
+        private static readonly object trackLock = new object();
+        private static readonly HashSet<Guid> checkedIds = new HashSet<Guid>();
+        private static Guid? trackGame;
+        private static int trackTotal, resumeFrom;   // all the games of the whole check; those done before this run
+        private static bool tracking;
+        private const string NL = "\r\n";
+
+        // each of the add-on's progress reports (its threads): the game before the one it's on now is done
+        private static void OnProgress(object sender, object report)
+        {
+            try
+            {
+                var t = report.GetType();
+                var id = t.GetProperty("CurrentGameId").GetValue(report, null) as Guid?;
+                lock (trackLock)
+                {
+                    if (trackTotal == 0)
+                    {
+                        var m = System.Text.RegularExpressions.Regex.Match(t.GetProperty("Message").GetValue(report, null) as string ?? "", @"(\d+)\s*/\s*(\d+)");
+                        if (m.Success) { trackTotal = resumeFrom + int.Parse(m.Groups[2].Value); File.AppendAllText(SetupFile, "total " + trackTotal + NL); }
+                    }
+                    if (!id.HasValue) return;
+                    if (trackGame.HasValue && trackGame.Value != id.Value && checkedIds.Add(trackGame.Value)) File.AppendAllText(SetupFile, trackGame.Value + NL);
+                    trackGame = id;
+                }
+            }
+            catch { }
+        }
+
         private static void SetUp()
         {
             try
             {
                 var p = Plugin();
                 if (p == null) return;
-                bool resuming = File.Exists(SetupFile);
-                bool recentOnly = resuming && File.ReadAllText(SetupFile).Trim() == "done";
+                var lines = File.Exists(SetupFile) ? File.ReadAllLines(SetupFile) : new string[0];
+                bool resuming = lines.Length > 0;
+                bool recentOnly = resuming && lines[0].Trim() == "done";
+                lock (trackLock)
+                {
+                    checkedIds.Clear(); trackGame = null; trackTotal = 0;
+                    if (resuming && !recentOnly)
+                        foreach (var l in lines)
+                        {
+                            Guid id;
+                            if (l.StartsWith("total ")) int.TryParse(l.Substring(6), out trackTotal);
+                            else if (Guid.TryParse(l.Trim(), out id)) checkedIds.Add(id);
+                        }
+                    resumeFrom = checkedIds.Count;
+                }
                 var settings = p.GetType().GetProperty("Settings").GetValue(p, null);
                 var persisted = settings.GetType().GetProperty("Persisted").GetValue(settings, null);
                 var done = persisted.GetType().GetProperty("FirstTimeSetupCompleted");
@@ -320,6 +365,14 @@ namespace Selene
                 var asm = p.GetType().Assembly;
                 var request = Activator.CreateInstance(asm.GetType("PlayniteAchievements.Models.RefreshRequest"));
                 request.GetType().GetProperty("Mode").SetValue(request, Enum.Parse(asm.GetType("PlayniteAchievements.Models.RefreshModeType"), recentOnly ? "Recent" : "Missing"), null);
+                if (resumeFrom > 0)
+                {
+                    // going on from where it was cut short: the games it hadn't got to (hidden ones as the add-on's setting says)
+                    var hiddenToo = persisted.GetType().GetProperty("IncludeHiddenGamesInBulkScans");
+                    bool withHidden = hiddenToo == null || (bool)hiddenToo.GetValue(persisted, null);
+                    var rest = HomeNav.Api.Database.Games.Where(g => (withHidden || !g.Hidden) && !checkedIds.Contains(g.Id)).Select(g => g.Id).ToList();
+                    request.GetType().GetProperty("GameIds").SetValue(request, rest, null);
+                }
                 var policy = Activator.CreateInstance(asm.GetType("PlayniteAchievements.Services.Refresh.RefreshExecutionPolicy"));
                 var pt = policy.GetType();
                 pt.GetProperty("ValidateAuthentication").SetValue(policy, false, null);   // (true asks to sign in, in a desktop window)
@@ -327,8 +380,14 @@ namespace Selene
                 pt.GetProperty("SwallowExceptions").SetValue(policy, true, null);
                 pt.GetProperty("ErrorLogMessage").SetValue(policy, "Selene: checking every game failed.", null);
                 var dispatcher = Dispatcher.CurrentDispatcher;
+                const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;   // (the add-on keeps these to itself)
+                var rt = p.GetType().GetProperty("RefreshRuntime", any).GetValue(p, null);
+                var progress = rt.GetType().GetEvent("RebuildProgress");
+                Delegate tracker = null;
                 Action<bool> finished = ok => dispatcher.BeginInvoke(new Action(() =>
                 {
+                    if (tracker != null) try { progress.RemoveEventHandler(rt, tracker); } catch { }
+                    tracking = false;
                     HomeNav.Log("achievements: " + (recentOnly ? "games played last" : "every game") + " checked, " + (ok ? "done" : "with errors"));
                     cachedAt = DateTime.MinValue;   // read again on the next look
                     if (recentOnly) return;
@@ -336,14 +395,20 @@ namespace Selene
                     if (ok) ProgressToast.ShowNote("Achievements are in", "Every game's trophies are on the Achievements card.", 0xea23);
                 }));
                 pt.GetProperty("OnRefreshCompleted").SetValue(policy, finished, null);
-                const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;   // (the add-on keeps these to itself)
                 int n, all; double part; Guid? on;
                 if (recentOnly && Checking(out n, out all, out part, out on)) { HomeNav.Log("achievements: the add-on is checking already"); return; }
+                if (!recentOnly)
+                {
+                    // (written and listening before it starts: its first reports come at once)
+                    if (resumeFrom == 0) File.WriteAllText(SetupFile, "started" + NL);
+                    tracker = Delegate.CreateDelegate(progress.EventHandlerType, typeof(AchievementsData).GetMethod("OnProgress", BindingFlags.NonPublic | BindingFlags.Static));
+                    progress.AddEventHandler(rt, tracker);
+                    tracking = true;
+                }
                 var entry = p.GetType().GetProperty("RefreshEntryPoint", any).GetValue(p, null);
                 entry.GetType().GetMethod("ExecuteAsync", any, null, new[] { request.GetType(), pt }, null).Invoke(entry, new[] { request, policy });
                 if (recentOnly) { HomeNav.Log("achievements: checking the games played last"); return; }
-                File.WriteAllText(SetupFile, "started");
-                HomeNav.Log("achievements: " + (resuming ? "the check cut short last time, again" : "Playnite Achievements set up, checking every game"));
+                HomeNav.Log("achievements: " + (resumeFrom > 0 ? "going on with the check cut short, " + resumeFrom + " games done before" : "Playnite Achievements set up, checking every game"));
                 ProgressToast.ShowNote("Checking your achievements", "This might take a while.", 0xea23);
             }
             catch (Exception ex) { HomeNav.Log("achievements: setting up failed: " + (ex.InnerException ?? ex).Message); }
