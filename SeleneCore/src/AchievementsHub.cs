@@ -381,6 +381,8 @@ namespace Selene
             }
         }
 
+        private static string LatestGame(Guid id) { var g = GameFacts.Find(id); return g != null ? " in " + g.Name : ""; }
+
         // ---- the card on Spotlight: the totals and the latest unlocks as pictures (Down goes into them) ----
         public static void FillCard()
         {
@@ -393,12 +395,13 @@ namespace Selene
                     int done = sets.Count(s => s.Platinum);
                     var res = Application.Current.Resources;
                     res["SeleneStatAchEarned"] = earned + " / " + total;
-                    res["SeleneStatAchDone"] = done == 1 ? "1 platinum" : done + " platinums";
+                    res["SeleneStatAchPlatinum"] = done.ToString();
+                    foreach (var grade in new[] { "Gold", "Silver", "Bronze" }) res["SeleneStatAch" + grade] = sets.Sum(s => s.Earned(grade)).ToString();
                     var latest = sets.SelectMany(s => s.Items.Where(i => i.Unlocked && i.When.HasValue).Select(i => new { s.GameId, Item = i }))
                                      .OrderByDescending(x => x.Item.When.Value).Take(4).ToList();
-                    string headline = sets.Count == 0 ? "No achievements yet" : earned == 1 ? "1 achievement earned" : earned + " achievements earned";
+                    string headline = sets.Count == 0 ? "No achievements yet" : earned == 1 ? "1 trophy earned" : earned + " trophies earned";
                     string about = sets.Count == 0 ? "Your achievements show here as Playnite Achievements fills them in."
-                                 : latest.Count > 0 ? "Latest: " + latest[0].Item.Name + ". Down for your newest unlocks." : "Across " + sets.Count + " games.";
+                                 : latest.Count > 0 ? "Latest: " + latest[0].Item.Name + LatestGame(latest[0].GameId) + " (" + latest[0].Item.Grade.ToLowerInvariant() + "). Down for your newest unlocks." : "Across " + sets.Count + " games.";
                     var entries = latest.Select(x =>
                     {
                         var g = GameFacts.Find(x.GameId);

@@ -564,7 +564,11 @@
                                                                                 </Border.OpacityMask>
                                                                             </Border>
                                                                             <Border x:Name="CardFace" CornerRadius="12" Background="{DynamicResource SeleneGlassBrush}" BorderBrush="{DynamicResource SeleneInk15Brush}" BorderThickness="1" Visibility="Collapsed">
+                                                                                <Grid>
                                                                                 <TextBlock x:Name="CardGlyph" FontFamily="Segoe MDL2 Assets" FontSize="56" Foreground="{DynamicResource SeleneInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                                <!-- (a card whose mark is a Material icon: the trophy) -->
+                                                                                <TextBlock x:Name="CardIcon" FontFamily="{DynamicResource SeleneIconFont}" FontSize="60" Foreground="{DynamicResource SeleneInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                                                                                </Grid>
                                                                             </Border>
                                                                         </Grid>
                                                                     </Border>
@@ -652,8 +656,8 @@
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding}" Value="nav:achievements">
                                                                     <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
-                                                                    <Setter TargetName="CardGlyph" Property="FontFamily" Value="{DynamicResource SeleneIconFont}"/>
-                                                                    <Setter TargetName="CardGlyph" Property="Text" Value="&#xEA23;"/>
+                                                                    <Setter TargetName="CardIcon" Property="Visibility" Value="Visible"/>
+                                                                    <Setter TargetName="CardIcon" Property="Text" Value="&#xEA23;"/>
                                                                 </DataTrigger>
                                                             </ControlTemplate.Triggers>
                                                         </ControlTemplate>
@@ -967,15 +971,75 @@
                                                     <TextBlock Text="{DynamicResource SeleneAchievementsHeadline}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="60" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{DynamicResource SeleneAchievementsAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="2,10,0,0"/>
                                                 </StackPanel>
+                                                <!-- the trophies earned, as the Achievements screen counts them: earned, then platinum, gold, silver, bronze -->
                                                 <StackPanel Orientation="Horizontal" Margin="4,24,0,0">
-                                                    <StackPanel Margin="0,0,26,0">
+                                                    <StackPanel Margin="0,0,24,0">
                                                         <TextBlock Text="EARNED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                         <TextBlock Text="{DynamicResource SeleneStatAchEarned}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                     </StackPanel>
-                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
-                                                    <StackPanel Margin="0,0,26,0">
-                                                        <TextBlock Text="PLATINUMS" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
-                                                        <TextBlock Text="{DynamicResource SeleneStatAchDone}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,24,4"/>
+                                                    <StackPanel Margin="0,0,24,0">
+                                                        <TextBlock Text="PLATINUM" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="24" VerticalAlignment="Center" Margin="0,0,7,0">
+                                                                <TextBlock.Foreground>
+                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                        <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                                                                        <GradientStop Color="#FFC9DDF2" Offset="0.5"/>
+                                                                        <GradientStop Color="#FF91A0AE" Offset="1"/>
+                                                                    </LinearGradientBrush>
+                                                                </TextBlock.Foreground>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{DynamicResource SeleneStatAchPlatinum}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,24,4"/>
+                                                    <StackPanel Margin="0,0,24,0">
+                                                        <TextBlock Text="GOLD" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="24" VerticalAlignment="Center" Margin="0,0,7,0">
+                                                                <TextBlock.Foreground>
+                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                        <GradientStop Color="#FFFFF7BD" Offset="0"/>
+                                                                        <GradientStop Color="#FFE8C46A" Offset="0.5"/>
+                                                                        <GradientStop Color="#FFA78D4C" Offset="1"/>
+                                                                    </LinearGradientBrush>
+                                                                </TextBlock.Foreground>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{DynamicResource SeleneStatAchGold}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,24,4"/>
+                                                    <StackPanel Margin="0,0,24,0">
+                                                        <TextBlock Text="SILVER" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="24" VerticalAlignment="Center" Margin="0,0,7,0">
+                                                                <TextBlock.Foreground>
+                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                        <GradientStop Color="#FFF9FFFF" Offset="0"/>
+                                                                        <GradientStop Color="#FFC2C9D3" Offset="0.5"/>
+                                                                        <GradientStop Color="#FF8C9198" Offset="1"/>
+                                                                    </LinearGradientBrush>
+                                                                </TextBlock.Foreground>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{DynamicResource SeleneStatAchSilver}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,24,4"/>
+                                                    <StackPanel Margin="0,0,24,0">
+                                                        <TextBlock Text="BRONZE" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="24" VerticalAlignment="Center" Margin="0,0,7,0">
+                                                                <TextBlock.Foreground>
+                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                        <GradientStop Color="#FFFFC595" Offset="0"/>
+                                                                        <GradientStop Color="#FFCD8E5E" Offset="0.5"/>
+                                                                        <GradientStop Color="#FF946644" Offset="1"/>
+                                                                    </LinearGradientBrush>
+                                                                </TextBlock.Foreground>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{DynamicResource SeleneStatAchBronze}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        </StackPanel>
                                                     </StackPanel>
                                                 </StackPanel>
                                                 <StackPanel x:Name="SeleneAchievementsShowcase" Orientation="Horizontal" Margin="10,28,-80,10" HorizontalAlignment="Left"/>
@@ -1034,6 +1098,9 @@
                                                                 <Setter Property="Visibility" Value="Hidden"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:surprise">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:achievements">
                                                                 <Setter Property="Visibility" Value="Hidden"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>

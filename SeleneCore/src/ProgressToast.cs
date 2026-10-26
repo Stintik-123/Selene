@@ -225,13 +225,14 @@ namespace Selene
             source = vm;
             shownText = null;
             if (layer == null) Build();
-            if (!Ready) { WhenReady(() => { if (ReferenceEquals(source, vm)) Show(main, vm); }); return; }
-            if (swap) { SwapOut(() => { if (ReferenceEquals(source, vm)) Present(main, vm, true); }); return; }
+            if (!Ready) { HomeNav.Log("card: held for the start-up (" + TaskText(vm) + ")"); WhenReady(() => { if (ReferenceEquals(source, vm)) Show(main, vm); else HomeNav.Log("card: done before the start-up was over"); }); return; }
+            if (swap) { HomeNav.Log("card: swapping for " + TaskText(vm)); SwapOut(() => { if (ReferenceEquals(source, vm)) Present(main, vm, true); }); return; }
             Present(main, vm, layer.Visibility != Visibility.Visible || leaving);
         }
 
         private static void Present(Window main, object vm, bool enter, bool sound = true)
         {
+            HomeNav.Log("card: showing \"" + TaskText(vm) + "\"" + (enter ? " (in)" : " (in place)"));
             displayed = vm;
             icon.Background = Ink.Brush("GlyphColor", 0.18);
             icon.Child = downloadGlyph;
@@ -617,6 +618,7 @@ namespace Selene
         private static void Leave()
         {
             if (source != null || layer == null) return;
+            HomeNav.Log("card: leaving");
             leaving = true;
             var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
             var slide = Ui.Fast(new DoubleAnimation(PeekIn, TimeSpan.FromMilliseconds(200)) { EasingFunction = easeIn });
