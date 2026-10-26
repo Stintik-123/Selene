@@ -134,7 +134,6 @@ namespace Selene
                 left.Children.Add(img);
             }
             else left.Children.Add(new TextBlock { Text = name, FontSize = 44, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 1100 });
-            left.Children.Add(new TextBlock { Text = "Achievements", FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(2, 10, 0, 0) });
             header.Children.Add(left);
             if (set == null || set.Total == 0) return;
 
