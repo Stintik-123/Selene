@@ -332,6 +332,19 @@ namespace Selene
             catch { }
         }
 
+        // the add-on's version, from its extension.yaml ("" when not found)
+        private static string AddonVersion(object plugin)
+        {
+            try
+            {
+                var yaml = Path.Combine(Path.GetDirectoryName(plugin.GetType().Assembly.Location), "extension.yaml");
+                foreach (var l in File.ReadAllLines(yaml))
+                    if (l.StartsWith("Version:")) return l.Substring(8).Trim();
+            }
+            catch { }
+            return "";
+        }
+
         private static void SetUp()
         {
             try
@@ -340,7 +353,12 @@ namespace Selene
                 if (p == null) return;
                 var lines = File.Exists(SetupFile) ? File.ReadAllLines(SetupFile) : new string[0];
                 bool resuming = lines.Length > 0;
-                bool recentOnly = resuming && lines[0].Trim() == "done";
+                // done before: only the games played last, unless the add-on was updated since (a new version can read games the
+                // old one couldn't: Steam's new achievement pages came with 4.1); a note without a version gets this one
+                string version = AddonVersion(p);
+                bool recentOnly = resuming && lines[0].Trim().StartsWith("done");
+                if (recentOnly && lines[0].Trim() == "done") { try { File.WriteAllText(SetupFile, "done " + version); } catch { } }
+                else if (recentOnly && lines[0].Trim() != "done " + version) { HomeNav.Log("achievements: Playnite Achievements now " + version + " (was " + lines[0].Trim().Substring(4).Trim() + "), every game it has nothing for checked again"); recentOnly = false; lines = new string[0]; }
                 lock (trackLock)
                 {
                     checkedIds.Clear(); trackGame = null; trackTotal = 0;
@@ -394,7 +412,7 @@ namespace Selene
                     HomeNav.Log("achievements: " + (recentOnly ? "games played last" : "every game") + " checked, " + (ok ? "done" : "with errors"));
                     cachedAt = DateTime.MinValue;   // read again on the next look
                     if (recentOnly) return;
-                    try { File.WriteAllText(SetupFile, "done"); } catch { }
+                    try { File.WriteAllText(SetupFile, "done " + version); } catch { }
                     if (ok) ProgressToast.ShowNote("Achievements are in", "Every game's trophies are on the Achievements card.", 0xea23);
                 }));
                 pt.GetProperty("OnRefreshCompleted").SetValue(policy, finished, null);
