@@ -198,10 +198,9 @@ const PAGE = `<!doctype html>
          background: radial-gradient(120% 70% at 50% -10%, #23315c 0%, #121a35 45%, #0a0f1f 80%) fixed; }
   main { max-width: 560px; margin: 0 auto; padding: 36px 20px calc(36px + env(safe-area-inset-bottom)); animation: rise .45s ease-out both; }
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
-  .mark { width: 46px; height: 46px; color: #fff; filter: drop-shadow(0 0 12px rgba(170,195,255,.55)); }
+  .brand { display: flex; justify-content: center; margin-bottom: 26px; }
+  .mark { width: 60px; height: 60px; color: #fff; filter: drop-shadow(0 0 12px rgba(170,195,255,.55)); }
   .mark svg { width: 100%; height: 100%; display: block; }
-  .word { font-size: 22px; font-weight: 600; letter-spacing: .02em; }
   h1 { font-size: 30px; font-weight: 600; margin: 0 0 6px; letter-spacing: -.01em; }
   .sub { color: var(--soft); margin: 0 0 22px; }
   .card { background: var(--glass); border: 1px solid var(--line); border-radius: 22px; padding: 18px; backdrop-filter: blur(12px); }
@@ -229,7 +228,7 @@ const state = __STATE__;
 const MARK = __MARK__;
 const app = document.getElementById("app");
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-function brand() { const b = el("div", "brand"); const m = el("div", "mark"); m.innerHTML = MARK; b.append(m, el("div", "word", "Selene")); return b; }
+function brand() { const b = el("div", "brand"); const m = el("div", "mark"); m.innerHTML = MARK; b.append(m); return b; }
 function showDone(result) {
   app.replaceChildren();
   const box = el("div", "done");
