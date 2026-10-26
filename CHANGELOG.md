@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Logos taken from Steam's own cache are cut to the logo itself (they come on a whole 1280 x 720 canvas, so the logo landed small or off to one side); the ones saved before are cut on the next pass.
 - Spotlight's row runs to both edges of the screen once scrolled (the left end stopped 80 px in while the right ran off the screen), and a tile cut by the edge dissolves into a darkened side, as in Collection (switch: Spotlight > Row to the edges).
 - Notification cards as a console's: a compact strip (84 px, a 48 px icon, the title at 18 px and the line at 15 px) as wide as its words, between 360 and 520 px; the session card alone stays a panel (560 x 128, its figures on one line).
 - Icons in circles (dialogs, the menu, notification cards, achievements, the report's badge) sit exactly in the middle: centred by the glyph's own outline, not its text box.

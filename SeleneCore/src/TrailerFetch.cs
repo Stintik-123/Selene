@@ -168,6 +168,7 @@ namespace Selene
             var logo = System.IO.Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "games", g.Id.ToString(), "logo.png");
             var hero = System.IO.Path.Combine(SelenePaths.Media("Hero"), g.Id + ".jpg");
             bool needLogo = !System.IO.File.Exists(logo), needHero = !System.IO.File.Exists(hero);
+            if (!needLogo) TrimLogoOnce(g.Id, logo);   // (one saved on a wide canvas before the trim came in)
             if (!needHero && IsBanner(hero)) { try { System.IO.File.Delete(hero); needHero = true; } catch { } }   // a banner saved before the crop came in: fetched again, sharper
             if (!needLogo && !needHero) return;
             var none = System.IO.Path.Combine(SelenePaths.Media("Trailers"), g.Id + ".noart");
@@ -177,7 +178,7 @@ namespace Selene
 
             // Steam's own library cache on this PC first (it has the logos the store page doesn't: newer games keep theirs
             // in hashed folders only Steam knows)
-            if (needLogo && CopyFromSteam(id, "logo.png", logo)) { needLogo = false; HomeNav.Log("art download: " + g.Name + " logo (Steam's cache)"); }
+            if (needLogo && CopyFromSteam(id, "logo.png", logo)) { needLogo = false; TrimLogo(logo); HomeNav.Log("art download: " + g.Name + " logo (Steam's cache)"); }
             if (needHero && CopyFromSteam(id, "library_hero.jpg", hero)) { needHero = false; Crop16x9(hero); HeroArrived(); HomeNav.Log("art download: " + g.Name + " background (Steam's cache)"); }
             if (!needLogo && !needHero) return;
 
@@ -202,12 +203,12 @@ namespace Selene
             bool got = false;
             if (needLogo)
                 foreach (var name in new[] { "logo_2x.png", "logo.png" })
-                    if (Save(url(name), logo, true)) { got = true; needLogo = false; HomeNav.Log("art download: " + g.Name + " logo"); break; }
+                    if (Save(url(name), logo, true)) { got = true; needLogo = false; TrimLogo(logo); HomeNav.Log("art download: " + g.Name + " logo"); break; }
             // newer games keep their logo in a hashed folder that only Steam's app info names (the store page doesn't):
             // read through steamcmd.net, a public mirror of it
             if (needLogo)
                 foreach (var name in LogoNamesFromAppInfo(id))
-                    if (Save(url(name), logo, true)) { got = true; needLogo = false; HomeNav.Log("art download: " + g.Name + " logo (app info)"); break; }
+                    if (Save(url(name), logo, true)) { got = true; needLogo = false; TrimLogo(logo); HomeNav.Log("art download: " + g.Name + " logo (app info)"); break; }
             if (needHero && Save(url(heroName), hero, false))
             {
                 got = true;
@@ -301,6 +302,53 @@ namespace Selene
                 System.IO.File.Move(path + ".part", path);
             }
             catch (Exception ex) { HomeNav.Log("art: crop " + System.IO.Path.GetFileName(path) + ": " + ex.Message); }
+        }
+
+        // Steam's client cache keeps a logo on a whole 1280 x 720 canvas, the logo somewhere inside it with empty space around:
+        // fitted to the logo's box that canvas fits and the letters land wherever they were. Cut to the ink (a little room kept),
+        // as the store's logos come. Nothing for a logo already tight.
+        private static void TrimLogo(string path)
+        {
+            try
+            {
+                System.Windows.Media.Imaging.BitmapSource src;
+                using (var file = System.IO.File.OpenRead(path))
+                    src = System.Windows.Media.Imaging.BitmapFrame.Create(file, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                if (src.Format != System.Windows.Media.PixelFormats.Bgra32) src = new System.Windows.Media.Imaging.FormatConvertedBitmap(src, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+                int w = src.PixelWidth, h = src.PixelHeight, stride = w * 4;
+                if (w < 8 || h < 8) return;
+                var px = new byte[stride * h];
+                src.CopyPixels(px, stride, 0);
+                int minX = w, minY = h, maxX = -1, maxY = -1;
+                for (int y = 0; y < h; y++)
+                {
+                    int rowAt = y * stride;
+                    for (int x = 0; x < w; x++)
+                        if (px[rowAt + x * 4 + 3] > 8) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+                }
+                if (maxX < 0) return;
+                int bw = maxX - minX + 1, bh = maxY - minY + 1;
+                if (bw > w * 0.9 && bh > h * 0.9) return;   // tight already
+                int pad = Math.Max(2, (int)(Math.Max(bw, bh) * 0.03));
+                int cx = Math.Max(0, minX - pad), cy = Math.Max(0, minY - pad);
+                int cw = Math.Min(w - cx, bw + 2 * pad), ch = Math.Min(h - cy, bh + 2 * pad);
+                var crop = new System.Windows.Media.Imaging.CroppedBitmap(src, new System.Windows.Int32Rect(cx, cy, cw, ch));
+                var png = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(crop));
+                using (var outFile = System.IO.File.Create(path + ".part")) png.Save(outFile);
+                System.IO.File.Delete(path);
+                System.IO.File.Move(path + ".part", path);
+                HomeNav.Log("art: logo trimmed " + w + "x" + h + " -> " + cw + "x" + ch + " (" + System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(path)) + ")");
+            }
+            catch (Exception ex) { HomeNav.Log("art: trim logo: " + ex.Message); }
+        }
+
+        // the logos saved in the last days (Selene's, before the trim), looked at once a session
+        private static readonly HashSet<Guid> trimLooked = new HashSet<Guid>();
+        private static void TrimLogoOnce(Guid id, string logo)
+        {
+            lock (gate) { if (!trimLooked.Add(id)) return; }
+            try { if ((DateTime.Now - System.IO.File.GetLastWriteTime(logo)).TotalDays < 3) TrimLogo(logo); } catch { }
         }
 
         // a picture to a file (through .part, so a cut download never shows); false when there is none (or it isn't one)
