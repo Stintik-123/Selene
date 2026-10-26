@@ -108,6 +108,8 @@ namespace Selene
                 if (IntroRunning && (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Space) && FocusOnHome()) { e.Handled = true; return; }
                 // the Store card's game pictures (Down from the card goes into them)
                 var asPad = e.Key == Key.Down ? "DPadDown" : e.Key == Key.Up ? "DPadUp" : e.Key == Key.Left ? "DPadLeft" : e.Key == Key.Right ? "DPadRight" : e.Key == Key.Enter ? "A" : e.Key == Key.Escape || e.Key == Key.Back ? "B" : null;
+                // a stray Enter as the layer closes over the details page (a capture) reopened it; pad presses come the other way
+                if (asPad == "A" && (DateTime.Now - LoginScene.ClosedAt).TotalMilliseconds < 1500) { Log("keys: Enter right after the layer closed, ignored"); e.Handled = true; return; }
                 if (asPad != null && !e.Handled && (StoreShowcase.Handle(asPad) || CardShowcase.Handle(asPad) || DetailsStage.Handle(asPad))) { e.Handled = true; return; }
                 // Up/Down never shrink the card; Left/Right only while moving inside the row (not in the bar below)
                 bool dirKey = e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left || e.Key == Key.Right;

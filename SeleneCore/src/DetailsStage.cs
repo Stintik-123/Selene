@@ -430,8 +430,6 @@ namespace Selene
                     return false;
                 case "A":
                 {
-                    // the layer just closed over the page (a capture): a stray Enter then reopened what was closed
-                    if ((DateTime.Now - LoginScene.ClosedAt).TotalMilliseconds < 1500) { HomeNav.Log("details stage: A right after the layer closed, ignored"); return true; }
                     int i = at[zone - 1];
                     if (i < opens[zone - 1].Count) { Ui.Confirm(); opens[zone - 1][i](); }
                     return true;
