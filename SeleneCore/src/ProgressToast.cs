@@ -291,7 +291,7 @@ namespace Selene
             row.Children.Add(icon);
             row.Children.Add(text);
             slideIn = new TranslateTransform();
-            glass = Ink.Brush("SeleneGlassColor", 0.72);   // see-through
+            glass = Ink.Brush("SeleneGlassColor", 1);   // solid: see-through, busy art behind showed through the words
             sessionGlass = Ink.Brush("SeleneGlassColor", 0.92);   // the session card: darker, the game's art shows faintly in it
             card = new Border
             {
