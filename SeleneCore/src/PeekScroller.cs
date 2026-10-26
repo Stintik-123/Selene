@@ -54,18 +54,28 @@ namespace Selene
             return host;
         }
 
+        // which rows are blurred now (kept here: a row's Tag belongs to its screen)
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<FrameworkElement, object> softened = new System.Runtime.CompilerServices.ConditionalWeakTable<FrameworkElement, object>();
+
+        // into the edge: blurring over a moment; out of it: sharp at once, the effect gone (a row the focus arrived on stayed
+        // soft for a moment while its blur faded, and an effect left at radius 0 still drew its words through it)
         private static void Soften(FrameworkElement row, bool on)
         {
-            var blur = row.Effect as BlurEffect;
-            if (blur == null)
+            object state;
+            bool now = softened.TryGetValue(row, out state);
+            if (on == now) return;
+            if (on)
             {
-                if (!on) return;
-                blur = new BlurEffect { Radius = 0, RenderingBias = RenderingBias.Performance };
+                softened.Add(row, true);
+                var blur = new BlurEffect { Radius = 0, RenderingBias = RenderingBias.Performance };
                 row.Effect = blur;
+                blur.BeginAnimation(BlurEffect.RadiusProperty, new DoubleAnimation(5, TimeSpan.FromMilliseconds(200)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
             }
-            if (Equals(row.Tag, on ? "soft" : "sharp")) return;
-            row.Tag = on ? "soft" : "sharp";
-            blur.BeginAnimation(BlurEffect.RadiusProperty, new DoubleAnimation(on ? 5 : 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+            else
+            {
+                softened.Remove(row);
+                if (row.Effect is BlurEffect) row.Effect = null;
+            }
         }
     }
 }
