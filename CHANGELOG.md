@@ -4,7 +4,6 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Notification cards drop in at the top centre, inside the top bar, instead of under it at the right (they landed on the Collection's covers).
 - Spotlight: the name beside the selected card (Achievements, Captures, Activity) sits clear of the card again.
 - Settings: the red dot also marks the option whose work still runs, with where it's at (games to go, achievements checked so far).
 - The menu opened from a game's details page shows the page dimmed underneath instead of a black screen.

@@ -30,7 +30,6 @@ namespace Selene
         // a note's or task's card: a compact strip as a console's (a 48 px icon, two lines), as wide as its words between these;
         // the session card alone is a panel
         private const double CardWidth = 520, CardMinWidth = 360, CardHeight = 84, Edge = 28, ShadowRoom = 24, Drift = 26;
-        private const double BarHeight = 110;   // the top bar (tabs left, clock right): the cards sit centred in its empty middle
         private const int MinShownMs = 2600, AfterDoneMs = 1100, InMs = 260, OutMs = 220;
         private static Window hiddenProgress;   // Playnite's own window, kept out of sight
         private static DateTime busyUntil = DateTime.MinValue;
@@ -61,9 +60,7 @@ namespace Selene
             card.CornerRadius = new CornerRadius(session ? 14 : 12);
             card.Background = session ? sessionGlass : glass;
             if (!session && !ReferenceEquals(card.Child, row)) card.Child = row;
-            layer.Width = Math.Max(CardWidth, SessionWidth) + 2 * ShadowRoom;
-            // centred in the bar; the session card is taller than the bar, so it hangs just below the top edge
-            layer.Margin = new Thickness(0, (session ? 16 : (BarHeight - CardHeight) / 2) - ShadowRoom, 0, 0);
+            layer.Width = Math.Max(CardWidth, SessionWidth) + ShadowRoom + Edge;
             text.HorizontalAlignment = HorizontalAlignment.Left;
             titleLine.HorizontalAlignment = HorizontalAlignment.Left;
             words.HorizontalAlignment = HorizontalAlignment.Left;
@@ -314,9 +311,9 @@ namespace Selene
             swapping = true;
             if (leaveTimer != null) leaveTimer.Stop();
             var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
-            var slide = Ui.Fast(new DoubleAnimation(-PeekIn, TimeSpan.FromMilliseconds(180)) { EasingFunction = easeIn });
+            var slide = Ui.Fast(new DoubleAnimation(PeekIn, TimeSpan.FromMilliseconds(180)) { EasingFunction = easeIn });
             slide.Completed += (s, e) => { swapping = false; layer.Visibility = Visibility.Collapsed; then(); };
-            slideIn.BeginAnimation(TranslateTransform.YProperty, slide);
+            slideIn.BeginAnimation(TranslateTransform.XProperty, slide);
             card.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, TimeSpan.FromMilliseconds(180)) { EasingFunction = easeIn }));
         }
 
@@ -343,8 +340,7 @@ namespace Selene
             readyWatch.Start();
         }
 
-        // the top layer of Playnite's own window, top centre: the empty middle of the bar, between the tabs and the clock (under
-        // the bar at the right it landed on the Collection's covers)
+        // the top layer of Playnite's own window, at the top right under the bar (the clock and the profile), not over it
         private static void Place(Window main)
         {
             var host = HomeNav.FindByName(main, "PART_MainHost") as Grid;
@@ -399,15 +395,15 @@ namespace Selene
                 Width = CardWidth, CornerRadius = new CornerRadius(12), Padding = new Thickness(16, 0, 22, 0), Height = CardHeight,
                 Background = glass, BorderBrush = Ink.Brush("SeleneInkColor", 0.08), BorderThickness = new Thickness(1),   // see-through
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
-                Child = row, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(ShadowRoom), RenderTransform = slideIn,
+                Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(ShadowRoom, ShadowRoom, Edge, ShadowRoom), RenderTransform = slideIn,
                 CacheMode = new BitmapCache { SnapsToDevicePixels = true }   // drawn once: the shadow's blur wasn't redrawn every frame of a slide
             };
             layer = new Grid
             {
                 IsHitTestVisible = false, ClipToBounds = true, Visibility = Visibility.Collapsed,
-                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top,
-                Width = CardWidth + 2 * ShadowRoom, Margin = new Thickness(0, (BarHeight - CardHeight) / 2 - ShadowRoom, 0, 0)
+                HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
+                Width = CardWidth + ShadowRoom + Edge, Margin = new Thickness(0, 112 - ShadowRoom, 0, 0)
             };
             // on whole pixels (as wide as its words, the card's edges fell between pixels and its text went soft); the text keeps
             // WPF's smooth shapes (drawn "for the screen" it went jaggy)
@@ -608,9 +604,9 @@ namespace Selene
         private static void SlideIn()
         {
             Sharpen();
-            // as a console's: a short quick slide down from the top edge with a fade, the fade over in the first moments (so it's only
+            // as a console's: a short quick slide from the right with a fade, the fade over in the first moments (so it's only
             // see-through for a blink), at the screen's own rate
-            slideIn.BeginAnimation(TranslateTransform.YProperty, Ui.Fast(new DoubleAnimation(-PeekIn, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } }));
+            slideIn.BeginAnimation(TranslateTransform.XProperty, Ui.Fast(new DoubleAnimation(PeekIn, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } }));
             card.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(150)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } }));
         }
 
@@ -639,7 +635,7 @@ namespace Selene
             HomeNav.Log("card: leaving");
             leaving = true;
             var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
-            var slide = Ui.Fast(new DoubleAnimation(-PeekIn, TimeSpan.FromMilliseconds(200)) { EasingFunction = easeIn });
+            var slide = Ui.Fast(new DoubleAnimation(PeekIn, TimeSpan.FromMilliseconds(200)) { EasingFunction = easeIn });
             slide.Completed += (s, e) =>
             {
                 if (!leaving) return;   // a new task brought it back meanwhile
@@ -650,7 +646,7 @@ namespace Selene
                 sweep.BeginAnimation(TranslateTransform.XProperty, null); sweep.X = 0;
                 fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = 0;
             };
-            slideIn.BeginAnimation(TranslateTransform.YProperty, slide);
+            slideIn.BeginAnimation(TranslateTransform.XProperty, slide);
             card.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, TimeSpan.FromMilliseconds(200)) { EasingFunction = easeIn }));
         }
 
