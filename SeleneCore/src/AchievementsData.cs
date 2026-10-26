@@ -356,6 +356,37 @@ namespace Selene
             return "";
         }
 
+        // the add-on's Steam account (ProviderSettings["Steam"].SteamUserId) set to this PC's Steam user when empty; true when set
+        private static bool FillSteamUser(object persisted)
+        {
+            try
+            {
+                var steamId = SelenePaths.SteamId;
+                if (string.IsNullOrEmpty(steamId)) return false;
+                var dict = persisted.GetType().GetProperty("ProviderSettings").GetValue(persisted, null) as System.Collections.IDictionary;
+                if (dict == null || !dict.Contains("Steam")) return false;
+                var steam = dict["Steam"];
+                if (steam == null) return false;
+                var prop = steam.GetType().GetProperty("SteamUserId");
+                if (prop != null)
+                {
+                    if (!string.IsNullOrEmpty(prop.GetValue(steam, null) as string)) return false;
+                    prop.SetValue(steam, steamId, null);
+                }
+                else if (steam.GetType().Name == "JObject")
+                {
+                    var token = steam.GetType().GetMethod("GetValue", new[] { typeof(string) }).Invoke(steam, new object[] { "SteamUserId" });
+                    if (token != null && !string.IsNullOrEmpty(token.ToString())) return false;
+                    var jvalue = steam.GetType().Assembly.GetType("Newtonsoft.Json.Linq.JValue");
+                    steam.GetType().GetProperty("Item", new[] { typeof(string) }).SetValue(steam, Activator.CreateInstance(jvalue, (object)steamId), new object[] { "SteamUserId" });
+                }
+                else return false;
+                HomeNav.Log("achievements: Steam account set for Playnite Achievements");
+                return true;
+            }
+            catch (Exception ex) { HomeNav.Log("achievements: Steam account: " + (ex.InnerException ?? ex).Message); return false; }
+        }
+
         private static void SetUp()
         {
             try
@@ -384,6 +415,14 @@ namespace Selene
                 }
                 var settings = p.GetType().GetProperty("Settings").GetValue(p, null);
                 var persisted = settings.GetType().GetProperty("Persisted").GetValue(settings, null);
+                // Steam: the account signed in to Steam on this PC, when the add-on has none (it reads public Steam profiles by
+                // that id; left empty it never got a Steam game's achievements, which a new install never had). Then every game
+                // it has nothing for is checked once more.
+                if (FillSteamUser(persisted))
+                {
+                    typeof(Playnite.SDK.Plugins.Plugin).GetMethod("SavePluginSettings").MakeGenericMethod(settings.GetType()).Invoke(p, new[] { settings });
+                    if (recentOnly) { recentOnly = false; resuming = false; lines = new string[0]; lock (trackLock) { checkedIds.Clear(); trackTotal = 0; resumeFrom = 0; } }
+                }
                 var done = persisted.GetType().GetProperty("FirstTimeSetupCompleted");
                 // (its theme-integration question: nothing for Selene to move over; left unanswered it held the updates too)
                 var seen = persisted.GetType().GetProperty("SeenThemeMigration");

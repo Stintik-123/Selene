@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Steam achievements on a new install: Selene gives Playnite Achievements the Steam account signed in on this PC when it has none (it never fetched a Steam game's achievements without one), then checks every game once.
 - A game with every achievement unlocked gets a little celebration on its Locked tab: a gold medal, sparkles and a line to be proud of (switch: Games > Achievements: celebrate 100%).
 - Collection's covers: as many as fit across the row (about seven on a 1920 px screen), so the row is full and big on any screen. A game's page: the right stick scrolls the description from anywhere on the page, and the hints show RS Scroll. Logos for newer games come from Steam's app info.
 - Game songs without any setup: UniPlaySong needs yt-dlp and ffmpeg to find songs and doesn't bring them, so a new install had none. Selene downloads both once (about 130 MB), points UniPlaySong at them and asks it for a song for every game; new games get theirs from UniPlaySong itself (Selene settings > Sound & music > Get game songs).
