@@ -197,8 +197,10 @@ const PAGE = `<!doctype html>
   body { margin: 0; min-height: 100vh; font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
   main { max-width: 520px; margin: 0 auto; padding: 40px 22px calc(36px + env(safe-area-inset-bottom)); }
   .brand { display: flex; justify-content: center; margin-bottom: 30px; }
-  .mark { width: 52px; height: 52px; color: var(--ink); filter: drop-shadow(0 0 10px rgba(200, 215, 255, .55)) drop-shadow(0 0 26px rgba(160, 185, 255, .25)); }
-  .mark svg { width: 100%; height: 100%; display: block; }
+  .mark { position: relative; width: 52px; height: 52px; color: var(--ink); }
+  .mark::before { content: ""; position: absolute; left: 50%; top: 50%; width: 150px; height: 150px; transform: translate(-50%, -50%); border-radius: 50%;
+                  background: radial-gradient(circle, rgba(185, 202, 255, .28) 0%, rgba(150, 175, 255, .10) 38%, rgba(150, 175, 255, 0) 68%); pointer-events: none; }
+  .mark svg { position: relative; width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 6px rgba(210, 222, 255, .6)); }
   h1 { font-size: 26px; font-weight: 600; margin: 0 0 6px; }
   .sub { color: var(--soft); margin: 0 0 26px; }
   .about { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 0 0 10px; }
