@@ -157,6 +157,7 @@ namespace Selene
                 {
                     // a row that does something: its button's label in a pill
                     track = new Border { CornerRadius = new CornerRadius(17), Padding = new Thickness(16, 4, 16, 5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24, 0, 0, 0), Background = Ink.Brush("SeleneInkColor", 0.12), Child = new TextBlock { Text = action, FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor") } };
+                    if (f.Action == null) { track.Background = Brushes.Transparent; track.Padding = new Thickness(0, 4, 6, 5); }   // (Adjust: the word alone, no pill)
                     knob = null;
                 }
                 else if (f.IsChoice && f.Slider)
