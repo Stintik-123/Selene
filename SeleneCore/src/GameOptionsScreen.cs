@@ -59,6 +59,9 @@ namespace Selene
 
         private readonly Action move;
 
+        // no game: the add-ons' and scripts' main menus (Playnite's Extensions menu), opened from Selene's menu
+        public static GameOptionsScreen Extensions() { return new GameOptionsScreen(null); }
+
         public GameOptionsScreen(Game game, Action move = null)
         {
             this.game = game;
@@ -76,7 +79,7 @@ namespace Selene
             Root.Children.Add(layout);
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Select")));
-            levels.Push(MainLevel());
+            levels.Push(game != null ? MainLevel() : SectionLevel("Extensions", MenuItems(), 0));
         }
 
         public override void Shown()
@@ -209,7 +212,7 @@ namespace Selene
                 var run = it.Run;
                 l.Entries.Add(new Entry { Label = it.Description, Icon = 0xe5c8, Run = () => LoginScene.FinishThen(() => { try { run(); } catch (Exception ex) { HomeNav.Log("game options: extension failed: " + (ex.InnerException ?? ex).Message); } }) });
             }
-            if (l.Entries.Count == 0) l.Entries.Add(new Entry { Label = "Nothing from your add-ons for this game", Run = () => { } });
+            if (l.Entries.Count == 0) l.Entries.Add(new Entry { Label = game != null ? "Nothing from your add-ons for this game" : "Nothing from your add-ons here", Run = () => { } });
             return l;
         }
 
@@ -233,12 +236,36 @@ namespace Selene
                 }
                 catch (Exception ex) { HomeNav.Log("game options: " + plugin.GetType().Name + " menu failed: " + ex.Message); }
             }
-            result.AddRange(ScriptItems(games));
+            result.AddRange(ScriptItems("GameMenu", "GetGameMenuItems", new GetGameMenuItemsArgs { Games = games }, "ScriptGameMenuItemActionArgs", a => Set(a, "Games", games)));
             return result;
         }
 
-        // PowerShell script extensions' game menus, through Playnite's own extension list (they aren't in the API's add-ons)
-        private static List<Item> ScriptItems(List<Game> games)
+        // the add-ons' main menu items (Playnite lists them under Extensions in its own menu)
+        private static List<Item> MenuItems()
+        {
+            var result = new List<Item>();
+            var args = new GetMainMenuItemsArgs();
+            foreach (var plugin in HomeNav.Api.Addons.Plugins)
+            {
+                try
+                {
+                    var items = plugin.GetMainMenuItems(args);
+                    if (items == null) continue;
+                    foreach (var mi in items)
+                    {
+                        if (mi == null || mi.Description == "-" || mi.Action == null) continue;
+                        var m = mi;
+                        result.Add(new Item { Description = Clean(m.Description), Path = Sections(m.MenuSection), Run = () => m.Action(new MainMenuItemActionArgs { SourceItem = m }) });
+                    }
+                }
+                catch (Exception ex) { HomeNav.Log("extensions: " + plugin.GetType().Name + " menu failed: " + ex.Message); }
+            }
+            result.AddRange(ScriptItems("MainMenu", "GetMainMenuItems", args, "ScriptMainMenuItemActionArgs", a => { }));
+            return result;
+        }
+
+        // PowerShell script extensions' game or main menus, through Playnite's own extension list (they aren't in the API's add-ons)
+        private static List<Item> ScriptItems(string menu, string getter, object getArgs, string argsName, Action<object> fill)
         {
             var result = new List<Item>();
             try
@@ -250,7 +277,7 @@ namespace Selene
                 Type argsType = null;
                 foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    argsType = asm.GetType("Playnite.SDK.Plugins.ScriptGameMenuItemActionArgs") ?? asm.GetType("Playnite.Scripting.ScriptGameMenuItemActionArgs");
+                    argsType = asm.GetType("Playnite.SDK.Plugins." + argsName) ?? asm.GetType("Playnite.Scripting." + argsName);
                     if (argsType != null) break;
                 }
                 foreach (var script in scripts)
@@ -258,10 +285,10 @@ namespace Selene
                     try
                     {
                         var menus = Get(script, "SupportedMenus") as IEnumerable;
-                        if (menus == null || !menus.Cast<object>().Any(m => m.ToString() == "GameMenu")) continue;
-                        var get = script.GetType().GetMethod("GetGameMenuItems");
+                        if (menus == null || !menus.Cast<object>().Any(m => m.ToString() == menu)) continue;
+                        var get = script.GetType().GetMethod(getter);
                         var invoke = script.GetType().GetMethod("InvokeFunction");
-                        var items = get != null ? get.Invoke(script, new object[] { new GetGameMenuItemsArgs { Games = games } }) as IEnumerable : null;
+                        var items = get != null ? get.Invoke(script, new object[] { getArgs }) as IEnumerable : null;
                         if (items == null || invoke == null || argsType == null) continue;
                         foreach (var it in items)
                         {
@@ -276,14 +303,14 @@ namespace Selene
                                 Run = () =>
                                 {
                                     var a = Activator.CreateInstance(argsType);
-                                    Set(a, "Games", games);
+                                    fill(a);
                                     Set(a, "SourceItem", source);
                                     invoke.Invoke(s, new object[] { fn, new List<object> { a } });
                                 }
                             });
                         }
                     }
-                    catch (Exception ex) { HomeNav.Log("game options: a script's menu failed: " + ex.Message); }
+                    catch (Exception ex) { HomeNav.Log("extensions: a script's menu failed: " + ex.Message); }
                 }
             }
             catch (Exception ex) { HomeNav.Log("game options: scripts: " + ex.Message); }
@@ -356,9 +383,10 @@ namespace Selene
         private void Show(bool animate)
         {
             var l = levels.Peek();
-            title.Text = levels.Count == 1 ? game.Name : l.Title;
-            // above the title: "GAME OPTIONS", then the levels walked through
-            crumbs.Text = (levels.Count == 1 ? "Game options" : game.Name + "  ›  " + string.Join("  ›  ", levels.Reverse().Skip(1).Take(levels.Count - 2).Select(x => x.Title).ToArray())).TrimEnd(' ', '›').ToUpperInvariant();
+            var top = game != null ? game.Name : "Extensions";
+            title.Text = levels.Count == 1 ? top : l.Title;
+            // above the title: "GAME OPTIONS" (nothing for Extensions), then the levels walked through
+            crumbs.Text = (levels.Count == 1 ? (game != null ? "Game options" : "") : top + "  ›  " + string.Join("  ›  ", levels.Reverse().Skip(1).Take(levels.Count - 2).Select(x => x.Title).ToArray())).TrimEnd(' ', '›').ToUpperInvariant();
             list.Children.Clear();
             rows.Clear();
             scroller.ScrollToVerticalOffset(0);
@@ -452,7 +480,9 @@ namespace Selene
             if (b == "B")
             {
                 Ui.Back();
-                if (levels.Count > 1) { levels.Pop(); Show(true); } else LoginScene.Finish();
+                if (levels.Count > 1) { levels.Pop(); Show(true); }
+                else if (game == null) LoginScene.Show(new MenuScreen(true), -1);   // back to the menu it came from
+                else LoginScene.Finish();
                 return;
             }
             if (b == "DPadUp" || b == "DPadDown")

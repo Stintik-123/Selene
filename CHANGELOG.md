@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- The menu has Extensions again: your add-ons' own menu items (an audio output switcher, metadata tools...) as in Playnite's menu, in their sections (#11).
+
 ## 1.2.1 - 2026-10-26
 
 - The new-version card comes first: Selene looks for an update right at start, and a progress card (the library update...) steps aside for it and comes back after.
