@@ -69,6 +69,8 @@ namespace Selene
         public MenuScreen(bool returning = false)
         {
             var profile = Profiles.Active;
+            // a newer Selene found: Update first, as a console puts its system update
+            if (UpdateCheck.Available != null) items.Add(new Item { Icon = Ui.Icon(0xe923), Label = "Update", Sub = "Selene " + UpdateCheck.Available, Run = () => LoginScene.Show(new UpdateScreen(() => new MenuScreen(true)), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe853), Label = profile != null ? profile.Name : "Switch profile", Sub = profile != null ? "Switch profile" : null, Picture = profile != null ? WhoScreen.Avatar(profile, 52) : null, Run = () => LoginScene.Show(new WhoScreen(null), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe3c9), Label = "Edit profile", Run = EditProfile });
             items.Add(new Item { Icon = Ui.Icon(0xe40a), Label = "Theme", Run = ChangeTheme });

@@ -286,7 +286,7 @@ namespace Selene
             new Option { Group = "Notifications", Key = "notifysound", Label = "Notification sound", About = "A soft sound as a card comes in." },
             new Option { Group = "Notifications", Key = "sessioncard", Label = "Session card", About = "After a game: how long you played, this time and in total." },
             new Option { Group = "Notifications", Key = "progresstoast", Label = "Downloads as a card", About = "Add-ons fetching logos or trailers show a small card instead of covering the screen." },
-            new Option { Group = "Notifications", Key = "updatecheck", Label = "New version notice", About = "Once a day Selene checks for a newer version and says so. Nothing installs by itself." },
+            new Option { Group = "Notifications", Key = "updatecheck", Label = "New version notice", About = "Once a day Selene checks for a newer version and says so; Update in the menu installs it with one press." },
             new Option { Group = "Notifications", Key = "setuphint", Label = "Add-on hint", About = "A note when logos and trailers need the Extra Metadata add-on." },
             // ---- Sound & music ----
             new Option { Group = "Sound & music", Key = "sounds", Label = "Interface sounds", About = "Sounds when you move, select and go back." },
@@ -324,6 +324,7 @@ namespace Selene
             new Option { Group = "Games", Key = "admin", Label = "No-prompt launchers", About = "Admin games skip the Windows prompt after their first run." },
             new Option { Group = "Games", Key = "quietbackups", Label = "Quiet save backups", About = "Ludusavi backs up saves after playing without asking." },
             // ---- Advanced ----
+            new Option { Group = "Advanced", Key = "updatenow", Label = "Check for updates", About = "Looks for a newer Selene now and installs it with one press.", Action = "Check" },
             new Option { Group = "Advanced", Key = "report", Label = "Report a problem", About = "Tell us what went wrong in a few presses. No GitHub account needed. Anywhere: click both sticks, with a picture.", Action = "Open" },
             new Option { Group = "Advanced", Key = "reportchord", Label = "Both sticks report a problem", About = "Click both sticks in together anywhere: Report a problem opens with a picture of the screen." },
             new Option { Group = "Advanced", Key = "fullrate", Label = "Match the screen's refresh rate", About = "Selene moves at 120 / 144 Hz on such screens instead of 60. Only while Playnite is in front." },

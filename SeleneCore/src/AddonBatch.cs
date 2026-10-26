@@ -85,13 +85,20 @@ namespace Selene
             return file;
         }
 
+        // a package (add-on .pext or theme .pthm) to Playnite's install queue, as opening it would (Selene's own update)
+        public static bool QueuePackage(string file)
+        {
+            try { return Queue(file); }
+            catch (Exception ex) { HomeNav.Log("update: queue failed: " + (ex.InnerException ?? ex).Message); return false; }
+        }
+
         // Playnite's own check and queue (Playnite.Plugins.ExtensionInstaller); the queue file itself if they can't be reached
         private static bool Queue(string file)
         {
             var installer = PlayniteType("Playnite.Plugins.ExtensionInstaller");
             if (installer != null)
             {
-                var verify = installer.GetMethod("VerifyExtensionPackage", BindingFlags.Public | BindingFlags.Static);
+                var verify = installer.GetMethod(file.EndsWith(".pthm", StringComparison.OrdinalIgnoreCase) ? "VerifyThemePackage" : "VerifyExtensionPackage", BindingFlags.Public | BindingFlags.Static);
                 var queue = installer.GetMethod("QueuePackageInstall", BindingFlags.Public | BindingFlags.Static);
                 if (queue != null)
                 {

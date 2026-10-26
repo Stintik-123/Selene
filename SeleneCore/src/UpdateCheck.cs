@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -7,12 +8,19 @@ using System.Windows.Threading;
 namespace Selene
 {
     // Once a day, a moment after start: is there a newer Selene on GitHub than the one installed? If so, a notification says
-    // so and where to get it (GitHub: Playnite's add-on updates don't list Selene yet). Each version is told about once. Nothing is
-    // downloaded or installed here. Switch: "updatecheck". Developer switch: %TEMP%\selene-dev-update pretends 9.9.9 is out.
+    // so, the menu gets an Update item, and the Update screen installs it with one press (Playnite's add-on updates don't list
+    // Selene). Each version's notification comes once. Switch: "updatecheck". Selene settings > Advanced > Check for updates
+    // looks at once. Developer switch: %TEMP%\selene-dev-update shows the newest release as if it were new, and the Update
+    // screen does everything but hand the files to Playnite (a preview).
     public static class UpdateCheck
     {
         private const string Latest = "https://api.github.com/repos/mattxslv/Selene/releases/latest";
         private static string StateFile { get { return Path.Combine(SelenePaths.DataFolder, "update-check.txt"); } }   // "<checked at ticks> <last version told>"
+
+        // the newer version found (null: none), its release notes, and whether it's the developer preview
+        public static string Available { get; private set; }
+        public static string Notes { get; private set; }
+        public static bool Preview { get; private set; }
 
         public static void Later()
         {
@@ -23,6 +31,31 @@ namespace Selene
             var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(pretend ? 6 : 30) };
             t.Tick += (s, e) => { t.Stop(); Check(pretend); };
             t.Start();
+        }
+
+        // the newest release on GitHub: its version and notes (null when it can't be reached); off the UI thread
+        private static void Fetch(Action<string, string> done)
+        {
+            var ui = Application.Current.Dispatcher;
+            System.Threading.Tasks.Task.Factory.StartNew(() =>
+            {
+                string newest = null, notes = null;
+                try
+                {
+                    try { System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12; } catch { }
+                    using (var web = new System.Net.WebClient { Encoding = System.Text.Encoding.UTF8 })
+                    {
+                        web.Headers[System.Net.HttpRequestHeader.UserAgent] = "Selene-Playnite";
+                        web.Headers[System.Net.HttpRequestHeader.Accept] = "application/vnd.github+json";
+                        var release = new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = int.MaxValue }.DeserializeObject(web.DownloadString(Latest)) as Dictionary<string, object>;
+                        object tag, body;
+                        if (release != null && release.TryGetValue("tag_name", out tag)) newest = Convert.ToString(tag).TrimStart('v');
+                        if (release != null && release.TryGetValue("body", out body)) notes = Convert.ToString(body);
+                    }
+                }
+                catch (Exception ex) { HomeNav.Log("update check: " + ex.Message); }
+                ui.BeginInvoke(new Action(() => done(newest, notes)));
+            });
         }
 
         private static void Check(bool pretend)
@@ -36,38 +69,31 @@ namespace Selene
             }
             catch { }
             if (!pretend && DateTime.UtcNow - new DateTime(checkedAt, DateTimeKind.Utc) < TimeSpan.FromHours(20)) return;
-            var ui = Application.Current.Dispatcher;
-            System.Threading.Tasks.Task.Factory.StartNew(() =>
-            {
-                string newest = null;
-                try
-                {
-                    if (pretend) newest = "9.9.9";
-                    else
-                    {
-                        try { System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12; } catch { }
-                        using (var web = new System.Net.WebClient())
-                        {
-                            web.Headers[System.Net.HttpRequestHeader.UserAgent] = "Selene-Playnite";
-                            web.Headers[System.Net.HttpRequestHeader.Accept] = "application/vnd.github+json";
-                            var json = web.DownloadString(Latest);
-                            var m = Regex.Match(json, "\"tag_name\"\\s*:\\s*\"v?([0-9][^\"]*)\"");
-                            if (m.Success) newest = m.Groups[1].Value;
-                        }
-                    }
-                }
-                catch (Exception ex) { HomeNav.Log("update check: " + ex.Message); }
-                ui.BeginInvoke(new Action(() => Done(newest, told, pretend)));
-            });
+            Fetch((newest, notes) => Done(newest, notes, told, pretend));
         }
 
-        private static void Done(string newest, string told, bool pretend)
+        private static void Done(string newest, string notes, string told, bool pretend)
         {
             try { if (!pretend) File.WriteAllText(StateFile, DateTime.UtcNow.Ticks + " " + (newest != null && IsNewer(newest) ? newest : told)); } catch { }
             if (newest == null) return;
-            HomeNav.Log("update check: newest " + newest + ", this is " + Brand.Version);
-            if (!IsNewer(newest) || (!pretend && newest == told)) return;
-            ProgressToast.ShowNote("Selene " + newest + " is available", "Get it at github.com/mattxslv/Selene", 0xE923 /* update */);
+            HomeNav.Log("update check: newest " + newest + ", this is " + Brand.Version + (pretend ? " (preview)" : ""));
+            if (!pretend && !IsNewer(newest)) return;
+            Available = newest; Notes = notes; Preview = pretend;
+            if (!pretend && newest == told) return;   // (told once; the menu's Update item stays)
+            ProgressToast.ShowNote("Selene " + newest + " is available", "Press Start, then Update.", 0xE923 /* update */);
+        }
+
+        // Selene settings > Check for updates: looks now; the Update screen when there's one, else a note
+        public static void CheckNow(Func<Screen> back)
+        {
+            Ui.Notice("Looking for a newer Selene…", 3000);
+            Fetch((newest, notes) =>
+            {
+                if (newest == null) { Ui.Notice("Couldn't reach GitHub. Try again in a moment.", 5000); return; }
+                if (!IsNewer(newest)) { Ui.Notice("Selene is up to date (" + Brand.Version + ").", 5000); return; }
+                Available = newest; Notes = notes; Preview = false;
+                LoginScene.Show(new UpdateScreen(back), 1);
+            });
         }
 
         private static bool IsNewer(string newest)
