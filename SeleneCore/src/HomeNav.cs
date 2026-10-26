@@ -4581,47 +4581,37 @@ namespace Selene
             catch (Exception ex) { Log("apply card order: " + ex.Message); }
         }
 
-        // Controller battery for the hub toast: DynamicResource "SelenePadBattery" = "none" | "wired" | "0".."3" (XInput levels).
-        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-        private struct XInputBattery { public byte Type; public byte Level; }
-
-        [System.Runtime.InteropServices.DllImport("xinput1_4.dll")]
-        private static extern int XInputGetBatteryInformation(int userIndex, byte devType, ref XInputBattery info);
-
+        // Controller battery (PadPower: the pad's own report, Bluetooth's figure, Gaming Input, XInput's buckets), read off the UI
+        // thread every 30 s. DynamicResource "SelenePadBattery" = "none" | "wired" | "0".."3" for the theme; the cards from PadBattery.
         private static System.Windows.Threading.DispatcherTimer batteryTimer;
+        private static bool batteryBusy;
 
         private static void StartBatteryPolling()
         {
             UpdateBattery();
-            batteryTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
+            batteryTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
             batteryTimer.Tick += (s, e) => UpdateBattery();
             batteryTimer.Start();
         }
 
-        private static readonly DateTime batteryStart = DateTime.Now;
         private static void UpdateBattery()
         {
-            string value = "none";
-            try
+            if (batteryBusy) return;
+            batteryBusy = true;
+            var dispatcher = Application.Current.Dispatcher;
+            System.Threading.Tasks.Task.Factory.StartNew(() =>
             {
-                // %TEMP%\selene-dev-battery: a wireless pad played, full for the first 45 s and low after (the cards, seen on any PC)
-                if (System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-battery"))) value = (DateTime.Now - batteryStart).TotalSeconds < 45 ? "3" : "1";
-                else
-                for (int i = 0; i < 4; i++)
+                PadPower.Reading r;
+                try { r = PadPower.Best(); } catch (Exception ex) { LastError = ex.ToString(); r = new PadPower.Reading(); }
+                dispatcher.BeginInvoke(new Action(() =>
                 {
-                    var info = new XInputBattery();
-                    if (XInputGetBatteryInformation(i, 0, ref info) != 0 || info.Type == 0) continue;  // 0 = disconnected
-                    value = info.Type == 1 ? "wired" : Math.Min((int)info.Level, 3).ToString();
-                    break;
-                }
-            }
-            catch (Exception ex)
-            {
-                LastError = ex.ToString();
-            }
-            var res = Application.Current.Resources;
-            if (!Equals(res["SelenePadBattery"], value)) { res["SelenePadBattery"] = value; Log("battery: " + value); }
-            PadBattery.Show(value);   // a card as Selene starts and as it runs low (the "Controller battery" switch)
+                    batteryBusy = false;
+                    string value = !r.Present ? "none" : r.Wired && r.Percent < 0 ? "wired" : Math.Max(0, r.Level).ToString();
+                    var res = Application.Current.Resources;
+                    if (!Equals(res["SelenePadBattery"], value)) { res["SelenePadBattery"] = value; Log("battery: " + r); }
+                    PadBattery.Show(r);
+                }));
+            });
         }
 
         public static void RefreshBattery() { UpdateBattery(); }

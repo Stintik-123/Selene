@@ -5,7 +5,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Sound in the Start menu: Windows' volume (Left / Right, X mutes) and which speakers or headset play (Left / Right switches the default device), in a card over the menu like Power's (switch: Sound & music > Sound in the menu) (#15).
-- A card with the controller's battery as Selene starts (full, medium, low), and another as it runs low (switch: Look > Controller battery; Xbox-type controllers, others through a wrapper like DS4Windows) (#15).
+- A card with the controller's battery as Selene starts and another as it runs low, read as exactly as Windows allows: the pad's own report (DualSense, DualShock 4, Switch Pro: a percentage), Windows' Bluetooth figure (Xbox and 8BitDo pads over Bluetooth), the Xbox adapter's report, XInput's four levels last; a pad on a cable or a 2.4 GHz dongle has nothing to read (switch: Look > Controller battery) (#15).
 - A game's page: captures named the way Game Bar writes them ("Onimusha_ Way of the Sword 10_25_2026 9_45_56 PM") are matched to the game (the short date is stripped, names are compared as a filename carries them), ScreenshotsVisualizer's own index is used when it's installed, and a drive's $RECYCLE.BIN no longer shows as a source (#16).
 - A game's page opened from Collection showed the game before's screenshots until reopened; it shows the right ones, loaded at once (#17).
 - Shade over the art runs from Off to 100% and covers Collection's two gradients as well as Spotlight's; from the menu's settings, Adjust sets it with the home in full view, the shades following the slider as it moves (#18).
