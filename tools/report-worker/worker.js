@@ -213,7 +213,7 @@ const PAGE = `<!doctype html>
   .note { color: var(--faint); font-size: 14px; margin: 18px 0 0; }
   .done { text-align: center; padding-top: 10px; }
   .check { width: 72px; height: 72px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center;
-           font-size: 36px; font-weight: 700; margin: 6px auto 22px; }
+           margin: 6px auto 22px; }
   a.link { color: var(--ink); }
 </style></head>
 <body><main id="app"></main>
@@ -222,11 +222,12 @@ const state = __STATE__;
 const MARK = __MARK__;
 const app = document.getElementById("app");
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function checkMark() { const c = el("div", "check"); c.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'; return c; }
 function brand() { const b = el("div", "brand"); const m = el("div", "mark"); m.innerHTML = MARK; b.append(m); return b; }
 function showDone(result) {
   app.replaceChildren();
   const box = el("div", "done");
-  box.append(brand(), el("div", "check", "\u2713"), el("h1", null, "Report #" + result.number + " is sent"),
+  box.append(brand(), checkMark(), el("h1", null, "Report #" + result.number + " is sent"),
              el("p", "sub", "Thanks, it helps make Selene better. You can close this page."));
   const p = el("p", "note"); const a = el("a", "link", "See it on GitHub"); a.href = result.url;
   p.append(a, document.createTextNode(". Adding screenshots or comments there needs a free account."));
