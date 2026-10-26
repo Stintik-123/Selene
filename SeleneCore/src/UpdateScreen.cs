@@ -67,7 +67,7 @@ namespace Selene
             var notesArea = new Grid();
             notesArea.Children.Add(notesScroll);
             notesArea.Children.Add(track);
-            var notesBox = new Border { MaxHeight = 380, Margin = new Thickness(0, 30, 0, 0), ClipToBounds = true, Child = notesArea, Padding = new Thickness(28, 22, 28, 22), CornerRadius = new CornerRadius(18), Background = Ink.Brush("SeleneGlassColor", 0.7), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(1) };
+            var notesBox = new Border { MaxHeight = 540, Margin = new Thickness(0, 30, 0, 0), ClipToBounds = true, Child = notesArea, Padding = new Thickness(28, 22, 28, 22), CornerRadius = new CornerRadius(18), Background = Ink.Brush("SeleneGlassColor", 0.7), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(1) };
             col.Children.Add(notesBox);
 
             fill.Background = Ink.Brush("SeleneFocusColor");
