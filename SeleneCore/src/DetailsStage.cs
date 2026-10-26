@@ -57,7 +57,7 @@ namespace Selene
         private static StickScroll stickScroll;
         private static void WatchStick(bool on)
         {
-            if (stickScroll == null) stickScroll = new StickScroll(() => Part<ScrollViewer>("PART_ScrollHtmlDescription"), () => Active && zone == 0);
+            if (stickScroll == null) stickScroll = new StickScroll(() => Part<ScrollViewer>("PART_ScrollHtmlDescription"), () => Active && zone == 0) { TopSpeed = 240 };
             if (on) stickScroll.Start(); else stickScroll.Stop();
         }
 
@@ -423,6 +423,9 @@ namespace Selene
 
         public static bool Handle(string b)
         {
+            // the right stick only scrolls the description here (StickScroll reads it directly): its directions reaching
+            // Playnite moved the focus (Up put it on Play)
+            if (Active && b.StartsWith("RightStick") && b != "RightStick") return true;
             if (b == "Start" && Active) { SeleneShell.OpenMenu(); return true; }   // the menu over the page, as everywhere
             if (!Active) { zone = 0; return false; }
             // Y: the game's achievements (the hint shows when Playnite Achievements has them)

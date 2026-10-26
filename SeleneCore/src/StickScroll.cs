@@ -9,7 +9,8 @@ namespace Selene
     // the stick is pushed, the faster.
     public sealed class StickScroll
     {
-        private const double TopSpeed = 1100;   // px a second, stick all the way
+        // px a second, stick all the way (a small box, like a game's description, wants it slower to read along)
+        public double TopSpeed = 1100;
         private readonly Func<ScrollViewer> target;   // looked up each frame (a page's parts come later than the page)
         private readonly Func<bool> active;
         private double velocity, offset = -1;
