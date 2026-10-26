@@ -4752,6 +4752,22 @@ namespace Selene
         private static bool launching;
         public static bool Launching { get { return launching; } }
         public static bool Quitting;   // Playnite is being closed for real (Exit, Alt+F4, power actions)
+        private static bool quitFaded;
+
+        // Playnite closing: Selene's screen goes dark at once, so nothing (the login layer, a card) shows while it shuts down
+        public static void BeginQuit()
+        {
+            Quitting = true;
+            if (quitFaded) return;
+            quitFaded = true;
+            try
+            {
+                var w = Application.Current.MainWindow;
+                var root = w != null ? w.Content as UIElement : null;
+                if (root != null && w.IsVisible) root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(150)));
+            }
+            catch (Exception ex) { Log("quit fade: " + ex.Message); }
+        }
         public static bool GameRunning()
         {
             try { return gameWindow != IntPtr.Zero || (Api != null && Api.Database.Games.Any(g => g.IsRunning)); } catch { return false; }

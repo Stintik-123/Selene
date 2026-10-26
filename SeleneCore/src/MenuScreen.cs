@@ -217,7 +217,8 @@ namespace Selene
                 {
                     try
                     {
-                        HomeNav.Quitting = true;
+                        // (not for Sleep: Playnite carries on after it)
+                        if (what < 0) HomeNav.BeginQuit(); else if (what > 0) HomeNav.Quitting = true;
                         if (what < 0) Later(() => PlayniteMenu.Run("ExitCommand"));
                         else Power.Run(what);
                     }

@@ -76,8 +76,23 @@ namespace Selene
 
         // Playnite's progress window draws its first frame (an opaque dark screen) before it is Loaded: it is made invisible as
         // it activates, which comes first (the black flash before the card)
+        // Playnite closing: its progress window stays invisible and off the screen
+        public static void HideForQuit(Window w)
+        {
+            try
+            {
+                w.BeginAnimation(UIElement.OpacityProperty, null);
+                w.Opacity = 0;
+                w.Content = null;
+                var hwnd = new WindowInteropHelper(w).Handle;
+                if (hwnd != IntPtr.Zero) SetWindowPos(hwnd, IntPtr.Zero, -32000, -32000, 1, 1, 0x0010 | 0x0004 | 0x0200);
+            }
+            catch (Exception ex) { HomeNav.Log("quit: hiding the closing screen failed: " + ex.Message); }
+        }
+
         public static void Prehide(Window w)
         {
+            if (HomeNav.Quitting) { HideForQuit(w); return; }
             if (!Features.On("dialogs") || !Features.On("progresstoast")) return;
             var main = Application.Current.MainWindow;
             if (main == null || ReferenceEquals(main, w) || !main.IsVisible) return;

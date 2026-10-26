@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Quitting Playnite is clean: the screen goes dark at once and Playnite's "Closing" screen no longer flashes up. Sleep from the power menu no longer turns Selene's progress cards off afterwards.
+- HowLongToBeat times come by themselves: opening a game's page asks the add-on for that game's times when it has none yet.
 - Picking a game in Activity, Find a game or Surprise me lands on that game on Spotlight with its art and logo (it sometimes landed on a neighbour with a blank background).
 - From amogh-w (#3): animations follow the screen's refresh rate (no longer capped at 144), Spotlight trailer cards play a game's full trailer when there's no preview clip, a game's page shows HowLongToBeat times (with that add-on; switch: Games > HowLongToBeat times), the top bar can show what UniPlaySong is playing (off by default: Look > Now playing in the top bar), the page behind a game's options menu stays still, and Collection's first and last games stay fully in view.
 - Report a problem: click both sticks in together anywhere to report with a picture of the screen (you see it and can leave it out), and "Type on your phone" opens a page on your phone to type and send from. The Power menu opens centred over Power.

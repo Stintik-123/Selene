@@ -47,6 +47,7 @@ namespace Selene
             if (w == null || !Features.On("dialogs")) return;
             if (w.GetType().Name == "ProgressWindow")
             {
+                if (HomeNav.Quitting) { ProgressToast.HideForQuit(w); return; }   // Playnite's "Closing" screen: not shown at all
                 try { if (!(Features.On("progresstoast") && ProgressToast.Make(w))) DressProgress(w); }
                 catch (Exception ex) { HomeNav.Log("progress look: " + ex.Message); }
                 return;

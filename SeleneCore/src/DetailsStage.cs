@@ -61,6 +61,7 @@ namespace Selene
                 shift = page != null ? page.RenderTransform as TranslateTransform : null;
                 if (page == null) { HomeNav.Log("details stage: no page in the template"); return; }
                 SeleneShell.Switch(Part<UIElement>("SeleneHltb"), "hltb");
+                HltbFetch.ForPage(g);
                 if (sink == null || !ReferenceEquals(sink.Parent, page))
                 {
                     sink = new Border { Width = 0, Height = 0, Focusable = true, FocusVisualStyle = null, IsHitTestVisible = false };

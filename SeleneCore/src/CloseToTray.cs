@@ -55,7 +55,7 @@ namespace Selene
                     w.Dispatcher.BeginInvoke(new Action(() => { if (w.WindowState == WindowState.Minimized && w.IsVisible) HideToTray(); }));
                 else if (w.IsVisible) Shown();
             };
-            Application.Current.SessionEnding += (s, e) => { reallyQuit = true; HomeNav.Quitting = true; };
+            Application.Current.SessionEnding += (s, e) => { reallyQuit = true; HomeNav.BeginQuit(); };
             // Alt+F4 quits for real from anywhere in Playnite: caught as the raw key message on Playnite's thread, before any
             // screen, dialog or handler sees it (the WPF key event and the close command it becomes didn't always arrive)
             System.Windows.Interop.ComponentDispatcher.ThreadFilterMessage += OnThreadMessage;
@@ -109,7 +109,7 @@ namespace Selene
                 if (AltF4Held())
                 {
                     reallyQuit = true;
-                    HomeNav.Quitting = true;
+                    HomeNav.BeginQuit();
                     if (tray != null) tray.Visible = false;
                     HomeNav.Log("tray: Alt+F4 -> quit");
                     return IntPtr.Zero;
@@ -254,7 +254,7 @@ namespace Selene
         // Alt+F4: quit for real, the way Alt+F4 quits Playnite without Selene (its main window closes, Playnite shuts down)
         public static void AltF4()
         {
-            HomeNav.Quitting = true;
+            HomeNav.BeginQuit();
             if (reallyQuit) return;
             HomeNav.Log("tray: Alt+F4 -> quit");
             reallyQuit = true;
@@ -275,7 +275,7 @@ namespace Selene
         private static void QuitForReal()
         {
             reallyQuit = true;
-            HomeNav.Quitting = true;
+            HomeNav.BeginQuit();
             if (tray != null) tray.Visible = false;
             if (originalExit != null && originalExit.CanExecute(null)) originalExit.Execute(null);
             else Application.Current.Shutdown();
