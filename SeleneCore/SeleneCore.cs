@@ -194,7 +194,7 @@ namespace Selene
             }
             foreach (var f in Features.All)
             {
-                if (!f.IsChoice) continue;
+                if (!f.IsChoice || (f.Available != null && !f.Available())) continue;
                 var key = f.Key; var opt = f;
                 var line = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
                 var combo = new ComboBox { ItemsSource = f.Names ?? f.Choices, SelectedIndex = Math.Max(0, Array.IndexOf(f.Choices, Features.Value(key))), Width = 190, Margin = new Thickness(0, 0, 10, 0) };
@@ -292,8 +292,8 @@ namespace Selene
             new Option { Group = "Notifications", Key = "setuphint", Label = "Add-on hint", About = "A note when logos and trailers need the Extra Metadata add-on." },
             // ---- Sound & music ----
             new Option { Group = "Sound & music", Key = "sounds", Label = "Interface sounds", About = "Sounds when you move, select and go back." },
-            new Option { Group = "Sound & music", Key = "soundvolume", Slider = true, Label = "Sound volume", About = "How loud Selene's own sounds are.", Choices = new[] { "25", "50", "75", "100" }, Names = new[] { "25%", "50%", "75%", "100%" }, Default = "100" },
-            new Option { Group = "Sound & music", Key = "clipvolume", Slider = true, Label = "Clip volume", About = "Clips in Captures. Up / Down change it there too.", Choices = new[] { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Names = new[] { "Off", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, Default = "90" },
+            new Option { Group = "Sound & music", Key = "soundvolume", Slider = true, Label = "Interface sounds volume", About = "How loud the sounds are when you move, select and go back (not the music).", Choices = new[] { "25", "50", "75", "100" }, Names = new[] { "25%", "50%", "75%", "100%" }, Default = "100" },
+            new Option { Group = "Sound & music", Key = "clipvolume", Slider = true, Label = "Clip volume", About = "Clips in Captures. Up / Down change it there too.", Available = () => false /* set with Up / Down in Captures only */, Choices = new[] { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Names = new[] { "Off", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, Default = "90" },
             new Option { Group = "Sound & music", Key = "music", Label = "Background music", About = "The default track while browsing, a game's song with its trailer (with the UniPlaySong add-on).", Available = () => HomeNav.Api != null && HomeNav.Api.Addons.Addons.Any(a => a.StartsWith("UniPlaySong", StringComparison.OrdinalIgnoreCase)) },
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },
             // ---- Look ----
