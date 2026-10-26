@@ -202,6 +202,7 @@ namespace Selene
         public static void ApplyNowPlaying()
         {
             Switch(Part("SeleneHltbStatHub"), "hltb");
+            Switch(Part("SeleneHubShadeRight"), "rowedges");
             Switch(Part("SeleneHltbStatLibrary"), "hltb");
             Switch(Part("SeleneAchievementsStatHub"), "achievements");
         }

@@ -498,6 +498,19 @@
                                             </LinearGradientBrush>
                                         </Border.OpacityMask>
                                     </Border>
+                                    <!-- the screen's right side goes dark top to bottom: a tile dissolving at the row's right end (Selene Core's mask
+                                         on the row) fades into dark, bright art or not; the Row to the edges switch -->
+                                    <Border x:Name="SeleneHubShadeRight" Width="300" HorizontalAlignment="Right" Background="{DynamicResource SeleneScrimBrush}" IsHitTestVisible="False">
+                                        <Border.OpacityMask>
+                                            <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
+                                                <GradientStop Color="#C8000000" Offset="0"/>
+                                                <GradientStop Color="#96000000" Offset="0.2"/>
+                                                <GradientStop Color="#58000000" Offset="0.45"/>
+                                                <GradientStop Color="#22000000" Offset="0.72"/>
+                                                <GradientStop Color="#00000000" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Border.OpacityMask>
+                                    </Border>
                                     <Border x:Name="SeleneHubShadeBottom" Background="{DynamicResource SeleneScrimBrush}" Opacity="0.3">
                                         <Border.OpacityMask>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
@@ -751,7 +764,7 @@
                                         <!-- game row (Selene Core fills it, keeps the selection's slot, plays trailers) -->
                                         <Grid x:Name="SeleneRowIntro" Grid.Row="0" RenderTransformOrigin="0.5,0.3">
                                             <Grid.RenderTransform><ScaleTransform x:Name="SeleneRowIntroScale" ScaleX="1" ScaleY="1"/></Grid.RenderTransform>
-                                            <ListBoxEx x:Name="SeleneGameRow" Margin="-8,10,-80,-70" Tag="{DynamicResource SeleneRowMode}"
+                                            <ListBoxEx x:Name="SeleneGameRow" Margin="-88,10,-80,-70" Tag="{DynamicResource SeleneRowMode}"
                                                        SelectedIndex="1"
                                                        ItemContainerStyle="{StaticResource SeleneTileStyle}"
                                                        pbeh:FocusBahaviors.OnVisibilityFocus="True"

@@ -358,7 +358,7 @@ namespace Selene
                     // look, so chained moves glide at constant speed for exactly the repeat interval. A single tap eases out.
                     double sinceLast = (DateTime.Now - lastMoveAt).TotalMilliseconds;
                     lastMoveAt = DateTime.Now;
-                    Glide(shift, delta, sinceLast < 260);
+                    Glide(shift, delta, sinceLast < 260, RowRest(row));
                 }
             }
             target.Focus();
@@ -375,6 +375,68 @@ namespace Selene
             GameMedia.OnSelected(row.SelectedItem, RowNeighbours(row));
         }
 
+        // ---- the row to the edges ----
+        // The row's scroll window reaches the screen's edges (SeleneGameRow's margin). At the row's start a padding keeps the first
+        // card in from the left, as before; once scrolled the padding goes (the glide carries it off with the first move) and the
+        // tiles run to the edge on both sides, dissolving over the last 200 px into the screen's darkened sides. Switch: Spotlight >
+        // Row to the edges (off: the padding stays, no dissolve, no shade).
+        private const double StartPad = 80, RowEdgePx = 200;
+
+        private static double RowRest(ListBox row)
+        {
+            if (!Features.On("rowedges")) return StartPad;
+            var sv = FindChild<ScrollViewer>(row);
+            return sv == null || sv.HorizontalOffset < 0.5 ? StartPad : 0;
+        }
+
+        private static void RestRow(ListBox row, ScrollViewer sv)
+        {
+            var panel = FindChild<VirtualizingStackPanel>(row);
+            if (panel == null) return;
+            var shift = panel.RenderTransform as TranslateTransform;
+            if (shift == null || shift.IsFrozen) { shift = new TranslateTransform(); panel.RenderTransform = shift; }
+            double rest = RowRest(row);
+            if (glideHooked && ReferenceEquals(glideShift, shift)) { glideRest = rest; return; }   // the spring carries it there
+            shift.BeginAnimation(TranslateTransform.XProperty, null);
+            shift.X = rest;
+        }
+
+        private static void RowEdges(ListBox row, ScrollViewer sv)
+        {
+            try
+            {
+                if (!Features.On("rowedges")) { if (row.OpacityMask != null) row.OpacityMask = null; return; }
+                var brush = row.OpacityMask as LinearGradientBrush;
+                if (brush == null || brush.GradientStops.Count != 4)
+                {
+                    brush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0) };
+                    brush.GradientStops.Add(new GradientStop(Colors.Black, 0));
+                    brush.GradientStops.Add(new GradientStop(Colors.Black, 0.1));
+                    brush.GradientStops.Add(new GradientStop(Colors.Black, 0.9));
+                    brush.GradientStops.Add(new GradientStop(Colors.Black, 1));
+                    row.OpacityMask = brush;
+                }
+                double w = row.ActualWidth, over = Math.Max(0, -row.Margin.Right);   // the window runs past the screen's right edge
+                if (w > RowEdgePx * 3)
+                {
+                    brush.GradientStops[1].Offset = RowEdgePx / w;
+                    brush.GradientStops[2].Offset = Math.Max(0.5, (w - over - RowEdgePx) / w);
+                    brush.GradientStops[3].Offset = Math.Max(0.6, (w - over) / w);
+                }
+                bool left = sv.HorizontalOffset > 0.5, right = sv.HorizontalOffset < sv.ScrollableWidth - 0.5;
+                RowEdge(brush.GradientStops[0], left);
+                RowEdge(brush.GradientStops[3], right);
+            }
+            catch (Exception ex) { Log("row edges: " + ex.Message); }
+        }
+
+        private static void RowEdge(GradientStop stop, bool dissolve)
+        {
+            var to = dissolve ? Color.FromArgb(0, 0, 0, 0) : Colors.Black;
+            if (stop.Color == to && !stop.HasAnimatedProperties) return;
+            stop.BeginAnimation(GradientStop.ColorProperty, new ColorAnimation(to, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
+
         // ---- row slide: one continuous spring instead of a new animation per press (like Playnite's library) ----
         // Restarting an animation on every press reset the row's speed each time, so a held stick looked like a chain
         // of little slides (low-fps feel without dropped frames). Now a press only moves the target: the row keeps its
@@ -387,12 +449,17 @@ namespace Selene
         private static bool glideHooked;
         private static readonly TranslateTransform glideClock = new TranslateTransform();
 
-        internal static void Glide(TranslateTransform shift, double delta, bool chained)
+        internal static void Glide(TranslateTransform shift, double delta, bool chained) { Glide(shift, delta, chained, 0); }
+
+        // rest: where the content settles (Spotlight's row: its start padding at the row's start, 0 once scrolled; Collection: 0)
+        private static double glideRest;
+        internal static void Glide(TranslateTransform shift, double delta, bool chained, double rest)
         {
             if (glideShift != shift) { glideV = 0; glideShift = shift; }
+            glideRest = rest;
             shift.BeginAnimation(TranslateTransform.XProperty, null);
             shift.X += delta;                       // the tiles jumped by -delta in layout: start where they were seen
-            if (!chained) glideV = -GlideOmega * shift.X;   // pure exponential ease-out from here
+            if (!chained) glideV = -GlideOmega * (shift.X - rest);   // pure exponential ease-out from here
             if (glideHooked) return;
             glideHooked = true;
             glideLast = TimeSpan.Zero;
@@ -411,12 +478,13 @@ namespace Selene
             double dt = glideLast == TimeSpan.Zero ? 1.0 / 144 : Math.Min(0.05, (now - glideLast).TotalSeconds);
             glideLast = now;
             if (shift == null) { StopGlide(); return; }
-            // exact critically damped step: x(t) = (x0 + (v0 + w x0) t) e^-wt
-            double x0 = shift.X, v0 = glideV, w = GlideOmega, k = Math.Exp(-w * dt), b = v0 + w * x0;
+            // exact critically damped step: x(t) = (x0 + (v0 + w x0) t) e^-wt, around the rest
+            double rest = glideRest;
+            double x0 = shift.X - rest, v0 = glideV, w = GlideOmega, k = Math.Exp(-w * dt), b = v0 + w * x0;
             double x = (x0 + b * dt) * k;
             glideV = (v0 - w * b * dt) * k;
-            if (Math.Abs(x) < 0.3 && Math.Abs(glideV) < 6) { shift.X = 0; StopGlide(); return; }
-            shift.X = x;
+            if (Math.Abs(x) < 0.3 && Math.Abs(glideV) < 6) { shift.X = rest; StopGlide(); return; }
+            shift.X = x + rest;
         }
 
         private static void StopGlide()
@@ -972,12 +1040,17 @@ namespace Selene
             {
                 var sv = FindChild<ScrollViewer>(row);
                 if (sv == null) return;
+                RestRow(row, sv);
+                RowEdges(row, sv);
+                row.SizeChanged += (s2, a2) => RowEdges(row, sv);
                 sv.ScrollChanged += (s2, a2) =>
                 {
                     if (heldOffset >= 0 && !row.IsKeyboardFocusWithin && Math.Abs(sv.HorizontalOffset - heldOffset) > 0.5)
                     {
                         sv.ScrollToHorizontalOffset(heldOffset);
                     }
+                    if (!glideHooked) RestRow(row, sv);   // (a jump, not a move: the rest at once)
+                    RowEdges(row, sv);
                 };
             };
             row.ItemContainerGenerator.StatusChanged += (s, a) =>
@@ -1379,7 +1452,7 @@ namespace Selene
             }
             var panel = FindChild<VirtualizingStackPanel>(row);
             var shift = panel != null ? panel.RenderTransform as TranslateTransform : null;
-            if (shift != null && !shift.IsFrozen) { shift.BeginAnimation(TranslateTransform.XProperty, null); shift.X = 0; }   // no glide left over
+            if (shift != null && !shift.IsFrozen) { shift.BeginAnimation(TranslateTransform.XProperty, null); shift.X = glideRest = RowRest(row); }   // no glide left over
             if (c != null) c.Focus(); else row.SelectedIndex = idx;   // (never set while the row's own selection is changing: that crashed Playnite)
             if (sv != null && Math.Abs(sv.HorizontalOffset - offset) > 0.5) { sv.ScrollToHorizontalOffset(offset); row.UpdateLayout(); }   // once more with the focus in the row
             ScheduleTitle(row, 230);

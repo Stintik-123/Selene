@@ -269,7 +269,7 @@ namespace Selene
                 Features.Set(key, !Features.On(key));
                 if (key == "brand") Brand.Apply();
                 if (key == "topprofile") TopProfile.Refresh();
-                if (key == "hltb" || key == "achievements") SeleneShell.ApplyNowPlaying();
+                if (key == "hltb" || key == "achievements" || key == "rowedges") SeleneShell.ApplyNowPlaying();
                 if (key == "translatecollect") { Lang.Collect(Features.On(key)); if (Features.On(key)) Ui.Notice("Phrases go to \"Selene phrases.txt\" on your Desktop as you move around Selene."); }
                 Ui.Key();
                 ShowSwitch(index, true);
