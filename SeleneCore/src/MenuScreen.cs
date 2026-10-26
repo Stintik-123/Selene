@@ -372,7 +372,7 @@ namespace Selene
                     if (SystemAudio.SetDefault(outputs[k].Id)) { foreach (var d in outputs) d.Default = false; outputs[k].Default = true; HomeNav.Log("audio: output -> " + outputs[k].Name); }
                     else Ui.Shake(soundRows[1]);
                     ShowSound(true);
-                });
+                }, true);   // (over the card's middle)
                 return;
             }
             if (b == "DPadLeft" || b == "DPadRight")

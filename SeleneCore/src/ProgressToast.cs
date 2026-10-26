@@ -59,6 +59,8 @@ namespace Selene
             card.Height = session ? SessionHeight : CardHeight;
             card.Padding = session ? new Thickness(0) : new Thickness(16, 0, 16, 0);
             icon.Margin = new Thickness(0, 0, 14, 0);   // (a picture-only card before took these away)
+            icon.Width = 48;
+            icon.Padding = new Thickness(0);
             text.Visibility = Visibility.Visible;
             card.CornerRadius = new CornerRadius(session ? 14 : 12);
             card.Background = session ? sessionGlass : glass;
@@ -828,12 +830,18 @@ namespace Selene
             bool pictureOnly = string.IsNullOrEmpty(title) && string.IsNullOrEmpty(line);
             if (pictureOnly)
             {
-                // the tile alone, the card wrapped close around it
+                // a slim pill with the picture on its glass, as a console's controller notice: no tile, no words
                 icon.Margin = new Thickness(0);
+                icon.Background = Brushes.Transparent;
+                icon.Width = double.NaN;
+                icon.Padding = new Thickness(6, 0, 6, 0);
                 text.Visibility = Visibility.Collapsed;
                 titleLine.Visibility = Visibility.Collapsed;
                 words.Text = "";
-                Size(48 + 2 * 16 + 2, true);
+                card.Height = 60;
+                card.Padding = new Thickness(14, 0, 14, 0);
+                icon.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Size(icon.DesiredSize.Width + 28 + 2, true);
             }
             else
             {

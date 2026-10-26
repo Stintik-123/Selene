@@ -19,7 +19,7 @@ namespace Selene
         private int index;
         public bool IsOpen { get; private set; }
 
-        private ChoiceList(Panel host, FrameworkElement anchor, IList<string> names, int current, Action<int> chosen)
+        private ChoiceList(Panel host, FrameworkElement anchor, IList<string> names, int current, Action<int> chosen, bool centred)
         {
             this.chosen = chosen;
             index = Math.Max(0, Math.Min(names.Count - 1, current));
@@ -53,7 +53,7 @@ namespace Selene
             panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             var at = anchor.TranslatePoint(new Point(0, 0), host);
             double width = panel.DesiredSize.Width, height = panel.DesiredSize.Height;
-            double left = at.X + anchor.ActualWidth - width + 20;
+            double left = centred ? at.X + anchor.ActualWidth / 2 - width / 2 : at.X + anchor.ActualWidth - width + 20;
             double top = at.Y + anchor.ActualHeight / 2 - 6 - RowHeight / 2 - index * RowHeight;
             double hostHeight = host.ActualHeight > 0 ? host.ActualHeight : 1080;
             top = Math.Max(40, Math.Min(hostHeight - height - 40, top));
@@ -68,10 +68,13 @@ namespace Selene
             IsOpen = true;
         }
 
-        public static ChoiceList Open(Panel host, FrameworkElement anchor, IList<string> names, int current, Action<int> chosen)
+        public static ChoiceList Open(Panel host, FrameworkElement anchor, IList<string> names, int current, Action<int> chosen) { return Open(host, anchor, names, current, chosen, false); }
+
+        // centred: the list over the anchor's middle (a wide row), not lined up with its right edge (a value pill)
+        public static ChoiceList Open(Panel host, FrameworkElement anchor, IList<string> names, int current, Action<int> chosen, bool centred)
         {
             Ui.Confirm();
-            return new ChoiceList(host, anchor, names, current, chosen);
+            return new ChoiceList(host, anchor, names, current, chosen, centred);
         }
 
         private void Look()

@@ -34,20 +34,27 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("battery: " + ex.Message); }
         }
 
-        // a battery lying down, the card's whole word: the case, its nub, four cells inside filled to the level; red when low or empty
+        // as a console's controller notice: the controller's outline, then a battery lying down with three bars inside, lit to the
+        // level (XInput's four levels onto three bars: full 3, medium 2, low 1 in red, empty none with a red case)
         private static UIElement Glyph(int level)
         {
             bool low = level <= 1;
-            var ink = Ink.Brush("SeleneInkColor", 0.9);
-            Brush fill = low ? new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)) : Ink.Brush("SeleneInkColor");
-            var g = new Grid { Width = 38, Height = 18, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            var cells = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2), VerticalAlignment = VerticalAlignment.Center };
-            int lit = level >= 3 ? 4 : level == 2 ? 3 : level == 1 ? 1 : 0;
-            for (int i = 0; i < 4; i++)
-                cells.Children.Add(new Border { Width = 5, Height = 8, CornerRadius = new CornerRadius(1), Margin = new Thickness(i == 0 ? 0 : 1, 0, 0, 0), Background = i < lit ? fill : Brushes.Transparent });
-            g.Children.Add(new Border { Width = 33, Height = 18, CornerRadius = new CornerRadius(4), BorderBrush = level == 0 ? fill : ink, BorderThickness = new Thickness(2), HorizontalAlignment = HorizontalAlignment.Left, Child = cells });
-            g.Children.Add(new Border { Width = 3, Height = 8, CornerRadius = new CornerRadius(0, 1.5, 1.5, 0), Background = ink, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(34, 0, 0, 0) });
-            return g;
+            var ink = Ink.Brush("SeleneInkColor");
+            Brush bar = low ? new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)) : ink;
+            var row = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            var pad = Ui.Glyph(Ui.Icon(0xea28), Ui.Icons, 30, ink);   // sports_esports: the controller
+            pad.VerticalAlignment = VerticalAlignment.Center;
+            pad.Margin = new Thickness(0, 0, 12, 0);
+            row.Children.Add(pad);
+            var battery = new Grid { Width = 44, Height = 22, VerticalAlignment = VerticalAlignment.Center };
+            var bars = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left };
+            int lit = level >= 3 ? 3 : level == 2 ? 2 : level == 1 ? 1 : 0;
+            for (int i = 0; i < 3; i++)
+                bars.Children.Add(new Border { Width = 8, Height = 12, CornerRadius = new CornerRadius(1.5), Margin = new Thickness(i == 0 ? 0 : 2, 0, 0, 0), Background = i < lit ? bar : Brushes.Transparent });
+            battery.Children.Add(new Border { Width = 40, Height = 22, CornerRadius = new CornerRadius(5), BorderBrush = level == 0 ? bar : ink, BorderThickness = new Thickness(2), HorizontalAlignment = HorizontalAlignment.Left, Child = bars });
+            battery.Children.Add(new Border { Width = 3, Height = 10, CornerRadius = new CornerRadius(0, 1.5, 1.5, 0), Background = ink, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(41, 0, 0, 0) });
+            row.Children.Add(battery);
+            return row;
         }
     }
 }
