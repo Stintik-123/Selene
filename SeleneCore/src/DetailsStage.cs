@@ -57,7 +57,7 @@ namespace Selene
         private static StickScroll stickScroll;
         private static void WatchStick(bool on)
         {
-            if (stickScroll == null) stickScroll = new StickScroll(() => Part<ScrollViewer>("PART_ScrollHtmlDescription"), () => Active && zone == 0) { TopSpeed = 240 };
+            if (stickScroll == null) stickScroll = new StickScroll(() => Part<ScrollViewer>("PART_ScrollHtmlDescription"), () => Active) { TopSpeed = 240 };   // (from anywhere on the page)
             if (on) stickScroll.Start(); else stickScroll.Stop();
         }
 

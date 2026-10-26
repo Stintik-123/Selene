@@ -4,8 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Collection's covers: as many as fit across the row (about seven on a 1920 px screen), so the row is full and big on any screen. A game's page: the right stick scrolls the description from anywhere on the page, and the hints show RS Scroll. Logos for newer games come from Steam's app info.
 - Game songs without any setup: UniPlaySong needs yt-dlp and ffmpeg to find songs and doesn't bring them, so a new install had none. Selene downloads both once (about 130 MB), points UniPlaySong at them and asks it for a song for every game; new games get theirs from UniPlaySong itself (Selene settings > Sound & music > Get game songs).
-- Collection shows the whole row on a new install (Playnite drew only as many covers as its Columns setting, 4 by default: the row ended after the fifth game). The Columns slider is gone from Selene's Playnite settings; it never sized Selene's covers.
 - Leaving a game's page (B) fades back to Spotlight instead of cutting (switch: Look > Soft way back).
 - Selene settings > Sound & music: "Sound volume" is called Interface sounds volume (it was never the music); Clip volume is set in Captures only (Up / Down).
 - A game's page: going down to the screenshots no longer leaves Play lit; the developer reads without its company ending (IO Interactive, not IO Interactive A/S).

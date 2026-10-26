@@ -109,7 +109,7 @@ namespace Selene
             try
             {
                 var res = Application.Current.Resources;
-                foreach (var b in new[] { "A", "B", "X", "Y", "LB", "RB", "LT", "RT" }) res["SelenePrompt" + b] = PromptLabel(b);
+                foreach (var b in new[] { "A", "B", "X", "Y", "LB", "RB", "LT", "RT", "RS" }) res["SelenePrompt" + b] = PromptLabel(b);
             }
             catch { }
             if (changed) { HomeNav.Log("prompts: " + (ps ? "PlayStation" : "Xbox")); try { HomeHints.Update(); } catch { } }
@@ -128,6 +128,7 @@ namespace Selene
                 case "RB": return "R1";
                 case "LT": return "L2";
                 case "RT": return "R2";
+                case "RS": return "R3";
                 default: return button;
             }
         }

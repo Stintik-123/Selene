@@ -202,7 +202,12 @@ namespace Selene
             bool got = false;
             if (needLogo)
                 foreach (var name in new[] { "logo_2x.png", "logo.png" })
-                    if (Save(url(name), logo, true)) { got = true; HomeNav.Log("art download: " + g.Name + " logo"); break; }
+                    if (Save(url(name), logo, true)) { got = true; needLogo = false; HomeNav.Log("art download: " + g.Name + " logo"); break; }
+            // newer games keep their logo in a hashed folder that only Steam's app info names (the store page doesn't):
+            // read through steamcmd.net, a public mirror of it
+            if (needLogo)
+                foreach (var name in LogoNamesFromAppInfo(id))
+                    if (Save(url(name), logo, true)) { got = true; needLogo = false; HomeNav.Log("art download: " + g.Name + " logo (app info)"); break; }
             if (needHero && Save(url(heroName), hero, false))
             {
                 got = true;
@@ -211,6 +216,25 @@ namespace Selene
                 HomeNav.Log("art download: " + g.Name + " background");
             }
             if (!got && (needLogo && !System.IO.File.Exists(logo)) && (needHero && !System.IO.File.Exists(hero))) System.IO.File.WriteAllText(none, g.Name);
+        }
+
+        // library_logo from Steam's app info (2x first, English), as asset file names ("<hash>/logo_2x.png"); none when unknown
+        private static List<string> LogoNamesFromAppInfo(string appId)
+        {
+            var names = new List<string>();
+            try
+            {
+                var root = new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = int.MaxValue }.DeserializeObject(Text("https://api.steamcmd.net/v1/info/" + appId)) as Dictionary<string, object>;
+                Func<object, string, object> at = (o, k) => { var d = o as Dictionary<string, object>; object v; return d != null && d.TryGetValue(k, out v) ? v : null; };
+                var logo = at(at(at(at(at(root, "data"), appId), "common"), "library_assets_full"), "library_logo");
+                foreach (var size in new[] { "image2x", "image" })
+                {
+                    var name = at(at(logo, size), "english") as string;
+                    if (!string.IsNullOrEmpty(name)) names.Add(name);
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("art download: app info " + appId + ": " + ex.Message); }
+            return names;
         }
 
         // the theme only looks in the media folder once something is there (SeleneShell.ApplyArtRoots)

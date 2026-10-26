@@ -667,10 +667,15 @@ namespace Selene
                 // Selene's library is one row under the trailer stage
                 var rows = fs.GetType().GetProperty("Rows");
                 if (rows != null && rows.PropertyType == typeof(int) && !Equals(rows.GetValue(fs, null), 1)) { rows.SetValue(fs, 1, null); Log("library rows -> 1"); }
-                // Playnite draws only "Columns" + 1 tiles, as if each were the screen's width / Columns; Selene's covers are a fixed
-                // size, so the default 4 left the row empty after the fifth game. Enough for any screen
+                // Columns: Playnite gives each cover the row's width / Columns and draws only Columns + 1 of them. Selene's one row
+                // of big covers wants as many as fit at its height (about 300 px each on a 1920 px row): fewer (the default 4)
+                // drew five covers and left the rest of the row empty, more (16) made them small, in two rows
                 var cols = fs.GetType().GetProperty("Columns");
-                if (cols != null && cols.PropertyType == typeof(int) && (int)cols.GetValue(fs, null) < 16) { cols.SetValue(fs, 16, null); Log("library columns -> 16"); }
+                var main = Application.Current.MainWindow;
+                var list = main != null ? FindByName(main, "PART_ListGameItems") as FrameworkElement : null;
+                double width = list != null && list.ActualWidth > 100 ? list.ActualWidth : (main != null && main.ActualWidth > 100 ? main.ActualWidth : 1920);
+                int want = Math.Max(4, (int)Math.Ceiling(width / 298.0));
+                if (cols != null && cols.PropertyType == typeof(int) && (int)cols.GetValue(fs, null) != want) { cols.SetValue(fs, want, null); Log("library columns -> " + want + " (row " + (int)width + " px)"); }
             }
             catch (Exception ex) { Log("horizontal: " + ex.Message); }
         }
