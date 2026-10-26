@@ -4,7 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Notification cards for tasks are as wide as their words. A game's page shows HowLongToBeat as one quiet line under its stats (11h 41m main story · 19h 14m with extras · 29h 1m completionist).
+- Notification cards for tasks are as wide as their words, solid, and slide in and out past the right edge instead of fading (the art showed through them). A game's page shows HowLongToBeat as one quiet line under its stats (11h 41m main story · 19h 14m with extras · 29h 1m completionist).
 - Playnite's library update ("Importing Steam games...", "Library update finished") shows as Selene's notification card instead of a line of words at the top right.
 - Spotlight and Collection show TIME TO BEAT (HowLongToBeat's main story time) beside the other stats when the add-on has it.
 - Quitting Playnite is clean: the screen goes dark at once and Playnite's "Closing" screen no longer flashes up. Sleep from the power menu no longer turns Selene's progress cards off afterwards.

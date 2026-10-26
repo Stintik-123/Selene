@@ -236,8 +236,7 @@ namespace Selene
                 shownAt = DateTime.Now;
                 layer.Visibility = Visibility.Visible;
                 // in, as a console does it: a quick fade with a short drift from the right
-                slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-                card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+                SlideIn();   // solid all the way: in from beyond the right edge (a fade showed the art through it)
                 Ui.NotifySound();
             }
             Update();
@@ -460,12 +459,25 @@ namespace Selene
             leaveTimer.Start();
         }
 
+        // task and note cards: solid, sliding the whole way in and out past the right edge (the layer clips there)
+        private static bool sessionCard;
+        private static double OffEdge { get { return Math.Max(card.ActualWidth, 360) + Edge + ShadowRoom; } }
+
+        private static void SlideIn()
+        {
+            sessionCard = false;
+            card.BeginAnimation(UIElement.OpacityProperty, null);
+            card.Opacity = 1;
+            slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(OffEdge, 0, TimeSpan.FromMilliseconds(300)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
+
         private static void Leave()
         {
             if (source != null || layer == null) return;
             leaving = true;
             var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
-            var slide = new DoubleAnimation(Drift, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn };
+            var slide = sessionCard ? new DoubleAnimation(Drift, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn }
+                                    : new DoubleAnimation(OffEdge, TimeSpan.FromMilliseconds(260)) { EasingFunction = easeIn };
             slide.Completed += (s, e) =>
             {
                 if (!leaving) return;   // a new task brought it back meanwhile
@@ -476,7 +488,7 @@ namespace Selene
                 fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = 0;
             };
             slideIn.BeginAnimation(TranslateTransform.XProperty, slide);
-            card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn });
+            if (sessionCard) card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn });
         }
 
         // Playnite's dim layer off now (it was switched on as the progress window loaded, before Selene saw it)
@@ -597,6 +609,7 @@ namespace Selene
             leaving = false;
             shownAt = DateTime.Now;
             layer.Visibility = Visibility.Visible;
+            sessionCard = true;
             slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
             card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
             Ui.NotifySound();
@@ -634,8 +647,7 @@ namespace Selene
             leaving = false;
             shownAt = DateTime.Now;
             layer.Visibility = Visibility.Visible;
-            slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-            card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            SlideIn();   // solid all the way: in from beyond the right edge (a fade showed the art through it)
             Ui.NotifySound();
             leaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(9000) };
             leaveTimer.Tick += (s, e) => { leaveTimer.Stop(); Leave(); };
