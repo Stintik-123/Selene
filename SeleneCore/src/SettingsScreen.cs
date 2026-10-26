@@ -122,7 +122,7 @@ namespace Selene
         // settings (set with the home in view, in ShadePreviewScreen); elsewhere that row keeps its slider
         private string ActionOf(Features.Option o)
         {
-            return o.Action ?? (o.Key == "shade" && fromMenu ? "Adjust" : null);
+            return o.Action ?? (o.Key == "shade" && LoginScene.KeepHome ? "Adjust" : null);
         }
 
         private void ShowGroup(bool animate)
