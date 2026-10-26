@@ -1,7 +1,9 @@
 // Selene's "Report a problem": takes a report from Selene Core and opens a GitHub issue with it, so players can report a
 // problem without a GitHub account. A report can also start in Selene and be finished on a phone (POST /draft, then the
-// page at /r/<id> adds the words and sends it). Secrets and bindings (see wrangler.toml): GITHUB_TOKEN (fine-grained,
-// Issues read/write on the repo only), REPO ("owner/name"), LIMITS (KV, rate limits), STORE (KV, pictures and drafts).
+// page at /r/<id> adds the words and sends it). Secrets and bindings (see wrangler.toml): APP_ID + APP_PRIVATE_KEY (a
+// GitHub App with Issues read/write, installed on the repo only, so issues are opened by "<app>[bot]"; the key in PKCS#8
+// PEM), or else GITHUB_TOKEN (fine-grained, Issues read/write; issues then carry that token owner's name), REPO
+// ("owner/name"), LIMITS (KV, rate limits and the app's cached token), STORE (KV, pictures and drafts).
 
 const CATEGORIES = [
   "Something doesn't work",
@@ -98,7 +100,7 @@ async function send(r, request, env, origin) {
   const response = await fetch(`https://api.github.com/repos/${env.REPO}/issues`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+      Authorization: `Bearer ${await githubToken(env)}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "selene-report-worker",
@@ -116,6 +118,45 @@ async function send(r, request, env, origin) {
     env.LIMITS.put(dayKey, String(Number(dayCount || 0) + 1), { expirationTtl: 172800 }),
   ]);
   return json({ ok: true, number: created.number, url: created.html_url }, 200);
+}
+
+// The token to open issues with: the GitHub App's installation token (cached for 50 of its 60 minutes) when the app is
+// set up, else the personal GITHUB_TOKEN
+async function githubToken(env) {
+  if (!env.APP_ID || !env.APP_PRIVATE_KEY) return env.GITHUB_TOKEN;
+  const cached = await env.LIMITS.get("app-token");
+  if (cached) return cached;
+  const headers = {
+    Authorization: `Bearer ${await appJwt(env)}`,
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "selene-report-worker",
+  };
+  const install = await fetch(`https://api.github.com/repos/${env.REPO}/installation`, { headers });
+  if (!install.ok) throw new Error("app installation: " + install.status + " " + (await install.text()));
+  const { id } = await install.json();
+  const res = await fetch(`https://api.github.com/app/installations/${id}/access_tokens`, { method: "POST", headers });
+  if (!res.ok) throw new Error("app token: " + res.status + " " + (await res.text()));
+  const { token } = await res.json();
+  await env.LIMITS.put("app-token", token, { expirationTtl: 3000 });
+  return token;
+}
+
+// a 9-minute JWT signed with the app's private key (RS256), what GitHub asks for to hand out installation tokens
+async function appJwt(env) {
+  const pem = env.APP_PRIVATE_KEY.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+  const key = await crypto.subtle.importKey("pkcs8", base64ToBytes(pem), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const now = Math.floor(Date.now() / 1000);
+  const part = (o) => base64Url(new TextEncoder().encode(JSON.stringify(o)));
+  const unsigned = part({ alg: "RS256", typ: "JWT" }) + "." + part({ iat: now - 60, exp: now + 540, iss: String(env.APP_ID) });
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
+  return unsigned + "." + base64Url(new Uint8Array(signature));
+}
+
+function base64Url(bytes) {
+  let text = "";
+  for (const b of bytes) text += String.fromCharCode(b);
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 async function readReport(request) {

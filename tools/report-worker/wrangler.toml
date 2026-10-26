@@ -10,7 +10,8 @@ REPO = "mattxslv/Selene"
 binding = "LIMITS"
 id = "8ca34546671d4ac9a371a5d324bc4496"
 
-# GITHUB_TOKEN is a secret: `npx wrangler secret put GITHUB_TOKEN` (never in this file)
+# secrets (never in this file): APP_ID and APP_PRIVATE_KEY (GitHub App, PKCS#8 PEM), so issues come from "<app>[bot]";
+# `npx wrangler secret put APP_ID` / `npx wrangler secret put APP_PRIVATE_KEY`. GITHUB_TOKEN (personal) is the fallback.
 
 # pictures in reports and drafts finished on a phone
 [[kv_namespaces]]
