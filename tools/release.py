@@ -2,7 +2,7 @@
 """Prepares a release: python3 tools/release.py 1.0.0
 
 Turns the "## Unreleased" notes in CHANGELOG.md into this version, writes the version into theme/theme.yaml,
-SeleneCore/extension.yaml and the README badge, and adds the version to both Playnite installer manifests
+SeleneCore/extension.yaml (the README's release badge follows GitHub by itself), and adds the version to both Playnite installer manifests
 (manifests/*.yaml, which Playnite reads to offer installs and updates). Then, on Windows: tools\\package.ps1 and
 publish the release (see docs/guide/building.md, "Releasing").
 """
@@ -43,7 +43,6 @@ def main():
 
     replace_once(ROOT / "theme" / "theme.yaml", r"^Version: .*$", f"Version: {version}")
     replace_once(ROOT / "SeleneCore" / "extension.yaml", r"^Version: .*$", f"Version: {version}")
-    replace_once(ROOT / "README.md", r"badge/version-[0-9.]+-", f"badge/version-{version}-")
 
     lines = "\n".join("      - >-\n        " + " ".join(n.split()) for n in notes)
     for manifest, file_name, api in (("Selene.yaml", "Selene.pthm", "2.10.0"), ("SeleneCore.yaml", "SeleneCore.pext", "6.0.0")):
