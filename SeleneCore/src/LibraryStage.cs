@@ -382,6 +382,8 @@ namespace Selene
                         if (video != player) return;
                         Fade(true);
                         HomeNav.SetMusic("trailer");   // the game's song comes with its trailer
+                        var gidProp = game.GetType().GetProperty("Id");
+                        if (gidProp != null && gidProp.GetValue(game, null) is Guid) SongSetup.NoteMissing((Guid)gidProp.GetValue(game, null));
                         if (rsHint != null && videoHasSound) rsHint.Text = "Trailer sound";
                     });
                 };

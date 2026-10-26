@@ -25,23 +25,53 @@ namespace Selene
 
         // how far the songs are, for the setting's row: "57 of 358 games have a song" (UniPlaySong keeps each game's song in
         // its own folder under ExtraMetadata / UniPlaySong / Games; a folder with one is a game with a song)
+        private static readonly string[] Audio = { ".mp3", ".m4a", ".ogg", ".opus", ".wav", ".flac" };
+        private static string SongsRoot { get { return Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "UniPlaySong", "Games"); } }
+        private static bool HasAudio(string dir) { return Directory.Exists(dir) && Directory.EnumerateFiles(dir).Any(f => Audio.Any(x => f.EndsWith(x, StringComparison.OrdinalIgnoreCase))); }
+
+        // how many games have a song, of how many
+        private static void Count(out int have, out int total)
+        {
+            have = 0;
+            total = HomeNav.Api.Database.Games.Count(g => !g.Hidden);
+            var root = SongsRoot;
+            if (Directory.Exists(root))
+                foreach (var dir in Directory.GetDirectories(root))
+                    if (HasAudio(dir)) have++;
+        }
+
+        // Selene's downloads are running (its own tools, songs still missing)
+        private static bool Fetching { get { return started && File.Exists(YtDlp) && File.Exists(Ffmpeg); } }
+
         public static string Status()
         {
             try
             {
                 if (HomeNav.Api == null) return null;
-                var root = Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "UniPlaySong", "Games");
-                int total = HomeNav.Api.Database.Games.Count(g => !g.Hidden);
+                int have, total;
+                Count(out have, out total);
                 if (total == 0) return null;
-                var audio = new[] { ".mp3", ".m4a", ".ogg", ".opus", ".wav", ".flac" };
-                int have = 0;
-                if (Directory.Exists(root))
-                    foreach (var dir in Directory.GetDirectories(root))
-                        if (Directory.EnumerateFiles(dir).Any(f => audio.Any(x => f.EndsWith(x, StringComparison.OrdinalIgnoreCase)))) have++;
-                bool fetching = started && File.Exists(YtDlp) && File.Exists(Ffmpeg) && have < total;
-                return have >= total ? "Every game has a song" : have + " of " + total + " games have a song" + (fetching ? ", more on the way" : "");
+                return have >= total ? "Every game has a song" : have + " of " + total + " games have a song" + (Fetching ? ", more on the way" : "");
             }
             catch { return null; }
+        }
+
+        // resting on a game that has no song yet while the songs are still coming: said once a session, short (a new user hears
+        // the theme's music where a song would be and might think songs don't work)
+        private static bool noted;
+        public static void NoteMissing(Guid gameId)
+        {
+            try
+            {
+                if (noted || HomeNav.Api == null || !Fetching || !Features.On("songsetup")) return;
+                if (HasAudio(Path.Combine(SongsRoot, gameId.ToString()))) return;
+                int have, total;
+                Count(out have, out total);
+                if (total == 0 || have >= total) return;
+                noted = true;
+                ProgressToast.ShowNote("Game songs", have + " of " + total + " so far", 0xE405);
+            }
+            catch (Exception ex) { HomeNav.Log("songs: note: " + ex.Message); }
         }
 
         // a little after start, in the background

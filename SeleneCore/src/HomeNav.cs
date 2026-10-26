@@ -1792,6 +1792,8 @@ namespace Selene
                 // the title stays hidden while the 16:9 card is open; HidePreview puts it back under the tile
 
                 Log("preview: " + game);
+                var songFor = Prop(game, "Id");
+                if (songFor is Guid) SongSetup.NoteMissing((Guid)songFor);   // (no song yet while they're still coming: said once)
             }
             catch (Exception ex) { Log("preview failed: " + ex.Message); }
         }
