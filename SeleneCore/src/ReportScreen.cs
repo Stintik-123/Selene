@@ -87,19 +87,19 @@ namespace Selene
             this.back = back;
             this.shot = shot;
             includeShot = shot != null;
-            var head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(120, 80, 0, 0) };
+            var head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 80, 0, 0) };   // (centered over the choices)
             // Selene's mark, glowing, beside the title (as on Selene settings)
-            var titleRow = new StackPanel { Orientation = Orientation.Horizontal };
+            var titleRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
             var mark = Brand.Mark(64, true);
             mark.Margin = new Thickness(0, 0, 16, 0);
             mark.VerticalAlignment = VerticalAlignment.Center;
             titleRow.Children.Add(mark);
             titleRow.Children.Add(new TextBlock { Text = "Report a problem", FontSize = 42, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
             head.Children.Add(titleRow);
-            stepLine = new TextBlock { FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(82, 4, 0, 0) };
+            stepLine = new TextBlock { FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Center };
             head.Children.Add(stepLine);
             if (shot == null && Features.On("reportchord"))
-                head.Children.Add(new TextBlock { Text = "Tip: click both sticks in together anywhere to report with a picture of the screen.", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.45), Margin = new Thickness(82, 6, 0, 0) });
+                head.Children.Add(new TextBlock { Text = "Tip: click both sticks in together anywhere to report with a picture of the screen.", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.45), Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Center });
             header = head;
             Root.Children.Add(head);
             Root.Children.Add(stage);
