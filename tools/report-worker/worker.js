@@ -212,8 +212,8 @@ const PAGE = `<!doctype html>
   button:disabled { opacity: .55; }
   .note { color: var(--faint); font-size: 14px; margin: 18px 0 0; }
   .done { text-align: center; padding-top: 10px; }
-  .check { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center;
-           font-size: 30px; margin: 6px auto 22px; }
+  .check { width: 72px; height: 72px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center;
+           font-size: 36px; font-weight: 700; margin: 6px auto 22px; }
   a.link { color: var(--ink); }
 </style></head>
 <body><main id="app"></main>
