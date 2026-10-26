@@ -20,6 +20,11 @@ namespace Selene
         private ScrollViewer scroller;
         private readonly TextBlock groupTitle;
         private readonly List<Border> rows = new List<Border>();
+        // the rows' live parts: the dot, the note and the bar follow the work while the screen is up (people wait here for it)
+        private class LiveRow { public Features.Option Opt; public UIElement Dot; public TextBlock Note; public WorkBar Bar; }
+        private readonly List<LiveRow> live = new List<LiveRow>();
+        private readonly List<UIElement> groupDots = new List<UIElement>();
+        private System.Windows.Threading.DispatcherTimer liveTimer;
         private readonly List<Border> knobs = new List<Border>();
         private readonly List<Border> tracks = new List<Border>();
         private readonly List<TextBlock> values = new List<TextBlock>();
@@ -44,6 +49,7 @@ namespace Selene
         {
             this.fromMenu = fromMenu;
             this.startKey = startKey;
+            Root.UseLayoutRounding = true;   // whole pixels: at a fractional scroll offset some lines went soft
             group = Math.Max(0, Array.IndexOf(Features.Groups, startGroup ?? ""));
             var layout = new Grid { Margin = new Thickness(120, 110, 120, 110) };
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(400) });
@@ -69,8 +75,10 @@ namespace Selene
                 line.Children.Add(new TextBlock { Text = Ui.Icon(GroupIcons[i]), FontFamily = Ui.Icons, FontSize = 24, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) });
                 line.Children.Add(new TextBlock { Text = Features.Groups[i], FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
                 // the dot: this group's work still running behind the scenes (songs, art, the achievements check)
-                if (Background.ForGroup(Features.Groups[i]))
-                    line.Children.Add(Background.Dot());
+                var groupDot = Background.Dot();
+                groupDot.Visibility = Background.ForGroup(Features.Groups[i]) ? Visibility.Visible : Visibility.Collapsed;
+                line.Children.Add(groupDot);
+                groupDots.Add(groupDot);
                 var row = new Border { Child = line, CornerRadius = new CornerRadius(14), Padding = new Thickness(20, 14, 20, 14), Margin = new Thickness(0, 0, 24, 6) };
                 left.Children.Add(row);
                 groupRows.Add(row);
@@ -105,6 +113,8 @@ namespace Selene
                 startKey = null;
             }
             ShowFocus();
+            if (liveTimer == null) { liveTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) }; liveTimer.Tick += Live; }
+            liveTimer.Start();
         }
 
         // the switches of the chosen group, rising in
@@ -112,28 +122,25 @@ namespace Selene
         {
             options = Features.All.Where(o => o.Group == Features.Groups[group] && (o.Available == null || o.Available())).ToList();
             groupTitle.Text = Features.Groups[group].ToUpperInvariant();
-            optionList.Children.Clear(); rows.Clear(); knobs.Clear(); tracks.Clear(); values.Clear(); sliders.Clear();
+            optionList.Children.Clear(); rows.Clear(); knobs.Clear(); tracks.Clear(); values.Clear(); sliders.Clear(); live.Clear();
             for (int i = 0; i < options.Count; i++)
             {
                 var f = options[i];
                 var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
                 var head = new StackPanel { Orientation = Orientation.Horizontal };
                 head.Children.Add(new TextBlock { Text = f.Label, FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor") });
-                if (Background.ForOption(f.Key)) head.Children.Add(Background.Dot());   // this one's work still running
+                var dot = Background.Dot();   // this one's work still running
+                head.Children.Add(dot);
                 text.Children.Add(head);
                 text.Children.Add(new TextBlock { Text = f.About, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) });
-                string note = null;
-                if (f.Note != null) { try { note = f.Note(); } catch { } }
-                if (!string.IsNullOrEmpty(note)) text.Children.Add(new TextBlock { Text = note, FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor"), Margin = new Thickness(0, 5, 0, 0) });
-                // the work's bar: a thin line filled as far as it has got (as the notification cards')
-                double share = -1;
-                if (f.Progress != null) { try { share = f.Progress(); } catch { } }
-                if (share >= 0)
-                {
-                    var bar = new Border { Height = 4, Width = 260, CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.14), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 9, 0, 2), ClipToBounds = true };
-                    bar.Child = new Border { Width = Math.Round(260 * Math.Min(1, share)), CornerRadius = new CornerRadius(2), Background = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Left };
-                    text.Children.Add(bar);
-                }
+                // the note (a count, a state) and, while the work runs, its bar: a thin line filled as far as it has got, with the percentage
+                var noteBlock = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor"), Margin = new Thickness(0, 5, 0, 0), Visibility = Visibility.Collapsed };
+                text.Children.Add(noteBlock);
+                WorkBar bar = null;
+                if (f.Progress != null) { bar = new WorkBar(); text.Children.Add(bar.Root); }
+                var liveRow = new LiveRow { Opt = f, Dot = dot, Note = noteBlock, Bar = bar };
+                Refresh(liveRow);
+                live.Add(liveRow);
                 var knob = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(11), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(4, 0, 0, 0), Background = Brushes.White, RenderTransform = new TranslateTransform() };
                 var track = new Border { Width = 56, Height = 30, CornerRadius = new CornerRadius(15), VerticalAlignment = VerticalAlignment.Center, Child = knob, Margin = new Thickness(24, 0, 0, 0) };
                 TextBlock value = null;
@@ -212,9 +219,103 @@ namespace Selene
                     double pad = PeekScroller.Band;
                     if (top - pad * 0.6 < scroller.VerticalOffset) want = Math.Max(0, top - pad * 0.6);
                     else if (top + row.ActualHeight > scroller.VerticalOffset + scroller.ViewportHeight - pad) want = top + row.ActualHeight - (scroller.ViewportHeight - pad);
-                    if (Math.Abs(want - scroller.VerticalOffset) > 0.5) scroller.ScrollToVerticalOffset(want);
+                    if (Math.Abs(want - scroller.VerticalOffset) > 0.5) scroller.ScrollToVerticalOffset(Math.Round(want));
                 }
                 catch { }
+            }
+        }
+
+        // a row's live parts brought up to date: the dot while its work runs, the note, the bar and its percentage
+        private static void Refresh(LiveRow r)
+        {
+            string note = null;
+            if (r.Opt.Note != null) { try { note = r.Opt.Note(); } catch { } }
+            r.Note.Text = note ?? "";
+            r.Note.Visibility = string.IsNullOrEmpty(note) ? Visibility.Collapsed : Visibility.Visible;
+            double share = -1;
+            if (r.Opt.Progress != null) { try { share = r.Opt.Progress(); } catch { } }
+            if (r.Bar != null) r.Bar.Set(share);
+            r.Dot.Visibility = Background.ForOption(r.Opt.Key) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // once a second while the screen is up: the work moves on, the rows and the groups' dots with it
+        private void Live(object sender, EventArgs e)
+        {
+            try
+            {
+                foreach (var r in live) Refresh(r);
+                for (int i = 0; i < groupDots.Count && i < Features.Groups.Length; i++)
+                    groupDots[i].Visibility = Background.ForGroup(Features.Groups[i]) ? Visibility.Visible : Visibility.Collapsed;
+            }
+            catch (Exception ex) { HomeNav.Log("settings: live: " + ex.Message); }
+        }
+
+        public override void Hidden()
+        {
+            if (liveTimer != null) liveTimer.Stop();
+        }
+
+        // the bar under a setting whose work runs: across the words' width to the control, filled as far as it has got, the
+        // percentage at its end, a soft light sweeping along it (so it reads as going, not stuck) while it's on screen
+        private class WorkBar
+        {
+            public readonly DockPanel Root = new DockPanel { Margin = new Thickness(0, 9, 0, 2), Visibility = Visibility.Collapsed, LastChildFill = true };
+            private readonly ColumnDefinition done = new ColumnDefinition(), left = new ColumnDefinition();
+            private readonly TextBlock percent;
+            private readonly TranslateTransform slide = new TranslateTransform(-1.2, 0);
+            private bool running;
+
+            public WorkBar()
+            {
+                percent = new TextBlock { FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right, MinWidth = 36, Margin = new Thickness(12, 0, 0, 0) };
+                DockPanel.SetDock(percent, Dock.Right);
+                Root.Children.Add(percent);
+                var bar = new Grid { Height = 4, ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center };
+                bar.ColumnDefinitions.Add(done);
+                bar.ColumnDefinitions.Add(left);
+                var track = new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.14) };
+                Grid.SetColumnSpan(track, 2);
+                bar.Children.Add(track);
+                bar.Children.Add(new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("GlyphColor"), MinWidth = 6 });
+                // the light: a soft band of white gliding over the whole bar, brighter over the filled part (the fill shows through it)
+                var light = new Border
+                {
+                    Background = Brushes.White, Opacity = 0.45, IsHitTestVisible = false,
+                    OpacityMask = new LinearGradientBrush(new GradientStopCollection
+                    {
+                        new GradientStop(Color.FromArgb(0x00, 255, 255, 255), 0.25), new GradientStop(Color.FromArgb(0xFF, 255, 255, 255), 0.5), new GradientStop(Color.FromArgb(0x00, 255, 255, 255), 0.75)
+                    }, new Point(0, 0.5), new Point(1, 0.5)) { RelativeTransform = slide }
+                };
+                Grid.SetColumnSpan(light, 2);
+                bar.Children.Add(light);
+                Root.Children.Add(bar);
+                Root.Loaded += (s, e) => { if (Root.Visibility == Visibility.Visible) Start(); };
+                Root.Unloaded += (s, e) => Stop();   // (nothing ticking for a row gone)
+            }
+
+            // how far: 0..1 shows it so, below 0 takes it away
+            public void Set(double share)
+            {
+                if (share < 0) { Root.Visibility = Visibility.Collapsed; Stop(); return; }
+                share = Math.Max(0, Math.Min(1, share));
+                done.Width = new GridLength(Math.Max(0.004, share), GridUnitType.Star);
+                left.Width = new GridLength(Math.Max(0, 1 - share), GridUnitType.Star);
+                percent.Text = (int)Math.Round(share * 100) + "%";
+                Root.Visibility = Visibility.Visible;
+                if (Root.IsLoaded) Start();
+            }
+
+            private void Start()
+            {
+                if (running) return;
+                running = true;
+                slide.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-1.2, 1.2, TimeSpan.FromMilliseconds(1600)) { RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
+            }
+
+            private void Stop()
+            {
+                running = false;
+                slide.BeginAnimation(TranslateTransform.XProperty, null);
             }
         }
 

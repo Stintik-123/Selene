@@ -56,7 +56,7 @@ namespace Selene
             card.Width = session ? SessionWidth : CardWidth;   // (a note's or task's width follows its words: Size())
             card.MaxWidth = double.PositiveInfinity;
             card.Height = session ? SessionHeight : CardHeight;
-            card.Padding = session ? new Thickness(0) : new Thickness(16, 0, 22, 0);
+            card.Padding = session ? new Thickness(0) : new Thickness(16, 0, 16, 0);
             card.CornerRadius = new CornerRadius(session ? 14 : 12);
             card.Background = session ? sessionGlass : glass;
             if (!session && !ReferenceEquals(card.Child, row)) card.Child = row;
@@ -279,7 +279,7 @@ namespace Selene
         }
 
         // ---- a card as wide as its words, between the least and the most (a console's strip grows with the text) ----
-        private const double Around = 104;   // the icon tile, its gap and the card's padding
+        private const double Around = 98;   // the icon tile, its gap and the card's padding
 
         private static double Need(string head, string line, double headSize, double lineSize)
         {
@@ -392,7 +392,7 @@ namespace Selene
             sessionGlass = Ink.Brush("SeleneGlassColor", 0.92);   // the session card: darker, the game's art shows faintly in it
             card = new Border
             {
-                Width = CardWidth, CornerRadius = new CornerRadius(12), Padding = new Thickness(16, 0, 22, 0), Height = CardHeight,
+                Width = CardWidth, CornerRadius = new CornerRadius(12), Padding = new Thickness(16, 0, 16, 0), Height = CardHeight,
                 Background = glass, BorderBrush = Ink.Brush("SeleneInkColor", 0.08), BorderThickness = new Thickness(1),   // see-through
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
                 Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
