@@ -37,9 +37,13 @@ namespace Selene
         // opened from the menu: B goes back to it (on this item); held Start from the home: B goes back to the home
         private readonly bool fromMenu;
 
-        public SettingsScreen(bool fromMenu = false, string startGroup = null)
+        // startKey: the row to land on (back from what that row opened: Setup check, Report a problem...), else the group list
+        private string startKey;
+
+        public SettingsScreen(bool fromMenu = false, string startGroup = null, string startKey = null)
         {
             this.fromMenu = fromMenu;
+            this.startKey = startKey;
             group = Math.Max(0, Array.IndexOf(Features.Groups, startGroup ?? ""));
             var layout = new Grid { Margin = new Thickness(120, 110, 120, 110) };
             layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(400) });
@@ -91,6 +95,12 @@ namespace Selene
             for (int i = 0; i < groupRows.Count; i++) Ui.Rise(groupRows[i], 40 + i * 40, 12, 260);
             Ui.Play("OpenPanel.wav", 0.8);
             ShowGroup(false);
+            if (startKey != null)
+            {
+                int k = options.FindIndex(o => o.Key == startKey);
+                if (k >= 0) { index = k; inOptions = true; }
+                startKey = null;
+            }
             ShowFocus();
         }
 
@@ -241,10 +251,10 @@ namespace Selene
             {
                 if (b != "A") { MoveRow(b); return; }
                 Ui.Confirm();
-                if (opt.Key == "setupcheck") { bool back = fromMenu; LoginScene.Show(new SetupScreen(false) { Back = () => new SettingsScreen(back, "Advanced") }, 1); }
-                else if (opt.Key == "updatenow") { bool back = fromMenu; UpdateCheck.CheckNow(() => new SettingsScreen(back, "Advanced")); }
-                else if (opt.Key == "report") { bool back = fromMenu; LoginScene.Show(new ReportScreen(() => new SettingsScreen(back, "Advanced")), 1); }
-                else if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false, () => new SettingsScreen(true, "Games")), 1);
+                if (opt.Key == "setupcheck") { bool back = fromMenu; LoginScene.Show(new SetupScreen(false) { Back = () => new SettingsScreen(back, "Advanced", "setupcheck") }, 1); }
+                else if (opt.Key == "updatenow") { bool back = fromMenu; UpdateCheck.CheckNow(() => new SettingsScreen(back, "Advanced", "updatenow")); }
+                else if (opt.Key == "report") { bool back = fromMenu; LoginScene.Show(new ReportScreen(() => new SettingsScreen(back, "Advanced", "report")), 1); }
+                else if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false, () => new SettingsScreen(true, "Games", "storeregion")), 1);
                 else if (opt.Key == "reset")
                 {
                     ask = new Dialog("\uE5D5", "Reset Selene settings?", "Every switch and choice goes back to how Selene ships. Your profiles, theme and wallpaper stay.",
