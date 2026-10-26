@@ -27,7 +27,7 @@ namespace Selene
         [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
         [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left, Top, Right, Bottom; }
 
-        private const double CardWidth = 500, CardHeight = 96, Edge = 28, ShadowRoom = 24, Drift = 26;   // one size for every card
+        private const double CardWidth = 560, CardHeight = 96, Edge = 28, ShadowRoom = 24, Drift = 26;   // one size for every card
         private const int MinShownMs = 2600, AfterDoneMs = 1100, InMs = 260, OutMs = 220;
         private static Window hiddenProgress;   // Playnite's own window, kept out of sight
         private static DateTime busyUntil = DateTime.MinValue;
@@ -218,6 +218,7 @@ namespace Selene
         private static void Show(Window main, object vm)
         {
             source = vm;
+            shownText = null;
             if (layer == null) Build();
             icon.Background = Ink.Brush("GlyphColor", 0.18);
             icon.Child = downloadGlyph;
@@ -344,7 +345,7 @@ namespace Selene
                 var args = Prop(source, "ProgressArgs");
                 var text = Prop(args, "Text") as string;
                 if (text != null) text = text.Trim();   // Playnite's texts can start with spaces (they sat indented)
-                if (!string.IsNullOrEmpty(text) && words.Text != text) { words.Text = text; IconFor(text); }
+                if (!string.IsNullOrEmpty(text) && shownText != text) { shownText = text; ShowWords(text); IconFor(text); }
                 bool indeterminate = Equals(Prop(args, "IsIndeterminate"), true);
                 double max = ToDouble(Prop(args, "ProgressMaxValue")), value = ToDouble(Prop(args, "CurrentProgressValue"));
                 double width = track.ActualWidth;
@@ -353,6 +354,27 @@ namespace Selene
                 Bar(width * Math.Max(0, Math.Min(1, value / max)));
             }
             catch { }
+        }
+
+        // "HowLongToBeat - Downloading data from new games...": the add-on's name as a small heading, its message one line under
+        // it (as one wrapped line they ran together)
+        private static string shownText;
+
+        private static void ShowWords(string text)
+        {
+            string head = null, line = text;
+            int dash = text.IndexOf(" - ", StringComparison.Ordinal);
+            if (dash > 0 && dash <= 32) { head = text.Substring(0, dash).Trim(); line = text.Substring(dash + 3).Trim(); }
+            if (line.Length > 0) line = char.ToUpper(line[0]) + line.Substring(1);
+            if (head != null)
+            {
+                titleLine.Content = new TextBlock { Text = head, FontFamily = Ui.Display, FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.55), TextTrimming = TextTrimming.CharacterEllipsis };
+                titleLine.Margin = new Thickness(0, 0, 0, 2);
+                titleLine.Visibility = Visibility.Visible;
+            }
+            else titleLine.Visibility = Visibility.Collapsed;
+            words.TextWrapping = head != null ? TextWrapping.NoWrap : TextWrapping.Wrap;
+            words.Text = line;
         }
 
         private static void Sweep(double width)
@@ -639,6 +661,7 @@ namespace Selene
             titleLine.Content = new TextBlock { Text = title, FontFamily = Ui.Display, FontSize = 19, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 110 };
             titleLine.Visibility = Visibility.Visible;
             titleLine.Margin = new Thickness(0, 0, 0, 3);
+            words.TextWrapping = TextWrapping.Wrap;
             words.Text = line;
             words.FontSize = 15;
             words.Foreground = Ink.Brush("SeleneInkColor", 0.65);
