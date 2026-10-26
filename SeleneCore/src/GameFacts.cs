@@ -69,6 +69,21 @@ namespace Selene
             catch { return null; }
         }
 
+        // a square picture of the game: Selene's own square art (the media folder), else the game's icon
+        public static string SquarePath(Game g)
+        {
+            try
+            {
+                if (g == null) return null;
+                var square = System.IO.Path.Combine(SelenePaths.Media("Square"), g.Id + ".jpg");
+                if (System.IO.File.Exists(square)) return square;
+                if (string.IsNullOrEmpty(g.Icon) || HomeNav.Api == null) return null;
+                var icon = HomeNav.Api.Database.GetFullFilePath(g.Icon);
+                return !string.IsNullOrEmpty(icon) && System.IO.File.Exists(icon) && !icon.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) ? icon : null;
+            }
+            catch { return null; }
+        }
+
         public static string BackgroundPath(Game g)
         {
             try

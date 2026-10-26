@@ -216,7 +216,7 @@ namespace Selene
                 var s = games[i];
                 var g = GameFacts.Find(s.GameId);
                 var face = new Border { Width = 96, Height = 96, CornerRadius = new CornerRadius(12), Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
-                var cover = g != null ? GameFacts.CoverPath(g) : null;
+                var cover = g != null ? GameFacts.SquarePath(g) ?? GameFacts.CoverPath(g) : null;   // square art, else the cover filling the square
                 if (cover != null) { files.Add(cover); faces.Add(face); }
 
                 var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
@@ -259,14 +259,7 @@ namespace Selene
             Ui.LoadInOrder(files, 160, (k, pic) =>
             {
                 if (closed || k >= faces.Count) return;
-                // square, the whole cover in it: fitted in the middle over a blurred, darker copy of itself filling the sides
-                var fill = new Border { Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill }, Opacity = 0.55, Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 14 } };
-                var whole = new Image { Source = pic, Stretch = Stretch.Uniform };
-                RenderOptions.SetBitmapScalingMode(whole, BitmapScalingMode.HighQuality);
-                var both = new Grid();
-                both.Children.Add(fill);
-                both.Children.Add(whole);
-                faces[k].Child = both;
+                faces[k].Child = new Border { Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } };
             });
         }
 
@@ -408,9 +401,11 @@ namespace Selene
                         var id = x.GameId;
                         return new CardShowcase.Entry
                         {
-                            Image = g != null ? (GameFacts.BackgroundPath(g) ?? GameFacts.CoverPath(g)) : null,
+                            Icon = x.Item.Icon,
+                            Grade = x.Item.Grade,
                             Title = x.Item.Name,
-                            Sub = (g != null ? g.Name + "  ·  " : "") + x.Item.Grade + "  ·  " + GameFacts.Ago(x.Item.When),
+                            Sub = g != null ? g.Name : "",
+                            Third = GameFacts.Ago(x.Item.When),
                             Glyph = "",
                             Open = () => LoginScene.OpenWith(() => new AchievementsScreen(id, null))
                         };

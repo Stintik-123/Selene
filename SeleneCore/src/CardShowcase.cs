@@ -17,6 +17,9 @@ namespace Selene
             public string Image;          // a picture file (decoded small), or null for a glyph face
             public string Title, Sub, Glyph;
             public Action Open;
+            // an achievement: its own icon on a glass tile with its words beside it (no picture behind: the same game's art
+            // came back on every tile); Grade is its trophy (bronze...), Third its last line
+            public string Icon, Grade, Third;
         }
 
         private class Strip
@@ -57,6 +60,7 @@ namespace Selene
                 var e = s.Entries[i];
                 var tile = new Tile(420, 236, 14, 5) { FocusScale = 1.04 };
                 tile.Root.Margin = new Thickness(0, 0, 22, 0);
+                if (e.Icon != null || e.Grade != null) { tile.Face.Child = AchievementFace(e); panel.Children.Add(tile.Root); s.Tiles.Add(tile); Ui.Rise(tile.Root, i * 50, 12, 280); continue; }
                 var frame = new Grid();
                 if (e.Image != null) { files.Add(e.Image); at.Add(i); }
                 else
@@ -84,6 +88,34 @@ namespace Selene
                 frame.Children.Insert(0, fill);
                 Ui.Fade(fill, 1, 260);
             });
+        }
+
+        private static Grid AchievementFace(Entry e)
+        {
+            var g = new Grid { Margin = new Thickness(22) };
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var icon = new Border { Width = 150, Height = 150, CornerRadius = new CornerRadius(16), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Background = Ink.Brush("SeleneInkColor", 0.08) };
+            icon.Child = AchievementsData.TrophyIcon(e.Grade ?? "Bronze", 64);
+            ((TextBlock)icon.Child).HorizontalAlignment = HorizontalAlignment.Center;
+            if (e.Icon != null) Ui.LoadInOrder(new List<string> { e.Icon }, 300, (k, pic) => icon.Child = new Border { Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } });
+            g.Children.Add(icon);
+            var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(20, 0, 0, 0) };
+            Grid.SetColumn(words, 1);
+            words.Children.Add(new TextBlock { Text = e.Title ?? "", FontSize = 22, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), TextWrapping = TextWrapping.Wrap, MaxHeight = 62, TextTrimming = TextTrimming.CharacterEllipsis });
+            if (!string.IsNullOrEmpty(e.Sub)) words.Children.Add(new TextBlock { Text = e.Sub, FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 6, 0, 0) });
+            var line = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
+            if (e.Grade != null)
+            {
+                var t = AchievementsData.TrophyIcon(e.Grade, 22);
+                t.Margin = new Thickness(0, 0, 6, 0);
+                line.Children.Add(t);
+                line.Children.Add(new TextBlock { Text = e.Grade, FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = AchievementsData.GradeBrush(e.Grade), VerticalAlignment = VerticalAlignment.Center });
+            }
+            if (!string.IsNullOrEmpty(e.Third)) line.Children.Add(new TextBlock { Text = (e.Grade != null ? "  ·  " : "") + e.Third, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), VerticalAlignment = VerticalAlignment.Center });
+            words.Children.Add(line);
+            g.Children.Add(words);
+            return g;
         }
 
         // Down from a card goes into its pictures; true when the press was the pictures'
