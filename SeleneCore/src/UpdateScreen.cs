@@ -49,8 +49,25 @@ namespace Selene
             // the right stick scrolls a long one, smoothly
             var notesScroll = new ScrollViewer { Content = notes, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false, CanContentScroll = false };
             stick = new StickScroll(notesScroll, () => !closed);
-            var notesBox = new Border { MaxHeight = 380, Margin = new Thickness(0, 30, 0, 0), ClipToBounds = true, Child = notesScroll, Padding = new Thickness(28, 22, 28, 22), CornerRadius = new CornerRadius(18), Background = Ink.Brush("SeleneGlassColor", 0.7), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(1) };
-            notesBox.OpacityMask = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Colors.Black, 0), new GradientStop(Colors.Black, 0.82), new GradientStop(Color.FromArgb(0x30, 0, 0, 0), 1) }, 90);
+            notesScroll.OpacityMask = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Colors.Black, 0), new GradientStop(Colors.Black, 0.85), new GradientStop(Color.FromArgb(0x30, 0, 0, 0), 1) }, 90);
+            // a slim bar at the right: there's more, and where you are in it (only when it scrolls)
+            var thumb = new Border { Width = 4, CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.6), VerticalAlignment = VerticalAlignment.Top };
+            var track = new Grid { Width = 4, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, -16, 0), Visibility = Visibility.Collapsed };
+            track.Children.Add(new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.12) });
+            track.Children.Add(thumb);
+            notesScroll.ScrollChanged += (sv, e) =>
+            {
+                bool more = notesScroll.ScrollableHeight > 1 && notesScroll.ExtentHeight > 0;
+                track.Visibility = more ? Visibility.Visible : Visibility.Collapsed;
+                if (!more) return;
+                double h = notesScroll.ViewportHeight, size = Math.Max(24, h * h / notesScroll.ExtentHeight);
+                thumb.Height = size;
+                thumb.Margin = new Thickness(0, (h - size) * notesScroll.VerticalOffset / notesScroll.ScrollableHeight, 0, 0);
+            };
+            var notesArea = new Grid();
+            notesArea.Children.Add(notesScroll);
+            notesArea.Children.Add(track);
+            var notesBox = new Border { MaxHeight = 380, Margin = new Thickness(0, 30, 0, 0), ClipToBounds = true, Child = notesArea, Padding = new Thickness(28, 22, 28, 22), CornerRadius = new CornerRadius(18), Background = Ink.Brush("SeleneGlassColor", 0.7), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(1) };
             col.Children.Add(notesBox);
 
             fill.Background = Ink.Brush("SeleneFocusColor");
