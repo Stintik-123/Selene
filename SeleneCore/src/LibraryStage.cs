@@ -41,8 +41,6 @@ namespace Selene
                 foreach (UIElement child in grid.Children)
                     if (child.GetType().Name == "FadeImage") { art = child; break; }
             wallpaper = HomeNav.FindByName(library, "SeleneLibraryWallpaper") as UIElement;
-            fadeLeft = HomeNav.FindByName(library, "SeleneLibraryFadeLeft") as FrameworkElement;
-            fadeRight = HomeNav.FindByName(library, "SeleneLibraryFadeRight") as FrameworkElement;
             baseLayer = HomeNav.FindByName(library, "SeleneLibraryBase") as UIElement;
             HomeNav.Log("library stage: art " + (art != null) + ", wallpaper " + (wallpaper != null));
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
@@ -59,7 +57,13 @@ namespace Selene
                 var game = gp != null ? gp.GetValue(entry, null) as Playnite.SDK.Models.Game : entry as Playnite.SDK.Models.Game;
                 try { HltbFetch.ForPage(game); } catch (Exception ex) { HomeNav.Log("hltb: " + ex.Message); }   // its times under its name
             };
-            library.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Rearm(false); else Stop(); };
+            library.IsVisibleChanged += (s, e) =>
+            {
+                if (!(bool)e.NewValue) { Stop(); return; }
+                Rearm(false);
+                // the row's edges as soon as it shows (not from the first move)
+                list.Dispatcher.BeginInvoke(new Action(() => { var sv = RowScroller(); if (sv != null) { HookScroll(sv); ShowFades(sv); } }), DispatcherPriority.Loaded);
+            };
             HookArtCrossfade(grid);
             HookGlide();
         }
@@ -85,7 +89,34 @@ namespace Selene
         }
 
         private static ScrollViewer hooked;
-        private static FrameworkElement fadeLeft, fadeRight;
+        // the row's edges: a cover cut by the screen dissolves over the last 200 px (an opacity mask on the row, its end stops
+        // animated clear or solid), so nothing is a black slab; a side with nothing cut off (the row's start or end) stays solid
+        private static GradientStop maskLeft, maskRight, maskLeftIn, maskRightIn;
+        private const double EdgePx = 200;
+
+        private static void EnsureMask()
+        {
+            if (!Features.On("collectionglide")) { if (list.OpacityMask != null) list.OpacityMask = null; return; }
+            var brush = list.OpacityMask as LinearGradientBrush;
+            if (brush == null)
+            {
+                maskLeft = new GradientStop(Colors.Black, 0);
+                maskLeftIn = new GradientStop(Colors.Black, 0.1);
+                maskRightIn = new GradientStop(Colors.Black, 0.9);
+                maskRight = new GradientStop(Colors.Black, 1);
+                brush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0) };
+                brush.GradientStops.Add(maskLeft); brush.GradientStops.Add(maskLeftIn); brush.GradientStops.Add(maskRightIn); brush.GradientStops.Add(maskRight);
+                list.OpacityMask = brush;
+            }
+            double w = list.ActualWidth;
+            if (w > EdgePx * 3) { maskLeftIn.Offset = EdgePx / w; maskRightIn.Offset = 1 - EdgePx / w; }
+        }
+
+        private static void SetEdge(GradientStop stop, bool dissolve)
+        {
+            var to = dissolve ? Color.FromArgb(0, 0, 0, 0) : Colors.Black;
+            stop.BeginAnimation(GradientStop.ColorProperty, new ColorAnimation(to, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
         private static TranslateTransform endShift;
 
         // scrolled as far as it goes, the last cover (and its ring) still sat past the screen's edge: the whole row nudges left
@@ -111,20 +142,13 @@ namespace Selene
             endShift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(need, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         }
 
-        // the fades at the row's ends, each only while a cover is cut off on that side
+        // each edge dissolves only while a cover is cut off on that side
         private static void ShowFades(ScrollViewer sv)
         {
-            bool on = Features.On("collectionglide");
-            Fade(fadeLeft, on && sv.HorizontalOffset > 1);
-            Fade(fadeRight, on && sv.HorizontalOffset < sv.ScrollableWidth - 1);
-        }
-
-        private static void Fade(FrameworkElement el, bool show)
-        {
-            if (el == null) return;
-            double to = show ? 1 : 0;
-            if (Math.Abs(el.Opacity - to) < 0.01 && !el.HasAnimatedProperties) return;
-            el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            EnsureMask();
+            if (maskLeft == null || !Features.On("collectionglide")) return;
+            SetEdge(maskLeft, sv.HorizontalOffset > 1);
+            SetEdge(maskRight, sv.HorizontalOffset < sv.ScrollableWidth - 1);
         }
 
         // the row's scroll viewer watched for its one-cover steps (hooked again if the list got a new one)
