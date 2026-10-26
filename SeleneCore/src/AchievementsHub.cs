@@ -45,6 +45,11 @@ namespace Selene
         private int lastTotal;   // the games the check went through (its "of N"), for the line when it's over
         private const double CheckBar = 420;
         private string heroShown;
+        // the games' order: Y goes round these (kept while Playnite runs, so it's the same coming back from a game)
+        private static readonly string[] Sorts = { "Last unlocked", "Most complete", "Least complete", "Name A\u2013Z", "Name Z\u2013A", "Most trophies" };
+        private static int sort;
+        private TextBlock sortLabel;
+        private List<AchievementsData.GameSet> allSets = new List<AchievementsData.GameSet>();
 
         public override bool Overlay { get { return true; } }
         public override Brush OverlayShade { get { return Ink.Brush("SeleneScrimColor", 0.96); } }
@@ -87,6 +92,8 @@ namespace Selene
             gamesTitle = RowTitle("Your games");
             gamesTitle.Margin = new Thickness(Side + 2, ListTop, 0, 0);
             Root.Children.Add(gamesTitle);
+            sortLabel = new TextBlock { Text = Sorts[sort], FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.75), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, ListTop + 3, Side + 4, 0), Visibility = Visibility.Collapsed };
+            Root.Children.Add(sortLabel);
             scroller = new ScrollViewer { Content = list, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false, CanContentScroll = false };
             var listArea = PeekScroller.Wrap(scroller, list);
             listArea.VerticalAlignment = VerticalAlignment.Top;
@@ -98,7 +105,7 @@ namespace Selene
             Root.Children.Add(note);
             recentTitle.Visibility = gamesTitle.Visibility = Visibility.Collapsed;
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
-            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Open")));
+            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("Y", "Order"), Ui.Prompt("A", "Open")));
             heroLater.Tick += (s, e) => { heroLater.Stop(); ShowHero(); };
         }
 
@@ -187,13 +194,45 @@ namespace Selene
             // (no row of the latest unlocks here any more: each game's screen shows its own)
             BuildRecent();
             // every game: the latest played-for first
-            games.AddRange(sets.OrderByDescending(s => s.LastUnlock ?? DateTime.MinValue).ThenByDescending(s => s.Unlocked).ThenBy(s => s.Name));
+            allSets = sets;
+            games.AddRange(Order(sets));
             BuildGames();
+            sortLabel.Visibility = games.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
 
             recentTitle.Visibility = recent.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             gamesTitle.Visibility = Visibility.Visible;
             zone = recent.Count == 0 ? 1 : Math.Min(1, keepZone);
             if (zone == 0) col = Math.Min(keepIndex, recent.Count - 1); else row = Math.Min(keepIndex, games.Count - 1);
+            ShowFocus(false);
+        }
+
+        // the games in the chosen order (ties: the latest unlock, then the name)
+        private static IEnumerable<AchievementsData.GameSet> Order(List<AchievementsData.GameSet> sets)
+        {
+            switch (sort)
+            {
+                case 1: return sets.OrderByDescending(s => s.Percent).ThenByDescending(s => s.Unlocked).ThenBy(s => s.Name);
+                case 2: return sets.OrderBy(s => s.Percent).ThenBy(s => s.Name);
+                case 3: return sets.OrderBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase);
+                case 4: return sets.OrderByDescending(s => s.Name, StringComparer.CurrentCultureIgnoreCase);
+                case 5: return sets.OrderByDescending(s => s.Unlocked).ThenBy(s => s.Name);
+                default: return sets.OrderByDescending(s => s.LastUnlock ?? DateTime.MinValue).ThenByDescending(s => s.Unlocked).ThenBy(s => s.Name);
+            }
+        }
+
+        // Y: the next order, the list built again from its top
+        private void NextOrder()
+        {
+            if (games.Count < 2) return;
+            sort = (sort + 1) % Sorts.Length;
+            Ui.Key();
+            sortLabel.Text = Sorts[sort];
+            Ui.Pop(sortLabel);
+            games.Clear(); gameRows.Clear(); list.Children.Clear();
+            games.AddRange(Order(allSets));
+            BuildGames();
+            zone = 1; row = 0;
+            scroller.ScrollToVerticalOffset(0);
             ShowFocus(false);
         }
 
@@ -415,6 +454,9 @@ namespace Selene
                     ShowFocus(true);
                     return;
                 }
+                case "Y":
+                    NextOrder();
+                    return;
                 case "A":
                 {
                     var id = FocusedGame;
