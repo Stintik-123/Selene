@@ -58,6 +58,8 @@ namespace Selene
             card.MaxWidth = double.PositiveInfinity;
             card.Height = session ? SessionHeight : CardHeight;
             card.Padding = session ? new Thickness(0) : new Thickness(16, 0, 16, 0);
+            icon.Margin = new Thickness(0, 0, 14, 0);   // (a picture-only card before took these away)
+            text.Visibility = Visibility.Visible;
             card.CornerRadius = new CornerRadius(session ? 14 : 12);
             card.Background = session ? sessionGlass : glass;
             if (!session && !ReferenceEquals(card.Child, row)) card.Child = row;
@@ -296,9 +298,12 @@ namespace Selene
             return Math.Ceiling(ft.WidthIncludingTrailingWhitespace);
         }
 
-        private static void Size(double need)
+        private static void Size(double need) { Size(need, false); }
+
+        // tiny: no least width (a picture-only card is just its tile)
+        private static void Size(double need, bool tiny)
         {
-            double w = Math.Min(CardWidth, Math.Max(CardMinWidth, Math.Ceiling(need / 2) * 2));
+            double w = Math.Min(CardWidth, Math.Max(tiny ? 0 : CardMinWidth, Math.Ceiling(need / 2) * 2));
             // a card already up grows or shrinks to its new words (200 ms) instead of jumping
             bool live = layer.Visibility == Visibility.Visible && card.ActualWidth > 1 && Math.Abs(card.ActualWidth - w) > 1;
             double from = card.ActualWidth;
@@ -312,7 +317,7 @@ namespace Selene
             }
             else card.Width = w;
             card.MaxWidth = double.PositiveInfinity;
-            words.MaxWidth = w - Around;
+            words.MaxWidth = Math.Max(0, w - Around);
         }
 
         // the card on screen out past the right edge, then the next one
@@ -793,28 +798,45 @@ namespace Selene
         // a short note of Selene's own (a new version is out...): the usual card with an icon, a bold line and a line under it,
         // held for a few seconds
         public static void ShowNote(string title, string line, int glyph) { ShowNote(title, line, glyph, false); }
+        public static void ShowNote(string title, string line, int glyph, bool first) { ShowNote(title, line, () => Ui.Glyph(Ui.Icon(glyph), Ui.Icons, 22, Ink.Brush("GlyphColor")), first); }
+
+        // a picture alone (the controller's battery): the card is just the picture's tile, nothing written
+        public static void ShowPicture(Func<UIElement> picture) { ShowNote("", "", picture, false); }
 
         // first: a note that goes before any task's card (a new Selene): the task's card steps aside for it and comes back after
-        public static void ShowNote(string title, string line, int glyph, bool first)
+        // (the picture made fresh each showing: a card put off and shown later can't reuse an element already placed)
+        public static void ShowNote(string title, string line, Func<UIElement> picture, bool first)
         {
             var main = Application.Current.MainWindow;
             if (main == null) return;
-            if ((source != null && !first) || !Ready || swapping) { Later(first ? 300 : 1500, () => ShowNote(title, line, glyph, first)); return; }   // a task's card up, or the start-up: after it
+            if ((source != null && !first) || !Ready || swapping) { Later(first ? 300 : 1500, () => ShowNote(title, line, picture, first)); return; }   // a task's card up, or the start-up: after it
             if (first && source != null)
             {
                 var task = source;
                 Later(NoteHoldMs + 400, () => { if (ReferenceEquals(source, task) && Equals(displayed, title)) { HomeNav.Log("card: back to " + TaskText(task)); Show(main, task); } });
             }
             if (layer == null) Build();
-            if (NoteHoldLeft > 0) { Later(NoteHoldLeft + 50, () => ShowNote(title, line, glyph, first)); return; }   // (the note up keeps its time)
-            if (layer.Visibility == Visibility.Visible && !leaving) { SwapOut(() => ShowNote(title, line, glyph, first)); return; }
+            if (NoteHoldLeft > 0) { Later(NoteHoldLeft + 50, () => ShowNote(title, line, picture, first)); return; }   // (the note up keeps its time)
+            if (layer.Visibility == Visibility.Visible && !leaving) { SwapOut(() => ShowNote(title, line, picture, first)); return; }
             Place(main);
             Shape(false);
             displayed = title;
             noteHeldUntil = DateTime.Now.AddMilliseconds(NoteHoldMs);
             icon.Background = Ink.Brush("GlyphColor", 0.18);
-            icon.Child = Ui.Glyph(Ui.Icon(glyph), Ui.Icons, 22, Ink.Brush("GlyphColor"));
+            icon.Child = picture();
             icon.Visibility = Visibility.Visible;
+            bool pictureOnly = string.IsNullOrEmpty(title) && string.IsNullOrEmpty(line);
+            if (pictureOnly)
+            {
+                // the tile alone, the card wrapped close around it
+                icon.Margin = new Thickness(0);
+                text.Visibility = Visibility.Collapsed;
+                titleLine.Visibility = Visibility.Collapsed;
+                words.Text = "";
+                Size(48 + 2 * 16 + 2, true);
+            }
+            else
+            {
             titleLine.Content = new TextBlock { Text = title, FontFamily = Ui.Display, FontSize = 18, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - Around };
             titleLine.Visibility = Visibility.Visible;
             titleLine.Margin = new Thickness(0, 0, 0, 2);
@@ -823,16 +845,17 @@ namespace Selene
             words.Foreground = Ink.Brush("SeleneInkColor", 0.72);
             words.TextWrapping = TextWrapping.NoWrap;
             Size(Need(title, line, 18, 15));
+            }
             if (leaveTimer != null) leaveTimer.Stop();
             leaving = false;
             shownAt = DateTime.Now;
             layer.Visibility = Visibility.Visible;
             SlideIn();   // solid all the way: in from beyond the right edge (a fade showed the art through it)
             Ui.NotifySound();
-            leaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(9000) };
+            leaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(pictureOnly ? 6000 : 9000) };
             leaveTimer.Tick += (s, e) => { leaveTimer.Stop(); Leave(); };
             leaveTimer.Start();
-            HomeNav.Log("note card: " + title);
+            HomeNav.Log("note card: " + (pictureOnly ? "(picture)" : title));
         }
 
         // the game's Steam app id: a Steam game's own, or the stand-in's (Expedition 33); null for anything else

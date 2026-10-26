@@ -4598,11 +4598,15 @@ namespace Selene
             batteryTimer.Start();
         }
 
+        private static readonly DateTime batteryStart = DateTime.Now;
         private static void UpdateBattery()
         {
             string value = "none";
             try
             {
+                // %TEMP%\selene-dev-battery: a wireless pad played, full for the first 45 s and low after (the cards, seen on any PC)
+                if (System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-battery"))) value = (DateTime.Now - batteryStart).TotalSeconds < 45 ? "3" : "1";
+                else
                 for (int i = 0; i < 4; i++)
                 {
                     var info = new XInputBattery();

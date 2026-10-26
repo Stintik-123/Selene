@@ -1,4 +1,7 @@
 using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace Selene
 {
@@ -20,20 +23,31 @@ namespace Selene
                 if (!told)
                 {
                     told = true;
-                    ProgressToast.ShowNote("Controller", Words(level), level <= 1 ? 0xe19c : 0xe1a4);
+                    ProgressToast.ShowPicture(() => Glyph(level));
                     if (level <= 1) lowNoted = level;   // (the start-up card said it already)
                     return;
                 }
                 // the card: once as the battery gets low, once more should it reach empty; not again until it has charged up
-                if (level <= 1 && level < lowNoted) { lowNoted = level; ProgressToast.ShowNote("Controller", Words(level), 0xe19c); }
+                if (level <= 1 && level < lowNoted) { lowNoted = level; ProgressToast.ShowPicture(() => Glyph(level)); }
                 else if (level >= 2) lowNoted = 9;
             }
             catch (Exception ex) { HomeNav.Log("battery: " + ex.Message); }
         }
 
-        private static string Words(int level)
+        // a battery lying down, the card's whole word: the case, its nub, four cells inside filled to the level; red when low or empty
+        private static UIElement Glyph(int level)
         {
-            return level >= 3 ? "Battery full" : level == 2 ? "Battery medium" : level == 1 ? "Battery low" : "Battery empty";
+            bool low = level <= 1;
+            var ink = Ink.Brush("SeleneInkColor", 0.9);
+            Brush fill = low ? new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)) : Ink.Brush("SeleneInkColor");
+            var g = new Grid { Width = 38, Height = 18, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            var cells = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2), VerticalAlignment = VerticalAlignment.Center };
+            int lit = level >= 3 ? 4 : level == 2 ? 3 : level == 1 ? 1 : 0;
+            for (int i = 0; i < 4; i++)
+                cells.Children.Add(new Border { Width = 5, Height = 8, CornerRadius = new CornerRadius(1), Margin = new Thickness(i == 0 ? 0 : 1, 0, 0, 0), Background = i < lit ? fill : Brushes.Transparent });
+            g.Children.Add(new Border { Width = 33, Height = 18, CornerRadius = new CornerRadius(4), BorderBrush = level == 0 ? fill : ink, BorderThickness = new Thickness(2), HorizontalAlignment = HorizontalAlignment.Left, Child = cells });
+            g.Children.Add(new Border { Width = 3, Height = 8, CornerRadius = new CornerRadius(0, 1.5, 1.5, 0), Background = ink, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(34, 0, 0, 0) });
+            return g;
         }
     }
 }

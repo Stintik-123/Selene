@@ -40,6 +40,7 @@ namespace Selene
         private readonly List<Border> soundRows = new List<Border>();
         private List<SystemAudio.Device> outputs = new List<SystemAudio.Device>();
         private int soundIndex;
+        private ChoiceList soundPicker;   // the devices, as a list over the Output row (A)
         private Dialog ask;
         private readonly List<Border> powerRows = new List<Border>();
         private int index, powerIndex;
@@ -337,6 +338,7 @@ namespace Selene
 
         private void HandleSound(string b)
         {
+            if (soundPicker != null && soundPicker.IsOpen) { soundPicker.Handle(b); return; }   // the devices' list has the buttons
             if (b == "B") { Ui.Back(); CloseSound(); return; }
             if (b == "Start") { leaving = true; Ui.Back(); if (!LoginScene.CloseMenuOver()) LoginScene.Finish(); return; }
             if (b == "DPadUp" || b == "DPadDown")
@@ -356,7 +358,24 @@ namespace Selene
                 ShowSound(true);
                 return;
             }
-            if (b == "DPadLeft" || b == "DPadRight" || b == "A")
+            if (b == "A" && soundIndex == 1)
+            {
+                // the devices as a list over the row; picking one makes it the default
+                if (outputs.Count == 0) { Ui.Shake(soundRows[1]); return; }
+                Ui.Confirm();
+                var names = new List<string>();
+                foreach (var d in outputs) names.Add(d.Name);
+                int now = Math.Max(0, outputs.FindIndex(d => d.Default));
+                soundPicker = ChoiceList.Open(Root, soundRows[1], names, now, k =>
+                {
+                    if (k == now || k < 0 || k >= outputs.Count) return;
+                    if (SystemAudio.SetDefault(outputs[k].Id)) { foreach (var d in outputs) d.Default = false; outputs[k].Default = true; HomeNav.Log("audio: output -> " + outputs[k].Name); }
+                    else Ui.Shake(soundRows[1]);
+                    ShowSound(true);
+                });
+                return;
+            }
+            if (b == "DPadLeft" || b == "DPadRight")
             {
                 int dir = b == "DPadLeft" ? -1 : 1;
                 if (soundIndex == 0)
