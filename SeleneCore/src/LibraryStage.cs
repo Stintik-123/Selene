@@ -49,6 +49,7 @@ namespace Selene
             list.SelectionChanged += (s, e) =>
             {
                 Rearm(true);
+                AttachGlide();   // (the list's parts aren't made yet when this is set up, and it may never load again)
                 KeepNearLeft();
                 TrailerFetch.Want(list.SelectedItem, null);
                 var entry = list.SelectedItem;
@@ -77,13 +78,17 @@ namespace Selene
         {
             if (glideAttached) return;
             var sv = FindChild<ScrollViewer>(list);
-            if (sv == null) return;
+            if (sv == null) { HomeNav.Log("collection glide: no scroll viewer yet"); return; }
             glideAttached = true;
+            HomeNav.Log("collection glide: attached (" + sv.GetType().Name + ", panel " + (FindChild<VirtualizingPanel>(list) != null ? FindChild<VirtualizingPanel>(list).GetType().Name : "?") + ")");
+            int told = 0;
             sv.ScrollChanged += (s, e) =>
             {
-                if (Math.Abs(e.HorizontalChange) < 0.001 || !library.IsVisible || !list.IsKeyboardFocusWithin || !Features.On("collectionglide")) return;
+                if (Math.Abs(e.HorizontalChange) < 0.001 || !library.IsVisible || !Features.On("collectionglide")) return;
+                if (!list.IsKeyboardFocusWithin) { if (told++ < 3) HomeNav.Log("collection glide: scrolled " + e.HorizontalChange + " without the focus in the row"); return; }
                 var presenter = FindChild<ItemsPresenter>(list);
                 double pitch = Pitch();
+                if (told++ < 3) HomeNav.Log("collection glide: scrolled " + e.HorizontalChange + ", pitch " + pitch.ToString("0") + ", presenter " + (presenter != null));
                 if (presenter == null || pitch <= 0 || Math.Abs(e.HorizontalChange) > 12) return;   // (a long jump: as it is)
                 var shift = presenter.RenderTransform as TranslateTransform;
                 if (shift == null || shift.IsFrozen) { shift = new TranslateTransform(); presenter.RenderTransform = shift; }
