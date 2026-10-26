@@ -98,13 +98,17 @@ namespace Selene
                 if (!list.IsKeyboardFocusWithin) { if (told++ < 3) HomeNav.Log("collection glide: scrolled " + e.HorizontalChange + " without the focus in the row"); return; }
                 var presenter = FindChild<ItemsPresenter>(list);
                 double pitch = Pitch();
-                if (told++ < 3) HomeNav.Log("collection glide: scrolled " + e.HorizontalChange + ", pitch " + pitch.ToString("0") + ", presenter " + (presenter != null));
-                if (presenter == null || pitch <= 0 || Math.Abs(e.HorizontalChange) > 12) return;   // (a long jump: as it is)
+                if (presenter == null || pitch <= 0) return;
+                // the scroll counts in pixels here (in covers only with item scrolling): either way, the distance the covers jumped
+                bool itemUnits = Math.Abs(sv.ExtentWidth - list.Items.Count) < 2;
+                double delta = itemUnits ? e.HorizontalChange * pitch : e.HorizontalChange;
+                if (told++ < 3) HomeNav.Log("collection glide: scrolled " + delta.ToString("0") + " px (pitch " + pitch.ToString("0") + (itemUnits ? ", item units" : "") + ")");
+                if (Math.Abs(delta) > pitch * 1.6) return;   // (a long jump, a pick from elsewhere: as it is)
                 var shift = presenter.RenderTransform as TranslateTransform;
                 if (shift == null || shift.IsFrozen) { shift = new TranslateTransform(); presenter.RenderTransform = shift; }
                 double since = (DateTime.Now - lastStep).TotalMilliseconds;
                 lastStep = DateTime.Now;
-                HomeNav.Glide(shift, e.HorizontalChange * pitch, since < 260);   // (a held stick glides on at one speed)
+                HomeNav.Glide(shift, delta, since < 260);   // (a held stick glides on at one speed)
             };
         }
 
