@@ -324,6 +324,7 @@ namespace Selene
             new Option { Group = "Games", Key = "admin", Label = "No-prompt launchers", About = "Admin games skip the Windows prompt after their first run." },
             new Option { Group = "Games", Key = "quietbackups", Label = "Quiet save backups", About = "Ludusavi backs up saves after playing without asking." },
             // ---- Advanced ----
+            new Option { Group = "Advanced", Key = "setupcheck", Label = "Setup check", About = "Checks Playnite's settings and the add-ons Selene works with, and fixes what it can.", Action = "Open" },
             new Option { Group = "Advanced", Key = "updatenow", Label = "Check for updates", About = "Looks for a newer Selene now and installs it with one press.", Action = "Check" },
             new Option { Group = "Advanced", Key = "report", Label = "Report a problem", About = "Tell us what went wrong in a few presses. No GitHub account needed. Anywhere: click both sticks, with a picture.", Action = "Open" },
             new Option { Group = "Advanced", Key = "reportchord", Label = "Both sticks report a problem", About = "Click both sticks in together anywhere: Report a problem opens with a picture of the screen." },

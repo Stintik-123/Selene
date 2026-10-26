@@ -4,7 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- A note card (a new version, achievements...) stays at least 5 seconds before a progress card takes its place (the library update's card replaced the new-version note within a second).
+- Notification cards are slimmer (lower, narrower, a smaller icon and words), and a note (a new version, achievements...) stays 6 seconds before a progress card takes its place (the library update's card replaced the new-version note within a second).
+- The menu: Update sits where Setup check was (it opens a newer Selene, or looks for one); Setup check moved to Selene settings > Advanced; Update library shows only when the library update at start is off.
 - Updating Selene takes one press: when a newer version is out, the menu shows Update (and a notification says so); it shows what's new, downloads the theme and the add-on and hands them to Playnite's installer, then restarts Playnite. Settings, profiles and your theme stay. Selene settings > Advanced > Check for updates looks at once.
 
 ## 1.2.0 - 2026-10-26

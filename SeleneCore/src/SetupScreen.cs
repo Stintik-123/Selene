@@ -36,6 +36,7 @@ namespace Selene
         private bool settingUpLudusavi;
 
         private readonly bool fromMenu;   // B goes back to the menu (on Setup check) instead of the home
+        public Func<Screen> Back;   // or to this (Selene settings)
 
         public SetupScreen(bool firstRun, bool fromMenu = false)
         {
@@ -260,7 +261,8 @@ namespace Selene
             {
                 if (firstRun) { Ui.Shake(Root.Children[0]); return; }
                 Ui.Back();
-                if (fromMenu) LoginScene.Show(new MenuScreen(true), -1);
+                if (Back != null) LoginScene.Show(Back(), -1);
+                else if (fromMenu) LoginScene.Show(new MenuScreen(true), -1);
                 else LoginScene.Finish();
                 return;
             }

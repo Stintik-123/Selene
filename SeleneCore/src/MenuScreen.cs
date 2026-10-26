@@ -69,17 +69,17 @@ namespace Selene
         public MenuScreen(bool returning = false)
         {
             var profile = Profiles.Active;
-            // a newer Selene found: Update first, as a console puts its system update
-            if (UpdateCheck.Available != null) items.Add(new Item { Icon = Ui.Icon(0xe923), Label = "Update", Sub = "Selene " + UpdateCheck.Available, Run = () => LoginScene.Show(new UpdateScreen(() => new MenuScreen(true)), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe853), Label = profile != null ? profile.Name : "Switch profile", Sub = profile != null ? "Switch profile" : null, Picture = profile != null ? WhoScreen.Avatar(profile, 52) : null, Run = () => LoginScene.Show(new WhoScreen(null), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe3c9), Label = "Edit profile", Run = EditProfile });
             items.Add(new Item { Icon = Ui.Icon(0xe40a), Label = "Theme", Run = ChangeTheme });
             items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Run = () => LoginScene.Show(new SettingsScreen(true), 1) });
             items.Add(new Item { Icon = Ui.Icon(0xe8ac), Label = "Power", Run = OpenPower });
             items.Add(new Item { Icon = Ui.Icon(0xe8b8), Label = "Playnite settings", Run = () => { if (Features.On("playnitesettings")) LoginScene.Show(new PlayniteSettingsScreen(), 1); else Later(PlayniteMenu.OpenSettings); } });
-            items.Add(new Item { Icon = Ui.Icon(0xe627), Label = "Update library", Run = UpdateLibrary });
+            if (!Features.On("startrefresh")) items.Add(new Item { Icon = Ui.Icon(0xe627), Label = "Update library", Run = UpdateLibrary });   // (it updates at every start otherwise)
             items.Add(new Item { Icon = Ui.Icon(0xe30c), Label = "Desktop mode", Run = () => Later(() => PlayniteMenu.Main("SwitchToDesktopCommand")) });
-            items.Add(new Item { Icon = Ui.Icon(0xf0c5), Label = "Setup check", Run = () => LoginScene.Show(new SetupScreen(false, true), 1) });
+            // Update, where Setup check was (that one is in Selene settings > Advanced now): a newer Selene found opens it, else it looks
+            items.Add(new Item { Icon = Ui.Icon(0xe923), Label = "Update", Sub = UpdateCheck.Available != null ? "Selene " + UpdateCheck.Available : null,
+                Run = () => { if (UpdateCheck.Available != null) LoginScene.Show(new UpdateScreen(() => new MenuScreen(true)), 1); else UpdateCheck.CheckNow(() => new MenuScreen(true)); } });
 
             index = items.FindIndex(i => i.Label == "Power");   // opens on Power, in the middle
             if (returning && lastOpened != null) index = Math.Max(0, items.FindIndex(i => i.Label == lastOpened));
