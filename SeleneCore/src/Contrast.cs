@@ -109,7 +109,8 @@ namespace Selene
             if (saved == "0.7") Features.SetValue("shade", "0.75"); else if (saved == "1.3") Features.SetValue("shade", "1.25");
             double scale = Features.Number("shade");
             if (scale < 0) scale = 1;
-            double strength = scale <= 0 ? 0 : Math.Max(Base * scale, Math.Min(Max, (Base + (need - 0.35) * 1.5) * scale));
+            // above 100% the ceiling rises with it too: a bright picture already at the most had nothing more to show at 125 / 150%
+            double strength = scale <= 0 ? 0 : Math.Min(1, Math.Max(Base * scale, Math.Min(Max * Math.Max(1, scale), (Base + (need - 0.35) * 1.5) * scale)));
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             foreach (var name in new[] { "SeleneHubShadeLeft", "SeleneHubShadeBottom", "SeleneHubShadeTop" })
             {
