@@ -153,12 +153,30 @@ namespace Selene
             pass.Add(pick);
             var files = pass.Select(GameFacts.CoverPath).Where(f => f != null).Distinct().ToList();
             var byFile = pass.Where(g => GameFacts.CoverPath(g) != null).GroupBy(GameFacts.CoverPath).ToDictionary(x => x.Key, x => x.First().Id);
-            Ui.LoadInOrder(files, 600, (i, pic) => { Guid id; if (byFile.TryGetValue(files[i], out id)) covers[id] = pic; });
+            // the spin starts once its covers are in (they flicked past as bare names, the pick's an empty card, on a first
+            // open), or after a second at most; one arriving late still fills the card it's on
             spinning = true;
             stepAt = 0;
             queue = pass;
-            step.Interval = TimeSpan.FromMilliseconds(Steps[0]);
-            step.Start();
+            int want = files.Count(f => { Guid id; return byFile.TryGetValue(f, out id) && !covers.ContainsKey(id); }), got = 0;
+            bool started = false;
+            Action go = () => { if (started || closed) return; started = true; step.Interval = TimeSpan.FromMilliseconds(Steps[0]); step.Start(); };
+            var spinPick = pick;
+            Ui.LoadInOrder(files, 600, (i, pic) =>
+            {
+                Guid id;
+                if (!byFile.TryGetValue(files[i], out id)) return;
+                covers[id] = pic;
+                if (++got >= want) go();
+                if (!spinning && pick != null && pick == spinPick && id == pick.Id) ShowCover(pick, true);   // landed before it came
+            });
+            if (want == 0) go();
+            else
+            {
+                var cap = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
+                cap.Tick += (s2, e2) => { cap.Stop(); go(); };
+                cap.Start();
+            }
         }
 
         private List<Game> queue = new List<Game>();
