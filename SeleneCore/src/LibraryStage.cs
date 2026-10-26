@@ -49,6 +49,7 @@ namespace Selene
             list.SelectionChanged += (s, e) =>
             {
                 Rearm(true);
+                KeepNearLeft();
                 TrailerFetch.Want(list.SelectedItem, null);
                 var entry = list.SelectedItem;
                 var gp = entry != null ? entry.GetType().GetProperty("Game") : null;
@@ -90,6 +91,28 @@ namespace Selene
                 lastStep = DateTime.Now;
                 HomeNav.Glide(shift, e.HorizontalChange * pitch, since < 260);   // (a held stick glides on at one speed)
             };
+        }
+
+        // the chosen cover stays one in from the left as you go (the row moves under it, so what's next is in view); Playnite only
+        // scrolled once it reached the right edge. Its own scroll into view runs first, so this comes right after it
+        private static void KeepNearLeft()
+        {
+            if (!Features.On("collectionglide") || !list.IsKeyboardFocusWithin) return;
+            list.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    var sv = FindChild<ScrollViewer>(list);
+                    int idx = list.SelectedIndex;
+                    if (sv == null || idx < 0) return;
+                    bool itemUnits = Math.Abs(sv.ExtentWidth - list.Items.Count) < 2;   // (item scrolling counts in covers)
+                    double want = Math.Max(0, idx - 1);
+                    if (!itemUnits) { double pitch = Pitch(); if (pitch <= 0) return; want *= pitch; }
+                    want = Math.Min(want, sv.ScrollableWidth);
+                    if (Math.Abs(sv.HorizontalOffset - want) > 0.01) sv.ScrollToHorizontalOffset(want);
+                }
+                catch { }
+            }), DispatcherPriority.Loaded);
         }
 
         // the distance from one cover to the next (the scroll moves in whole covers)

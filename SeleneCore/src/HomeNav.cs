@@ -1869,6 +1869,7 @@ namespace Selene
             SetUpsSetting("ForceDefaultMusicOverride", WantDefault);
             ApplyVideoPause();
             if (musicHeldForLaunch) SetUpsVideoPlaying(true);
+            LogUpsStateLater();
             EmptyLibraryMusic();   // the add-on starts the song over when the override flips: paused again
             // UniPlaySong can switch to a game's song on its own when Playnite's selection changes: like the legacy theme,
             // the wanted state is checked 4x a second and put back
@@ -1888,6 +1889,39 @@ namespace Selene
         }
 
         private static System.Windows.Threading.DispatcherTimer musicGuard;
+
+        // what UniPlaySong is really doing a moment after a switch (playing? paused, and by what? which song, how loud?): the
+        // music went silent on a PC with everything else looking right
+        private static System.Windows.Threading.DispatcherTimer upsStateTimer;
+        private static void LogUpsStateLater()
+        {
+            if (upsStateTimer == null)
+            {
+                upsStateTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
+                upsStateTimer.Tick += (s, e) =>
+                {
+                    upsStateTimer.Stop();
+                    try
+                    {
+                        var plugin = Api != null ? Api.Addons.Plugins.FirstOrDefault(pl => pl.Id == UniPlaySongId) : null;
+                        var field = plugin != null ? plugin.GetType().GetField("_playbackService", BindingFlags.Instance | BindingFlags.NonPublic) : null;
+                        var svc = field != null ? field.GetValue(plugin) : null;
+                        if (svc == null) return;
+                        Func<string, object> get = n => { var p = svc.GetType().GetProperty(n); return p != null ? p.GetValue(svc, null) : null; };
+                        var sources = svc.GetType().GetField("_activePauseSources", BindingFlags.Instance | BindingFlags.NonPublic);
+                        var set = sources != null ? sources.GetValue(svc) as System.Collections.IEnumerable : null;
+                        var paused = set != null ? string.Join(",", set.Cast<object>().Select(o => o.ToString()).ToArray()) : "?";
+                        var song = get("CurrentSongPath") as string;
+                        var vol = svc.GetType().GetMethod("GetVolume");
+                        Log("UPS state (" + musicMode + "): playing=" + get("IsPlaying") + " paused by [" + paused + "] default=" + get("IsPlayingDefaultMusic")
+                            + " song=" + (string.IsNullOrEmpty(song) ? "none" : System.IO.Path.GetFileName(song)) + " volume=" + (vol != null ? vol.Invoke(svc, null) : "?"));
+                    }
+                    catch (Exception ex) { Log("UPS state: " + ex.Message); }
+                };
+            }
+            upsStateTimer.Stop();
+            upsStateTimer.Start();
+        }
 
         // No games yet: the add-on starts its default track only when a game gets selected, so with nothing to select the
         // home and the login stayed silent. It's asked for the default track with a stand-in game (one with no songs).

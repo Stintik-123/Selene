@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Collection: the chosen cover stays one in from the left as you go, the row gliding under it, so the next games are in view; the achievements above the covers sit higher, clear of the chosen cover.
 - A game picked elsewhere (a search, More like this, Activity) is reached on Spotlight by a quick scroll along the row instead of appearing there at once (switch: Spotlight > Scroll to a picked game). The avatar picker shows the moving GIFs first.
 - Collection's covers glide from game to game instead of jumping, on the same spring as Spotlight's row (switch: Collection > Gliding row).
 - Steam achievements on a new install: Selene gives Playnite Achievements the Steam account signed in on this PC when it has none (it never fetched a Steam game's achievements without one), then checks every game once.

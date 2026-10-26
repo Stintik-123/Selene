@@ -185,10 +185,10 @@
                                 </ItemsControl>
                                 </StackPanel>
 
-                                <!-- achievements of the selected game (Playnite Achievements), bottom right just above the covers: a trophy badge
+                                <!-- achievements of the selected game (Playnite Achievements), bottom right above the covers (clear of the chosen one, which grows): a trophy badge
                                      (gold once every one is earned), the count large with the share beside it, a glowing bar -->
                                 <!-- (no panel or shadow of its own: an effect on the whole block drew its words soft) -->
-                                <Border Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,64,-24" Padding="0">
+                                <Border Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,64,28" Padding="0">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Visibility" Value="Collapsed"/>
