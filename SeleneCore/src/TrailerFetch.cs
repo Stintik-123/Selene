@@ -30,7 +30,8 @@ namespace Selene
         private static string Mode { get { return Features.Value("trailerdownload"); } }
 
         // trailers, logos or backgrounds still coming (for the red dot on the menu and the Spotlight group)
-        public static bool Busy { get { lock (gate) return worker != null && queue.Count > 0; } }
+        public static bool Busy { get { lock (gate) return worker != null; } }
+        public static int Pending { get { lock (gate) return queue.Count + (worker != null ? 1 : 0); } }
 
         public static string PathFor(Guid id)
         {

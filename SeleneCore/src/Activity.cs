@@ -1,4 +1,7 @@
 using System;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace Selene
 {
@@ -25,6 +28,32 @@ namespace Selene
             if (group == "Spotlight") return Art;
             if (group == "Games") return Achievements;
             return false;
+        }
+
+        // the setting that owns the running work
+        public static bool ForOption(string key)
+        {
+            if (key == "songsetup") return Songs;
+            if (key == "trailerdownload" || key == "artdownload") return Art;
+            if (key == "achievements") return Achievements;
+            return false;
+        }
+
+        // the dot itself: the red of a console's notice dot, the same in every theme
+        public static UIElement Dot()
+        {
+            return new Ellipse { Width = 10, Height = 10, Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 2, 0, 0) };
+        }
+
+        // a line under the setting while its work runs: where it's at
+        public static string ArtNote()
+        {
+            try { int n = TrailerFetch.Pending; return n > 0 ? n + (n == 1 ? " game to go" : " games to go") : null; } catch { return null; }
+        }
+        public static string AchievementsNote()
+        {
+            try { int n, all; double part; Guid? on; return AchievementsData.Checking(out n, out all, out part, out on) ? "Checking " + n + " of " + all : null; }
+            catch { return null; }
         }
     }
 }

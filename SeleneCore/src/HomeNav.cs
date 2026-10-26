@@ -2774,7 +2774,7 @@ namespace Selene
             double animated = p.X - RestingLeftRaw(tile, canvas);       // minus the container's intro/drop offset
             var panel = FindChild<VirtualizingStackPanel>(row);
             var slide = panel != null ? panel.RenderTransform as TranslateTransform : null;
-            if (slide != null) animated -= slide.X;                       // minus what is left of the row's slide
+            if (slide != null) animated -= slide.X - glideRest;           // minus what is left of the row's slide (not the offset it rests on)
             double right = edge.TranslatePoint(new Point(edge.ActualWidth, 0), canvas).X + animated;
             right = Math.Max(right, RestingLeftRaw(tile, canvas) + animated + ZoomedTile);
             Canvas.SetLeft(title, right + 16);

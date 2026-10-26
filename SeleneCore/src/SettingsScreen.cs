@@ -70,7 +70,7 @@ namespace Selene
                 line.Children.Add(new TextBlock { Text = Features.Groups[i], FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
                 // the dot: this group's work still running behind the scenes (songs, art, the achievements check)
                 if (Background.ForGroup(Features.Groups[i]))
-                    line.Children.Add(new System.Windows.Shapes.Ellipse { Width = 10, Height = 10, Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)), Stroke = Ink.Brush("SeleneScrimColor"), StrokeThickness = 2, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 1, 0, 0) });
+                    line.Children.Add(Background.Dot());
                 var row = new Border { Child = line, CornerRadius = new CornerRadius(14), Padding = new Thickness(20, 14, 20, 14), Margin = new Thickness(0, 0, 24, 6) };
                 left.Children.Add(row);
                 groupRows.Add(row);
@@ -117,7 +117,10 @@ namespace Selene
             {
                 var f = options[i];
                 var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-                text.Children.Add(new TextBlock { Text = f.Label, FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor") });
+                var head = new StackPanel { Orientation = Orientation.Horizontal };
+                head.Children.Add(new TextBlock { Text = f.Label, FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor") });
+                if (Background.ForOption(f.Key)) head.Children.Add(Background.Dot());   // this one's work still running
+                text.Children.Add(head);
                 text.Children.Add(new TextBlock { Text = f.About, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) });
                 string note = null;
                 if (f.Note != null) { try { note = f.Note(); } catch { } }
