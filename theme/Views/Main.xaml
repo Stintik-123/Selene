@@ -367,30 +367,6 @@
                                 </Border>
 
                                 <!-- the whole library: one row of big covers, close together -->
-                                <!-- the screen's sides go dark, top to bottom (a band only as tall as the row showed its edges): a cover
-                                     dissolving at the row's end (Selene Core's mask on the row) fades into dark either side, bright art or not -->
-                                <Border x:Name="SeleneLibraryShadeLeft" Grid.Row="0" Grid.RowSpan="4" Width="300" HorizontalAlignment="Left" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}">
-                                    <Border.OpacityMask>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                            <GradientStop Color="#C8000000" Offset="0"/>
-                                            <GradientStop Color="#96000000" Offset="0.2"/>
-                                            <GradientStop Color="#58000000" Offset="0.45"/>
-                                            <GradientStop Color="#22000000" Offset="0.72"/>
-                                            <GradientStop Color="#00000000" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.OpacityMask>
-                                </Border>
-                                <Border x:Name="SeleneLibraryShadeRight" Grid.Row="0" Grid.RowSpan="4" Width="300" HorizontalAlignment="Right" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}">
-                                    <Border.OpacityMask>
-                                        <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
-                                            <GradientStop Color="#C8000000" Offset="0"/>
-                                            <GradientStop Color="#96000000" Offset="0.2"/>
-                                            <GradientStop Color="#58000000" Offset="0.45"/>
-                                            <GradientStop Color="#22000000" Offset="0.72"/>
-                                            <GradientStop Color="#00000000" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.OpacityMask>
-                                </Border>
                                 <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="0,0,0,0" Background="Transparent" BorderThickness="0" FocusVisualStyle="{x:Null}"
                                            ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Item"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
@@ -495,19 +471,6 @@
                                                 <GradientStop Color="#E0000000" Offset="0"/>
                                                 <GradientStop Color="#80000000" Offset="0.5"/>
                                                 <GradientStop Color="#26000000" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Border.OpacityMask>
-                                    </Border>
-                                    <!-- the screen's right side goes dark top to bottom: a tile dissolving at the row's right end (Selene Core's mask
-                                         on the row) fades into dark, bright art or not; the Row to the edges switch -->
-                                    <Border x:Name="SeleneHubShadeRight" Width="300" HorizontalAlignment="Right" Background="{DynamicResource SeleneScrimBrush}" IsHitTestVisible="False">
-                                        <Border.OpacityMask>
-                                            <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
-                                                <GradientStop Color="#C8000000" Offset="0"/>
-                                                <GradientStop Color="#96000000" Offset="0.2"/>
-                                                <GradientStop Color="#58000000" Offset="0.45"/>
-                                                <GradientStop Color="#22000000" Offset="0.72"/>
-                                                <GradientStop Color="#00000000" Offset="1"/>
                                             </LinearGradientBrush>
                                         </Border.OpacityMask>
                                     </Border>

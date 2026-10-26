@@ -202,13 +202,11 @@ namespace Selene
         public static void ApplyNowPlaying()
         {
             Switch(Part("SeleneHltbStatHub"), "hltb");
-            Switch(Part("SeleneHubShadeRight"), "rowedges");
             Switch(Part("SeleneHltbStatLibrary"), "hltb");
             Switch(Part("SeleneAchievementsStatHub"), "achievements");
             Switch(Part("SeleneLibraryStats"), "collectioninfo");
             Switch(Part("SeleneLibraryGenres"), "collectioninfo");
             Switch(Part("SeleneLibraryHints"), "collectionhints");
-            Contrast.Apply();   // (Shade over the art at Off keeps the side bands away whatever the row-edges switch says)
         }
 
         // Switching between Spotlight and Collection is a crossfade: the screen you leave stays up while the other one gets

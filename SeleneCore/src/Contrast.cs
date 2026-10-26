@@ -126,14 +126,6 @@ namespace Selene
                 var shade = HomeNav.FindByName(w, name) as UIElement;
                 if (shade != null) shade.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(Math.Min(1, scale), TimeSpan.FromMilliseconds(450)) { EasingFunction = ease });
             }
-            // Off is no darkening anywhere: the side bands (Spotlight's right one, Collection's two) go as well, and come back above it
-            foreach (var name in new[] { "SeleneHubShadeRight", "SeleneLibraryShadeLeft", "SeleneLibraryShadeRight" })
-            {
-                var side = HomeNav.FindByName(w, name) as UIElement;
-                if (side == null) continue;
-                if (scale <= 0) side.Visibility = Visibility.Collapsed;
-                else if (name != "SeleneHubShadeRight" || Features.On("rowedges")) side.ClearValue(UIElement.VisibilityProperty);   // (that one has its own switch)
-            }
             shadeStrength = strength;
             var changed = Changed;
             if (changed != null) changed();
