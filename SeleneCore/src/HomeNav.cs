@@ -54,12 +54,16 @@ namespace Selene
             installed = true;
             LocalGames.StartRunningWatch();
             Smoothness.Start();
-            var libTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
+            var libTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             // not while the login / profile setup is up: add-ons answer a library update with progress screens of their own
-            // (logos, trailers, achievements...), which landed in the middle of making a profile. It waits for the home.
+            // (logos, trailers, achievements...), which landed in the middle of making a profile. It waits for the home, its
+            // intro, and a breath after (a fixed 20 s from launch made its card come long after the home)
+            DateTime homeAt = DateTime.MinValue;
             libTimer.Tick += (s, e) =>
             {
-                if (LoginScene.IsActive || DialogUp()) { libTimer.Interval = TimeSpan.FromSeconds(5); return; }
+                if (LoginScene.IsActive || LoginScene.StartingUp || IntroRunning || DialogUp()) { homeAt = DateTime.MinValue; return; }
+                if (homeAt == DateTime.MinValue) homeAt = DateTime.Now;
+                if ((DateTime.Now - homeAt).TotalSeconds < 2.5) return;
                 libTimer.Stop();
                 if (Features.On("startrefresh")) RefreshLibrary("start");
             };   // the Library update at start switch

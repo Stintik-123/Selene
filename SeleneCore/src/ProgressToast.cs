@@ -230,7 +230,7 @@ namespace Selene
             Present(main, vm, layer.Visibility != Visibility.Visible || leaving);
         }
 
-        private static void Present(Window main, object vm, bool enter)
+        private static void Present(Window main, object vm, bool enter, bool sound = true)
         {
             displayed = vm;
             icon.Background = Ink.Brush("GlyphColor", 0.18);
@@ -253,11 +253,14 @@ namespace Selene
                 shownAt = DateTime.Now;
                 layer.Visibility = Visibility.Visible;
                 SlideIn();   // solid all the way: in from beyond the right edge (a fade showed the art through it)
-                Ui.NotifySound();
+                if (sound) Ui.NotifySound();
             }
             Update();
             poll.Start();
         }
+
+        // a message without its numbers (a count or a percentage changing is the same message)
+        private static string Kind(string text) { return System.Text.RegularExpressions.Regex.Replace(text ?? "", @"[\d/%.,()]+", "").Trim(); }
 
         private static string TaskText(object vm)
         {
@@ -305,7 +308,7 @@ namespace Selene
         }
 
         // ---- not over the start-up: the home up and its intro done ----
-        public static bool Ready { get { return !LoginScene.StartingUp && !HomeNav.IntroRunning && (DateTime.Now - LoginScene.ClosedAt).TotalMilliseconds > 900; } }
+        public static bool Ready { get { return !LoginScene.StartingUp && !HomeNav.IntroRunning && (DateTime.Now - LoginScene.ClosedAt).TotalMilliseconds > 400; } }
 
         private static DispatcherTimer readyWatch;
         private static Action whenReady;
@@ -428,7 +431,19 @@ namespace Selene
                 var args = Prop(source, "ProgressArgs");
                 var text = Prop(args, "Text") as string;
                 if (text != null) text = text.Trim();   // Playnite's texts can start with spaces (they sat indented)
-                if (!string.IsNullOrEmpty(text) && shownText != text) { shownText = text; ShowWords(text); IconFor(text); }   // (same width: words change in place)
+                if (!string.IsNullOrEmpty(text) && shownText != text)
+                {
+                    // a new message ("Importing Xbox games" after "Importing Steam games") is a new card, as a console's; a count
+                    // going up (22/40, 23/40) changes in place
+                    if (shownText != null && Kind(text) != Kind(shownText) && !swapping && !leaving)
+                    {
+                        var vm = source;
+                        shownText = text;
+                        SwapOut(() => { if (ReferenceEquals(source, vm)) Present(Application.Current.MainWindow, vm, true, false); });   // (the same task: no new sound)
+                        return;
+                    }
+                    shownText = text; ShowWords(text); IconFor(text);
+                }
                 bool indeterminate = Equals(Prop(args, "IsIndeterminate"), true);
                 double max = ToDouble(Prop(args, "ProgressMaxValue")), value = ToDouble(Prop(args, "CurrentProgressValue"));
                 double width = track.ActualWidth;

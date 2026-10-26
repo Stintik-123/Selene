@@ -4,7 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Notification cards work like a console's: none over the start-up or Spotlight's intro (they wait for it), each comes in one of three widths and keeps it while its words change, a new one slides the old one away instead of reshaping it, and they're solid, sliding in and out past the right edge. A game's page shows HowLongToBeat as one quiet line under its stats (11h 41m main story · 19h 14m with extras · 29h 1m completionist).
+- The library update at start begins a couple of seconds after the home and its intro are up (it waited a fixed 20 seconds from launch).
+- Notification cards work like a console's: none over the start-up or Spotlight's intro (they wait for it), each comes in one of three widths and keeps it while its words change, a new one (or a new message from the same task) slides the old one away instead of reshaping it, and they're solid, sliding in and out past the right edge. A game's page shows HowLongToBeat as one quiet line under its stats (11h 41m main story · 19h 14m with extras · 29h 1m completionist).
 - Playnite's library update ("Importing Steam games...", "Library update finished") shows as Selene's notification card instead of a line of words at the top right.
 - Spotlight and Collection show TIME TO BEAT (HowLongToBeat's main story time) beside the other stats when the add-on has it.
 - Quitting Playnite is clean: the screen goes dark at once and Playnite's "Closing" screen no longer flashes up. Sleep from the power menu no longer turns Selene's progress cards off afterwards.
