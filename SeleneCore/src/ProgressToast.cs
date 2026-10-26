@@ -218,6 +218,11 @@ namespace Selene
         // keeps one of three widths for as long as it's up (its words change in place), and a different task doesn't reshape
         // the card on screen: that one slides away first and the new one slides in.
         private static object displayed;   // the task (or note) the card on screen belongs to
+        // a note (a new version, achievements...) stays this long before a task's card or another note takes its place (the
+        // library update's card replaced the new-version note within a second)
+        private const int NoteHoldMs = 5000;
+        private static DateTime noteHeldUntil = DateTime.MinValue;
+        private static int NoteHoldLeft { get { return displayed is string && layer != null && layer.Visibility == Visibility.Visible && !leaving ? (int)(noteHeldUntil - DateTime.Now).TotalMilliseconds : 0; } }
 
         private static void Show(Window main, object vm)
         {
@@ -226,6 +231,7 @@ namespace Selene
             shownText = null;
             if (layer == null) Build();
             if (!Ready) { HomeNav.Log("card: held for the start-up (" + TaskText(vm) + ")"); WhenReady(() => { if (ReferenceEquals(source, vm)) Show(main, vm); else HomeNav.Log("card: done before the start-up was over"); }); return; }
+            if (swap && NoteHoldLeft > 0) { int wait = NoteHoldLeft; HomeNav.Log("card: " + TaskText(vm) + " waits for the note (" + wait + " ms)"); Later(wait + 50, () => { if (ReferenceEquals(source, vm)) Show(main, vm); }); return; }
             if (swap) { HomeNav.Log("card: swapping for " + TaskText(vm)); SwapOut(() => { if (ReferenceEquals(source, vm)) Present(main, vm, true); }); return; }
             Present(main, vm, layer.Visibility != Visibility.Visible || leaving);
         }
@@ -431,7 +437,7 @@ namespace Selene
         {
             try
             {
-                if (source == null) return;
+                if (source == null || !ReferenceEquals(displayed, source)) return;   // (a task waiting for a note: not over its words)
                 var args = Prop(source, "ProgressArgs");
                 var text = Prop(args, "Text") as string;
                 if (text != null) text = text.Trim();   // Playnite's texts can start with spaces (they sat indented)
@@ -578,6 +584,7 @@ namespace Selene
             if (!ReferenceEquals(vm, source) || layer == null) return;
             source = null;
             poll.Stop();
+            if (!ReferenceEquals(displayed, vm)) return;   // (done while it waited for a note: the note keeps its card and time)
             if (track.ActualWidth > 1) Bar(track.ActualWidth);
             int wait = Math.Max(AfterDoneMs, MinShownMs - (int)(DateTime.Now - shownAt).TotalMilliseconds);
             leaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(wait) };
@@ -770,10 +777,12 @@ namespace Selene
             if (main == null) return;
             if (source != null || !Ready || swapping) { Later(1500, () => ShowNote(title, line, glyph)); return; }   // a task's card up, or the start-up: after it
             if (layer == null) Build();
+            if (NoteHoldLeft > 0) { Later(NoteHoldLeft + 50, () => ShowNote(title, line, glyph)); return; }   // (the note up keeps its time)
             if (layer.Visibility == Visibility.Visible && !leaving) { SwapOut(() => ShowNote(title, line, glyph)); return; }
             Place(main);
             Shape(false);
             displayed = title;
+            noteHeldUntil = DateTime.Now.AddMilliseconds(NoteHoldMs);
             icon.Background = Ink.Brush("GlyphColor", 0.18);
             icon.Child = new TextBlock { Text = Ui.Icon(glyph), FontFamily = Ui.Icons, FontSize = 28, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             icon.Visibility = Visibility.Visible;
