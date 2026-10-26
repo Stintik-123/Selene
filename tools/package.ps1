@@ -25,7 +25,7 @@ try {
     }
     $names = @($zip.Entries | ForEach-Object { $_.FullName })
 } finally { $zip.Dispose() }
-foreach ($need in 'Fonts\MaterialIcons-Regular.ttf', 'Fonts\PlayStation4.ttf', 'Fonts\XBOXONE.ttf', 'Fonts\icofont.ttf', 'Fonts\TitilliumWeb-Regular.ttf',
+foreach ($need in 'Fonts\MaterialIcons-Regular.ttf', 'Fonts\PlayStation4.ttf', 'Fonts\XBOXONE.ttf', 'Fonts\icofont.ttf', 'Fonts\TitilliumWeb-Regular.ttf', 'Fonts\Lato-Regular.ttf', 'Fonts\Lato-Black.ttf',
                   'Audio\navigation.wav', 'Views\Main.xaml', 'Constants.xaml', 'Palettes\selene.xaml') {
     if ($names -notcontains $need) { throw "theme package is missing $need" }
 }

@@ -33,6 +33,21 @@ namespace Selene
             }
         }
 
+        // the words everywhere Selene doesn't name a font: Lato, shipped in theme\Fonts (it used to be Playnite's font setting,
+        // which is Trebuchet MS on a new install: Selene only looked right on a PC with Lato picked there)
+        private static FontFamily text;
+        public static FontFamily TextFont
+        {
+            get
+            {
+                if (text != null) return text;
+                var folder = SelenePaths.ThemeFile("Fonts");
+                text = System.IO.File.Exists(System.IO.Path.Combine(folder, "Lato-Regular.ttf"))
+                    ? new FontFamily(new Uri(folder.TrimEnd('\\') + "\\"), "./#Lato, Segoe UI") : new FontFamily("Lato, Segoe UI");
+                return text;
+            }
+        }
+
         // a Material Icons character from its code point (the font's codepoints list)
         public static string Icon(int code) { return ((char)code).ToString(); }
 

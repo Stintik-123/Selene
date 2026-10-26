@@ -63,6 +63,10 @@ will be done right away.
 ## Fonts
 Fonts bundled with the Playnite theme template keep their own licenses (see `theme/Fonts`).
 
+## Lato
+Selene's text font is Lato by Łukasz Dziedzic (`theme/Fonts/Lato-Regular.ttf`, `Lato-Black.ttf`), SIL Open Font License 1.1
+(`theme/Fonts/Lato-OFL.txt`). https://www.latofonts.com
+
 ## Material Icons
 The menu's icons are Google's Material Icons (`theme/Fonts/MaterialIcons-Regular.ttf`), Apache License 2.0
 (`theme/Fonts/MaterialIcons-LICENSE.txt`). https://github.com/google/material-design-icons

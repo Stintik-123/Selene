@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Selene brings its own text font (Lato): words that used Playnite's font setting were Trebuchet MS on a new install, so screens like Activity, the buttons and the page facts looked different from the screenshots.
+- A game's page: the right stick only scrolls the description, at a pace you can read (it also moved the focus to Play).
 - A game's page opens on the game you picked: right after start, the library update moved Playnite's selection to the first game and the page showed that one instead.
 - A game's description is words only (store banners, GIFs and videos are left out), and Up / Down scroll it smoothly instead of jumping.
 - Fewer warnings in Playnite's log: Selene no longer asks for tile and background art from its media folder when there is none.
