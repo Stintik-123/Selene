@@ -6,7 +6,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 - Music plays again: the hold that keeps UniPlaySong quiet during start-up left its pause on, so the home music and every game's song stayed silent all session.
 - A picked game is reached the way a held stick would get there: the ring walks tile to tile with its tick and the row's glide (from far away it lands six tiles short first). Selene settings > Sound & music > Get game songs shows how many games have a song.
-- Collection: the chosen cover stays one in from the left as you go, the row gliding under it, so the next games are in view; the achievements above the covers sit higher, clear of the chosen cover.
+- Collection: the ring walks along the row and, once only one cover is left beyond it, the row glides instead, so what's next is always in view (Playnite waited for the very edge); the achievements above the covers sit higher, clear of the chosen cover.
 - The avatar picker shows the moving GIFs first.
 - Collection's covers glide from game to game instead of jumping, on the same spring as Spotlight's row (switch: Collection > Gliding row).
 - Steam achievements on a new install: Selene gives Playnite Achievements the Steam account signed in on this PC when it has none (it never fetched a Steam game's achievements without one), then checks every game once.

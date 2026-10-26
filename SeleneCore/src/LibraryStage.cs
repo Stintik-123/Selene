@@ -108,8 +108,9 @@ namespace Selene
             };
         }
 
-        // the chosen cover stays one in from the left as you go (the row moves under it, so what's next is in view); Playnite only
-        // scrolled once it reached the right edge. Its own scroll into view runs first, so this comes right after it
+        // one cover of lookahead: the ring walks along the row, and once only one cover is left beyond it (either side) the row
+        // moves instead, so what's next is always in view. Playnite only scrolled once the ring reached the very edge. Its own
+        // scroll into view runs first, so this comes right after it
         private static void KeepNearLeft()
         {
             if (!Features.On("collectionglide") || !list.IsKeyboardFocusWithin) return;
@@ -122,9 +123,13 @@ namespace Selene
                     if (sv == null || idx < 0) return;
                     HookScroll(sv);   // (found here when the earlier looks came up empty)
                     bool itemUnits = Math.Abs(sv.ExtentWidth - list.Items.Count) < 2;   // (item scrolling counts in covers)
-                    double want = Math.Max(0, idx - 1);
-                    if (!itemUnits) { double pitch = Pitch(); if (pitch <= 0) return; want *= pitch; }
-                    want = Math.Min(want, sv.ScrollableWidth);
+                    double pitch = itemUnits ? 1 : Pitch();
+                    if (pitch <= 0) return;
+                    int visible = Math.Max(3, (int)Math.Floor(sv.ViewportWidth / pitch + 0.01));   // whole covers across the row
+                    int first = (int)Math.Round(sv.HorizontalOffset / pitch);
+                    int lo = first + 1, hi = first + visible - 2;   // where the ring may be with a cover still beyond it
+                    int firstWant = idx > hi ? idx - (visible - 2) : idx < lo ? idx - 1 : first;
+                    double want = Math.Max(0, Math.Min(firstWant * pitch, sv.ScrollableWidth));
                     if (Math.Abs(sv.HorizontalOffset - want) > 0.01) sv.ScrollToHorizontalOffset(want);
                 }
                 catch { }
