@@ -53,24 +53,11 @@ namespace Selene
 
         // the right stick scrolls the description, smoothly and faster the further it's pushed (Playnite gives the stick's
         // presses only, not its tilt: read from the pad itself while the page is up)
-        private static DispatcherTimer stickTimer;
+        private static StickScroll stickScroll;
         private static void WatchStick(bool on)
         {
-            if (!on) { if (stickTimer != null) stickTimer.Stop(); return; }
-            if (stickTimer == null)
-            {
-                stickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-                stickTimer.Tick += (s, e) =>
-                {
-                    if (!Active || zone != 0) return;
-                    var y = Pad.Read().RightY;
-                    if (Math.Abs(y) < 0.01) return;
-                    var sv = Part<ScrollViewer>("PART_ScrollHtmlDescription");
-                    if (sv == null) return;
-                    sv.ScrollToVerticalOffset(Math.Max(0, Math.Min(sv.ScrollableHeight, sv.VerticalOffset - y * Math.Abs(y) * 14)));
-                };
-            }
-            stickTimer.Start();
+            if (stickScroll == null) stickScroll = new StickScroll(() => Part<ScrollViewer>("PART_ScrollHtmlDescription"), () => Active && zone == 0);
+            if (on) stickScroll.Start(); else stickScroll.Stop();
         }
 
         private static void Opened()

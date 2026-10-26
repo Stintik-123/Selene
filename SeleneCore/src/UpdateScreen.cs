@@ -28,6 +28,7 @@ namespace Selene
         private int state;   // 0 asking, 1 downloading, 2 ready to restart, 3 failed
         private bool closed;
         private WebClient web;
+        private StickScroll stick;
 
         public override bool Overlay { get { return true; } }
         public override Brush OverlayShade { get { return Ink.Brush("SeleneScrimColor", 0.94); } }
@@ -41,11 +42,14 @@ namespace Selene
             mark.HorizontalAlignment = HorizontalAlignment.Center;
             col.Children.Add(mark);
             col.Children.Add(new TextBlock { Text = "Selene " + version, FontSize = 48, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 18, 0, 0) });
-            col.Children.Add(new TextBlock { Text = "A new version is ready. You have " + Brand.Version + ".", FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) });
+            col.Children.Add(new TextBlock { Text = UpdateCheck.Preview ? "A preview of the update screen (this is what people on an older version see)." : "A new version is ready. You have " + Brand.Version + ".", FontSize = 19, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) });
 
             // what's new: the release notes as plain words, fading out at the foot when long
             var notes = new TextBlock { Text = Plain(UpdateCheck.Notes), FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), TextWrapping = TextWrapping.Wrap, LineHeight = 26 };
-            var notesBox = new Border { MaxHeight = 380, Margin = new Thickness(0, 30, 0, 0), ClipToBounds = true, Child = notes, Padding = new Thickness(28, 22, 28, 22), CornerRadius = new CornerRadius(18), Background = Ink.Brush("SeleneGlassColor", 0.7), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(1) };
+            // the right stick scrolls a long one, smoothly
+            var notesScroll = new ScrollViewer { Content = notes, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false, CanContentScroll = false };
+            stick = new StickScroll(notesScroll, () => !closed);
+            var notesBox = new Border { MaxHeight = 380, Margin = new Thickness(0, 30, 0, 0), ClipToBounds = true, Child = notesScroll, Padding = new Thickness(28, 22, 28, 22), CornerRadius = new CornerRadius(18), Background = Ink.Brush("SeleneGlassColor", 0.7), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(1) };
             notesBox.OpacityMask = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Colors.Black, 0), new GradientStop(Colors.Black, 0.82), new GradientStop(Color.FromArgb(0x30, 0, 0, 0), 1) }, 90);
             col.Children.Add(notesBox);
 
@@ -185,7 +189,9 @@ namespace Selene
             if (back != null) LoginScene.Show(back(), -1); else LoginScene.Finish();
         }
 
-        public override void Hidden() { closed = true; if (web != null && web.IsBusy) try { web.CancelAsync(); } catch { } }
+        public override void Shown() { stick.Start(); }
+
+        public override void Hidden() { closed = true; stick.Stop(); if (web != null && web.IsBusy) try { web.CancelAsync(); } catch { } }
 
         public override void Handle(string b)
         {
