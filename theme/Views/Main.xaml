@@ -985,8 +985,8 @@
                                                                 <TextBlock.Foreground>
                                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                                         <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                                                                        <GradientStop Color="#FFC9DDF2" Offset="0.5"/>
-                                                                        <GradientStop Color="#FF91A0AE" Offset="1"/>
+                                                                        <GradientStop Color="#FFC4B8F4" Offset="0.55"/>
+                                                                        <GradientStop Color="#FF8CA8E0" Offset="1"/>
                                                                     </LinearGradientBrush>
                                                                 </TextBlock.Foreground>
                                                             </TextBlock>
@@ -1016,9 +1016,9 @@
                                                             <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="24" VerticalAlignment="Center" Margin="0,0,7,0">
                                                                 <TextBlock.Foreground>
                                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                        <GradientStop Color="#FFF9FFFF" Offset="0"/>
-                                                                        <GradientStop Color="#FFC2C9D3" Offset="0.5"/>
-                                                                        <GradientStop Color="#FF8C9198" Offset="1"/>
+                                                                        <GradientStop Color="#FFF4F4F4" Offset="0"/>
+                                                                        <GradientStop Color="#FFB8BBC0" Offset="0.5"/>
+                                                                        <GradientStop Color="#FF84878C" Offset="1"/>
                                                                     </LinearGradientBrush>
                                                                 </TextBlock.Foreground>
                                                             </TextBlock>

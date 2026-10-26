@@ -37,6 +37,17 @@ namespace Selene
         // a trophy of a grade, its metal shading down from light to its colour (as a console's trophies)
         public static System.Windows.Controls.TextBlock TrophyIcon(string grade, double size)
         {
+            if (grade == "Platinum")
+            {
+                // platinum: white with an icy blue and a hint of lilac across it, brighter and cooler than silver (as a console's)
+                var shine = new System.Windows.Media.LinearGradientBrush { StartPoint = new System.Windows.Point(0, 0), EndPoint = new System.Windows.Point(1, 1) };
+                shine.GradientStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF), 0));
+                shine.GradientStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromRgb(0xD8, 0xEA, 0xFF), 0.35));
+                shine.GradientStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromRgb(0xC4, 0xB8, 0xF4), 0.62));
+                shine.GradientStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromRgb(0x8C, 0xA8, 0xE0), 1));
+                shine.Freeze();
+                return new System.Windows.Controls.TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = size, Foreground = shine, VerticalAlignment = System.Windows.VerticalAlignment.Center };
+            }
             var c = ((System.Windows.Media.SolidColorBrush)GradeBrush(grade)).Color;
             var light = System.Windows.Media.Color.FromRgb((byte)Math.Min(255, c.R + 55), (byte)Math.Min(255, c.G + 55), (byte)Math.Min(255, c.B + 55));
             var dark = System.Windows.Media.Color.FromRgb((byte)(c.R * 0.72), (byte)(c.G * 0.72), (byte)(c.B * 0.72));
@@ -51,9 +62,9 @@ namespace Selene
             System.Windows.Media.Color c;
             switch (grade)
             {
-                case "Platinum": c = System.Windows.Media.Color.FromRgb(0xC9, 0xDD, 0xF2); break;
+                case "Platinum": c = System.Windows.Media.Color.FromRgb(0xB9, 0xC8, 0xF6); break;   // (icy blue-lilac: apart from silver)
                 case "Gold": c = System.Windows.Media.Color.FromRgb(0xE8, 0xC4, 0x6A); break;
-                case "Silver": c = System.Windows.Media.Color.FromRgb(0xC2, 0xC9, 0xD3); break;
+                case "Silver": c = System.Windows.Media.Color.FromRgb(0xB8, 0xBB, 0xC0); break;   // (a neutral grey)
                 default: c = System.Windows.Media.Color.FromRgb(0xCD, 0x8E, 0x5E); break;
             }
             var b = new System.Windows.Media.SolidColorBrush(c);
