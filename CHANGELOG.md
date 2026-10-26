@@ -5,7 +5,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Spotlight's row runs to both edges of the screen once scrolled (the left end stopped 80 px in while the right ran off the screen), and a tile cut by the edge dissolves into a darkened side, as in Collection (switch: Spotlight > Row to the edges).
-- Notification cards: one frame for every card (560 x 128, like the session card's), a 60 px icon, the title at 20 px and the line at 16 px, the session card's figures on one line (they came in three widths with small words).
+- Notification cards as a console's: a compact strip (84 px, a 48 px icon, the title at 18 px and the line at 15 px) as wide as its words, between 360 and 520 px; the session card alone stays a panel (560 x 128, its figures on one line).
 - Icons in circles (dialogs, the menu, notification cards, achievements, the report's badge) sit exactly in the middle: centred by the glyph's own outline, not its text box.
 - Back from Setup check, Check for updates, Report a problem or the Store region lands on that row in Selene settings, not on the group list.
 - Collection's row: scrolled to its end, the last cover and its ring sit inside the screen (the last one was cut off); a cover cut by the screen's edge dissolves into the screen's darkened sides; a held stick moves at Spotlight's pace (Playnite's list dropped every other repeat).
