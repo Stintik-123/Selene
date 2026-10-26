@@ -198,8 +198,10 @@ const PAGE = `<!doctype html>
   main { max-width: 520px; margin: 0 auto; padding: 40px 22px calc(36px + env(safe-area-inset-bottom)); }
   .brand { display: flex; justify-content: center; margin-bottom: 30px; }
   .mark { position: relative; width: 52px; height: 52px; color: var(--ink); }
-  .mark::before { content: ""; position: absolute; left: 50%; top: 50%; width: 150px; height: 150px; transform: translate(-50%, -50%); border-radius: 50%;
-                  background: radial-gradient(circle, rgba(185, 202, 255, .28) 0%, rgba(150, 175, 255, .10) 38%, rgba(150, 175, 255, 0) 68%); pointer-events: none; }
+  .mark::before { content: ""; position: absolute; left: 50%; top: 50%; width: 100px; height: 100px; transform: translate(-50%, -50%); border-radius: 50%;
+                  background: radial-gradient(circle, rgba(185, 202, 255, .28) 0%, rgba(150, 175, 255, .10) 38%, rgba(150, 175, 255, 0) 70%); pointer-events: none;
+                  animation: breathe 2.2s ease-in-out infinite alternate; }
+  @keyframes breathe { from { opacity: .45; } to { opacity: 1; } }
   .mark svg { position: relative; width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 6px rgba(210, 222, 255, .6)); }
   h1 { font-size: 26px; font-weight: 600; margin: 0 0 6px; }
   .sub { color: var(--soft); margin: 0 0 26px; }
