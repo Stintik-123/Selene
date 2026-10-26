@@ -269,6 +269,7 @@ namespace Selene
             new Option { Group = "Start-up", Key = "startrefresh", Label = "Library update at start", About = "Looks for new and removed games shortly after start and when back from the tray." },
             // ---- Spotlight ----
             new Option { Group = "Spotlight", Key = "cardactivity", Label = "Activity card", About = "What you've been playing, with the numbers." },
+            new Option { Group = "Spotlight", Key = "activitysessions", Label = "Activity: your play sessions", About = "This week day by day, your streak, this month and each game's sessions on the Activity screen (with the GameActivity add-on).", Available = Sessions.Available },
             new Option { Group = "Spotlight", Key = "cardcaptures", Label = "Captures card", About = "Your screenshots and clips." },
             new Option { Group = "Spotlight", Key = "cardachievements", Label = "Achievements card", About = "Every game's achievements together, the latest unlocks first.", Available = AchievementsData.Available },
             new Option { Group = "Spotlight", Key = "cardsurprise", Label = "Surprise me card", About = "Covers flick past and stop on a game to play." },

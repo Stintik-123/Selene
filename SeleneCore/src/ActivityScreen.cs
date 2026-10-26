@@ -34,11 +34,12 @@ namespace Selene
         private const double CallW = 520;
         private readonly StackPanel call = new StackPanel { Width = CallW, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 62, Side - 30, 0) };
         private readonly TextBlock callLabel = new TextBlock { FontSize = 12, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center };
-        private readonly Grid callArt = new Grid { Height = 120, Margin = new Thickness(0, 12, 0, 0) };
+        private readonly Grid callArt = new Grid { Height = 100, Margin = new Thickness(0, 10, 0, 0) };
         private readonly StackPanel callNums = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 16, 0, 0) };
         private ulong totalSecs;
         private List<Game> mostList = new List<Game>();
         private Game callShown;
+        private readonly StackPanel callMore = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 14, 0, 0) };   // sessions, trophies
         private string heroShown;
 
         public ActivityScreen()
@@ -96,8 +97,15 @@ namespace Selene
             call.Children.Add(callLabel);
             call.Children.Add(callArt);
             call.Children.Add(callNums);
+            call.Children.Add(callMore);
             Root.Children.Add(call);
             if (most.Count > 0 && total > 0) { FillCall(most[0], 0); Ui.Rise(call, 120, 14, 320); }
+            // the trophies read once in the background: the game showing gets its line when they're in
+            if (Features.On("achievements") && AchievementsData.Available() && !AchievementsData.HasCache)
+                AchievementsData.All(sets => { if (closed || callShown == null) return; var shownNow = callShown; callShown = null; FillCall(shownNow, zone); });
+
+            // this week day by day, and the streak (GameActivity's sessions), between the numbers and the panel
+            if (Sessions.All().Count > 0) { var chart = WeekChart(Sessions.ThisWeek(), Sessions.Streak()); Root.Children.Add(chart); Ui.Rise(chart, 80, 14, 320); }
 
             // the rows, on a page that glides up (two rows at a time)
             var area = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, RowTop - 30, 0, 0), Height = Visible * RowPitch + 60, ClipToBounds = true };
@@ -113,6 +121,24 @@ namespace Selene
             page.Margin = new Thickness(0, 30, 0, 0);
             area.Children.Add(new Canvas { Children = { page } });
             Root.Children.Add(area);
+            // this month so far, like a year's wrap-up in small: its games by time this month, the title saying how it went
+            var monthNow = Sessions.Month(DateTime.Today);
+            if (monthNow.Count > 0)
+            {
+                var monthGames = monthNow.OrderByDescending(m => m.Value).Select(m => GameFacts.Find(m.Key)).Where(m => m != null).Take(PerRow).ToList();
+                ulong monthSecs = 0; foreach (var v in monthNow.Values) monthSecs += v;
+                ulong beforeSecs = 0; foreach (var v in Sessions.Month(DateTime.Today.AddMonths(-1)).Values) beforeSecs += v;
+                string about = GameFacts.Hours(monthSecs);
+                if (beforeSecs > 0)
+                {
+                    int diff = (int)Math.Round(100.0 * ((double)monthSecs - beforeSecs) / beforeSecs);
+                    string before = DateTime.Today.AddMonths(-1).ToString("MMMM");
+                    about += "  \u00B7  " + (diff == 0 ? "as much as " + before : Math.Abs(diff) + "% " + (diff > 0 ? "more" : "less") + " than " + before);
+                }
+                if (monthGames.Count > 0) about += "  \u00B7  most in " + monthGames[0].Name;
+                ulong monthTop = monthGames.Count > 0 ? monthNow[monthGames[0].Id] : 1;
+                AddRow(DateTime.Today.ToString("MMMM") + " so far", monthGames, g => GameFacts.Hours(monthNow[g.Id]), g => (double)monthNow[g.Id] / Math.Max(1, monthTop), about);
+            }
             ulong maxSecs = most.Count > 0 ? GameFacts.Seconds(most[0]) : 1;
             AddRow("Most played", most, g => GameFacts.Hours(GameFacts.Seconds(g)), g => (double)GameFacts.Seconds(g) / Math.Max(1, maxSecs));
             AddRow("Played last", recent, g => GameFacts.Ago(GameFacts.LastPlayed(g)), null);
@@ -141,7 +167,7 @@ namespace Selene
                 var logo = HomeNav.Api != null ? System.IO.Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "games", g.Id.ToString(), "Logo.png") : null;
                 if (logo != null && System.IO.File.Exists(logo))
                 {
-                    var img = new Image { MaxHeight = 120, MaxWidth = 460, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
+                    var img = new Image { MaxHeight = 100, MaxWidth = 440, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
                     RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
                     callArt.Children.Add(img);
                     Ui.LoadInOrder(new List<string> { logo }, 920, (k, pic) => { if (!closed && ReferenceEquals(callShown, g)) img.Source = pic; });
@@ -164,9 +190,55 @@ namespace Selene
                     if (last.HasValue) callNums.Children.Add(Stat(GameFacts.Ago(last), "LAST PLAYED", false));
                 }
                 else callNums.Children.Add(Stat(g.IsInstalled ? "Installed" : "Not installed", "NEVER PLAYED", true));
+                callMore.Children.Clear();
+                int count; ulong longest, average;
+                if (Sessions.Facts(g.Id, out count, out longest, out average))
+                    callMore.Children.Add(Line(null, (count == 1 ? "1 session" : count + " sessions") + "  \u00B7  longest " + GameFacts.Hours(longest) + "  \u00B7  about " + GameFacts.Hours(average) + " each"));
+                var set = Features.On("achievements") ? AchievementsData.Cached(g.Id) : null;
+                if (set != null && set.Total > 0)
+                    callMore.Children.Add(Line(set.Platinum ? "Platinum" : "Gold", set.Percent + "%  \u00B7  " + set.Unlocked + " of " + set.Total + " trophies"));
             };
             if (first) { fill(); return; }
             Ui.Fade(call, 0, 120, 0, () => { if (!ReferenceEquals(callShown, g)) return; fill(); Ui.Fade(call, 1, 220); });
+        }
+
+        // a small centered line in the panel, a trophy before it when grade is given
+        private static StackPanel Line(string grade, string text)
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 4, 0, 0) };
+            if (grade != null) { var t = AchievementsData.TrophyIcon(grade, 17); t.Margin = new Thickness(0, 0, 7, 0); t.VerticalAlignment = VerticalAlignment.Center; row.Children.Add(t); }
+            row.Children.Add(new TextBlock { Text = text, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.7), VerticalAlignment = VerticalAlignment.Center });
+            return row;
+        }
+
+        // this week, Monday to Sunday: a bar a day for the time played (today in the focus color), growing in; the week's total
+        // and the streak over it
+        private static StackPanel WeekChart(ulong[] days, int streak)
+        {
+            var box = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(990, 118, 0, 0) };
+            ulong week = 0; foreach (var d in days) week += d;
+            string label = "THIS WEEK  \u00B7  " + (week > 0 ? GameFacts.Hours(week).ToUpperInvariant() : "NOTHING YET");
+            if (streak > 1) label += "  \u00B7  " + streak + " DAYS IN A ROW";
+            box.Children.Add(new TextBlock { Text = label, FontSize = 12, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6) });
+            var bars = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+            double max = Math.Max(3600, days.Max());
+            int today = ((int)DateTime.Today.DayOfWeek + 6) % 7;
+            var names = new[] { "M", "T", "W", "T", "F", "S", "S" };
+            for (int i = 0; i < 7; i++)
+            {
+                var col = new StackPanel { Width = 30, Margin = new Thickness(0, 0, 8, 0) };
+                var well = new Grid { Height = 60 };
+                well.Children.Add(new Border { Width = 12, CornerRadius = new CornerRadius(6), Background = Ink.Brush("SeleneInkColor", 0.08), HorizontalAlignment = HorizontalAlignment.Center });
+                double h = days[i] > 0 ? Math.Max(8, 60 * days[i] / max) : 0;
+                var fill = new Border { Width = 12, Height = 0, CornerRadius = new CornerRadius(6), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Center, Background = i == today ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneInkColor", 0.7) };
+                well.Children.Add(fill);
+                if (h > 0) fill.BeginAnimation(FrameworkElement.HeightProperty, new DoubleAnimation(0, h, TimeSpan.FromMilliseconds(420)) { BeginTime = TimeSpan.FromMilliseconds(220 + i * 50), EasingFunction = Ui.Out() });
+                col.Children.Add(well);
+                col.Children.Add(new TextBlock { Text = names[i], FontSize = 12, FontWeight = i == today ? FontWeights.Bold : FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", i == today ? 0.95 : 0.45), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) });
+                bars.Children.Add(col);
+            }
+            box.Children.Add(bars);
+            return box;
         }
 
         // a number large with what it counts under it, a thin line before it (but the first)
@@ -182,13 +254,16 @@ namespace Selene
         }
 
         // a row of covers with a caption each; bar: a share of the longest (most played), shown as a line under the cover
-        private void AddRow(string title, List<Game> games, Func<Game, string> caption, Func<Game, double> bar)
+        private void AddRow(string title, List<Game> games, Func<Game, string> caption, Func<Game, double> bar, string about = null)
         {
             if (games.Count == 0) return;
             int r = rows.Count;
             var list = new List<Tile>();
             var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, r * RowPitch, 0, 0) };
-            panel.Children.Add(new TextBlock { Text = title, FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(2, 0, 0, 14) });
+            var head = new TextBlock { FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(2, 0, 0, 14) };
+            head.Inlines.Add(new System.Windows.Documents.Run(title));
+            if (!string.IsNullOrEmpty(about)) head.Inlines.Add(new System.Windows.Documents.Run("   " + about) { FontSize = 17, FontWeight = FontWeights.Normal, Foreground = Ink.Brush("SeleneInkColor", 0.6) });
+            panel.Children.Add(head);
             var shift = new TranslateTransform();
             var strip = new StackPanel { Orientation = Orientation.Horizontal, RenderTransform = shift };
             for (int i = 0; i < games.Count; i++)

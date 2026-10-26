@@ -106,6 +106,9 @@ namespace Selene
         // what was read last: the screens open on it at once (reading the add-on's database took a moment each time, a dark
         // screen before the list); a fresh read follows in the background when it's over a minute old
         private static List<GameSet> cache;
+        public static bool HasCache { get { return cache != null; } }
+        // one game from what was read last (null when not read yet, or nothing for it)
+        public static GameSet Cached(Guid id) { return cache != null ? cache.FirstOrDefault(g => g.GameId == id) : null; }
         private static DateTime cachedAt;
         private static bool reading;
 
