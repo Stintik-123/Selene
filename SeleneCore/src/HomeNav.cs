@@ -365,6 +365,16 @@ namespace Selene
             EnsureTileCaches(row);
         }
 
+        // what a newly selected game brings: Playnite's selection, the trailer card's wait, its art ahead, the heart, the screenshots
+        private static void AfterSelection(ListBox row)
+        {
+            QueuePush(row);
+            ArmPreview(row);
+            PreloadCoverArt(row.SelectedItem);
+            ShowHeart(row.SelectedItem);
+            GameMedia.OnSelected(row.SelectedItem, RowNeighbours(row));
+        }
+
         // ---- row slide: one continuous spring instead of a new animation per press (like Playnite's library) ----
         // Restarting an animation on every press reset the row's speed each time, so a held stick looked like a chain
         // of little slides (low-fps feel without dropped frames). Now a press only moves the target: the row keeps its
@@ -981,11 +991,8 @@ namespace Selene
                 // decides where home resumes (the old one kept putting it back on NBA 2K26)
                 if (LiveRow() != null && !ReferenceEquals(LiveRow(), row)) return;
                 lastSelected = row.SelectedItem;
-                QueuePush(row);
-                ArmPreview(row);
-                PreloadCoverArt(row.SelectedItem);
-                ShowHeart(row.SelectedItem);
-                GameMedia.OnSelected(row.SelectedItem, RowNeighbours(row));
+                if (rideFirst >= 0) return;   // a walk to a picked game: the work per game waits for the game it lands on (it stuttered)
+                AfterSelection(row);
             };
             // the game already selected when the row appears never raises SelectionChanged
             row.IsVisibleChanged += (s, a) => { if (row.IsVisible && row.SelectedItem != null) GameMedia.OnSelected(row.SelectedItem, RowNeighbours(row)); };
@@ -1314,10 +1321,10 @@ namespace Selene
                 wantedFocusIndex = start;
                 try { PlaceAtLeft(row, start); }   // the first game at the row's left edge
                 finally { wantedFocusIndex = -1; }
-                var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(15) };
+                var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };   // (every 15 ms stuttered: the row has to lay out each time)
                 int waits = 0;
                 DateTime began = DateTime.MinValue, lastTick = DateTime.MinValue;
-                Action finish = () => { step.Stop(); rideFirst = -1; done(); };
+                Action finish = () => { step.Stop(); rideFirst = -1; AfterSelection(row); done(); };
                 step.Tick += (s, e) =>
                 {
                     if (LoginScene.IsActive) { if (++waits < 120) return; finish(); return; }   // (the screen it was picked on still closing: a moment)
