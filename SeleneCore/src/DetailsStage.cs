@@ -83,6 +83,13 @@ namespace Selene
                 }
                 SeleneShell.Switch(Part<UIElement>("SeleneAchievementsStat"), "achievements");
                 SeleneShell.Switch(Part<UIElement>("SeleneAchievementsHint"), "achievements");
+                // the description never takes the focus (the right stick scrolls it): inside it Playnite's text view moved a hidden
+                // caret line by line and jumped the view to it, and the focus went back and forth between it and Play
+                foreach (var name in new[] { "PART_ScrollHtmlDescription", "PART_HtmlDescription" })
+                {
+                    var el = Part<FrameworkElement>(name);
+                    if (el != null) { el.Focusable = false; KeyboardNavigation.SetIsTabStop(el, false); }
+                }
                 if (sink == null || !ReferenceEquals(sink.Parent, page))
                 {
                     sink = new Border { Width = 0, Height = 0, Focusable = true, FocusVisualStyle = null, IsHitTestVisible = false };
@@ -444,11 +451,9 @@ namespace Selene
             if (b == "B" && HomeNav.CloseDetailsToHub()) { zone = 0; return true; }
             if (zone == 0)
             {
-                // in the description, Up / Down scroll it a few lines, eased (at its ends they go on: Up to the buttons,
-                // Down to the next band)
+                // the focus in the description after all (it can't take it any more, but Playnite's first focus): back on the buttons
                 var inText = Keyboard.FocusedElement as DependencyObject;
-                if ((b == "DPadDown" || b == "DPadUp") && inText != null && InDescription(inText)
-                    && StickScroll.Step(Part<ScrollViewer>("PART_ScrollHtmlDescription"), b == "DPadDown" ? 78 : -78)) return true;
+                if (b.StartsWith("DPad") && inText != null && InDescription(inText)) { FocusPills(); return true; }
                 if (b != "DPadDown") return false;
                 int z = NextBand(0, 1);
                 HomeNav.Log("details stage: Down from the top, next band " + z + " (bands " + tiles[0].Count + "/" + tiles[1].Count + "/" + tiles[2].Count + "), focus " + (Keyboard.FocusedElement is FrameworkElement ? ((FrameworkElement)Keyboard.FocusedElement).Name + "/" + Keyboard.FocusedElement.GetType().Name : "none"));
