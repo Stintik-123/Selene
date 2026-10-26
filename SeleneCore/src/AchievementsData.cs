@@ -306,7 +306,7 @@ namespace Selene
                 entry.GetType().GetMethod("ExecuteAsync", any, null, new[] { request.GetType(), pt }, null).Invoke(entry, new[] { request, policy });
                 File.WriteAllText(SetupFile, DateTime.UtcNow.ToString("o"));
                 HomeNav.Log("achievements: Playnite Achievements set up, checking every game");
-                ProgressToast.ShowNote("Checking your achievements", "Every game in your library. The first time takes a while.", 0xea23);
+                ProgressToast.ShowNote("Checking your achievements", "This might take a while.", 0xea23);
             }
             catch (Exception ex) { HomeNav.Log("achievements: setting up failed: " + (ex.InnerException ?? ex).Message); }
         }
