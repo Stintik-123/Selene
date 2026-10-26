@@ -61,7 +61,8 @@ namespace Selene
             DateTime homeAt = DateTime.MinValue;
             libTimer.Tick += (s, e) =>
             {
-                if (LoginScene.IsActive || LoginScene.StartingUp || IntroRunning || DialogUp()) { homeAt = DateTime.MinValue; return; }
+                // (a card's screen opened right away doesn't hold it: only the sign-in and profile screens do)
+                if (LoginScene.InSetup || LoginScene.StartingUp || IntroRunning || DialogUp()) { homeAt = DateTime.MinValue; return; }
                 if (homeAt == DateTime.MinValue) homeAt = DateTime.Now;
                 if ((DateTime.Now - homeAt).TotalSeconds < 2.5) return;
                 libTimer.Stop();
@@ -1241,7 +1242,8 @@ namespace Selene
                     idx = RowIndexOf(row, id);
                 }
                 Log("find a game: " + (idx >= 0 ? "picked on Spotlight (tile " + idx + ")" : "not on Spotlight's row"));
-                if (idx < 0) return;
+                // (Spotlight's row is Playnite's own list, its filter can leave a game out: its options then, Play among them)
+                if (idx < 0) { GameOptionsScreen.Open(id); return; }
                 int cur = row.SelectedIndex >= 0 && row.SelectedIndex < row.Items.Count ? row.SelectedIndex : 0;
                 // the focus comes from outside the row (the search layer): the row's guard would send it back to the old
                 // selection, so it's told which tile is wanted
@@ -1249,6 +1251,19 @@ namespace Selene
                 try { PlaceAtLeft(row, idx); }   // the game you went looking for, first on the row
                 finally { wantedFocusIndex = -1; }
                 Log("find a game: row focused=" + row.IsKeyboardFocusWithin + " selected=" + row.SelectedIndex);
+                // a screen still closing (a card's) can take the focus back with the old tile: looked at again, a few times
+                int tries = 0;
+                var again = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+                again.Tick += (s2, e2) =>
+                {
+                    if (++tries > 6) { again.Stop(); return; }
+                    if (LoginScene.IsActive) return;
+                    if (row.SelectedIndex == idx) { again.Stop(); return; }   // (stops at once once right: a move of yours isn't undone)
+                    Log("find a game: the selection went back (" + row.SelectedIndex + "), again");
+                    wantedFocusIndex = idx;
+                    try { PlaceAtLeft(row, idx); } finally { wantedFocusIndex = -1; }
+                };
+                again.Start();
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
@@ -1274,7 +1289,8 @@ namespace Selene
             var panel = FindChild<VirtualizingStackPanel>(row);
             var shift = panel != null ? panel.RenderTransform as TranslateTransform : null;
             if (shift != null && !shift.IsFrozen) { shift.BeginAnimation(TranslateTransform.XProperty, null); shift.X = 0; }   // no glide left over
-            if (c != null) c.Focus(); else row.SelectedIndex = idx;
+            row.SelectedIndex = idx;   // (the focus alone didn't take while another screen still held it)
+            if (c != null) c.Focus();
             if (sv != null && Math.Abs(sv.HorizontalOffset - offset) > 0.5) { sv.ScrollToHorizontalOffset(offset); row.UpdateLayout(); }   // once more with the focus in the row
             ScheduleTitle(row, 230);
             EnsureTileCaches(row);

@@ -95,6 +95,9 @@ namespace Selene
 
         public static bool IsActive { get { return loginRoot != null && loginRoot.IsVisible && scene != null && current != null; } }
 
+        // the sign-in, a profile being made or the first setup up (not a card's screen: Activity, Achievements...)
+        public static bool InSetup { get { return IsActive && (current is IntroScreen || current is WhoScreen || current is ProfileSteps || current is SetupScreen); } }
+
         // controller buttons (from HomeNav's input hook): everything goes to the screen while the login layer is up
         // Playnite turns each controller press into a fake arrow-key press as well; those copies arrive right after the
         // controller's own event and moved everything two steps, so keys within a moment of a pad press are ignored
