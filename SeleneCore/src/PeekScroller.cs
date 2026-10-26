@@ -57,8 +57,8 @@ namespace Selene
         // which rows are blurred now (kept here: a row's Tag belongs to its screen)
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<FrameworkElement, object> softened = new System.Runtime.CompilerServices.ConditionalWeakTable<FrameworkElement, object>();
 
-        // into the edge: blurring over a moment; out of it: sharp at once, the effect gone (a row the focus arrived on stayed
-        // soft for a moment while its blur faded, and an effect left at radius 0 still drew its words through it)
+        // in and out of the edge at once, as the list itself moves (fading either way flickered: each step a row went sharp
+        // as the next one faded in); out of it the effect goes entirely (at radius 0 it still drew the words through it)
         private static void Soften(FrameworkElement row, bool on)
         {
             object state;
@@ -67,9 +67,7 @@ namespace Selene
             if (on)
             {
                 softened.Add(row, true);
-                var blur = new BlurEffect { Radius = 0, RenderingBias = RenderingBias.Performance };
-                row.Effect = blur;
-                blur.BeginAnimation(BlurEffect.RadiusProperty, new DoubleAnimation(5, TimeSpan.FromMilliseconds(200)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+                row.Effect = new BlurEffect { Radius = 5, RenderingBias = RenderingBias.Performance };
             }
             else
             {
