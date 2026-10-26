@@ -53,6 +53,7 @@ namespace Selene
         // a progress card's shape (wide, one row: icon tile and words) or the session card's (Legacy's: words left, logo right)
         private static void Shape(bool session)
         {
+            card.BeginAnimation(FrameworkElement.WidthProperty, null);   // (a width still gliding to the last words)
             card.Width = session ? SessionWidth : CardWidth;   // (a note's or task's width follows its words: Size())
             card.MaxWidth = double.PositiveInfinity;
             card.Height = session ? SessionHeight : CardHeight;
@@ -298,7 +299,18 @@ namespace Selene
         private static void Size(double need)
         {
             double w = Math.Min(CardWidth, Math.Max(CardMinWidth, Math.Ceiling(need / 2) * 2));
-            card.Width = w;
+            // a card already up grows or shrinks to its new words (200 ms) instead of jumping
+            bool live = layer.Visibility == Visibility.Visible && card.ActualWidth > 1 && Math.Abs(card.ActualWidth - w) > 1;
+            double from = card.ActualWidth;
+            card.BeginAnimation(FrameworkElement.WidthProperty, null);
+            if (live)
+            {
+                card.Width = from;
+                var grow = Ui.Fast(new DoubleAnimation(w, TimeSpan.FromMilliseconds(200)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+                grow.Completed += (s, e) => { card.BeginAnimation(FrameworkElement.WidthProperty, null); card.Width = w; };
+                card.BeginAnimation(FrameworkElement.WidthProperty, grow);
+            }
+            else card.Width = w;
             card.MaxWidth = double.PositiveInfinity;
             words.MaxWidth = w - Around;
         }
@@ -489,7 +501,9 @@ namespace Selene
             }
             else { titleLine.Visibility = Visibility.Collapsed; words.Foreground = Ink.Brush("SeleneInkColor", 0.95); }
             words.TextWrapping = head != null ? TextWrapping.NoWrap : TextWrapping.Wrap;
+            line = line.TrimEnd('.', '\u2026', ' ');   // ("Importing Xbox games...": the dots say nothing a card doesn't)
             words.Text = line;
+            Size(Need(head ?? "", line, 18, 15));   // (the words changed while the card is up: it fits them again)
         }
 
         private static void Sweep(double width)
