@@ -29,6 +29,7 @@ namespace Selene
         private readonly StackPanel list = new StackPanel();
         private readonly ScrollViewer scroller;
         private readonly Image hero = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
+        private readonly Image heroBack = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };   // the art going, under the one coming
         private readonly DispatcherTimer heroLater = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };
         private readonly StackPanel head;
         private readonly Grid summary = new Grid { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 62, Side, 0) };
@@ -47,6 +48,8 @@ namespace Selene
         {
             keepZone = zone; keepIndex = index;
             RenderOptions.SetBitmapScalingMode(hero, BitmapScalingMode.HighQuality);
+            RenderOptions.SetBitmapScalingMode(heroBack, BitmapScalingMode.HighQuality);
+            Root.Children.Add(heroBack);
             Root.Children.Add(hero);
             Root.Children.Add(new Border { IsHitTestVisible = false, Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0.94, 0), Ink.Stop("SeleneScrimColor", 0.72, 0.5), Ink.Stop("SeleneScrimColor", 0.35, 1) }, 0) });
             Root.Children.Add(new Border { IsHitTestVisible = false, Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0, 0.25), Ink.Stop("SeleneScrimColor", 0.9, 1) }, 90) });
@@ -78,7 +81,7 @@ namespace Selene
             listArea.Height = 1080 - (ListTop + 44) - 110;
             Root.Children.Add(listArea);
 
-            note = new TextBlock { Text = "Getting your achievements...", FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, MaxWidth = 900, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, RowTop + 20, 0, 0) };
+            note = new TextBlock { Text = "", FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, MaxWidth = 900, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, RowTop + 20, 0, 0) };
             Root.Children.Add(note);
             recentTitle.Visibility = gamesTitle.Visibility = Visibility.Collapsed;
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
@@ -306,13 +309,19 @@ namespace Selene
             var path = g != null ? GameFacts.BackgroundPath(g) : null;
             if (path == heroShown) return;
             heroShown = path;
-            if (path == null) { Ui.Fade(hero, 0, 300); return; }
+            if (path == null) { Ui.Fade(hero, 0, 400); return; }
             Ui.LoadInOrder(new List<string> { path }, 1920, (i, pic) =>
             {
                 if (closed || path != heroShown) return;
+                // a crossfade: the art showing goes under, the new one fades in over it, then the old one melts away
+                heroBack.BeginAnimation(UIElement.OpacityProperty, null);
+                heroBack.Source = hero.Source;
+                heroBack.Opacity = hero.Opacity;
+                hero.BeginAnimation(UIElement.OpacityProperty, null);
                 hero.Source = pic;
                 hero.Opacity = 0;
-                Ui.Fade(hero, 0.6, 500);
+                Ui.Fade(hero, 0.6, 600);
+                Ui.Fade(heroBack, 0, 900, 300);
             });
         }
 

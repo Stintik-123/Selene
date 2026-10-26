@@ -81,7 +81,7 @@ namespace Selene
             area.Height = 1080 - ListTop - 120;
             Root.Children.Add(area);
 
-            note = new TextBlock { FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, MaxWidth = 900, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side + 4, ListTop + 10, 0, 0), Text = "Getting the achievements..." };
+            note = new TextBlock { FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, MaxWidth = 900, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side + 4, ListTop + 10, 0, 0), Text = "" };
             Root.Children.Add(note);
 
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
