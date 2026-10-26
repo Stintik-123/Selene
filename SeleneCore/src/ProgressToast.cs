@@ -438,7 +438,7 @@ namespace Selene
                 {
                     // a new message ("Importing Xbox games" after "Importing Steam games") is a new card, as a console's; a count
                     // going up (22/40, 23/40) changes in place
-                    if (shownText != null && Kind(text) != Kind(shownText) && !swapping && !leaving)
+                    if (shownText != null && Kind(text) != Kind(shownText) && !swapping && !leaving && !(source is Status))   // (the library update: one card for all its steps)
                     {
                         var vm = source;
                         shownText = text;
@@ -525,7 +525,9 @@ namespace Selene
                 bool on = Features.On("dialogs") && Features.On("progresstoast");
                 statusLine.Opacity = on ? 0 : 1;
                 if (!on) return;
-                var text = (statusWords.Text ?? "").Trim();
+                var raw = (statusWords.Text ?? "").Trim();
+                // one card for the whole update: "Library update" as its heading, the step it's on under it
+                var text = raw.Length == 0 ? "" : "Library update - " + (raw.IndexOf("finished", StringComparison.OrdinalIgnoreCase) >= 0 ? "Finished" : raw);
                 bool active = statusLine.Visibility == Visibility.Visible && text.Length > 0;
                 if (active)
                 {
