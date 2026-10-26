@@ -16,7 +16,7 @@ namespace Selene
     // A opens that game's list, B goes back.
     public class AchievementsHub : Screen
     {
-        private const double Side = 96, TileW = 104, Pitch = TileW + 18, RowTop = 172, ListTop = 430;
+        private const double Side = 96, TileW = 104, Pitch = TileW + 18, RowTop = 172, ListTop = 200;   // (the latest unlocks: on each game's screen now)
         private const int Recent = 12;
 
         private class Pick { public Guid Game; public AchievementsData.Item Item; }
@@ -184,7 +184,7 @@ namespace Selene
             Ui.Rise(summary, 120, 12, 320);
 
             // the latest unlocks
-            recent.AddRange(unlocked.Where(p => p.Item.When.HasValue).OrderByDescending(p => p.Item.When.Value).Take(Recent));
+            // (no row of the latest unlocks here any more: each game's screen shows its own)
             BuildRecent();
             // every game: the latest played-for first
             games.AddRange(sets.OrderByDescending(s => s.LastUnlock ?? DateTime.MinValue).ThenByDescending(s => s.Unlocked).ThenBy(s => s.Name));

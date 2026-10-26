@@ -16,7 +16,9 @@ namespace Selene
     // achievement large. X: a hidden one's words. B: back.
     public class AchievementsScreen : Screen
     {
-        private const double Side = 96, ListTop = 372, IconSize = 64, Page = 120;
+        private const double Side = 96, ListTop = 452, IconSize = 64, Page = 120;
+        private const double TileW = 96, Pitch = TileW + 16, StripTop = 196;   // the latest unlocks under the header
+        private const int RecentMax = 14;
         private static readonly string[] Tabs = { "All", "Unlocked", "Locked" };
         private static readonly string[] Sorts = { "Default order", "Newest unlocked", "Rarest first" };
 
@@ -34,6 +36,13 @@ namespace Selene
         private readonly TextBlock sortLabel, note;
         private readonly Image hero = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
         private Grid detail;
+        // the game's latest unlocks: a row under the header (Up from the top of the list goes in), the focused one's name under it
+        private readonly List<AchievementsData.Item> recent = new List<AchievementsData.Item>();
+        private readonly List<Tile> recentTiles = new List<Tile>();
+        private readonly StackPanel recentStrip = new StackPanel { Orientation = Orientation.Horizontal };
+        private readonly TextBlock recentLine = new TextBlock { FontSize = 15, FontFamily = Ui.Body, Opacity = 0 };
+        private bool inRecent;
+        private int recentIndex;
         private int tab, sort, index, built;
         private bool closed;
 
@@ -113,8 +122,59 @@ namespace Selene
                     return;
                 }
                 note.Visibility = Visibility.Collapsed;
+                BuildRecent();
                 Fill();
             });
+        }
+
+        private void BuildRecent()
+        {
+            recent.AddRange(set.Items.Where(i => i.Unlocked && i.When.HasValue).OrderByDescending(i => i.When.Value).Take(RecentMax));
+            var box = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side + 2, StripTop, 0, 0) };
+            box.Children.Add(new TextBlock { Text = "Recently unlocked", FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(0, 0, 0, 12) });
+            if (recent.Count == 0)
+            {
+                box.Children.Add(new TextBlock { Text = "Nothing unlocked yet.", FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55) });
+                Root.Children.Add(box);
+                return;
+            }
+            var files = new List<string>();
+            var at = new List<int>();
+            for (int i = 0; i < recent.Count; i++)
+            {
+                var t = new Tile(TileW, TileW, 14) { FocusScale = 1.06 };
+                t.Root.Margin = new Thickness(0, 0, Pitch - TileW, 0);
+                t.Face.Child = AchievementsData.TrophyIcon(recent[i].Grade, 34);
+                ((TextBlock)t.Face.Child).HorizontalAlignment = HorizontalAlignment.Center;
+                ((TextBlock)t.Face.Child).VerticalAlignment = VerticalAlignment.Center;
+                if (recent[i].Icon != null) { files.Add(recent[i].Icon); at.Add(i); }
+                recentStrip.Children.Add(t.Root);
+                recentTiles.Add(t);
+                Ui.Rise(t.Root, 120 + i * 40, 12, 280);
+            }
+            box.Children.Add(recentStrip);
+            recentLine.Margin = new Thickness(0, 14, 0, 0);
+            box.Children.Add(recentLine);
+            Root.Children.Add(box);
+            Ui.LoadInOrder(files, 192, (k, pic) =>
+            {
+                if (closed || k >= at.Count) return;
+                var face = new Border { CornerRadius = new CornerRadius(13), Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } };
+                RenderOptions.SetBitmapScalingMode(face, BitmapScalingMode.HighQuality);
+                recentTiles[at[k]].Face.Child = face;
+            });
+        }
+
+        // the row's focus (or none, the list having it), the focused unlock's name and date under it
+        private void ShowRecentFocus()
+        {
+            for (int i = 0; i < recentTiles.Count; i++) recentTiles[i].Focus(inRecent && i == recentIndex);
+            if (!inRecent || recentIndex >= recent.Count) { Ui.Fade(recentLine, 0, 140); return; }
+            var it = recent[recentIndex];
+            recentLine.Inlines.Clear();
+            recentLine.Inlines.Add(new System.Windows.Documents.Run(it.Name ?? "") { FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
+            recentLine.Inlines.Add(new System.Windows.Documents.Run("  \u00B7  " + it.Grade + "  \u00B7  " + GameFacts.Ago(it.When)) { Foreground = Ink.Brush("SeleneInkColor", 0.6) });
+            Ui.Fade(recentLine, 1, 180);
         }
 
         public override void Hidden() { closed = true; }
@@ -331,7 +391,7 @@ namespace Selene
             if (index >= built - 10 && built < shown.Count) BuildMore();
             for (int i = 0; i < rows.Count; i++)
             {
-                bool on = i == index;
+                bool on = i == index && !inRecent;
                 rows[i].BorderBrush = on ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
                 rows[i].Background = Ink.Brush("SeleneGlassColor", on ? 0.95 : 0.72);
             }
@@ -353,7 +413,11 @@ namespace Selene
         private void OpenDetail()
         {
             if (index >= shown.Count) return;
-            var it = shown[index];
+            OpenDetail(shown[index]);
+        }
+
+        private void OpenDetail(AchievementsData.Item it)
+        {
             bool secret = it.Hidden && !it.Unlocked && !revealed.Contains(it);
             detail = new Grid { Background = Ink.Brush("SeleneScrimColor", 0.85) };
             var card = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Width = 760 };
@@ -399,6 +463,42 @@ namespace Selene
             if (detail != null) { if (b == "B" || b == "A") { Ui.Back(); CloseDetail(); } return; }
             if (b == "B") { Ui.Back(); if (back == null) LoginScene.Finish(); else LoginScene.Show(back(), -1); return; }
             if (set == null || set.Total == 0) return;
+            if (inRecent)
+            {
+                switch (b)
+                {
+                    case "DPadLeft":
+                    case "DPadRight":
+                    {
+                        int next = recentIndex + (b == "DPadRight" ? 1 : -1);
+                        if (next < 0 || next >= recent.Count) return;
+                        recentIndex = next;
+                        Ui.Tick();
+                        ShowRecentFocus();
+                        return;
+                    }
+                    case "DPadDown":
+                        if (shown.Count == 0) return;
+                        inRecent = false;
+                        Ui.Tick();
+                        ShowRecentFocus();
+                        ShowFocus();
+                        return;
+                    case "A":
+                        Ui.Confirm();
+                        OpenDetail(recent[recentIndex]);
+                        return;
+                }
+                return;
+            }
+            if (b == "DPadUp" && index == 0 && recent.Count > 0)
+            {
+                inRecent = true;
+                Ui.Tick();
+                ShowFocus();
+                ShowRecentFocus();
+                return;
+            }
             switch (b)
             {
                 case "LeftShoulder":
