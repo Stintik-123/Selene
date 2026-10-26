@@ -1964,6 +1964,9 @@ namespace Selene
             SetUpsVideoPlaying(want);
         }
 
+        // UniPlaySong swapped its settings object (a save does): looked up again on the next use
+        internal static void ForgetUps() { upsSettings = null; }
+
         // UniPlaySong's live settings, the object its player reads: found inside the add-on like the legacy theme did
         // (asking Playnite for the add-on's settings can hand back a copy, so changes never reached the player)
         private static object LiveUps()

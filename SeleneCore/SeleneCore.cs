@@ -55,6 +55,7 @@ namespace Selene
             HomeNav.RefreshRowFilters();              // the five tabs, then your own filter presets
             Ui.RefreshPrompts();                      // Xbox or PlayStation names in the hints
             SeleneShell.Start();
+            SongSetup.StartLater();                   // game songs: UniPlaySong's downloads set up once
             if (string.IsNullOrWhiteSpace(settings.Settings.AvatarPath)) AnimatedAvatar.Fetch(SelenePaths.SteamId);
             HomeNav.Log("Selene Core started");
         }
@@ -294,6 +295,7 @@ namespace Selene
             new Option { Group = "Sound & music", Key = "sounds", Label = "Interface sounds", About = "Sounds when you move, select and go back." },
             new Option { Group = "Sound & music", Key = "soundvolume", Slider = true, Label = "Interface sounds volume", About = "How loud the sounds are when you move, select and go back (not the music).", Choices = new[] { "25", "50", "75", "100" }, Names = new[] { "25%", "50%", "75%", "100%" }, Default = "100" },
             new Option { Group = "Sound & music", Key = "clipvolume", Slider = true, Label = "Clip volume", About = "Clips in Captures. Up / Down change it there too.", Available = () => false /* set with Up / Down in Captures only */, Choices = new[] { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Names = new[] { "Off", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, Default = "90" },
+            new Option { Group = "Sound & music", Key = "songsetup", Label = "Get game songs", About = "Selene sets up UniPlaySong's song downloads (yt-dlp and ffmpeg, about 130 MB once) and gets a song for every game.", Available = () => HomeNav.Api != null && HomeNav.Api.Addons.Addons.Any(a => a.StartsWith("UniPlaySong", StringComparison.OrdinalIgnoreCase)) },
             new Option { Group = "Sound & music", Key = "music", Label = "Background music", About = "The default track while browsing, a game's song with its trailer (with the UniPlaySong add-on).", Available = () => HomeNav.Api != null && HomeNav.Api.Addons.Addons.Any(a => a.StartsWith("UniPlaySong", StringComparison.OrdinalIgnoreCase)) },
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },
             // ---- Look ----

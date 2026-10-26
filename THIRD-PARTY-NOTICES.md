@@ -30,6 +30,9 @@ keep their own licenses: Extra Metadata Loader (darklinkpower), Ludusavi (mtkenn
 (Lacro59), Playnite Achievements (justin-delano), DuplicateHider (felixkmh), UniPlaySong (aHuddini) and Audio Switcher
 (Naerian). For save backups it also downloads the [Ludusavi](https://github.com/mtkennerly/ludusavi) program
 (MIT License, Copyright (c) 2020 Matthew T. Kennerly) into Selene Core's data folder.
+For game songs it downloads [yt-dlp](https://github.com/yt-dlp/yt-dlp) (The Unlicense) and an
+[ffmpeg](https://ffmpeg.org) build from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) (GPL v3) the same way, for
+UniPlaySong to use; neither is bundled.
 
 ## Avatars
 The profile pictures in `theme/Avatars` are Xbox gamer pictures from Microsoft's public gamerpic server
