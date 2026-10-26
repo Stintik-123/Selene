@@ -103,9 +103,20 @@ namespace Selene
             return prop != null ? prop.GetValue(p, null) : null;
         }
 
+        // what was read last: the screens open on it at once (reading the add-on's database took a moment each time, a dark
+        // screen before the list); a fresh read follows in the background when it's over a minute old
+        private static List<GameSet> cache;
+        private static DateTime cachedAt;
+        private static bool reading;
+
         // one game, its hidden ones as the add-on shows them; then on the UI thread
         public static void ForGame(Guid id, Action<GameSet> done)
         {
+            if (cache != null)
+            {
+                var known = cache.FirstOrDefault(g => g.GameId == id);
+                if (known != null) { done(known); return; }
+            }
             var dispatcher = Dispatcher.CurrentDispatcher;
             Task.Factory.StartNew(() =>
             {
@@ -124,6 +135,18 @@ namespace Selene
         // every game with achievements
         public static void All(Action<List<GameSet>> done)
         {
+            if (cache != null)
+            {
+                done(cache);
+                if ((DateTime.Now - cachedAt).TotalSeconds > 60 && !reading) Read(null);
+                return;
+            }
+            Read(done);
+        }
+
+        private static void Read(Action<List<GameSet>> done)
+        {
+            reading = true;
             var dispatcher = Dispatcher.CurrentDispatcher;
             Task.Factory.StartNew(() =>
             {
@@ -136,7 +159,13 @@ namespace Selene
                     if (all != null) foreach (var g in all) { var set = ToSet(g); if (set != null && set.Total > 0) list.Add(set); }
                 }
                 catch (Exception ex) { HomeNav.Log("achievements: reading all failed: " + (ex.InnerException ?? ex).Message); }
-                dispatcher.BeginInvoke(new Action(() => done(list)));
+                dispatcher.BeginInvoke(new Action(() =>
+                {
+                    cache = list;
+                    cachedAt = DateTime.Now;
+                    reading = false;
+                    if (done != null) done(list);
+                }));
             });
         }
 

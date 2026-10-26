@@ -215,7 +215,7 @@ namespace Selene
             {
                 var s = games[i];
                 var g = GameFacts.Find(s.GameId);
-                var face = new Border { Width = 96, Height = 96, CornerRadius = new CornerRadius(12), Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
+                var face = new Border { Width = 68, Height = 100, CornerRadius = new CornerRadius(10),   /* a cover's shape: the whole cover shows */ Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
                 var cover = g != null ? GameFacts.CoverPath(g) : null;
                 if (cover != null) { files.Add(cover); faces.Add(face); }
 
