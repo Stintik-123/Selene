@@ -104,13 +104,13 @@ namespace Selene
             var artOpacity = Application.Current.Resources["SeleneArtOpacity"];
             bool artShown = art.Count > 0 && !(artOpacity is double && (double)artOpacity < 0.05);   // a profile that keeps the wallpaper
             double need = artShown ? art.Values.Max(i => Need(i)) : wallpaperNeed;
-            // the Shade over the art slider scales it (Off, 25%... 150%; the old Lighter / Deeper choices moved onto it)
+            // the Shade over the art slider: 100% is as deep as the picture needs (the most), each step down a plain share of
+            // that, so every step shows (the old Lighter / Deeper and 125 / 150% values land on the slider)
             var saved = Features.Value("shade");
-            if (saved == "0.7") Features.SetValue("shade", "0.75"); else if (saved == "1.3") Features.SetValue("shade", "1.25");
-            double scale = Features.Number("shade");
-            if (scale < 0) scale = 1;
-            // above 100% the ceiling rises with it too: a bright picture already at the most had nothing more to show at 125 / 150%
-            double strength = scale <= 0 ? 0 : Math.Min(1, Math.Max(Base * scale, Math.Min(Max * Math.Max(1, scale), (Base + (need - 0.35) * 1.5) * scale)));
+            if (saved == "0.7") Features.SetValue("shade", "0.75"); else if (saved == "1.3" || saved == "1.25" || saved == "1.5") Features.SetValue("shade", "1");
+            double scale = Math.Max(0, Math.Min(1, Features.Number("shade")));
+            double auto = Math.Max(Base, Math.Min(Max, Base + (need - 0.35) * 1.5));
+            double strength = scale * auto;
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             foreach (var name in new[] { "SeleneHubShadeLeft", "SeleneHubShadeBottom", "SeleneHubShadeTop" })
             {
