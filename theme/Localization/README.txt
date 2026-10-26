@@ -12,9 +12,10 @@ fr.txt to cover every variant. One phrase per line, the English on the left, you
 Lines starting with # are notes. Phrases you leave out stay English. Numbers and names (play times, dates, game
 titles) are never translated.
 
-To get the full list of English phrases: create an empty file called selene-strings in your %TEMP% folder, start
-Playnite and walk through the screens; every phrase shown is written to %TEMP%\selene-strings.txt, once each, with
-" = " ready after it. Fill in the right side and save it here.
+To get the full list of English phrases: in Selene settings > Advanced, turn on "Collect words to translate", then
+walk through the screens. Every phrase shown is written to "Selene phrases.txt" on your Desktop, once each, with " = "
+ready after it. Fill in the right side, save it here under your language's name (id_ID.txt, fr.txt...), restart
+Playnite, and turn the collecting off again.
 
-The switch Look > "Selene in Playnite's language" turns this on and off. Playnite's own words (its settings, its
+The switch Advanced > "Selene in Playnite's language" turns this on and off. Playnite's own words (its settings, its
 dialogs) follow Playnite's language on their own.

@@ -42,6 +42,7 @@ namespace Selene
             HomeNav.Api = PlayniteApi;
             HomeNav.Install();
             if (Features.On("translate")) Lang.Load(PlayniteApi);
+            Lang.CollectIfAsked();   // the words to translate, collected on the Desktop (Advanced switch)
             try { if (Features.On("quietbackups")) LudusaviApp.Quiet(PlayniteApi); }
             catch (Exception ex) { logger.Warn("Selene Core: couldn't quieten Ludusavi: " + ex.Message); }
             try { Profiles.ApplyLook(); }
@@ -324,6 +325,7 @@ namespace Selene
             new Option { Group = "Advanced", Key = "fullrate", Label = "Match the screen's refresh rate", About = "Selene moves at 120 / 144 Hz on such screens instead of 60. Only while Playnite is in front." },
             new Option { Group = "Advanced", Key = "viewswitch", Label = "View button", About = "Switches Spotlight and Collection. Hold it to search." },
             new Option { Group = "Advanced", Key = "playnitesettings", Label = "Playnite settings, Selene's way", About = "The menu's Playnite settings as a Selene screen. Off: Playnite's own pages." },
+            new Option { Group = "Advanced", Key = "translatecollect", Label = "Collect words to translate", About = "Every phrase Selene shows goes to \"Selene phrases.txt\" on your Desktop, ready to translate.", DefaultOn = false },
             new Option { Group = "Advanced", Key = "translate", Label = "Selene in Playnite's language", About = "Selene's words follow Playnite's language when a translation exists." },
             new Option { Group = "Advanced", Key = "reset", Label = "Reset Selene settings", About = "Every switch and choice back to how Selene ships. Profiles stay.", Action = "Reset" },
         };

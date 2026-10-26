@@ -11,8 +11,7 @@ namespace Selene
     //     Who's playing? = Wer spielt?
     // Every TextBlock Selene or the theme shows is looked up by its English text when it loads (HomeNav.OnTextLoaded), so a
     // translation needs no code. Texts made of numbers (play times, counts) stay as they are.
-    // To collect the English phrases for a new language, make an empty file %TEMP%\selene-strings: every phrase shown is then
-    // appended to %TEMP%\selene-strings.txt, once each.
+    // To collect the English phrases for a new language: Advanced > "Collect words to translate" (CollectIfAsked).
     public static class Lang
     {
         private static Dictionary<string, string> table;
@@ -38,10 +37,36 @@ namespace Selene
                 }
                 table = file != null ? Read(file) : null;
                 if (table != null) HomeNav.Log("language: " + Language + ", " + table.Count + " phrases from " + Path.GetFileName(file));
-                var marker = Path.Combine(Path.GetTempPath(), "selene-strings");
-                if (File.Exists(marker)) { collectFile = marker + ".txt"; seen = new HashSet<string>(); HomeNav.Log("language: collecting phrases into " + collectFile); }
             }
             catch (Exception ex) { HomeNav.Log("language: " + ex.Message); }
+        }
+
+        // ---- collecting the English phrases to translate: Advanced > "Collect words to translate" writes each phrase shown
+        // to "Selene phrases.txt" on the Desktop, once each, " = " after it. (The old way, an empty "selene-strings" in
+        // %TEMP%, still works as a file, a .txt or a folder: Explorer hides the .txt, and it failed silently.)
+        public static void CollectIfAsked()
+        {
+            var temp = Path.GetTempPath();
+            bool marker = File.Exists(Path.Combine(temp, "selene-strings")) || Directory.Exists(Path.Combine(temp, "selene-strings"))
+                       || (File.Exists(Path.Combine(temp, "selene-strings.txt")) && new FileInfo(Path.Combine(temp, "selene-strings.txt")).Length == 0);
+            Collect(Features.On("translatecollect") || marker);
+        }
+
+        public static string PhrasesFile { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Selene phrases.txt"); } }
+
+        public static void Collect(bool on)
+        {
+            if (!on) { collectFile = null; return; }
+            try
+            {
+                collectFile = PhrasesFile;
+                seen = new HashSet<string>(StringComparer.Ordinal);
+                if (File.Exists(collectFile))
+                    foreach (var line in File.ReadAllLines(collectFile)) { int at = line.IndexOf(" = ", StringComparison.Ordinal); if (at > 0) seen.Add(line.Substring(0, at)); }
+                else File.WriteAllText(collectFile, "# Selene's phrases: write your language after each \" = \", then save this as theme\\Localization\\<language>.txt" + Environment.NewLine);
+                HomeNav.Log("language: collecting phrases into " + collectFile + " (" + seen.Count + " so far)");
+            }
+            catch (Exception ex) { collectFile = null; HomeNav.Log("language: can't collect phrases: " + ex.Message); }
         }
 
         // Playnite's own language setting (en_US, de_DE..., "english" for the default), read loosely so an SDK change can't break it
