@@ -86,7 +86,7 @@ namespace Selene
             var tvBackup = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "fullscreenConfig.tv.json");
             RowMode = System.IO.File.Exists(tvBackup) ? "all" : "tv";
             var app = Application.Current;
-            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Unhush(); GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); if (Features.On("tray")) CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
+            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Unhush(); GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); StartBatteryPolling(); if (Features.On("tray")) CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
         }
 
         private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -4617,7 +4617,10 @@ namespace Selene
             }
             var res = Application.Current.Resources;
             if (!Equals(res["SelenePadBattery"], value)) res["SelenePadBattery"] = value;
+            PadBattery.Show(value);   // beside the clock (the "Controller battery" switch), and a card as it runs low
         }
+
+        public static void RefreshBattery() { UpdateBattery(); }
 
         // ---- Guide (ring) button = home, from anywhere ----
         // Playnite's own GuideButtonFocus never fired for some controllers (its Guide shows up only through the hidden

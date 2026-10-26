@@ -431,6 +431,7 @@ namespace Selene
                 Features.Set(key, !Features.On(key));
                 if (key == "brand") Brand.Apply();
                 if (key == "topprofile") TopProfile.Refresh();
+                if (key == "padbattery") HomeNav.RefreshBattery();
                 if (key == "hltb" || key == "achievements" || key == "rowedges" || key == "collectioninfo" || key == "collectionhints") SeleneShell.ApplyNowPlaying();
                 if (key == "translatecollect") { Lang.Collect(Features.On(key)); if (Features.On(key)) Ui.Notice("Phrases go to \"Selene phrases.txt\" on your Desktop as you move around Selene."); }
                 Ui.Key();

@@ -300,6 +300,7 @@ namespace Selene
             new Option { Group = "Notifications", Key = "setuphint", Label = "Add-on hint", About = "A note when logos and trailers need the Extra Metadata add-on." },
             // ---- Sound & music ----
             new Option { Group = "Sound & music", Key = "sounds", Label = "Interface sounds", About = "Sounds when you move, select and go back." },
+            new Option { Group = "Sound & music", Key = "soundmenu", Label = "Sound in the menu", About = "Windows' volume, and which speakers or headset play, from the Start menu's Sound." },
             new Option { Group = "Sound & music", Key = "soundvolume", Slider = true, Label = "Interface sounds volume", About = "How loud the sounds are when you move, select and go back (not the music).", Choices = new[] { "25", "50", "75", "100" }, Names = new[] { "25%", "50%", "75%", "100%" }, Default = "100" },
             new Option { Group = "Sound & music", Key = "clipvolume", Slider = true, Label = "Clip volume", About = "Clips in Captures. Up / Down change it there too.", Available = () => false /* set with Up / Down in Captures only */, Choices = new[] { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Names = new[] { "Off", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, Default = "90" },
             new Option { Group = "Sound & music", Key = "songsetup", Label = "Get game songs", About = "Selene sets up UniPlaySong's song downloads (yt-dlp and ffmpeg, about 130 MB once) and gets a song for every game.", Note = SongSetup.Status, Progress = Background.SongsProgress, Available = () => HomeNav.Api != null && HomeNav.Api.Addons.Addons.Any(a => a.StartsWith("UniPlaySong", StringComparison.OrdinalIgnoreCase)) },
@@ -316,6 +317,7 @@ namespace Selene
             new Option { Group = "Games", Key = "hltb", Label = "HowLongToBeat times", About = "How long a game takes to beat, on Spotlight and Collection (with the HowLongToBeat add-on).", Available = HltbFetch.Installed },
             new Option { Group = "Games", Key = "hltbauto", Label = "HowLongToBeat: fetch new games", About = "HowLongToBeat's own setting: times for games as they're added to your library.", Get = HltbFetch.AutoImport, Put = HltbFetch.SetAutoImport, Available = HltbFetch.Installed },
             new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
+            new Option { Group = "Look", Key = "padbattery", Label = "Controller battery", About = "A battery beside the clock while a wireless controller is connected, and a card as it runs low. Xbox-type controllers; others through a wrapper like DS4Windows." },
             new Option { Group = "Look", Key = "textshadow", Label = "Readable text", About = "A soft halo behind text over bright pictures." },
             new Option { Group = "Look", Key = "smoothswitch", Label = "Soft way back", About = "Leaving a game's page fades back to Spotlight instead of cutting." },
             new Option { Group = "Look", Key = "dialogs", Label = "Selene dialogs", About = "Playnite's questions and errors as Selene cards." },

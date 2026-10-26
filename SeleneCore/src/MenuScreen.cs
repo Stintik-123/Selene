@@ -34,6 +34,12 @@ namespace Selene
         private readonly StackPanel bar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 70) };
         private readonly TextBlock status = new TextBlock { FontSize = 16, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 30) };
         private Border powerList;
+        private Border soundList;   // the Sound card: Windows' volume and which device plays
+        private SliderBar soundSlider;
+        private TextBlock soundOut;
+        private readonly List<Border> soundRows = new List<Border>();
+        private List<SystemAudio.Device> outputs = new List<SystemAudio.Device>();
+        private int soundIndex;
         private Dialog ask;
         private readonly List<Border> powerRows = new List<Border>();
         private int index, powerIndex;
@@ -74,6 +80,7 @@ namespace Selene
             items.Add(new Item { Icon = Ui.Icon(0xe3c9), Label = "Edit profile", Run = EditProfile });
             items.Add(new Item { Icon = Ui.Icon(0xe40a), Label = "Theme", Run = ChangeTheme });
             items.Add(new Item { Icon = Ui.Icon(0xe429), Label = "Selene settings", Badge = Background.Any, Run = () => LoginScene.Show(new SettingsScreen(true), 1) });   // (the dot: something still running behind the scenes)
+            if (Features.On("soundmenu")) items.Add(new Item { Icon = Ui.Icon(0xe050), Label = "Sound", Sub = SystemAudio.Summary(), Run = OpenSound });   // Windows' volume and output
             items.Add(new Item { Icon = Ui.Icon(0xe8ac), Label = "Power", Run = OpenPower });
             // the add-ons' own menus (Playnite's Extensions menu): audio switchers, metadata tools...
             items.Add(new Item { Icon = Ui.Icon(0xe87b), Picture = Ui.Glyph(Ui.Icon(0xe87b), Ui.Icons, 34, Ink.Brush("SeleneInkColor"), true), Label = "Extensions", Run = () => LoginScene.Show(GameOptionsScreen.Extensions(), 1) });   // (the piece centred by its body, not its knobs)
@@ -154,6 +161,7 @@ namespace Selene
             if (leaving) return;
             if (ask != null) { ask.Handle(b); return; }   // the power question is up
             if (powerList != null) { HandlePower(b); return; }
+            if (soundList != null) { HandleSound(b); return; }
             if (b == "B" || b == "Start") { leaving = true; Ui.Back(); if (!LoginScene.CloseMenuOver()) LoginScene.Finish(); return; }
             if (b == "A")
             {
@@ -258,6 +266,132 @@ namespace Selene
         {
             var list = powerList;
             powerList = null;
+            Ui.Fade(list, 0, 150, 0, () => Root.Children.Remove(list));
+        }
+
+        // ---- Sound: Windows' master volume (Left / Right, X mutes) and which playback device is the default (Left / Right) ----
+        private void OpenSound()
+        {
+            var list = new StackPanel { Width = 440 };
+            soundRows.Clear();
+            // the volume: the settings' slider look, its figure and line
+            soundSlider = new SliderBar();
+            soundRows.Add(SoundRow(list, "Volume", soundSlider.Root));
+            // the output: the device playing, the arrows either side say Left / Right change it
+            var pick = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24, 0, 6, 0) };
+            pick.Children.Add(new TextBlock { Text = "\u25C2", FontSize = 14, Foreground = Ink.Brush("SeleneInkColor", 0.55), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
+            soundOut = new TextBlock { FontSize = 17, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, MaxWidth = 230, TextTrimming = TextTrimming.CharacterEllipsis };
+            pick.Children.Add(soundOut);
+            pick.Children.Add(new TextBlock { Text = "\u25B8", FontSize = 14, Foreground = Ink.Brush("SeleneInkColor", 0.55), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) });
+            soundRows.Add(SoundRow(list, "Output", pick));
+            soundList = new Border
+            {
+                Child = list, CornerRadius = new CornerRadius(18), Padding = new Thickness(8),
+                Background = Ink.Brush("SeleneGlassColor", 0.96), BorderBrush = Ink.Brush("SeleneInkColor", 0.16), BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 40, Opacity = 0.5, Color = Colors.Black }
+            };
+            // centred over the Sound button, as the Power list is
+            var at = cells[index].TranslatePoint(new Point(Cell / 2, 0), Root);
+            soundList.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            soundList.Margin = new Thickness(Math.Max(20, Math.Min(Root.ActualWidth - soundList.DesiredSize.Width - 20, at.X - soundList.DesiredSize.Width / 2)), 0, 0, Root.ActualHeight - at.Y + 16);
+            Root.Children.Add(soundList);
+            Ui.Rise(soundList, 0, 12, 200);
+            Ui.Play("OpenPanel.wav", 0.8);
+            soundIndex = 0;
+            outputs = SystemAudio.Outputs();
+            ShowSound(false);
+            ShowSoundFocus();
+        }
+
+        private static Border SoundRow(StackPanel list, string label, UIElement control)
+        {
+            var line = new DockPanel();
+            DockPanel.SetDock(control, Dock.Right);
+            line.Children.Add(control);
+            line.Children.Add(new TextBlock { Text = label, FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 1) });
+            var row = new Border { Child = line, CornerRadius = new CornerRadius(12), Padding = new Thickness(16, 12, 12, 12), Margin = new Thickness(0, 2, 0, 2) };
+            list.Children.Add(row);
+            return row;
+        }
+
+        private void ShowSound(bool animate)
+        {
+            double v = SystemAudio.Volume;
+            bool muted = v >= 0 && SystemAudio.Muted;
+            if (soundSlider != null) soundSlider.Set(v < 0 ? 0 : (int)Math.Round(v * 20), 21, v < 0 ? "\u2014" : muted ? "Muted" : (int)Math.Round(v * 100) + "%", animate);
+            var now = outputs.Find(d => d.Default);
+            if (soundOut != null) soundOut.Text = now != null ? now.Name : outputs.Count > 0 ? outputs[0].Name : "No playback device";
+        }
+
+        private void ShowSoundFocus()
+        {
+            for (int i = 0; i < soundRows.Count; i++)
+            {
+                bool on = i == soundIndex;
+                soundRows[i].Background = on ? Ink.Brush("SeleneInkColor", 0.1) : Brushes.Transparent;
+                soundRows[i].BorderBrush = on ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
+                soundRows[i].BorderThickness = new Thickness(2);
+            }
+        }
+
+        private void HandleSound(string b)
+        {
+            if (b == "B") { Ui.Back(); CloseSound(); return; }
+            if (b == "Start") { leaving = true; Ui.Back(); if (!LoginScene.CloseMenuOver()) LoginScene.Finish(); return; }
+            if (b == "DPadUp" || b == "DPadDown")
+            {
+                int next = soundIndex + (b == "DPadUp" ? -1 : 1);
+                if (next < 0 || next >= soundRows.Count) return;
+                soundIndex = next;
+                Ui.Tick();
+                ShowSoundFocus();
+                return;
+            }
+            if (b == "X" || (b == "A" && soundIndex == 0))
+            {
+                if (SystemAudio.Volume < 0) return;
+                SystemAudio.Muted = !SystemAudio.Muted;   // the mute, either way
+                Ui.Key();
+                ShowSound(true);
+                return;
+            }
+            if (b == "DPadLeft" || b == "DPadRight" || b == "A")
+            {
+                int dir = b == "DPadLeft" ? -1 : 1;
+                if (soundIndex == 0)
+                {
+                    double v = SystemAudio.Volume;
+                    if (v < 0) return;
+                    double to = Math.Max(0, Math.Min(1, Math.Round(v * 20) / 20 + dir * 0.05));   // 5% a step
+                    if (Math.Abs(to - v) < 0.001 && !SystemAudio.Muted) return;   // the end of the line
+                    SystemAudio.Volume = to;
+                    if (SystemAudio.Muted) SystemAudio.Muted = false;   // a turn of the volume unmutes, as Windows does
+                    Ui.Tick();
+                    ShowSound(true);
+                }
+                else
+                {
+                    if (outputs.Count < 2) { Ui.Shake(soundRows[1]); return; }
+                    int at = outputs.FindIndex(d => d.Default);
+                    int next = ((at < 0 ? 0 : at) + dir + outputs.Count) % outputs.Count;
+                    if (SystemAudio.SetDefault(outputs[next].Id))
+                    {
+                        foreach (var d in outputs) d.Default = false;
+                        outputs[next].Default = true;
+                        Ui.Tick();
+                        ShowSound(true);
+                        HomeNav.Log("audio: output -> " + outputs[next].Name);
+                    }
+                    else Ui.Shake(soundRows[1]);
+                }
+            }
+        }
+
+        private void CloseSound()
+        {
+            var list = soundList;
+            soundList = null;
             Ui.Fade(list, 0, 150, 0, () => Root.Children.Remove(list));
         }
 
