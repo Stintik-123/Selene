@@ -15,11 +15,12 @@ namespace Selene
     // hand or by a script stay bare (no description, genres, cover...). A while after the start, every game missing its main
     // details gets each empty field filled from the metadata add-ons, in the order Playnite's own metadata settings give for
     // that field (IGDB for the words, SteamGridDB for the pictures, say). Nothing already there is replaced. A game is tried
-    // again two weeks later at the soonest (metadata-tried.txt).
+    // again two weeks later at the soonest (metadata-tried-2.txt). What the add-ons leave empty (IGDB finds nothing for a game
+    // it can't match on its own) comes from the Steam store when a game there has exactly the same name.
     internal static class GameInfo
     {
         private const int PerStart = 120;   // games looked up per start at most (the rest next time)
-        private static string TriedFile { get { return Path.Combine(SelenePaths.DataFolder, "metadata-tried.txt"); } }
+        private static string TriedFile { get { return Path.Combine(SelenePaths.DataFolder, "metadata-tried-2.txt"); } }   // (2: every game once more, with the Steam store as well)
 
         public static void CompleteLater()
         {
@@ -160,6 +161,7 @@ namespace Selene
             if (string.IsNullOrEmpty(game.BackgroundImage)) wants[MetadataField.BackgroundImage] = Local(first(MetadataField.BackgroundImage, p => p.GetBackgroundImage(args)) as MetadataFile);
             if (string.IsNullOrEmpty(game.Icon)) wants[MetadataField.Icon] = Local(first(MetadataField.Icon, p => p.GetIcon(args)) as MetadataFile);
             foreach (var pr in providers.Values) if (pr != null) try { pr.Dispose(); } catch { }
+            if (wants.Any(w => w.Value == null)) FromSteamStore(game.Name, wants);
 
             var found = wants.Where(w => w.Value != null).ToDictionary(w => w.Key, w => w.Value);
             if (found.Count == 0) return false;
@@ -190,6 +192,75 @@ namespace Selene
             if (changed) HomeNav.Log("game info: " + game.Name + ": " + string.Join(", ", found.Keys));
             foreach (var w in found) if (w.Value is string && ((string)w.Value).StartsWith(Path.GetTempPath())) try { File.Delete((string)w.Value); } catch { }
             return changed;
+        }
+
+        // ---- the Steam store, for what the add-ons left empty ----
+        private static string Plain(string name)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in (name ?? "").ToLowerInvariant()) if (char.IsLetterOrDigit(c)) sb.Append(c);
+            return sb.ToString();
+        }
+
+        private static object Json(string url)
+        {
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            using (var web = new WebClient { Encoding = System.Text.Encoding.UTF8 })
+            {
+                web.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0";
+                return new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = int.MaxValue }.DeserializeObject(web.DownloadString(url));
+            }
+        }
+
+        private static object At(object o, params string[] path)
+        {
+            foreach (var k in path) { var d = o as Dictionary<string, object>; if (d == null || !d.TryGetValue(k, out o)) return null; }
+            return o;
+        }
+
+        private static List<MetadataProperty> Names(object list, string key)
+        {
+            var names = new List<MetadataProperty>();
+            foreach (var o in (list as IEnumerable) ?? new object[0])
+            {
+                var n = key == null ? Convert.ToString(o) : Convert.ToString(At(o, key));
+                if (!string.IsNullOrWhiteSpace(n)) names.Add(new MetadataNameProperty(n.Trim()));
+            }
+            return names.Count > 0 ? names : null;
+        }
+
+        // the empty ones of `wants` from the store page of the game with exactly this name (nothing when there's none)
+        private static void FromSteamStore(string name, Dictionary<MetadataField, object> wants)
+        {
+            try
+            {
+                var plain = Plain(name);
+                if (plain.Length == 0) return;
+                var found = At(Json("https://store.steampowered.com/api/storesearch/?term=" + Uri.EscapeDataString(name) + "&l=english&cc=US"), "items") as IEnumerable;
+                string appId = null;
+                foreach (var item in found ?? new object[0]) if (Plain(Convert.ToString(At(item, "name"))) == plain) { appId = Convert.ToString(At(item, "id")); break; }
+                if (appId == null) { HomeNav.Log("game info: " + name + ": not on the Steam store by that name"); return; }
+                var data = At(Json("https://store.steampowered.com/api/appdetails?appids=" + appId + "&l=english"), appId, "data");
+                if (data == null) return;
+                Action<MetadataField, object> put = (field, value) => { object had; if (wants.TryGetValue(field, out had) && had == null && value != null) wants[field] = value; };
+                var about = Convert.ToString(At(data, "detailed_description") ?? At(data, "about_the_game"));
+                put(MetadataField.Description, string.IsNullOrWhiteSpace(about) ? null : about);
+                put(MetadataField.Genres, Names(At(data, "genres"), "description"));
+                put(MetadataField.Developers, Names(At(data, "developers"), null));
+                put(MetadataField.Publishers, Names(At(data, "publishers"), null));
+                put(MetadataField.Features, Names(At(data, "categories"), "description"));
+                DateTime when;
+                var date = Convert.ToString(At(data, "release_date", "date"));
+                if (DateTime.TryParseExact(date, new[] { "d MMM, yyyy", "MMM d, yyyy", "d MMMM, yyyy", "MMMM d, yyyy" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out when) || DateTime.TryParse(date, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out when)) put(MetadataField.ReleaseDate, (ReleaseDate?)new ReleaseDate(when));
+                var score = At(data, "metacritic", "score");
+                if (score != null) put(MetadataField.CriticScore, (int?)Convert.ToInt32(score));
+                var cdn = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/" + appId + "/";
+                object had2;
+                if (wants.TryGetValue(MetadataField.CoverImage, out had2) && had2 == null) wants[MetadataField.CoverImage] = Local(new MetadataFile(cdn + "library_600x900_2x.jpg")) ?? Local(new MetadataFile(cdn + "library_600x900.jpg"));
+                if (wants.TryGetValue(MetadataField.BackgroundImage, out had2) && had2 == null) wants[MetadataField.BackgroundImage] = Local(new MetadataFile(cdn + "library_hero.jpg")) ?? Local(new MetadataFile(Convert.ToString(At(data, "background_raw"))));
+                HomeNav.Log("game info: " + name + ": Steam store page " + appId);
+            }
+            catch (Exception ex) { HomeNav.Log("game info: " + name + ": Steam store: " + ex.Message); }
         }
 
         // a picture from an add-on as a file on disk (its bytes, a web address downloaded, or a path as it is); null without one
