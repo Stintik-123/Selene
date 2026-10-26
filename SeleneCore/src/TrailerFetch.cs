@@ -168,11 +168,18 @@ namespace Selene
             var logo = System.IO.Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "games", g.Id.ToString(), "logo.png");
             var hero = System.IO.Path.Combine(SelenePaths.Media("Hero"), g.Id + ".jpg");
             bool needLogo = !System.IO.File.Exists(logo), needHero = !System.IO.File.Exists(hero);
+            if (!needHero && IsBanner(hero)) { try { System.IO.File.Delete(hero); needHero = true; } catch { } }   // a banner saved before the crop came in: fetched again, sharper
             if (!needLogo && !needHero) return;
             var none = System.IO.Path.Combine(SelenePaths.Media("Trailers"), g.Id + ".noart");
             if (System.IO.File.Exists(none) && (DateTime.Now - System.IO.File.GetLastWriteTime(none)).TotalDays < 7) return;
             var id = steamId();
             if (string.IsNullOrEmpty(id)) { System.IO.File.WriteAllText(none, g.Name); return; }
+
+            // Steam's own library cache on this PC first (it has the logos the store page doesn't: newer games keep theirs
+            // in hashed folders only Steam knows)
+            if (needLogo && CopyFromSteam(id, "logo.png", logo)) { needLogo = false; HomeNav.Log("art download: " + g.Name + " logo (Steam's cache)"); }
+            if (needHero && CopyFromSteam(id, "library_hero.jpg", hero)) { needHero = false; Crop16x9(hero); HeroArrived(); HomeNav.Log("art download: " + g.Name + " background (Steam's cache)"); }
+            if (!needLogo && !needHero) return;
 
             // the file names (newer games have them in hashed folders) from Steam's store service
             string format = "steam/apps/" + id + "/${FILENAME}", heroName = "library_hero.jpg";
@@ -185,7 +192,8 @@ namespace Selene
                 if (assets != null)
                 {
                     if (assets.ContainsKey("asset_url_format")) format = (string)assets["asset_url_format"];
-                    if (assets.ContainsKey("library_hero")) heroName = (string)assets["library_hero"];
+                    if (assets.ContainsKey("library_hero_2x")) heroName = (string)assets["library_hero_2x"];   // (sharper once cropped)
+                    else if (assets.ContainsKey("library_hero")) heroName = (string)assets["library_hero"];
                 }
             }
             catch (Exception ex) { HomeNav.Log("art download: " + g.Name + ": store service: " + ex.Message); }
@@ -198,14 +206,77 @@ namespace Selene
             if (needHero && Save(url(heroName), hero, false))
             {
                 got = true;
+                Crop16x9(hero);
+                HeroArrived();
                 HomeNav.Log("art download: " + g.Name + " background");
-                // the theme only looks in the media folder once something is there (SeleneShell.ApplyArtRoots)
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if ("".Equals(Application.Current.Resources["SeleneHeroRoot"])) SeleneShell.ApplyArtRoots();
-                }));
             }
             if (!got && (needLogo && !System.IO.File.Exists(logo)) && (needHero && !System.IO.File.Exists(hero))) System.IO.File.WriteAllText(none, g.Name);
+        }
+
+        // the theme only looks in the media folder once something is there (SeleneShell.ApplyArtRoots)
+        private static void HeroArrived()
+        {
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if ("".Equals(Application.Current.Resources["SeleneHeroRoot"])) SeleneShell.ApplyArtRoots();
+            }));
+        }
+
+        // a picture from Steam's library cache (librarycache\<appid>\ or a hashed folder under it); false when it has none
+        private static bool CopyFromSteam(string appId, string name, string to)
+        {
+            try
+            {
+                var steam = Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null) as string;
+                if (string.IsNullOrEmpty(steam)) return false;
+                var dir = System.IO.Path.Combine(steam.Replace('/', '\\'), "appcache", "librarycache", appId);
+                if (!System.IO.Directory.Exists(dir)) return false;
+                var found = System.IO.Directory.GetFiles(dir, name, System.IO.SearchOption.AllDirectories)
+                    .OrderByDescending(f => new System.IO.FileInfo(f).Length).FirstOrDefault();
+                if (found == null) return false;
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(to));
+                System.IO.File.Copy(found, to + ".part", true);
+                if (System.IO.File.Exists(to)) { System.IO.File.Delete(to + ".part"); return true; }
+                System.IO.File.Move(to + ".part", to);
+                return true;
+            }
+            catch (Exception ex) { HomeNav.Log("art: Steam's cache: " + ex.Message); return false; }
+        }
+
+        // Steam's backgrounds are banners (about 3:1); Selene's are 16:9 like the screen (a game's page stretches the art over
+        // its whole tall page: a banner was blown up to a slice of its middle). The middle, cut to 16:9; nothing for one that
+        // is already about that shape.
+        private static bool IsBanner(string path)
+        {
+            try
+            {
+                using (var file = System.IO.File.OpenRead(path))
+                {
+                    var frame = System.Windows.Media.Imaging.BitmapFrame.Create(file, System.Windows.Media.Imaging.BitmapCreateOptions.DelayCreation, System.Windows.Media.Imaging.BitmapCacheOption.None);
+                    return frame.PixelHeight > 0 && (double)frame.PixelWidth / frame.PixelHeight >= 1.9;
+                }
+            }
+            catch { return false; }
+        }
+
+        private static void Crop16x9(string path)
+        {
+            try
+            {
+                System.Windows.Media.Imaging.BitmapSource src;
+                using (var file = System.IO.File.OpenRead(path))
+                    src = System.Windows.Media.Imaging.BitmapFrame.Create(file, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                int w = src.PixelWidth, h = src.PixelHeight;
+                if (h == 0 || (double)w / h < 1.9) return;
+                int cw = (int)Math.Round(h * 16.0 / 9);
+                var crop = new System.Windows.Media.Imaging.CroppedBitmap(src, new System.Windows.Int32Rect((w - cw) / 2, 0, cw, h));
+                var jpg = new System.Windows.Media.Imaging.JpegBitmapEncoder { QualityLevel = 92 };
+                jpg.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(crop));
+                using (var outFile = System.IO.File.Create(path + ".part")) jpg.Save(outFile);
+                System.IO.File.Delete(path);
+                System.IO.File.Move(path + ".part", path);
+            }
+            catch (Exception ex) { HomeNav.Log("art: crop " + System.IO.Path.GetFileName(path) + ": " + ex.Message); }
         }
 
         // a picture to a file (through .part, so a cut download never shows); false when there is none (or it isn't one)

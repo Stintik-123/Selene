@@ -345,10 +345,11 @@
                                             <GradientStop Color="Transparent" Offset="1"/>
                                         </LinearGradientBrush>
                                     </Border.OpacityMask>
-                                    <ScrollViewerEx x:Name="PART_ScrollHtmlDescription" CustomScrollAmount="42" VerticalScrollBarVisibility="Hidden" Focusable="False" IsTabStop="False" KeyboardNavigation.DirectionalNavigation="None">
+                                    <!-- a plain ScrollViewer: Playnite's ScrollViewerEx eases every offset change itself, which fought the right stick's frame-by-frame scroll -->
+                                    <ScrollViewer x:Name="PART_ScrollHtmlDescription" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" CanContentScroll="False" Focusable="False" IsTabStop="False" KeyboardNavigation.DirectionalNavigation="None">
                                         <HtmlTextView x:Name="PART_HtmlDescription" HtmlFontSize="17" Focusable="False" IsTabStop="False"
                                                       HtmlForeground="{DynamicResource SeleneInkColor}" LinkForeground="{DynamicResource GlyphColor}" FocusVisualStyle="{x:Null}"/>
-                                    </ScrollViewerEx>
+                                    </ScrollViewer>
                                 </Border>
                             </DockPanel>
 
