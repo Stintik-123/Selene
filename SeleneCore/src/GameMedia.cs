@@ -89,6 +89,7 @@ namespace Selene
         {
             var g = AsGame(o);
             if (g == null) { Clear(); return; }  // Capture / Store / Library tiles: no game, no strip
+            try { HltbFetch.ForPage(g); } catch (Exception ex) { HomeNav.Log("hltb: " + ex.Message); }   // its times, shown under its name, once a session
             if (g.Id == shown)
             {
                 // back on the game already loaded (moved away and back before another loaded): the strip had started to

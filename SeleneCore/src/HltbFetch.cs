@@ -16,15 +16,35 @@ namespace Selene
         private static object database;
         private static bool looked;
 
+        // asked once the selection rests on a game (scrolling past a row of games started a search for each)
+        private static System.Windows.Threading.DispatcherTimer settle;
+        private static Game waiting;
+
         public static void ForPage(Game game)
         {
             if (game == null || !Features.On("hltb") || asked.Contains(game.Id)) return;
+            waiting = game;
+            if (settle == null)
+            {
+                settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+                settle.Tick += (s, e) => { settle.Stop(); var g = waiting; waiting = null; if (g != null) Fetch(g); };
+            }
+            settle.Stop();
+            settle.Start();
+        }
+
+        private static void Fetch(Game game)
+        {
+            if (game == null || asked.Contains(game.Id)) return;
             var db = Database();
             if (db == null) return;
             asked.Add(game.Id);
             var type = db.GetType();
             var get = type.GetMethod("Get", new[] { typeof(Guid), typeof(bool), typeof(bool) });
             var themes = type.GetMethod("SetThemesResources", new[] { typeof(Game) });
+            // AddData: the add-on's automatic lookup (best match, no questions). Get(id, false, false) only searched through
+            // its "pick the right game" window, which exists in desktop mode only: in fullscreen it found nothing, ever
+            var add = type.GetMethod("AddData", new[] { typeof(Game) });
             if (get == null) return;
             if (HasData(get.Invoke(db, new object[] { game.Id, true, false }))) return;   // already known
             var dispatcher = System.Windows.Application.Current.Dispatcher;
@@ -32,7 +52,8 @@ namespace Selene
             {
                 try
                 {
-                    var found = HasData(get.Invoke(db, new object[] { game.Id, false, false }));
+                    if (add != null) add.Invoke(db, new object[] { game });
+                    var found = HasData(get.Invoke(db, new object[] { game.Id, add != null, false }));
                     HomeNav.Log("hltb: " + game.Name + (found ? " fetched" : " not found on HowLongToBeat"));
                     if (!found || themes == null) return;
                     dispatcher.BeginInvoke(new Action(() =>

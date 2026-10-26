@@ -46,7 +46,15 @@ namespace Selene
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
             arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(4000) };   // like Aniki: the art first, the trailer about 4 s in
             arm.Tick += (s, e) => { arm.Stop(); Play(); };
-            list.SelectionChanged += (s, e) => { Rearm(true); TrailerFetch.Want(list.SelectedItem, null); };
+            list.SelectionChanged += (s, e) =>
+            {
+                Rearm(true);
+                TrailerFetch.Want(list.SelectedItem, null);
+                var entry = list.SelectedItem;
+                var gp = entry != null ? entry.GetType().GetProperty("Game") : null;
+                var game = gp != null ? gp.GetValue(entry, null) as Playnite.SDK.Models.Game : entry as Playnite.SDK.Models.Game;
+                try { HltbFetch.ForPage(game); } catch (Exception ex) { HomeNav.Log("hltb: " + ex.Message); }   // its times under its name
+            };
             library.IsVisibleChanged += (s, e) => { if ((bool)e.NewValue) Rearm(false); else Stop(); };
             HookArtCrossfade(grid);
         }
