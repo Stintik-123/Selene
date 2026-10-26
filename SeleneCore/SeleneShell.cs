@@ -14,7 +14,7 @@ namespace Selene
     // The parts of the main screen Selene Core owns: home <-> library, the login layer, values the theme binds to.
     public static class SeleneShell
     {
-        private class Relay : ICommand
+        internal class Relay : ICommand
         {
             private readonly Action run;
             public Relay(Action run) { this.run = run; }
@@ -103,6 +103,7 @@ namespace Selene
             Wire("SeleneNav_activity", () => new ActivityScreen());
             Wire("SeleneNav_captures", () => new CapturesScreen());
             Wire("SeleneNav_surprise", () => new SurpriseScreen());
+            Wire("SeleneNav_achievements", () => new AchievementsHub());
             HomeNav.ApplyValueSettings();
             Ui.WatchFullRate(main);            // the screen's own refresh rate while Playnite is in front
             DetailsStage.Attach(main);         // the details page's lower half

@@ -62,6 +62,13 @@ namespace Selene
                 if (page == null) { HomeNav.Log("details stage: no page in the template"); return; }
                 SeleneShell.Switch(Part<UIElement>("SeleneHltb"), "hltb");
                 HltbFetch.ForPage(g);
+                var ach = Part<System.Windows.Controls.Primitives.ButtonBase>("SeleneAchievementsButton");
+                if (ach != null)
+                {
+                    var id = g.Id;
+                    ach.Command = new SeleneShell.Relay(() => { Ui.Confirm(); LoginScene.OpenWith(() => new AchievementsScreen(id, null)); });
+                    SeleneShell.Switch(ach, "achievements");
+                }
                 if (sink == null || !ReferenceEquals(sink.Parent, page))
                 {
                     sink = new Border { Width = 0, Height = 0, Focusable = true, FocusVisualStyle = null, IsHitTestVisible = false };

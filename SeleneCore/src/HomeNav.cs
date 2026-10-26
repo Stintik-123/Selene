@@ -4226,6 +4226,7 @@ namespace Selene
             new System.Collections.Generic.KeyValuePair<string, string>("nav:activity", "cardactivity"),
             new System.Collections.Generic.KeyValuePair<string, string>("nav:captures", "cardcaptures"),
             new System.Collections.Generic.KeyValuePair<string, string>("nav:surprise", "cardsurprise"),
+            new System.Collections.Generic.KeyValuePair<string, string>("nav:achievements", "cardachievements"),
         };
 
         private static void ApplyCardOrder(ListBox row)
@@ -4236,7 +4237,7 @@ namespace Selene
                 if (items == null) return;
                 // cards switched off in Selene settings leave the row
                 foreach (var card in CardFeatures)
-                    if (!Features.On(card.Value)) { int at = items.IndexOf(card.Key); if (at >= 0) items.RemoveAt(at); }
+                    if (!Features.On(card.Value) || (card.Key == "nav:achievements" && !AchievementsData.Available())) { int at = items.IndexOf(card.Key); if (at >= 0) items.RemoveAt(at); }   // (achievements: only with Playnite Achievements)
                 if (!System.IO.File.Exists(CardOrderFile)) return;
                 // a saved order from before a card existed would push the new cards to the end: it's ignored until the cards
                 // are moved again (the next move saves a complete one)

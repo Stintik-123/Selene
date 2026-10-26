@@ -1,0 +1,401 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using Playnite.SDK.Models;
+
+namespace Selene
+{
+    // A game's achievements, like a console's trophy list (Playnite Achievements' data): the logo, a completion ring and the
+    // count, then the list. LB / RB: all, unlocked, locked. Y: the order (default, newest unlocked, rarest). A: one
+    // achievement large. X: a hidden one's words. B: back.
+    public class AchievementsScreen : Screen
+    {
+        private const double Side = 96, ListTop = 372, IconSize = 64, Page = 120;
+        private static readonly string[] Tabs = { "All", "Unlocked", "Locked" };
+        private static readonly string[] Sorts = { "Default order", "Newest unlocked", "Rarest first" };
+
+        private readonly Guid gameId;
+        private readonly Func<Screen> back;
+        private readonly Game game;
+        private AchievementsData.GameSet set;
+        private List<AchievementsData.Item> shown = new List<AchievementsData.Item>();
+        private readonly HashSet<AchievementsData.Item> revealed = new HashSet<AchievementsData.Item>();
+        private readonly List<Border> rows = new List<Border>();
+        private readonly List<Border> tabPills = new List<Border>();
+        private readonly StackPanel list = new StackPanel();
+        private readonly ScrollViewer scroller;
+        private readonly Grid header = new Grid();
+        private readonly TextBlock sortLabel, note;
+        private readonly Image hero = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
+        private Grid detail;
+        private int tab, sort, index, built;
+        private bool closed;
+
+        public override bool Overlay { get { return true; } }
+        public override Brush OverlayShade { get { return Ink.Brush("SeleneScrimColor", 0.96); } }
+
+        public AchievementsScreen(Guid gameId, Func<Screen> back)
+        {
+            this.gameId = gameId;
+            this.back = back;
+            game = GameFacts.Find(gameId);
+
+            // the game's art faint behind, dark at the left and the bottom (as Activity)
+            RenderOptions.SetBitmapScalingMode(hero, BitmapScalingMode.HighQuality);
+            Root.Children.Add(hero);
+            Root.Children.Add(new Border { IsHitTestVisible = false, Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0.96, 0), Ink.Stop("SeleneScrimColor", 0.75, 0.55), Ink.Stop("SeleneScrimColor", 0.45, 1) }, 0) });
+            Root.Children.Add(new Border { IsHitTestVisible = false, Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0, 0.2), Ink.Stop("SeleneScrimColor", 0.92, 0.75) }, 90) });
+
+            header.HorizontalAlignment = HorizontalAlignment.Stretch;
+            header.VerticalAlignment = VerticalAlignment.Top;
+            header.Margin = new Thickness(Side, 56, Side, 0);
+            Root.Children.Add(header);
+
+            var tabsRow = new DockPanel { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, ListTop - 70, Side, 0), LastChildFill = false };
+            var tabs = new StackPanel { Orientation = Orientation.Horizontal };
+            tabs.Children.Add(Badge("LB"));
+            for (int i = 0; i < Tabs.Length; i++)
+            {
+                var pill = new Border { CornerRadius = new CornerRadius(20), Padding = new Thickness(18, 7, 18, 8), Margin = new Thickness(6, 0, 6, 0), Child = new TextBlock { FontSize = 17, FontFamily = Ui.Body, FontWeight = FontWeights.SemiBold } };
+                tabPills.Add(pill);
+                tabs.Children.Add(pill);
+            }
+            tabs.Children.Add(Badge("RB"));
+            DockPanel.SetDock(tabs, Dock.Left);
+            tabsRow.Children.Add(tabs);
+            sortLabel = new TextBlock { FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), VerticalAlignment = VerticalAlignment.Center };
+            DockPanel.SetDock(sortLabel, Dock.Right);
+            tabsRow.Children.Add(sortLabel);
+            Root.Children.Add(tabsRow);
+
+            scroller = new ScrollViewer { Content = list, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false, CanContentScroll = false };
+            var area = PeekScroller.Wrap(scroller, list);
+            area.VerticalAlignment = VerticalAlignment.Top;
+            area.Margin = new Thickness(Side, ListTop, Side, 0);
+            area.Height = 1080 - ListTop - 120;
+            Root.Children.Add(area);
+
+            note = new TextBlock { FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, MaxWidth = 900, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side + 4, ListTop + 10, 0, 0), Text = "Getting the achievements..." };
+            Root.Children.Add(note);
+
+            Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
+            Root.Children.Add(Ui.Prompts(true, Ui.Prompt("Y", "Order"), Ui.Prompt("A", "Open")));
+            ShowTabs();
+        }
+
+        private static Border Badge(string text)
+        {
+            return new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(7, 2, 7, 3), Margin = new Thickness(4, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center, Background = Ink.Brush("SeleneInkColor", 0.9), Child = new TextBlock { Text = text, FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor") } };
+        }
+
+        public override void Shown()
+        {
+            Ui.Play("OpenPanel.wav", 0.8);
+            Ui.Rise(header, 40, 14, 320);
+            var art = game != null ? GameFacts.BackgroundPath(game) : null;
+            if (art != null) Ui.LoadInOrder(new List<string> { art }, 1920, (k, pic) => { if (closed) return; hero.Source = pic; Ui.Fade(hero, 0.5, 600); });
+            AchievementsData.ForGame(gameId, s =>
+            {
+                if (closed) return;
+                set = s;
+                BuildHeader();
+                if (set == null || set.Total == 0)
+                {
+                    note.Text = AchievementsData.Available()
+                        ? "No achievements for this game yet. Playnite Achievements fills them in when it next refreshes this game."
+                        : "Achievements need the Playnite Achievements add-on.";
+                    return;
+                }
+                note.Visibility = Visibility.Collapsed;
+                Fill();
+            });
+        }
+
+        public override void Hidden() { closed = true; }
+
+        // ---- the header: logo (or name), the ring, the count ----
+        private void BuildHeader()
+        {
+            header.Children.Clear();
+            var left = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left };
+            var logo = game != null && HomeNav.Api != null ? System.IO.Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "games", game.Id.ToString(), "Logo.png") : null;
+            string name = game != null ? game.Name : set != null ? set.Name : "";
+            if (logo != null && File.Exists(logo))
+            {
+                var img = new Image { MaxHeight = 120, MaxWidth = 520, HorizontalAlignment = HorizontalAlignment.Left, Stretch = Stretch.Uniform };
+                RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                Ui.LoadInOrder(new List<string> { logo }, 1040, (k, pic) => img.Source = pic);
+                left.Children.Add(img);
+            }
+            else left.Children.Add(new TextBlock { Text = name, FontSize = 44, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 1100 });
+            left.Children.Add(new TextBlock { Text = "Achievements", FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(2, 10, 0, 0) });
+            header.Children.Add(left);
+            if (set == null || set.Total == 0) return;
+
+            // the ring and the numbers at the right
+            var right = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
+            right.Children.Add(Ring(set.Unlocked / (double)set.Total, 112));
+            var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(22, 0, 0, 0) };
+            words.Children.Add(new TextBlock { Text = set.Unlocked + " of " + set.Total, FontSize = 30, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
+            words.Children.Add(new TextBlock { Text = set.Completed || set.Unlocked == set.Total ? "Every achievement earned" : "unlocked", FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65) });
+            var last = set.LastUnlock;
+            if (last.HasValue) words.Children.Add(new TextBlock { Text = "Last one " + GameFacts.Ago(last).ToLowerInvariant(), FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), Margin = new Thickness(0, 4, 0, 0) });
+            right.Children.Add(words);
+            header.Children.Add(right);
+            Ui.Rise(right, 80, 12, 320);
+        }
+
+        // a completion ring: the track, the share as an arc, the percent in the middle
+        internal static Grid Ring(double share, double size)
+        {
+            share = Math.Max(0, Math.Min(1, share));
+            var g = new Grid { Width = size, Height = size };
+            double stroke = size * 0.08, r = (size - stroke) / 2, c = size / 2;
+            g.Children.Add(new Ellipse { Stroke = Ink.Brush("SeleneInkColor", 0.15), StrokeThickness = stroke });
+            if (share >= 0.999) g.Children.Add(new Ellipse { Stroke = Ink.Brush("SeleneFocusColor"), StrokeThickness = stroke });
+            else if (share > 0)
+            {
+                double angle = share * 2 * Math.PI;
+                var start = new Point(c, c - r);
+                var end = new Point(c + r * Math.Sin(angle), c - r * Math.Cos(angle));
+                var fig = new PathFigure { StartPoint = start, IsClosed = false };
+                fig.Segments.Add(new ArcSegment(end, new Size(r, r), 0, share > 0.5, SweepDirection.Clockwise, true));
+                g.Children.Add(new System.Windows.Shapes.Path { Data = new PathGeometry(new[] { fig }), Stroke = Ink.Brush("SeleneFocusColor"), StrokeThickness = stroke, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round });
+            }
+            g.Children.Add(new TextBlock { Text = (int)Math.Floor(share * 100) + "%", FontSize = size * 0.24, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            return g;
+        }
+
+        // ---- the list ----
+        private void Fill()
+        {
+            IEnumerable<AchievementsData.Item> items = set.Items;
+            if (tab == 1) items = items.Where(i => i.Unlocked);
+            if (tab == 2) items = items.Where(i => !i.Unlocked);
+            if (sort == 1) items = items.OrderByDescending(i => i.Unlocked).ThenByDescending(i => i.When ?? DateTime.MinValue);
+            else if (sort == 2) items = items.OrderBy(i => i.Rarity ?? 101);
+            else items = items.OrderBy(i => i.Order);
+            shown = items.ToList();
+            list.Children.Clear();
+            rows.Clear();
+            built = 0;
+            index = 0;
+            scroller.ScrollToVerticalOffset(0);
+            ShowTabs();
+            if (shown.Count == 0)
+            {
+                note.Text = tab == 1 ? "Nothing unlocked yet." : "Everything's unlocked.";
+                note.Visibility = Visibility.Visible;
+                return;
+            }
+            note.Visibility = Visibility.Collapsed;
+            BuildMore();
+            ShowFocus();
+        }
+
+        // rows are built a page at a time (some games have hundreds, or thousands)
+        private void BuildMore()
+        {
+            int end = Math.Min(shown.Count, built + (int)Page);
+            var files = new List<string>();
+            var targets = new List<Tuple<Border, bool>>();
+            for (int i = built; i < end; i++)
+            {
+                var it = shown[i];
+                var icon = new Border { Width = IconSize, Height = IconSize, CornerRadius = new CornerRadius(10), Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
+                if (!it.Unlocked) icon.Opacity = 0.55;
+                if (it.Icon != null) { files.Add(it.Icon); targets.Add(Tuple.Create(icon, !it.Unlocked)); }
+                else icon.Child = new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 30, Foreground = Ink.Brush("SeleneInkColor", 0.5), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+
+                var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                var name = new TextBlock { FontSize = 21, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", it.Unlocked ? 1 : 0.8), TextTrimming = TextTrimming.CharacterEllipsis };
+                var about = new TextBlock { FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 3, 0, 0) };
+                Words(it, name, about);
+                words.Children.Add(name);
+                words.Children.Add(about);
+
+                var side = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24, 0, 0, 0), MinWidth = 180 };
+                var rarity = AchievementsData.RarityLine(it);
+                if (!string.IsNullOrEmpty(rarity)) side.Children.Add(new TextBlock { Text = rarity, FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = TierBrush(it), HorizontalAlignment = HorizontalAlignment.Right });
+                side.Children.Add(new TextBlock { Text = Status(it), FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 3, 0, 0) });
+
+                var line = new DockPanel();
+                DockPanel.SetDock(icon, Dock.Left);
+                DockPanel.SetDock(side, Dock.Right);
+                line.Children.Add(icon);
+                line.Children.Add(side);
+                line.Children.Add(words);
+                var row = new Border { Child = line, CornerRadius = new CornerRadius(16), Padding = new Thickness(16, 12, 24, 12), Margin = new Thickness(0, 0, 0, 8), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Ink.Brush("SeleneGlassColor", 0.72), Tag = it };
+                list.Children.Add(row);
+                rows.Add(row);
+                if (i < 8) Ui.Rise(row, 60 + i * 40, 12, 280);
+            }
+            built = end;
+            Ui.LoadInOrder(files, 128, (k, pic) =>
+            {
+                if (closed || k >= targets.Count) return;
+                var src = pic as BitmapSource;
+                // locked: in grey, as a console shows the ones still to get
+                if (targets[k].Item2 && src != null) { try { var grey = new FormatConvertedBitmap(src, PixelFormats.Gray8, null, 0); grey.Freeze(); pic = grey; } catch { } }
+                targets[k].Item1.Child = new Border { Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } };
+            });
+        }
+
+        // a hidden one stays hidden until it's unlocked (or X shows it)
+        private void Words(AchievementsData.Item it, TextBlock name, TextBlock about)
+        {
+            bool secret = it.Hidden && !it.Unlocked && !revealed.Contains(it);
+            name.Text = secret ? "Hidden achievement" : it.Name;
+            about.Text = secret ? "Keep playing to find out. X shows it." : (string.IsNullOrWhiteSpace(it.Description) ? " " : it.Description);
+        }
+
+        private static string Status(AchievementsData.Item it)
+        {
+            if (it.Unlocked) return it.When.HasValue ? "Unlocked " + it.When.Value.ToString("MMM d, yyyy") : "Unlocked";
+            if (it.ProgressNum.HasValue && it.ProgressDenom.HasValue && it.ProgressDenom.Value > 0) return it.ProgressNum.Value + " / " + it.ProgressDenom.Value;
+            return "Locked";
+        }
+
+        internal static Brush TierBrush(AchievementsData.Item it)
+        {
+            if (it.Tier == "Ultra rare") return Ink.Brush("GlyphColor");
+            if (it.Tier == "Rare") return Ink.Brush("GlyphColor", 0.8);
+            return Ink.Brush("SeleneInkColor", 0.6);
+        }
+
+        private void ShowTabs()
+        {
+            for (int i = 0; i < tabPills.Count; i++)
+            {
+                int count = set == null ? 0 : i == 0 ? set.Total : i == 1 ? set.Unlocked : set.Total - set.Unlocked;
+                var t = (TextBlock)tabPills[i].Child;
+                t.Text = Tabs[i] + (set != null ? "  " + count : "");
+                bool on = i == tab;
+                tabPills[i].Background = on ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneInkColor", 0.1);
+                t.Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.85);
+            }
+            sortLabel.Text = Sorts[sort];
+        }
+
+        private void ShowFocus()
+        {
+            if (index >= built - 10 && built < shown.Count) BuildMore();
+            for (int i = 0; i < rows.Count; i++)
+            {
+                bool on = i == index;
+                rows[i].BorderBrush = on ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
+                rows[i].Background = Ink.Brush("SeleneGlassColor", on ? 0.95 : 0.72);
+            }
+            if (index >= rows.Count) return;
+            try
+            {
+                scroller.UpdateLayout();
+                var row = rows[index];
+                var top = row.TranslatePoint(new Point(0, 0), list).Y;
+                double want = scroller.VerticalOffset, pad = PeekScroller.Band;
+                if (top - pad * 0.6 < scroller.VerticalOffset) want = Math.Max(0, top - pad * 0.6);
+                else if (top + row.ActualHeight > scroller.VerticalOffset + scroller.ViewportHeight - pad) want = top + row.ActualHeight - (scroller.ViewportHeight - pad);
+                if (Math.Abs(want - scroller.VerticalOffset) > 0.5) scroller.ScrollToVerticalOffset(want);
+            }
+            catch { }
+        }
+
+        // ---- one achievement, large ----
+        private void OpenDetail()
+        {
+            if (index >= shown.Count) return;
+            var it = shown[index];
+            bool secret = it.Hidden && !it.Unlocked && !revealed.Contains(it);
+            detail = new Grid { Background = Ink.Brush("SeleneScrimColor", 0.85) };
+            var card = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Width = 760 };
+            var icon = new Border { Width = 168, Height = 168, CornerRadius = new CornerRadius(24), HorizontalAlignment = HorizontalAlignment.Center, Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true };
+            if (it.Icon != null && !secret)
+                Ui.LoadInOrder(new List<string> { it.Icon }, 336, (k, pic) =>
+                {
+                    var src = pic as BitmapSource;
+                    if (!it.Unlocked && src != null) { try { var grey = new FormatConvertedBitmap(src, PixelFormats.Gray8, null, 0); grey.Freeze(); pic = grey; } catch { } }
+                    icon.Child = new Border { Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } };
+                });
+            else icon.Child = new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 72, Foreground = Ink.Brush("SeleneInkColor", 0.5), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            if (!it.Unlocked) icon.Opacity = 0.6;
+            card.Children.Add(icon);
+            card.Children.Add(new TextBlock { Text = secret ? "Hidden achievement" : it.Name, FontSize = 34, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 26, 0, 0) });
+            card.Children.Add(new TextBlock { Text = secret ? "Keep playing to find out." : it.Description, FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.75), HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) });
+            var facts = new List<string>();
+            facts.Add(it.Unlocked ? (it.When.HasValue ? "Unlocked " + it.When.Value.ToString("MMMM d, yyyy  ·  HH:mm") : "Unlocked") : Status(it));
+            if (it.Rarity.HasValue) facts.Add((it.Rarity.Value < 1 ? it.Rarity.Value.ToString("0.0") : Math.Round(it.Rarity.Value).ToString("0")) + "% of players have it" + (it.Tier.Length > 0 ? "  ·  " + it.Tier : ""));
+            foreach (var f in facts) card.Children.Add(new TextBlock { Text = f, FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.55), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 14, 0, 0) });
+            detail.Children.Add(card);
+            detail.Children.Add(Ui.Prompts(true, Ui.Prompt("B", "Close")));
+            Panel.SetZIndex(detail, 50);
+            Root.Children.Add(detail);
+            detail.Opacity = 0;
+            Ui.Fade(detail, 1, 200);
+            Ui.Rise(card, 0, 16, 280);
+        }
+
+        private void CloseDetail()
+        {
+            var d = detail;
+            detail = null;
+            Ui.Fade(d, 0, 160, 0, () => Root.Children.Remove(d));
+        }
+
+        public override void Handle(string b)
+        {
+            if (detail != null) { if (b == "B" || b == "A") { Ui.Back(); CloseDetail(); } return; }
+            if (b == "B") { Ui.Back(); if (back == null) LoginScene.Finish(); else LoginScene.Show(back(), -1); return; }
+            if (set == null || set.Total == 0) return;
+            switch (b)
+            {
+                case "LeftShoulder":
+                case "RightShoulder":
+                    tab = (tab + (b == "RightShoulder" ? 1 : Tabs.Length - 1)) % Tabs.Length;
+                    Ui.Tick();
+                    Fill();
+                    Ui.Pop(tabPills[tab]);
+                    return;
+                case "Y":
+                    sort = (sort + 1) % Sorts.Length;
+                    Ui.Key();
+                    Fill();
+                    Ui.Pop(sortLabel);
+                    return;
+                case "DPadUp":
+                case "DPadDown":
+                {
+                    int next = index + (b == "DPadDown" ? 1 : -1);
+                    if (next < 0 || next >= shown.Count) { if (index < rows.Count) Ui.Shake(rows[index]); return; }
+                    index = next;
+                    Ui.Tick();
+                    ShowFocus();
+                    return;
+                }
+                case "A":
+                    if (index >= shown.Count) return;
+                    Ui.Confirm();
+                    OpenDetail();
+                    return;
+                case "X":
+                {
+                    if (index >= shown.Count) return;
+                    var it = shown[index];
+                    if (!it.Hidden || it.Unlocked || revealed.Contains(it)) return;
+                    revealed.Add(it);
+                    Ui.Key();
+                    var line = (DockPanel)rows[index].Child;
+                    var words = line.Children.OfType<StackPanel>().First(p => p.Children.Count == 2 && p.Margin.Left == 0);
+                    Words(it, (TextBlock)words.Children[0], (TextBlock)words.Children[1]);
+                    Ui.Pop(rows[index]);
+                    return;
+                }
+            }
+        }
+    }
+}

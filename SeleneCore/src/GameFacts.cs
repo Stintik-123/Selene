@@ -147,6 +147,7 @@ namespace Selene
                 res["SeleneStatHours"] = total == 0 ? "0 h" : total < 3600 ? "Under an hour" : (int)TimeSpan.FromSeconds(total).TotalHours + " h";
                 ActivityScreen.FillCard(games, week, total);
                 SurpriseScreen.FillCard(games);
+                AchievementsHub.FillCard();
             }
             catch (Exception ex) { HomeNav.Log("activity stats: " + ex.Message); }
         }

@@ -225,6 +225,26 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,26,0,0">
                                     <ButtonEx x:Name="PART_ButtonContext" Style="{StaticResource SeleneDetailsButton}"/>
                                     <ButtonEx x:Name="PART_ButtonOptions" Style="{StaticResource SeleneDetailsButton}" Content="{DynamicResource LOCGameOptions}"/>
+                                    <!-- the game's achievements as a list of Selene's own (Selene Core wires it; Playnite Achievements' data) -->
+                                    <ButtonEx x:Name="SeleneAchievementsButton">
+                                        <ButtonEx.Style>
+                                            <Style TargetType="ButtonEx" BasedOn="{StaticResource SeleneDetailsButton}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{PluginSettings Plugin=PlayniteAchievements, Path=HasData, FallbackValue=False}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ButtonEx.Style>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <TextBlock Text="Achievements" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Unlocked, FallbackValue=''}" VerticalAlignment="Center" Opacity="0.7" Margin="12,0,0,0"/>
+                                            <TextBlock Text="/" VerticalAlignment="Center" Opacity="0.7"/>
+                                            <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Total, FallbackValue=''}" VerticalAlignment="Center" Opacity="0.7"/>
+                                        </StackPanel>
+                                    </ButtonEx>
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal" Margin="4,28,0,0">

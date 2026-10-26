@@ -480,6 +480,7 @@
                                 <ButtonEx x:Name="SeleneNav_activity" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
                                 <ButtonEx x:Name="SeleneNav_captures" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
                                 <ButtonEx x:Name="SeleneNav_surprise" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
+                                <ButtonEx x:Name="SeleneNav_achievements" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
 
                                 <Grid Margin="0,120,0,0">
                                     <Grid.RowDefinitions>
@@ -636,6 +637,11 @@
                                                                     <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
                                                                     <Setter TargetName="CardGlyph" Property="Text" Value="&#xE8B1;"/>
                                                                 </DataTrigger>
+                                                                <DataTrigger Binding="{Binding}" Value="nav:achievements">
+                                                                    <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
+                                                                    <Setter TargetName="CardGlyph" Property="FontFamily" Value="{DynamicResource SeleneIconFont}"/>
+                                                                    <Setter TargetName="CardGlyph" Property="Text" Value="&#xEA23;"/>
+                                                                </DataTrigger>
                                                             </ControlTemplate.Triggers>
                                                         </ControlTemplate>
                                                     </Setter.Value>
@@ -699,6 +705,7 @@
                                                         <!-- the section cards (Selene Core drops the ones switched off and keeps the saved order) -->
                                                         <sys:String>nav:captures</sys:String>
                                                         <sys:String>nav:activity</sys:String>
+                                                        <sys:String>nav:achievements</sys:String>
                                                         <sys:String>nav:surprise</sys:String>
                                                         <sys:String>nav:store</sys:String>
                                                         <sys:String>nav:library</sys:String>
@@ -735,6 +742,9 @@
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:surprise">
                                                                     <Setter Property="Text" Value="Surprise me"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:achievements">
+                                                                    <Setter Property="Text" Value="Achievements"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -917,6 +927,45 @@
                                                     </StackPanel>
                                                 </StackPanel>
                                                 <StackPanel x:Name="SeleneSurpriseShowcase" Orientation="Horizontal" Margin="10,28,-80,10" HorizontalAlignment="Left"/>
+                                            </StackPanel>
+                                            <!-- the achievements card selected: a headline, a few numbers, pictures below (Selene Core fills them; Down goes into them) -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1760" Opacity="0">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:achievements">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/></Storyboard></BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <StackPanel x:Name="SeleneAchievementsHead" Width="1000" HorizontalAlignment="Left" Margin="0,40,0,0">
+                                                    <TextBlock Text="{DynamicResource SeleneAchievementsHeadline}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="60" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{DynamicResource SeleneAchievementsAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="2,10,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="4,24,0,0">
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="EARNED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatAchEarned}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="COMPLETED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneStatAchDone}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel x:Name="SeleneAchievementsShowcase" Orientation="Horizontal" Margin="10,28,-80,10" HorizontalAlignment="Left"/>
                                             </StackPanel>
                                             <!-- the store card selected: what it is, a few numbers, what A does -->
                                             <!-- (wide: the showcase's big pictures go right across; the text keeps its own width) -->

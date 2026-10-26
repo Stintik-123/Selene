@@ -269,6 +269,7 @@ namespace Selene
             // ---- Spotlight ----
             new Option { Group = "Spotlight", Key = "cardactivity", Label = "Activity card", About = "What you've been playing, with the numbers." },
             new Option { Group = "Spotlight", Key = "cardcaptures", Label = "Captures card", About = "Your screenshots and clips." },
+            new Option { Group = "Spotlight", Key = "cardachievements", Label = "Achievements card", About = "Every game's achievements together, the latest unlocks first.", Available = AchievementsData.Available },
             new Option { Group = "Spotlight", Key = "cardsurprise", Label = "Surprise me card", About = "Covers flick past and stop on a game to play." },
             new Option { Group = "Spotlight", Key = "cardpictures", Label = "Pictures under the cards", About = "Latest captures, last played and a few ideas. Down goes into them." },
             new Option { Group = "Spotlight", Key = "trailerdelay", Label = "Trailer cards after", About = "How long you rest on a game before its tile plays its trailer.", Choices = new[] { "1", "2.5", "5", "0" }, Names = new[] { "1 second", "2.5 seconds", "5 seconds", "Never" }, Default = "2.5" },
@@ -295,6 +296,7 @@ namespace Selene
             new Option { Group = "Look", Key = "homebackground", Label = "Spotlight background", About = "Behind the picked game: its own art, or always your wallpaper.", Choices = new[] { "art", "wallpaper" }, Names = new[] { "Game art", "Wallpaper only" }, Default = "art" },
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
             new Option { Group = "Look", Key = "nowplaying", Label = "Now playing in the top bar", About = "The song UniPlaySong is playing, beside the clock.", DefaultOn = false },
+            new Option { Group = "Games", Key = "achievements", Label = "Achievements on a game's page", About = "An Achievements button beside Play: the game's full list, like a console's trophy list.", Available = AchievementsData.Available },
             new Option { Group = "Games", Key = "hltb", Label = "HowLongToBeat times", About = "How long a game takes to beat, on its page (with the HowLongToBeat add-on)." },
             new Option { Group = "Games", Key = "hltbauto", Label = "HowLongToBeat: fetch new games", About = "HowLongToBeat's own setting: times for games as they're added to your library.", Get = HltbFetch.AutoImport, Put = HltbFetch.SetAutoImport, Available = HltbFetch.Installed },
             new Option { Group = "Look", Key = "topprofile", Label = "Profile in the top bar", About = "Your avatar beside the clock." },
