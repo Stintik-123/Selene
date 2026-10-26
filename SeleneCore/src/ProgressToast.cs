@@ -583,11 +583,9 @@ namespace Selene
         }
 
         // task and note cards: solid, sliding the whole way in and out past the right edge (the layer clips there)
-        private static bool sessionCard;
 
         private static void SlideIn()
         {
-            sessionCard = false;
             Sharpen();
             // as a console's: a short quick slide from the right with a fade, the fade over in the first moments (so it's only
             // see-through for a blink), at the screen's own rate
@@ -619,8 +617,7 @@ namespace Selene
             if (source != null || layer == null) return;
             leaving = true;
             var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
-            var slide = Ui.Fast(sessionCard ? new DoubleAnimation(Drift, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn }
-                                            : new DoubleAnimation(PeekIn, TimeSpan.FromMilliseconds(200)) { EasingFunction = easeIn });
+            var slide = Ui.Fast(new DoubleAnimation(PeekIn, TimeSpan.FromMilliseconds(200)) { EasingFunction = easeIn });
             slide.Completed += (s, e) =>
             {
                 if (!leaving) return;   // a new task brought it back meanwhile
@@ -632,7 +629,7 @@ namespace Selene
                 fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = 0;
             };
             slideIn.BeginAnimation(TranslateTransform.XProperty, slide);
-            card.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, TimeSpan.FromMilliseconds(sessionCard ? OutMs : 200)) { EasingFunction = easeIn }));
+            card.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, TimeSpan.FromMilliseconds(200)) { EasingFunction = easeIn }));
         }
 
         // Playnite's dim layer off now (it was switched on as the progress window loaded, before Selene saw it)
@@ -753,9 +750,7 @@ namespace Selene
             leaving = false;
             shownAt = DateTime.Now;
             layer.Visibility = Visibility.Visible;
-            sessionCard = true;
-            slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(Drift, 0, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-            card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(InMs)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            SlideIn();   // the same way in as every card
             Ui.NotifySound();
             leaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(8000) };
             leaveTimer.Tick += (s, e) => { leaveTimer.Stop(); Leave(); };
