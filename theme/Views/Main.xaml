@@ -157,6 +157,23 @@
                                         <TextBlock Text="RELEASED" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                         <TextBlock Text="{Binding SelectedGame.ReleaseYear, Mode=OneWay, TargetNullValue=-, FallbackValue=-}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                     </StackPanel>
+                                    <!-- how long it takes to beat (the HowLongToBeat add-on, when it has a time for this game; Selene's "HowLongToBeat times" switch) -->
+                                    <StackPanel x:Name="SeleneHltbStatLibrary" Orientation="Horizontal">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{PluginSettings Plugin=HowLongToBeat, Path=HasData}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                    <DataTrigger Binding="{PluginSettings Plugin=HowLongToBeat, Path=MainStory}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="26,4,26,4"/>
+                                        <StackPanel>
+                                            <TextBlock Text="TIME TO BEAT" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                            <TextBlock Text="{PluginSettings Plugin=HowLongToBeat, Path=MainStoryFormat}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
                                 <!-- genres, quieter, under the stats -->
                                 <ItemsControl ItemsSource="{Binding SelectedGame.Genres}" HorizontalAlignment="Center" Margin="0,16,0,0" Focusable="False">
@@ -1092,6 +1109,23 @@
                                                 <TextBlock Text="&#xEA12;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="21" Foreground="{DynamicResource SeleneInkBrush}" VerticalAlignment="Center" Visibility="{DynamicResource SelenePlatformFallback}"/>
                                             </Grid>
                                                             <TextBlock Text="{DynamicResource SelenePlatformName}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <!-- how long it takes to beat (the HowLongToBeat add-on, when it has a time for this game; Selene's "HowLongToBeat times" switch) -->
+                                                    <StackPanel x:Name="SeleneHltbStatHub" Orientation="Horizontal">
+                                                        <StackPanel.Style>
+                                                            <Style TargetType="StackPanel">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{PluginSettings Plugin=HowLongToBeat, Path=HasData}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                                    <DataTrigger Binding="{PluginSettings Plugin=HowLongToBeat, Path=MainStory}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </StackPanel.Style>
+                                                        <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="26,4,26,4"/>
+                                                        <StackPanel>
+                                                            <TextBlock Text="TIME TO BEAT" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                            <TextBlock Text="{PluginSettings Plugin=HowLongToBeat, Path=MainStoryFormat}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </StackPanel>

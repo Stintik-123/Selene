@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Playnite's library update ("Importing Steam games...", "Library update finished") shows as Selene's notification card instead of a line of words at the top right.
+- Spotlight and Collection show TIME TO BEAT (HowLongToBeat's main story time) beside the other stats when the add-on has it.
 - Quitting Playnite is clean: the screen goes dark at once and Playnite's "Closing" screen no longer flashes up. Sleep from the power menu no longer turns Selene's progress cards off afterwards.
 - HowLongToBeat times come by themselves: opening a game's page asks the add-on for that game's times when it has none yet. Selene settings > Games > "HowLongToBeat: fetch new games" switches the add-on's own automatic download (shown when HowLongToBeat is installed).
 - Picking a game in Activity, Find a game or Surprise me lands on that game on Spotlight with its art and logo (it sometimes landed on a neighbour with a blank background).

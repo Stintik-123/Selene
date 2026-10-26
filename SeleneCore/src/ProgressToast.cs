@@ -373,6 +373,58 @@ namespace Selene
 
         // the task ended: the bar runs to the end, the card stays to be read, then slides out (unless another task takes it)
         // a task Selene runs itself (SeleneDialogs): the card without any Playnite window behind it
+        // ---- Playnite's own library-update status ("Importing Steam games...", "Library update finished"): the same card, ----
+        // instead of a line of words in Collection's bar. Its words and visibility are followed; the line itself stays hidden.
+        public class StatusArgs { public string Text { get; set; } public bool IsIndeterminate { get { return true; } } }
+        public class Status { private readonly StatusArgs args = new StatusArgs(); public StatusArgs ProgressArgs { get { return args; } } }
+        private static Status libraryStatus;
+        private static FrameworkElement statusLine;
+        private static TextBlock statusWords;
+        private static DispatcherTimer statusRetry;
+
+        public static void WatchLibraryStatus(Window main)
+        {
+            statusLine = HomeNav.FindByName(main, "PART_ElemProgressIndicator") as FrameworkElement;
+            statusWords = HomeNav.FindByName(main, "PART_TextProgressTooltip") as TextBlock;
+            if (statusLine == null || statusWords == null) { HomeNav.Log("library status: parts not found"); return; }
+            System.ComponentModel.DependencyPropertyDescriptor.FromProperty(UIElement.VisibilityProperty, typeof(FrameworkElement)).AddValueChanged(statusLine, (s, e) => SyncStatus());
+            System.ComponentModel.DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock)).AddValueChanged(statusWords, (s, e) => SyncStatus());
+            statusRetry = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            statusRetry.Tick += (s, e) => { statusRetry.Stop(); SyncStatus(); };
+            SyncStatus();
+        }
+
+        private static void SyncStatus()
+        {
+            try
+            {
+                bool on = Features.On("dialogs") && Features.On("progresstoast");
+                statusLine.Opacity = on ? 0 : 1;
+                if (!on) return;
+                var text = (statusWords.Text ?? "").Trim();
+                bool active = statusLine.Visibility == Visibility.Visible && text.Length > 0;
+                if (active)
+                {
+                    if (libraryStatus == null)
+                    {
+                        // another task's card is up (an add-on downloading): the status waits for it
+                        if (source != null || !Usable()) { statusRetry.Stop(); statusRetry.Start(); return; }
+                        libraryStatus = new Status();
+                        libraryStatus.ProgressArgs.Text = text;
+                        ShowTask(libraryStatus);
+                    }
+                    libraryStatus.ProgressArgs.Text = text;
+                }
+                else if (libraryStatus != null)
+                {
+                    var done = libraryStatus;
+                    libraryStatus = null;
+                    EndTask(done);
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("library status: " + ex.Message); }
+        }
+
         public static bool Usable()
         {
             var main = Application.Current != null ? Application.Current.MainWindow : null;

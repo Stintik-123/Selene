@@ -107,6 +107,7 @@ namespace Selene
             Ui.WatchFullRate(main);            // the screen's own refresh rate while Playnite is in front
             DetailsStage.Attach(main);         // the details page's lower half
             ApplyNowPlaying();
+            ProgressToast.WatchLibraryStatus(main);   // the library update's words as a notification card
             GameFacts.CardStats();
             CapturesScreen.CountInBackground();
             HomeNav.Log("shell: home/library wired");
@@ -179,7 +180,12 @@ namespace Selene
             else part.Visibility = Visibility.Collapsed;
         }
 
-        public static void ApplyNowPlaying() { Switch(Part("SeleneNowPlaying"), "nowplaying"); }
+        public static void ApplyNowPlaying()
+        {
+            Switch(Part("SeleneNowPlaying"), "nowplaying");
+            Switch(Part("SeleneHltbStatHub"), "hltb");
+            Switch(Part("SeleneHltbStatLibrary"), "hltb");
+        }
 
         // Switching between Spotlight and Collection is a crossfade: the screen you leave stays up while the other one gets
         // its picture, so you never see an empty background. (Spotlight sits above Collection in the theme.)

@@ -254,7 +254,7 @@ namespace Selene
                 Features.Set(key, !Features.On(key));
                 if (key == "brand") Brand.Apply();
                 if (key == "topprofile") TopProfile.Refresh();
-                if (key == "nowplaying") SeleneShell.ApplyNowPlaying();
+                if (key == "nowplaying" || key == "hltb") SeleneShell.ApplyNowPlaying();
                 Ui.Key();
                 ShowSwitch(index, true);
                 if (key == "hints") HomeHints.Update();
