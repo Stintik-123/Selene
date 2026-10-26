@@ -62,13 +62,8 @@ namespace Selene
                 if (page == null) { HomeNav.Log("details stage: no page in the template"); return; }
                 SeleneShell.Switch(Part<UIElement>("SeleneHltb"), "hltb");
                 HltbFetch.ForPage(g);
-                var ach = Part<System.Windows.Controls.Primitives.ButtonBase>("SeleneAchievementsButton");
-                if (ach != null)
-                {
-                    var id = g.Id;
-                    ach.Command = new SeleneShell.Relay(() => { Ui.Confirm(); LoginScene.OpenWith(() => new AchievementsScreen(id, null)); });
-                    SeleneShell.Switch(ach, "achievements");
-                }
+                SeleneShell.Switch(Part<UIElement>("SeleneAchievementsStat"), "achievements");
+                SeleneShell.Switch(Part<UIElement>("SeleneAchievementsHint"), "achievements");
                 if (sink == null || !ReferenceEquals(sink.Parent, page))
                 {
                     sink = new Border { Width = 0, Height = 0, Focusable = true, FocusVisualStyle = null, IsHitTestVisible = false };
@@ -386,6 +381,13 @@ namespace Selene
         public static bool Handle(string b)
         {
             if (!Active) { zone = 0; return false; }
+            // Y: the game's achievements (the hint shows when Playnite Achievements has them)
+            if (b == "Y" && Features.On("achievements") && AchievementsData.Available())
+            {
+                var hint = Part<UIElement>("SeleneAchievementsHint");
+                var g = Selected();
+                if (g != null && hint != null && hint.IsVisible) { Ui.Confirm(); var id = g.Id; LoginScene.OpenWith(() => new AchievementsScreen(id, null)); return true; }
+            }
             // B from Spotlight's details: the home comes back under the page before it closes (nothing else shows in between)
             if (b == "B") HideUnder(false);   // whatever closes the page next finds Collection as it was
             if (b == "B" && HomeNav.CloseDetailsToHub()) { zone = 0; return true; }

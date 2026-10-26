@@ -188,9 +188,11 @@
                                 </ItemsControl>
                                 </StackPanel>
 
-                                <!-- achievements of the selected game (Playnite Achievements), bottom right above the covers -->
-                                <Border Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,100,22" CornerRadius="20" Padding="18,11,20,12"
-                                        Background="{DynamicResource SeleneGlassBrush}" BorderBrush="{DynamicResource SeleneInk25Brush}" BorderThickness="1">
+                                <!-- achievements of the selected game (Playnite Achievements), bottom right just above the covers: a trophy badge
+                                     (gold once every one is earned), the count large with the share beside it, a glowing bar -->
+                                <Border Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,100,-6" CornerRadius="22" Padding="16,14,24,16"
+                                        Background="{DynamicResource SeleneGlassSolidBrush}" BorderBrush="{DynamicResource SeleneInk15Brush}" BorderThickness="1">
+                                    <Border.Effect><DropShadowEffect ShadowDepth="0" BlurRadius="28" Opacity="0.4" Color="Black"/></Border.Effect>
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -217,34 +219,46 @@
                                     <StackPanel Orientation="Horizontal">
                                         <!-- signals each new game for the fade (Playnite's add-on bindings can't) -->
                                         <TextBlock Text="{Binding SelectedGame.Id, NotifyOnTargetUpdated=True}" Visibility="Collapsed"/>
-                                        <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="30" VerticalAlignment="Center" Margin="0,0,14,0">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{DynamicResource GlyphBrush}"/>
-                                                    <Style.Triggers>
-                                                        <!-- every achievement: a gold trophy -->
-                                                        <DataTrigger Binding="{PluginSettings Plugin=PlayniteAchievements, Path=IsCompleted}" Value="True">
-                                                            <Setter Property="Foreground" Value="#FFE8C46A"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <StackPanel VerticalAlignment="Center" Width="230">
-                                            <Grid>
-                                                <TextBlock Text="ACHIEVEMENTS" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI" VerticalAlignment="Bottom"/>
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                    <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Unlocked, FallbackValue='-'}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="17" FontWeight="SemiBold" FontFamily="Segoe UI"/>
-                                                    <TextBlock Text=" / " Foreground="{DynamicResource SeleneInk60Brush}" FontSize="17" FontFamily="Segoe UI"/>
-                                                    <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Total, FallbackValue='-'}" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="17" FontFamily="Segoe UI"/>
+                                        <Grid Width="52" Height="52" VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <Ellipse>
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="{DynamicResource SeleneInk15Brush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{PluginSettings Plugin=PlayniteAchievements, Path=IsCompleted}" Value="True"><Setter Property="Fill" Value="#33E8C46A"/></DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource GlyphBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{PluginSettings Plugin=PlayniteAchievements, Path=IsCompleted}" Value="True"><Setter Property="Foreground" Value="#FFE8C46A"/></DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                        <StackPanel VerticalAlignment="Center" Width="250">
+                                            <TextBlock Text="ACHIEVEMENTS" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                            <Grid Margin="0,2,0,0">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                                    <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Unlocked, FallbackValue='-'}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="26" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display, Segoe UI"/>
+                                                    <TextBlock Text=" / " Foreground="{DynamicResource SeleneInk60Brush}" FontSize="20" FontFamily="Segoe UI" VerticalAlignment="Bottom" Margin="0,0,0,3"/>
+                                                    <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Total, FallbackValue='-'}" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="20" FontFamily="Segoe UI" VerticalAlignment="Bottom" Margin="0,0,0,3"/>
                                                 </StackPanel>
+                                                <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Percent, FallbackValue=0, StringFormat='{}{0:0}%'}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="17" FontWeight="SemiBold" FontFamily="Segoe UI" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,4"/>
                                             </Grid>
-                                            <ProgressBar Value="{PluginSettings Plugin=PlayniteAchievements, Path=Percent, FallbackValue=0}" Maximum="100" Height="6" Margin="0,7,0,0" Focusable="False">
+                                            <ProgressBar Value="{PluginSettings Plugin=PlayniteAchievements, Path=Percent, FallbackValue=0}" Maximum="100" Height="6" Margin="0,8,0,0" Focusable="False">
                                                 <ProgressBar.Template>
                                                     <ControlTemplate TargetType="ProgressBar">
                                                         <Grid>
                                                             <Border x:Name="PART_Track" CornerRadius="3" Background="{DynamicResource SeleneInk25Brush}"/>
-                                                            <Border x:Name="PART_Indicator" CornerRadius="3" Background="{DynamicResource GlyphBrush}" HorizontalAlignment="Left"/>
+                                                            <Border x:Name="PART_Indicator" CornerRadius="3" Background="{DynamicResource GlyphBrush}" HorizontalAlignment="Left">
+                                                                <Border.Effect><DropShadowEffect ShadowDepth="0" BlurRadius="10" Opacity="0.7" Color="{DynamicResource GlyphColor}"/></Border.Effect>
+                                                            </Border>
                                                         </Grid>
                                                     </ControlTemplate>
                                                 </ProgressBar.Template>
@@ -1175,6 +1189,37 @@
                                                         <StackPanel>
                                                             <TextBlock Text="TIME TO BEAT" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                                                             <TextBlock Text="{PluginSettings Plugin=HowLongToBeat, Path=MainStoryFormat}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <!-- achievements (Playnite Achievements): the count and a thin bar -->
+                                                    <StackPanel x:Name="SeleneAchievementsStatHub" Orientation="Horizontal">
+                                                        <StackPanel.Style>
+                                                            <Style TargetType="StackPanel">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{PluginSettings Plugin=PlayniteAchievements, Path=HasData, FallbackValue=False}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </StackPanel.Style>
+                                                        <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="26,4,26,4"/>
+                                                        <StackPanel>
+                                                            <TextBlock Text="ACHIEVEMENTS" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                                <TextBlock Text="&#xEA23;" FontFamily="{DynamicResource SeleneIconFont}" FontSize="20" Foreground="{DynamicResource GlyphBrush}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                                <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Unlocked, FallbackValue='-'}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                                <TextBlock Text=" / " Foreground="{DynamicResource SeleneInk60Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center"/>
+                                                                <TextBlock Text="{PluginSettings Plugin=PlayniteAchievements, Path=Total, FallbackValue='-'}" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="21" FontFamily="{DynamicResource FontMain}" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                            <ProgressBar Value="{PluginSettings Plugin=PlayniteAchievements, Path=Percent, FallbackValue=0}" Maximum="100" Height="4" Width="130" HorizontalAlignment="Left" Margin="0,5,0,0" Focusable="False">
+                                                                <ProgressBar.Template>
+                                                                    <ControlTemplate TargetType="ProgressBar">
+                                                                        <Grid>
+                                                                            <Border x:Name="PART_Track" CornerRadius="2" Background="{DynamicResource SeleneInk25Brush}"/>
+                                                                            <Border x:Name="PART_Indicator" CornerRadius="2" Background="{DynamicResource GlyphBrush}" HorizontalAlignment="Left"/>
+                                                                        </Grid>
+                                                                    </ControlTemplate>
+                                                                </ProgressBar.Template>
+                                                            </ProgressBar>
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </StackPanel>
