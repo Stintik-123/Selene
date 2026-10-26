@@ -370,6 +370,26 @@
                                 <ListBoxEx x:Name="PART_ListGameItems" Grid.Row="2" Height="400" Margin="0,0,0,0" Background="Transparent" BorderThickness="0" FocusVisualStyle="{x:Null}"
                                            ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Item"
                                            KeyboardNavigation.DirectionalNavigation="Once" />
+                                <!-- the row's ends: a cover cut by the screen's edge fades into the dark (Selene Core shows each only while
+                                     something is cut off on that side, with the Gliding row switch) -->
+                                <Border x:Name="SeleneLibraryFadeLeft" Grid.Row="2" Width="130" HorizontalAlignment="Left" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}" Panel.ZIndex="5" Opacity="0">
+                                    <Border.OpacityMask>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#F2000000" Offset="0"/>
+                                            <GradientStop Color="#7A000000" Offset="0.45"/>
+                                            <GradientStop Color="#00000000" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.OpacityMask>
+                                </Border>
+                                <Border x:Name="SeleneLibraryFadeRight" Grid.Row="2" Width="130" HorizontalAlignment="Right" IsHitTestVisible="False" Background="{DynamicResource SeleneScrimBrush}" Panel.ZIndex="5" Opacity="0">
+                                    <Border.OpacityMask>
+                                        <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
+                                            <GradientStop Color="#F2000000" Offset="0"/>
+                                            <GradientStop Color="#7A000000" Offset="0.45"/>
+                                            <GradientStop Color="#00000000" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.OpacityMask>
+                                </Border>
                                 <!-- nothing to show: Playnite's message in the middle of the screen (Selene Core sets its readable glow) -->
                                 <StackPanel x:Name="SeleneLibraryEmpty" Grid.Row="0" Grid.RowSpan="4" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,40">
                                     <StackPanel.Style>

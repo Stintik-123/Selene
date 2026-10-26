@@ -41,6 +41,8 @@ namespace Selene
                 foreach (UIElement child in grid.Children)
                     if (child.GetType().Name == "FadeImage") { art = child; break; }
             wallpaper = HomeNav.FindByName(library, "SeleneLibraryWallpaper") as UIElement;
+            fadeLeft = HomeNav.FindByName(library, "SeleneLibraryFadeLeft") as FrameworkElement;
+            fadeRight = HomeNav.FindByName(library, "SeleneLibraryFadeRight") as FrameworkElement;
             baseLayer = HomeNav.FindByName(library, "SeleneLibraryBase") as UIElement;
             HomeNav.Log("library stage: art " + (art != null) + ", wallpaper " + (wallpaper != null));
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
@@ -83,6 +85,47 @@ namespace Selene
         }
 
         private static ScrollViewer hooked;
+        private static FrameworkElement fadeLeft, fadeRight;
+        private static TranslateTransform endShift;
+
+        // scrolled as far as it goes, the last cover (and its ring) still sat past the screen's edge: the whole row nudges left
+        // by what's missing, on its own transform (the glide has the presenter's), and back when the row leaves the end
+        private static void KeepEndsInside(ScrollViewer sv)
+        {
+            if (endShift == null || endShift.IsFrozen) { endShift = new TranslateTransform(); list.RenderTransform = endShift; }
+            double need = 0;
+            if (sv.HorizontalOffset >= sv.ScrollableWidth - 0.5 && list.Items.Count > 0)
+            {
+                var last = list.ItemContainerGenerator.ContainerFromIndex(list.Items.Count - 1) as FrameworkElement;
+                if (last != null && last.IsVisible && last.ActualWidth > 0)
+                {
+                    var presenter = FindChild<ItemsPresenter>(list);
+                    var glide = presenter != null ? presenter.RenderTransform as TranslateTransform : null;
+                    double right = last.TranslatePoint(new Point(0, 0), list).X - (glide != null ? glide.X : 0) + last.ActualWidth;
+                    double edge = Math.Max(24, list.ActualWidth * 0.012);   // room for the ring and the zoom
+                    if (right > list.ActualWidth - edge) need = -(right - (list.ActualWidth - edge));
+                }
+            }
+            double now = endShift.X;
+            if (Math.Abs(now - need) < 0.5) return;
+            endShift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(need, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
+
+        // the fades at the row's ends, each only while a cover is cut off on that side
+        private static void ShowFades(ScrollViewer sv)
+        {
+            bool on = Features.On("collectionglide");
+            Fade(fadeLeft, on && sv.HorizontalOffset > 1);
+            Fade(fadeRight, on && sv.HorizontalOffset < sv.ScrollableWidth - 1);
+        }
+
+        private static void Fade(FrameworkElement el, bool show)
+        {
+            if (el == null) return;
+            double to = show ? 1 : 0;
+            if (Math.Abs(el.Opacity - to) < 0.01 && !el.HasAnimatedProperties) return;
+            el.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
 
         // the row's scroll viewer watched for its one-cover steps (hooked again if the list got a new one)
         private static void HookScroll(ScrollViewer sv)
@@ -94,7 +137,9 @@ namespace Selene
             int told = 0;
             sv.ScrollChanged += (s, e) =>
             {
-                if (Math.Abs(e.HorizontalChange) < 0.001 || !library.IsVisible || !Features.On("collectionglide")) return;
+                if (Math.Abs(e.HorizontalChange) < 0.001 || !library.IsVisible) return;
+                ShowFades(sv);
+                if (!Features.On("collectionglide")) return;
                 if (!list.IsKeyboardFocusWithin) { if (told++ < 3) HomeNav.Log("collection glide: scrolled " + e.HorizontalChange + " without the focus in the row"); return; }
                 var presenter = FindChild<ItemsPresenter>(list);
                 double pitch = Pitch();
@@ -135,6 +180,9 @@ namespace Selene
                     int firstWant = idx > hi ? idx - (visible - 2) : idx < lo ? idx - 1 : first;
                     double want = Math.Max(0, Math.Min(firstWant * pitch, sv.ScrollableWidth));
                     if (Math.Abs(sv.HorizontalOffset - want) > 0.01) sv.ScrollToHorizontalOffset(want);
+                    list.UpdateLayout();
+                    KeepEndsInside(sv);
+                    ShowFades(sv);
                 }
                 catch { }
             }), DispatcherPriority.Loaded);

@@ -320,7 +320,7 @@ namespace Selene
             // Item-based scrolling: the selection walks to the third slot, then stays there and the row moves.
             // ScrollViewer clamps the offset at the end, so the selection walks out to the last tile.
             double offsetBefore = sv != null ? sv.HorizontalOffset : 0;
-            if (sv != null) sv.ScrollToHorizontalOffset(Math.Max(0, next - AnchorSlot));
+            if (sv != null) sv.ScrollToHorizontalOffset(AnchorOffset(next));
             row.UpdateLayout();
             // the row only glides when it really scrolled: moving between tiles that stay put (the cards at the start)
             // changes the selected tile's size, and gliding that made the whole row bounce
@@ -1294,42 +1294,45 @@ namespace Selene
         // the row's glide, until it lands on it (it used to be there at once). From far away it lands six tiles short first,
         // then walks the rest. False when it doesn't apply (the switch off, nothing to walk): the caller places it at once.
         // Switch: Spotlight > Scroll to a picked game
+        // the row's first tile during a walk (-1: none): the scroll never goes left of it, so the ring crosses the first slots
+        // first, as it does at a row's start
+        private static int rideFirst = -1;
+        private static double AnchorOffset(int idx) { return Math.Max(rideFirst >= 0 ? rideFirst : 0, idx - AnchorSlot); }
+
         private static bool RideTo(ListBox row, int from, int idx, Action done)
         {
             try
             {
-                if (Lite || !Features.On("pickscroll") || from < 0 || from == idx || idx < 0 || idx >= row.Items.Count) return false;
-                int dir = idx > from ? 1 : -1;
-                const int walk = 6;
-                if (Math.Abs(idx - from) > walk)
-                {
-                    int start = idx - dir * walk;
-                    wantedFocusIndex = start;
-                    try { PlaceAtLeft(row, start); }
-                    finally { wantedFocusIndex = -1; }
-                }
-                var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(115) };
+                if (Lite || !Features.On("pickscroll") || idx < 0 || idx >= row.Items.Count) return false;
+                const int walk = 7;   // the ring crosses the first slots, then the row moves: about half a second
+                int start = Math.Max(FirstGameIndex(row), idx - walk);
+                if (start >= idx) return false;
+                rideFirst = start;
+                wantedFocusIndex = start;
+                try { PlaceAtLeft(row, start); }   // the walk's start at the row's left edge, as a row's start is
+                finally { wantedFocusIndex = -1; }
+                var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(70) };   // (a held stick's pace)
                 int steps = 0, waits = 0;
+                Action finish = () => { step.Stop(); rideFirst = -1; done(); };
                 EventHandler tick = null;
                 tick = (s, e) =>
                 {
-                    if (LoginScene.IsActive) { if (++waits < 20) return; step.Stop(); done(); return; }   // (the screen it was picked on still closing: a moment)
+                    if (LoginScene.IsActive) { if (++waits < 30) return; finish(); return; }   // (the screen it was picked on still closing: a moment)
                     int cur = row.SelectedIndex;
-                    if (cur == idx || cur < 0 || ++steps > walk + 2) { step.Stop(); done(); return; }
+                    if (cur == idx || cur < 0 || ++steps > walk + 2) { finish(); return; }
                     int next = -1;
-                    for (int i = cur + dir; i >= 0 && i < row.Items.Count; i += dir)
+                    for (int i = cur + 1; i < row.Items.Count; i++)
                         if (IsShown(row.Items[i])) { next = i; break; }
-                    if (next < 0 || (dir > 0 ? next > idx : next < idx)) { step.Stop(); done(); return; }
+                    if (next < 0 || next > idx) { finish(); return; }
                     wantedFocusIndex = next;
-                    try { MoveTo(row, cur, next); }
+                    try { MoveTo(row, cur, next); Ui.Tick(); }   // (the tick plays on real presses only: here by hand)
                     finally { wantedFocusIndex = -1; }
                 };
                 step.Tick += tick;
-                tick(null, null);   // the first step now
-                if (row.SelectedIndex != idx) step.Start();
+                step.Start();
                 return true;
             }
-            catch (Exception ex) { Log("find a game: ride: " + ex.Message); return false; }
+            catch (Exception ex) { rideFirst = -1; Log("find a game: ride: " + ex.Message); return false; }
         }
 
         // a tile at the left edge of the row, focused (a pick from a search or a card): the usual move keeps the third slot and,
@@ -1340,7 +1343,7 @@ namespace Selene
             // the row holds its place while the focus is outside it (the search layer still has it here): that hold undid the
             // scroll, so it's let go first. The game lands where a move would put it: the third slot
             heldOffset = -1;
-            double offset = Math.Max(0, idx - AnchorSlot);
+            double offset = AnchorOffset(idx);
             var sv = FindChild<ScrollViewer>(row);
             if (sv != null) { sv.ScrollToHorizontalOffset(offset); row.UpdateLayout(); }
             var c = row.ItemContainerGenerator.ContainerFromIndex(idx) as UIElement;

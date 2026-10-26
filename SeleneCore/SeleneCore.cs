@@ -285,7 +285,7 @@ namespace Selene
             new Option { Group = "Spotlight", Key = "shade", Label = "Shade over the art", About = "How much the art darkens behind the words.", Choices = new[] { "0.7", "1", "1.3" }, Names = new[] { "Lighter", "As needed", "Deeper" }, Default = "1" },
             new Option { Group = "Spotlight", Key = "idle", Label = "Idle screen after", About = "Left alone, Spotlight dims and drifts through your games' art. Any button wakes it.", Choices = new[] { "0", "5", "10", "20" }, Names = new[] { "Never", "5 minutes", "10 minutes", "20 minutes" }, Default = "10" },
             // ---- Collection ----
-            new Option { Group = "Collection", Key = "collectionglide", Label = "Gliding row", About = "Collection's covers slide from game to game instead of jumping." },
+            new Option { Group = "Collection", Key = "collectionglide", Label = "Gliding row", About = "Collection's covers slide from game to game instead of jumping, and a cover cut by the screen's edge fades into the dark." },
             new Option { Group = "Collection", Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game and its trailer plays. R3 for its sound." },
             new Option { Group = "Collection", Key = "cardcollection", Label = "Collection card on Spotlight", About = "A card that opens Collection (the View button does too).", DefaultOn = false },
             // ---- Notifications ----
