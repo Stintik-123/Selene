@@ -416,12 +416,15 @@ namespace Selene
                     brush.GradientStops.Add(new GradientStop(Colors.Black, 1));
                     row.OpacityMask = brush;
                 }
-                double w = row.ActualWidth, over = Math.Max(0, -row.Margin.Right);   // the window runs past the screen's right edge
+                // the row runs past the screen on both sides (its margins), so each dissolve ends off the screen and the tiles reach
+                // the edge before they're gone, the same either side (ending the right one at the screen's edge left the last
+                // 200 px fading out in view, as if the row stopped short)
+                double w = row.ActualWidth;
                 if (w > RowEdgePx * 3)
                 {
                     brush.GradientStops[1].Offset = RowEdgePx / w;
-                    brush.GradientStops[2].Offset = Math.Max(0.5, (w - over - RowEdgePx) / w);
-                    brush.GradientStops[3].Offset = Math.Max(0.6, (w - over) / w);
+                    brush.GradientStops[2].Offset = Math.Max(0.5, (w - RowEdgePx) / w);
+                    brush.GradientStops[3].Offset = 1;
                 }
                 bool left = sv.HorizontalOffset > 0.5, right = sv.HorizontalOffset < sv.ScrollableWidth - 0.5;
                 RowEdge(brush.GradientStops[0], left);
