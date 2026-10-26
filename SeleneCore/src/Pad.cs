@@ -17,6 +17,7 @@ namespace Selene
         {
             public bool Connected;
             public double LeftX, LeftY;      // -1..1 (deadzone removed), up = positive
+            public double RightX, RightY;    // the same for the right stick
             public double LeftTrigger, RightTrigger;   // 0..1
         }
 
@@ -31,7 +32,8 @@ namespace Selene
                 {
                     Connected = true,
                     LeftTrigger = Trigger(raw[6]), RightTrigger = Trigger(raw[7]),
-                    LeftX = Stick(BitConverter.ToInt16(raw, 8)), LeftY = Stick(BitConverter.ToInt16(raw, 10))
+                    LeftX = Stick(BitConverter.ToInt16(raw, 8)), LeftY = Stick(BitConverter.ToInt16(raw, 10)),
+                    RightX = Stick(BitConverter.ToInt16(raw, 12)), RightY = Stick(BitConverter.ToInt16(raw, 14))
                 };
             }
             return new State();

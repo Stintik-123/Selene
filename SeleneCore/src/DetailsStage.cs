@@ -51,10 +51,33 @@ namespace Selene
             catch { return null; }
         }
 
+        // the right stick scrolls the description, smoothly and faster the further it's pushed (Playnite gives the stick's
+        // presses only, not its tilt: read from the pad itself while the page is up)
+        private static DispatcherTimer stickTimer;
+        private static void WatchStick(bool on)
+        {
+            if (!on) { if (stickTimer != null) stickTimer.Stop(); return; }
+            if (stickTimer == null)
+            {
+                stickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                stickTimer.Tick += (s, e) =>
+                {
+                    if (!Active || zone != 0) return;
+                    var y = Pad.Read().RightY;
+                    if (Math.Abs(y) < 0.01) return;
+                    var sv = Part<ScrollViewer>("PART_ScrollHtmlDescription");
+                    if (sv == null) return;
+                    sv.ScrollToVerticalOffset(Math.Max(0, Math.Min(sv.ScrollableHeight, sv.VerticalOffset - y * Math.Abs(y) * 14)));
+                };
+            }
+            stickTimer.Start();
+        }
+
         private static void Opened()
         {
             var g = Selected();
             if (g == null) return;
+            WatchStick(true);
             // the page's parts are in the template, made once the view shows
             details.Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -129,6 +152,7 @@ namespace Selene
 
         private static void Closed()
         {
+            WatchStick(false);
             HideUnder(false);
             zone = 0;
             if (shotsWatch != null) shotsWatch.Stop();
