@@ -362,7 +362,7 @@ namespace Selene
                 }
             }
             target.Focus();
-            EnsureTileCaches(row);
+            if (rideFirst < 0) EnsureTileCaches(row);   // (a walk caches its tiles once it lands: a cache per passed tile stuttered)
         }
 
         // what a newly selected game brings: Playnite's selection, the trailer card's wait, its art ahead, the heart, the screenshots
@@ -1311,12 +1311,15 @@ namespace Selene
             try
             {
                 if (Lite || !Features.On("pickscroll") || idx < 0 || idx >= row.Items.Count) return false;
-                int start = Math.Max(0, FirstGameIndex(row));   // from the row's first game, as a held stick from the start would
+                // from the row's first game, as a held stick from the start would; from far away, from 24 games before it: every
+                // game passed has its tile built and its cover decoded, and hundreds of those in a second stutter on any PC
+                const int reach = 24;
+                int start = Math.Max(Math.Max(0, FirstGameIndex(row)), idx - reach);
                 if (start >= idx) return false;
                 int span = idx - start;
-                // the whole way in under two seconds however far: slow over the first slots, quick through the middle, easing
-                // down onto the game (a held stick's pace, then its speed)
-                double seconds = Math.Min(1.6, 0.45 + span * 0.01);
+                // slow over the first slots, quick through the middle, easing down onto the game (a held stick's pace, then its speed)
+                double seconds = Math.Min(1.2, 0.45 + span * 0.03);
+                Ui.MeasureFrames("picked game walk", (int)(seconds * 1000) + 300);
                 rideFirst = start;
                 wantedFocusIndex = start;
                 try { PlaceAtLeft(row, start); }   // the first game at the row's left edge
@@ -1324,7 +1327,7 @@ namespace Selene
                 var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };   // (every 15 ms stuttered: the row has to lay out each time)
                 int waits = 0;
                 DateTime began = DateTime.MinValue, lastTick = DateTime.MinValue;
-                Action finish = () => { step.Stop(); rideFirst = -1; AfterSelection(row); done(); };
+                Action finish = () => { step.Stop(); rideFirst = -1; EnsureTileCaches(row); AfterSelection(row); done(); };
                 step.Tick += (s, e) =>
                 {
                     if (LoginScene.IsActive) { if (++waits < 120) return; finish(); return; }   // (the screen it was picked on still closing: a moment)
