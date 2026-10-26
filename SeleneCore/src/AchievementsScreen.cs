@@ -16,7 +16,7 @@ namespace Selene
     // achievement large. X: a hidden one's words. B: back.
     public class AchievementsScreen : Screen
     {
-        private const double Side = 96, ListTop = 452, IconSize = 64, Page = 120;
+        private const double Side = 96, ListTop = 452, IconSize = 64, Page = 24;   // (rows made at a time: more as the focus nears the last)
         private const double TileW = 96, Pitch = TileW + 16, StripTop = 196;   // the latest unlocks under the header
         private const int RecentMax = 14;
         private static readonly string[] Tabs = { "All", "Unlocked", "Locked" };
