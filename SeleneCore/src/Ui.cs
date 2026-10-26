@@ -230,13 +230,9 @@ namespace Selene
         }
 
         // "can't do that": a short sideways shake
-        public static void Shake(UIElement el)
-        {
-            var a = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromMilliseconds(320) };
-            foreach (var kv in new[] { new[] { 0.0, 0 }, new[] { 0.18, -9 }, new[] { 0.4, 8 }, new[] { 0.62, -5 }, new[] { 0.82, 3 }, new[] { 1.0, 0 } })
-                a.KeyFrames.Add(new LinearDoubleKeyFrame(kv[1], KeyTime.FromPercent(kv[0])));
-            Shift(el).BeginAnimation(TranslateTransform.XProperty, a);
-        }
+        // nothing moves at a list's end or on a refused press: the shake that did is gone (it read as a fault); the callers
+        // still mark where a press goes nowhere
+        public static void Shake(UIElement el) { }
 
         // ---------------- sounds ----------------
         private static readonly Dictionary<string, MediaPlayer> players = new Dictionary<string, MediaPlayer>();

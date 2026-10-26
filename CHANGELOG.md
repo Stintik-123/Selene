@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Nothing shakes any more at the end of a list or on a press that goes nowhere.
 - Game options (Y in Collection, Game Options on a game's page) are a Selene screen: the cover beside glass rows, switches for Favorite, Hidden and HDR, the completion status, Edit details (your score, categories, tags, genres... with tick lists), Extensions (every add-on's and script's actions for the game, in their sections), Remove and Uninstall with a question first. Switch: Games > "Game options, Selene's way" (off: Playnite's menu). Playnite's own pop-up menus are dark glass instead of blue.
 - Achievements come as trophies, like a console's: bronze, silver and gold (the game's own grade on PlayStation, else from how rare it is: gold under 5% of players, silver under 25%), and a platinum for every game completed. A game's list shows each one's trophy and the ones earned per grade; the Achievements card counts your platinums and trophies.
 - Collection's achievements block sits lower and has a trophy badge (gold when complete), the count large with its share, and a glowing bar.

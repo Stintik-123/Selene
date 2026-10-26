@@ -215,7 +215,7 @@ namespace Selene
             {
                 var s = games[i];
                 var g = GameFacts.Find(s.GameId);
-                var face = new Border { Width = 68, Height = 100, CornerRadius = new CornerRadius(10),   /* a cover's shape: the whole cover shows */ Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
+                var face = new Border { Width = 96, Height = 96, CornerRadius = new CornerRadius(12), Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
                 var cover = g != null ? GameFacts.CoverPath(g) : null;
                 if (cover != null) { files.Add(cover); faces.Add(face); }
 
@@ -259,7 +259,14 @@ namespace Selene
             Ui.LoadInOrder(files, 160, (k, pic) =>
             {
                 if (closed || k >= faces.Count) return;
-                faces[k].Child = new Border { Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill } };
+                // square, the whole cover in it: fitted in the middle over a blurred, darker copy of itself filling the sides
+                var fill = new Border { Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill }, Opacity = 0.55, Effect = new System.Windows.Media.Effects.BlurEffect { Radius = 14 } };
+                var whole = new Image { Source = pic, Stretch = Stretch.Uniform };
+                RenderOptions.SetBitmapScalingMode(whole, BitmapScalingMode.HighQuality);
+                var both = new Grid();
+                both.Children.Add(fill);
+                both.Children.Add(whole);
+                faces[k].Child = both;
             });
         }
 
