@@ -15,6 +15,7 @@ namespace Selene
     // goes on to the profile steps; from the menu, B or Continue goes back to the home.
     public class SetupScreen : Screen
     {
+        public override bool MenuOnStart { get { return false; } }   // (Start is its own here)
         private DateTime bottomArrivedAt = DateTime.MinValue;   // the last move onto the bottom row of cards
         private Dialog ask;            // Install all's question, then the restart question
         private bool batchRunning;     // Install all is downloading

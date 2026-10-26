@@ -15,6 +15,7 @@ namespace Selene
     // live beside the choices. B goes back a step (from the first step: back where it came from, look restored).
     public class ProfileSteps : Screen
     {
+        public override bool MenuOnStart { get { return false; } }   // (Start is its own here)
         private readonly Profile editing;
         private readonly Func<Screen> back;
         private readonly Action<Profile> done;

@@ -19,6 +19,7 @@ namespace Selene
     // which opens a GitHub issue; a code to scan then follows it. If sending fails, the code opens GitHub's own form.
     public class ReportScreen : Screen
     {
+        public override bool MenuOnStart { get { return false; } }   // (Start is its own here)
         private const string Service = "https://selene-report.mattxslv.workers.dev";
         private const string Form = "https://github.com/mattxslv/Selene/issues/new?template=bug_report.yml";
 

@@ -142,7 +142,7 @@ namespace Selene
             if (leaving) return;
             if (ask != null) { ask.Handle(b); return; }   // the power question is up
             if (powerList != null) { HandlePower(b); return; }
-            if (b == "B" || b == "Start") { leaving = true; Ui.Back(); LoginScene.Finish(); return; }
+            if (b == "B" || b == "Start") { leaving = true; Ui.Back(); if (!LoginScene.CloseMenuOver()) LoginScene.Finish(); return; }
             if (b == "A")
             {
                 var item = items[index];
@@ -207,7 +207,7 @@ namespace Selene
         private void HandlePower(string b)
         {
             if (b == "B") { Ui.Back(); ClosePower(); return; }
-            if (b == "Start") { leaving = true; Ui.Back(); LoginScene.Finish(); return; }
+            if (b == "Start") { leaving = true; Ui.Back(); if (!LoginScene.CloseMenuOver()) LoginScene.Finish(); return; }
             if (b == "A")
             {
                 Ui.Confirm();

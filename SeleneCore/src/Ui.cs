@@ -942,5 +942,8 @@ namespace Selene
         public virtual Brush OverlayShade { get { return null; } }
         // how long it takes to slide in
         public virtual int ShowMs { get { return 320; } }
+        // Start opens Selene's menu over it (as a console's control center, everywhere); false where Start is the screen's
+        // own (done, next) or the menu has no place (signing in, setting up)
+        public virtual bool MenuOnStart { get { return true; } }
     }
 }

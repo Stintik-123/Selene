@@ -16,6 +16,7 @@ namespace Selene
     // row, or Collection); X erases, Y types a space, Start opens the first result, B closes.
     public class SearchScreen : Screen
     {
+        public override bool MenuOnStart { get { return false; } }   // (Start is its own here)
         private static readonly string[] Rows = { "1234567890", "qwertyuiop", "asdfghjkl'", "zxcvbnm-." };
         private const int MaxLength = 30, MaxResults = 8;
         private readonly StackPanel letters = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };

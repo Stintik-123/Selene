@@ -389,6 +389,7 @@ namespace Selene
 
         public static bool Handle(string b)
         {
+            if (b == "Start" && Active) { SeleneShell.OpenMenu(); return true; }   // the menu over the page, as everywhere
             if (!Active) { zone = 0; return false; }
             // Y: the game's achievements (the hint shows when Playnite Achievements has them)
             if (b == "Y" && Features.On("achievements") && AchievementsData.Available())

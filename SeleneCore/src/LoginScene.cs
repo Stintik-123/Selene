@@ -121,6 +121,13 @@ namespace Selene
             if (!IsActive) return false;
             var b = Ui.Normalize(pressed);
             HomeNav.Log("login button " + pressed);
+            // Start on a Selene screen: the menu over it, the screen kept underneath for B to come back to
+            if (b == "Start" && under == null && current.MenuOnStart && !current.WantsText && !(current is MenuScreen))
+            {
+                Ui.Pressed(b);
+                ShowMenuOver(new MenuScreen());
+                return true;
+            }
             try { current.Handle(b); }
             catch (Exception ex) { HomeNav.Log("login: " + pressed + " failed: " + ex); }
             finally { Ui.Pressed(b); }
@@ -282,8 +289,53 @@ namespace Selene
 
         // switches screens: the old one slides out to one side and fades, the new one comes in from the other
         // (dir 1 = forward, -1 = back, 0 = cross-fade)
+        // ---------------- the menu over a screen ----------------
+        // the screen the menu was opened over (Start there): it stays in place underneath, dimmed and still, until the menu
+        // closes back to it or something from the menu replaces both
+        private static Screen under;
+
+        private static void ShowMenuOver(Screen menu)
+        {
+            under = current;
+            current = menu;
+            under.Root.IsHitTestVisible = false;
+            Ui.Fade(under.Root, 0.35, 200);
+            menu.Root.Opacity = 0;
+            stage.Children.Add(menu.Root);
+            menu.Shown();
+            Ui.Slide(menu.Root, 0, 0, 0, 1, 220);
+            HomeNav.Log("menu over " + under.GetType().Name);
+        }
+
+        // the menu closing: back to the screen under it (true), or nothing was under it (false: the layer closes as usual)
+        public static bool CloseMenuOver()
+        {
+            if (under == null) return false;
+            var menu = current;
+            current = under;
+            under = null;
+            menu.Hidden();
+            var root = menu.Root;
+            Ui.Fade(root, 0, 160, 0, () => stage.Children.Remove(root));
+            current.Root.IsHitTestVisible = true;
+            Ui.Fade(current.Root, 1, 200);
+            return true;
+        }
+
+        // something opened from the menu (or the layer closing): the screen under it goes too
+        private static void DropUnder()
+        {
+            if (under == null) return;
+            var gone = under;
+            under = null;
+            gone.Hidden();
+            var root = gone.Root;
+            Ui.Fade(root, 0, 200, 0, () => stage.Children.Remove(root));
+        }
+
         public static void Show(Screen next, int dir)
         {
+            DropUnder();
             var old = current;
             current = next;
             ApplyOverlay(next.Overlay, next.OverlayShade);
@@ -310,6 +362,7 @@ namespace Selene
 
         public static void Finish()
         {
+            DropUnder();
             ClosedAt = DateTime.Now;
             if (startupQuiet) { startupQuiet = false; HomeNav.QuietStartup(false); HomeNav.HoldMusicForLaunch(false); }
             SeleneShell.HideLogin();
@@ -704,6 +757,7 @@ namespace Selene
     // about 2.6 s: the crescent crown rises in, the full moon's glow breathes once, a chime, the logo fades out, then on to the next screen
     public class IntroScreen : Screen
     {
+        public override bool MenuOnStart { get { return false; } }   // (signing in: no menu yet)
         private readonly IntroLogo logo = new IntroLogo(190);
         private DispatcherTimer timer;
         private bool done;
@@ -766,6 +820,7 @@ namespace Selene
     // ---------------- Who's playing? ----------------
     public class WhoScreen : Screen
     {
+        public override bool MenuOnStart { get { return false; } }   // (signing in: no menu yet)
         private readonly List<Profile> profiles;
         private readonly List<Tile> tiles = new List<Tile>();
         private readonly List<FrameworkElement> items = new List<FrameworkElement>();
