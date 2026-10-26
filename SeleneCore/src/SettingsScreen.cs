@@ -268,7 +268,6 @@ namespace Selene
                 if (b != "A") { MoveRow(b); return; }
                 Ui.Confirm();
                 if (opt.Key == "setupcheck") { bool back = fromMenu; LoginScene.Show(new SetupScreen(false) { Back = () => new SettingsScreen(back, "Advanced", "setupcheck") }, 1); }
-                else if (opt.Key == "updatenow") { bool back = fromMenu; UpdateCheck.CheckNow(() => new SettingsScreen(back, "Advanced", "updatenow")); }
                 else if (opt.Key == "report") { bool back = fromMenu; LoginScene.Show(new ReportScreen(() => new SettingsScreen(back, "Advanced", "report")), 1); }
                 else if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false, () => new SettingsScreen(true, "Games", "storeregion")), 1);
                 else if (opt.Key == "reset")

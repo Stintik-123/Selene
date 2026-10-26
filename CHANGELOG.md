@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Settings, Advanced: Report a problem comes first; the Check for updates row is gone (the menu's Update item checks on its own).
 - Settings: backing out of a group's options to the groups leaves the list where it was (it jumped to the top), and A goes back to the row left.
 - Spotlight: the name beside the selected card (Achievements, Captures, Activity) sits clear of the card again.
 - Settings: the red dot also marks the option whose work still runs, with where it's at (games to go, achievements checked so far) and a thin bar of how far it has got.
@@ -13,7 +14,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 - Spotlight's row runs to both edges of the screen once scrolled (the left end stopped 80 px in while the right ran off the screen), and a tile cut by the edge dissolves into a darkened side, as in Collection (switch: Spotlight > Row to the edges).
 - Notification cards as a console's: a compact strip (84 px, a 48 px icon, the title at 18 px and the line at 15 px) as wide as its words, between 360 and 520 px; the session card alone stays a panel (560 x 128, its figures on one line).
 - Icons in circles (dialogs, the menu, notification cards, achievements, the report's badge) sit exactly in the middle: centred by the glyph's own outline, not its text box.
-- Back from Setup check, Check for updates, Report a problem or the Store region lands on that row in Selene settings, not on the group list.
+- Back from Setup check, Report a problem or the Store region lands on that row in Selene settings, not on the group list.
 - Collection's row: scrolled to its end, the last cover and its ring sit inside the screen (the last one was cut off); a cover cut by the screen's edge dissolves into the screen's darkened sides; a held stick moves at Spotlight's pace (Playnite's list dropped every other repeat).
 - Music plays again: the hold that keeps UniPlaySong quiet during start-up left its pause on, so the home music and every game's song stayed silent all session.
 - A picked game is reached the way a held stick would get there: from the row's first game, slow over the first slots, quick through the middle, easing down onto it, with the tick along the way. Selene settings > Sound & music > Get game songs shows how many games have a song.
