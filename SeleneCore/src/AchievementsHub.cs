@@ -229,6 +229,7 @@ namespace Selene
             sortLabel.Text = Sorts[sort];
             Ui.Pop(sortLabel);
             // the rows already made, put in the new order (building them and their covers again took a moment with hundreds)
+            BuildAllRows();
             var rowOf = new Dictionary<AchievementsData.GameSet, Border>();
             for (int i = 0; i < games.Count && i < gameRows.Count; i++) rowOf[games[i]] = gameRows[i];
             var ordered = Order(allSets).Where(rowOf.ContainsKey).ToList();
@@ -303,11 +304,35 @@ namespace Selene
         }
 
         // ---- every game, as a console lists them: picture, name and store, share with a line, trophies ----
+        // the rows: the first ones at once (the screen shows straight away), the rest a batch at a time behind (all of them in
+        // one go held the screen for a moment with hundreds of games, opening it and coming back to it)
+        private int buildGen;
+        private const int FirstRows = 14, Batch = 30;
+
         private void BuildGames()
+        {
+            int gen = ++buildGen;
+            BuildRows(Math.Max(FirstRows, Math.Min(keepIndex + 8, games.Count)));
+            Action more = null;
+            more = () =>
+            {
+                if (closed || gen != buildGen || gameRows.Count >= games.Count) return;
+                BuildRows(gameRows.Count + Batch);
+                if (gameRows.Count < games.Count) Dispatcher.CurrentDispatcher.BeginInvoke(more, DispatcherPriority.Background);
+            };
+            if (gameRows.Count < games.Count) Dispatcher.CurrentDispatcher.BeginInvoke(more, DispatcherPriority.Background);
+        }
+
+        // every row made now (an order change or a move past the made ones needs them all there)
+        private void BuildAllRows() { if (gameRows.Count < games.Count) BuildRows(games.Count); }
+
+        // the rows up to `upTo` (from the last made one), their covers loading behind
+        private void BuildRows(int upTo)
         {
             var files = new List<string>();
             var faces = new List<Border>();
-            for (int i = 0; i < games.Count; i++)
+            int from = gameRows.Count;
+            for (int i = from; i < Math.Min(upTo, games.Count); i++)
             {
                 var s = games[i];
                 var g = GameFacts.Find(s.GameId);
@@ -352,6 +377,7 @@ namespace Selene
                 gameRows.Add(r);
                 if (i < 5) Ui.Rise(r, 200 + i * 40, 12, 280);
             }
+            if (files.Count == 0) return;
             Ui.LoadInOrder(files, 160, (k, pic) =>
             {
                 if (closed || k >= faces.Count) return;
@@ -452,7 +478,7 @@ namespace Selene
                         int next = row + (down ? 1 : -1);
                         if (next < 0) { if (recent.Count == 0) return; zone = 0; }
                         else if (next >= games.Count) { Ui.Shake(gameRows[row]); return; }
-                        else row = next;
+                        else { if (next + 6 >= gameRows.Count) BuildRows(next + Batch); row = next; }
                     }
                     Ui.Tick();
                     ShowFocus(true);
