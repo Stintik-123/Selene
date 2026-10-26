@@ -295,7 +295,7 @@ namespace Selene
             stage.Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (leaving != null) Ui.Slide(leaving, 0, -dir * 90, leaving.Opacity, 0, 240, () => stage.Children.Remove(leaving));
-                Ui.Slide(next.Root, dir * 90, 0, 0, 1, 320);
+                Ui.Slide(next.Root, dir * 90, 0, 0, 1, next.ShowMs);
                 Ui.MeasureFrames("screen slide", 360);
             }), System.Windows.Threading.DispatcherPriority.Background);
             if (!scene.IsKeyboardFocusWithin) scene.Dispatcher.BeginInvoke(new Action(() => { if (IsActive) Keyboard.Focus(scene); }), System.Windows.Threading.DispatcherPriority.Input);

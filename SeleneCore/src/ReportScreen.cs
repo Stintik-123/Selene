@@ -19,7 +19,7 @@ namespace Selene
     // which opens a GitHub issue; a code to scan then follows it. If sending fails, the code opens GitHub's own form.
     public class ReportScreen : Screen
     {
-        private const string Service = "https://selene-report.mattxslv.workers.dev/report";
+        private const string Service = "https://selene-report.mattxslv.workers.dev";
         private const string Form = "https://github.com/mattxslv/Selene/issues/new?template=bug_report.yml";
 
         private static readonly string[] Kinds = { "Something doesn't work", "Something looks wrong", "Selene froze or closed", "Controller or navigation", "Sound or music", "Other" };
@@ -45,12 +45,12 @@ namespace Selene
         private bool includeShot;
         private int onTop = -1;   // Up from the keys: the chips you can press (the picture, typing on a phone)
         private readonly List<Border> tops = new List<Border>();
-        private Border shotChip, phoneChip;
+        private Border shotChip;
         private TextBlock shotLabel;
 
         public override bool Overlay { get { return true; } }
         public override Brush OverlayShade { get { return Ink.Brush("SeleneScrimColor", 0.94); } }
-        public override bool WantsText { get { return step == 2 && !sending && !phoneMode; } }
+        public override bool WantsText { get { return step == 2 && !sending; } }
 
         // both sticks anywhere: a picture of the screen first, then the report over it
         public static void OpenFromShortcut()
@@ -149,17 +149,14 @@ namespace Selene
         {
             tiles = new List<Tile>();
             var page = new Grid { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 70, 0, 0) };
-            var col = new StackPanel { Width = 960 };
+            page.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(900) });
+            page.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var col = new StackPanel();
             var chips = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 16) };
             chips.Children.Add(Chip(KindIcons[kind], Kinds[kind]));
             chips.Children.Add(Chip(PlaceIcons[place], Places[place]));
             tops.Clear();
             if (shot != null) { chips.Children.Add(ShotChip()); tops.Add(shotChip); }
-            phoneChip = Chip(0xe32c, "Type on your phone");
-            phoneChip.BorderThickness = new Thickness(2);
-            phoneChip.BorderBrush = Brushes.Transparent;
-            chips.Children.Add(phoneChip);
-            tops.Add(phoneChip);
             col.Children.Add(chips);
             noteText = new TextBlock { FontSize = 21, FontFamily = Ui.Body, TextWrapping = TextWrapping.Wrap };
             noteBox = new Border { Child = noteText, MinHeight = 96, CornerRadius = new CornerRadius(18), Padding = new Thickness(24, 18, 24, 18), Background = Ink.Brush("SeleneInkColor", 0.08), BorderBrush = Ink.Brush("SeleneFocusColor", 0.7), BorderThickness = new Thickness(2) };
@@ -178,7 +175,24 @@ namespace Selene
                 FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, Margin = new Thickness(40, 18, 40, 0)
             });
             page.Children.Add(col);
+
+            // or type on a phone: its code, ready as the page opens
+            var side = new StackPanel { Width = 300, Margin = new Thickness(56, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            var head = new StackPanel { Orientation = Orientation.Horizontal };
+            head.Children.Add(new TextBlock { Text = Ui.Icon(0xe32c), FontFamily = Ui.Icons, FontSize = 26, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
+            head.Children.Add(new TextBlock { Text = "Or type on your phone", FontSize = 22, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+            side.Children.Add(head);
+            phoneCode = new Image { Width = 220, Height = 220 };
+            RenderOptions.SetEdgeMode(phoneCode, EdgeMode.Aliased);
+            phoneTile = new Border { Child = phoneCode, Background = Brushes.White, CornerRadius = new CornerRadius(18), Padding = new Thickness(8), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 18, 0, 0), Opacity = 0 };
+            side.Children.Add(phoneTile);
+            phoneLine = new TextBlock { FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 14, 0, 0) };
+            side.Children.Add(phoneLine);
+            Grid.SetColumn(side, 1);
+            page.Children.Add(side);
+            Ui.Rise(side, 160, 14, 300);
             ShowNote();
+            PreparePhone();
             return page;
         }
 
@@ -257,18 +271,15 @@ namespace Selene
             if (b == "B")
             {
                 Ui.Back();
-                if (step == 2 && phoneMode) { StopPhone(); return; }
                 if (step == 0) Leave(); else Go(step - 1, -1);
                 return;
             }
             if (step == 2)
             {
-                if (phoneMode) return;   // (B, above, goes back to the keys)
                 if (onTop >= 0)
                 {
                     var chip = tops[onTop];
-                    if (b == "A" && ReferenceEquals(chip, shotChip)) { includeShot = !includeShot; Ui.Key(); Ui.Pop(chip); ShowTops(); }
-                    else if (b == "A" && ReferenceEquals(chip, phoneChip)) { Ui.Confirm(); StartPhone(); }
+                    if (b == "A" && ReferenceEquals(chip, shotChip)) { includeShot = !includeShot; Ui.Key(); Ui.Pop(chip); ShowTops(); PreparePhone(); }
                     else if (b == "DPadLeft" || b == "DPadRight")
                     {
                         int next = onTop + (b == "DPadRight" ? 1 : -1);
@@ -282,7 +293,8 @@ namespace Selene
                 if (b.StartsWith("DPad"))
                 {
                     if (pad.Move(b)) return;
-                    onTop = tops.Count - 1; Ui.Tick(); pad.Focus(false); ShowTops();
+                    if (tops.Count == 0) { Ui.Shake(noteBox); return; }
+                    onTop = 0; Ui.Tick(); pad.Focus(false); ShowTops();
                     return;
                 }
                 pad.Press(b);
@@ -310,7 +322,7 @@ namespace Selene
         // ---- sending ----
         private void Send()
         {
-            if (sending || phoneMode) return;
+            if (sending) return;
             sending = true;
             Ui.Confirm();
             pad.DoneText = "Sending...";
@@ -373,76 +385,64 @@ namespace Selene
         }
 
         // ---- finishing on a phone: the report goes up as a draft, the phone's page adds the words and sends it ----
-        private bool phoneMode;
-        private Border phoneCard;
+        private Image phoneCode;
+        private Border phoneTile;
+        private TextBlock phoneLine;
         private DispatcherTimer phoneWatch;
+        private string draftId;
+        private int draftTurn;
 
-        private void StartPhone()
+        private void PreparePhone()
         {
-            phoneMode = true;
-            onTop = -1;
-            ShowTops();
-            pad.Focus(false);
-            foreach (var el in new UIElement[] { noteBox, noteHint, pad.Root }) { var e2 = el; Ui.Fade(e2, 0, 160, 0, () => { if (phoneMode) e2.Visibility = Visibility.Collapsed; }); }
-            var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(34, 0, 0, 0), MaxWidth = 520 };
-            var title = new TextBlock { Text = "Getting it ready...", FontSize = 28, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor") };
-            var line = new TextBlock { Text = "Your phone's camera opens a page to type on. Send it from there and this screen follows. B types here instead.", FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) };
-            words.Children.Add(title);
-            words.Children.Add(line);
-            var code = new Image { Width = 230, Height = 230 };
-            RenderOptions.SetEdgeMode(code, EdgeMode.Aliased);
-            var tile = new Border { Child = code, Background = Brushes.White, CornerRadius = new CornerRadius(18), Padding = new Thickness(8), Opacity = 0 };
-            var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 30, 0, 0) };
-            row.Children.Add(tile);
-            row.Children.Add(words);
-            phoneCard = new Border { Child = row };
-            var holder = (Panel)noteBox.Parent;
-            holder.Children.Insert(holder.Children.IndexOf(noteBox), phoneCard);
-            Ui.Rise(phoneCard, 120, 14, 300);
+            int turn = ++draftTurn;
+            draftId = null;
+            if (phoneWatch != null) phoneWatch.Stop();
+            Ui.Fade(phoneTile, 0.15, 160);
+            phoneLine.Text = "Getting the code ready...";
             Post("/draft", "", (result, error) =>
             {
-                if (!phoneMode) return;
+                if (turn != draftTurn || step != 2 || sending) return;
                 if (result == null)
                 {
-                    title.Text = "Couldn't get it ready";
-                    line.Text = error == "slow down" ? "That's a lot of reports in a row. Try again in an hour." : "No internet, maybe. Press B and send it from here instead.";
                     HomeNav.Log("report: phone draft failed: " + error);
+                    phoneLine.Text = error == "slow down" ? "Too many reports in a row for now. Send it from here." : "Couldn't reach the report service. Send it from here, or check the internet.";
                     return;
                 }
-                var id = result["id"] as string;
-                try { code.Source = new QrCode(result["url"] as string).Picture(); } catch (Exception ex) { HomeNav.Log("report: code: " + ex.Message); }
-                Ui.Fade(tile, 1, 260);
-                title.Text = "Scan to type on your phone";
-                HomeNav.Log("report: waiting for the phone (" + id + ")");
-                phoneWatch = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-                phoneWatch.Tick += (s, e) =>
-                {
-                    if (!phoneMode || step != 2) { phoneWatch.Stop(); return; }
-                    var dispatcher = Root.Dispatcher;
-                    Task.Factory.StartNew(() =>
-                    {
-                        try
-                        {
-                            var answer = Call("/r/" + id + "/status", null);
-                            object ok;
-                            if (answer.TryGetValue("ok", out ok) && ok is bool && (bool)ok)
-                                dispatcher.BeginInvoke(new Action(() => { if (phoneMode && step == 2) { phoneWatch.Stop(); phoneMode = false; Done(answer["url"] as string, null); } }));
-                        }
-                        catch { }
-                    });
-                };
-                phoneWatch.Start();
+                draftId = result["id"] as string;
+                try { phoneCode.Source = new QrCode(result["url"] as string).Picture(); } catch (Exception ex) { HomeNav.Log("report: code: " + ex.Message); return; }
+                Ui.Fade(phoneTile, 1, 260);
+                phoneLine.Text = "Scan with your phone's camera, type there and send. This screen follows.";
+                Watch(draftId, turn);
             });
         }
 
-        private void StopPhone()
+        // the phone sent it: this screen shows it sent too
+        private void Watch(string id, int turn)
         {
-            phoneMode = false;
-            if (phoneWatch != null) phoneWatch.Stop();
-            if (phoneCard != null) { var card = phoneCard; phoneCard = null; ((Panel)card.Parent).Children.Remove(card); }
-            foreach (var el in new UIElement[] { noteBox, noteHint, pad.Root }) { el.Visibility = Visibility.Visible; Ui.Fade(el, 1, 200); }
-            ShowNote();
-            pad.Focus(true);
+            phoneWatch = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            phoneWatch.Tick += (s, e) =>
+            {
+                if (turn != draftTurn || step != 2 || sending) { ((DispatcherTimer)s).Stop(); return; }
+                var dispatcher = Root.Dispatcher;
+                Task.Factory.StartNew(() =>
+                {
+                    try
+                    {
+                        var answer = Call("/r/" + id + "/status", null);
+                        object ok;
+                        if (answer.TryGetValue("ok", out ok) && ok is bool && (bool)ok)
+                            dispatcher.BeginInvoke(new Action(() =>
+                            {
+                                if (turn != draftTurn || step != 2 || sending) return;
+                                if (phoneWatch != null) phoneWatch.Stop();
+                                HomeNav.Log("report: sent from the phone");
+                                Done(answer["url"] as string, null);
+                            }));
+                    }
+                    catch { }
+                });
+            };
+            phoneWatch.Start();
         }
 
         // the frame timings and polling lines fill a log without saying what happened

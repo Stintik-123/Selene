@@ -61,6 +61,7 @@ namespace Selene
 
         // opened on one capture from a game's details page: over the page (no backdrop), the capture fading in over it
         public override bool Overlay { get { return openPath != null; } }
+        public override int ShowMs { get { return openPath != null ? 180 : 320; } }
 
         public CapturesScreen(string openPath = null)
         {
@@ -694,7 +695,7 @@ namespace Selene
                 // the browser Playnite ships with, as the Store trailers do
                 var me = new MediaElement { Source = new Uri(c.Path), LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close, Stretch = Stretch.Uniform, Volume = clipVolume, Opacity = 0 };
                 video = me;
-                me.MediaOpened += (s, e) => Ui.Fade(me, 1, 360);   // fades in with its first frame
+                me.MediaOpened += (s, e) => Ui.Fade(me, 1, openPath != null ? 200 : 360);   // fades in with its first frame
                 me.MediaEnded += (s, e) => { try { me.Position = TimeSpan.Zero; me.Play(); } catch { } };
                 me.MediaFailed += (s, e) =>
                 {
@@ -708,7 +709,7 @@ namespace Selene
                     clip.Progress = (at, length, isPaused) => { if (viewing && clip != null) { ShowProgress(at, length, isPaused); if (clipSound != null) clipSound.Sync(at, isPaused); } };
                     clip.View.Opacity = 0;
                     viewer.Children.Insert(1, clip.View);
-                    Ui.Fade(clip.View, 1, 360, 250);   // (the page draws its first frame meanwhile)
+                    Ui.Fade(clip.View, 1, openPath != null ? 200 : 360, openPath != null ? 150 : 250);   // (the page draws its first frame meanwhile)
                 };
                 viewer.Children.Insert(1, me);
                 me.Play();
@@ -716,7 +717,7 @@ namespace Selene
             }
             else
             {
-                Ui.LoadInOrder(new List<string> { c.Path }, 1920, (k, pic) => { if (viewing && index == i) { picture.Source = pic; picture.Opacity = 0; Ui.Fade(picture, 1, 320); } });
+                Ui.LoadInOrder(new List<string> { c.Path }, 1920, (k, pic) => { if (viewing && index == i) { picture.Source = pic; picture.Opacity = 0; Ui.Fade(picture, 1, openPath != null ? 180 : 320); } });
             }
             if (!viewing)
             {

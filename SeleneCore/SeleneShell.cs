@@ -382,7 +382,8 @@ namespace Selene
             login.BeginAnimation(UIElement.OpacityProperty, null);
             login.Opacity = 0;
             login.Visibility = Visibility.Visible;
-            login.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            // over the details page (a capture): quicker, it's one picture opening
+            login.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(raised != null ? 160 : 320)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         }
 
         // the game details page sits after the login layer's grid in Main.xaml: opened from there (a capture), that grid goes
@@ -432,7 +433,7 @@ namespace Selene
             HomeNav.QuietFocus(1200);   // focus goes back to the home
             if (!LoginScene.KeepHome && StartOnCollection()) { ShowLibrary(); HomeNav.Log("start on Collection"); }
             else if (!LoginScene.KeepHome) HomeNav.HoldHomeForIntro();
-            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(raised != null ? 200 : 420)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
             fade.Completed += (s, e) => { login.Visibility = Visibility.Collapsed; login.BeginAnimation(UIElement.OpacityProperty, null); login.Opacity = 1; Raise(login, false); };
             login.BeginAnimation(UIElement.OpacityProperty, fade);
         }

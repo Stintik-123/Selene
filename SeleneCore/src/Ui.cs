@@ -940,5 +940,7 @@ namespace Selene
         public virtual bool Overlay { get { return false; } }
         // the shade over the home for an overlay screen (null = the usual deep one)
         public virtual Brush OverlayShade { get { return null; } }
+        // how long it takes to slide in
+        public virtual int ShowMs { get { return 320; } }
     }
 }
