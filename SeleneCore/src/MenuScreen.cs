@@ -108,9 +108,8 @@ namespace Selene
                 if (item.Badge)
                 {
                     // the red of a console's notice dot (the same in every theme, as the trophies' metals), ringed in the dark so it
-                    // reads over any wallpaper, breathing softly
+                    // reads over any wallpaper; still
                     var badge = new Ellipse { Width = 16, Height = 16, Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)), Stroke = Ink.Brush("SeleneScrimColor"), StrokeThickness = 2.5, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 4, 4, 0) };
-                    badge.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, 0.6, TimeSpan.FromMilliseconds(1100)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
                     dot.Children.Add(badge);
                 }
                 cell.Children.Add(label);
