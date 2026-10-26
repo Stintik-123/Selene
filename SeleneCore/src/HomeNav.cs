@@ -1262,8 +1262,11 @@ namespace Selene
                 // the focus comes from outside the row (the search layer): the row's guard would send it back to the old
                 // selection, so it's told which tile is wanted
                 wantedFocusIndex = idx;
+                var rowSv = FindChild<ScrollViewer>(row);
+                double fromOffset = rowSv != null ? rowSv.HorizontalOffset : 0;
                 try { PlaceAtLeft(row, idx); }   // the game you went looking for, first on the row
                 finally { wantedFocusIndex = -1; }
+                if (rowSv != null) RideTo(row, rowSv.HorizontalOffset - fromOffset);
                 Log("find a game: row focused=" + row.IsKeyboardFocusWithin + " selected=" + row.SelectedIndex);
                 // a screen still closing (a card's) can take the focus back with the old tile: looked at again, a few times
                 int tries = 0;
@@ -1281,6 +1284,35 @@ namespace Selene
                 };
                 again.Start();
             }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        // the row arrives at a picked game by scrolling to it: it starts up to seven covers back the way it came and slides there,
+        // quick and easing out (it was just there at once). Switch: Spotlight > Scroll to a picked game
+        private static void RideTo(ListBox row, double movedCovers)
+        {
+            try
+            {
+                if (Math.Abs(movedCovers) < 0.5 || Lite || !Features.On("pickscroll")) return;
+                var panel = FindChild<VirtualizingStackPanel>(row);
+                if (panel == null) return;
+                double pitch = 0;
+                for (int i = 0; i < row.Items.Count - 1 && pitch <= 0; i++)
+                {
+                    var a = row.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
+                    var b = row.ItemContainerGenerator.ContainerFromIndex(i + 1) as FrameworkElement;
+                    if (a != null && b != null && a.IsVisible && b.IsVisible) pitch = Math.Abs(b.TranslatePoint(new Point(0, 0), a).X);
+                }
+                if (pitch <= 0) return;
+                double covers = Math.Min(7, Math.Abs(movedCovers));
+                var shift = panel.RenderTransform as TranslateTransform;
+                if (shift == null || shift.IsFrozen) { shift = new TranslateTransform(); panel.RenderTransform = shift; }
+                StopGlide();
+                var ride = new DoubleAnimation(Math.Sign(movedCovers) * covers * pitch, 0, TimeSpan.FromMilliseconds(260 + covers * 40)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                Timeline.SetDesiredFrameRate(ride, 144);
+                ride.Completed += (s, e) => { shift.BeginAnimation(TranslateTransform.XProperty, null); shift.X = 0; };
+                shift.BeginAnimation(TranslateTransform.XProperty, ride);
+            }
+            catch (Exception ex) { Log("find a game: ride: " + ex.Message); }
         }
 
         // a tile at the left edge of the row, focused (a pick from a search or a card): the usual move keeps the third slot and,
