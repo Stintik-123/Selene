@@ -294,13 +294,16 @@ namespace Selene
         // closes back to it or something from the menu replaces both
         private static Screen under;
         private static List<FrameworkElement> underPrompts = new List<FrameworkElement>();   // its button hints, hidden meanwhile
+        private static Border underShade;   // the dark over it (the screen made see-through showed the backdrop's light through it)
 
         private static void ShowMenuOver(Screen menu)
         {
             under = current;
             current = menu;
             under.Root.IsHitTestVisible = false;
-            Ui.Fade(under.Root, 0.25, 200);
+            underShade = new Border { Background = Ink.Brush("SeleneScrimColor"), Opacity = 0, IsHitTestVisible = false };
+            stage.Children.Add(underShade);
+            Ui.Fade(underShade, 0.7, 200);
             // its button hints went under the menu's own (Close, Select): hidden while the menu is up
             underPrompts = Ui.PromptRows(under.Root);
             foreach (var row in underPrompts) Ui.Fade(row, 0, 120);
@@ -322,15 +325,23 @@ namespace Selene
             var root = menu.Root;
             Ui.Fade(root, 0, 160, 0, () => stage.Children.Remove(root));
             current.Root.IsHitTestVisible = true;
-            Ui.Fade(current.Root, 1, 200);
+            RemoveShade();
             foreach (var row in underPrompts) Ui.Fade(row, 1, 200);
             underPrompts = new List<FrameworkElement>();
             return true;
         }
 
         // something opened from the menu (or the layer closing): the screen under it goes too
+        private static void RemoveShade()
+        {
+            var shade = underShade;
+            underShade = null;
+            if (shade != null) Ui.Fade(shade, 0, 180, 0, () => stage.Children.Remove(shade));
+        }
+
         private static void DropUnder()
         {
+            RemoveShade();
             if (under == null) return;
             var gone = under;
             under = null;
