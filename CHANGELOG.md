@@ -4,7 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
-- Collection's row: scrolled to its end, the last cover and its ring sit inside the screen (the last one was cut off), and a cover cut by the screen's edge fades into the dark on either side.
+- Collection's row: scrolled to its end, the last cover and its ring sit inside the screen (the last one was cut off); a cover cut by the screen's edge dissolves on either side; a held stick moves at Spotlight's pace (Playnite's list dropped every other repeat).
 - Music plays again: the hold that keeps UniPlaySong quiet during start-up left its pause on, so the home music and every game's song stayed silent all session.
 - A picked game is reached the way a held stick would get there: from the row's first game, slow over the first slots, quick through the middle, easing down onto it, with the tick along the way. Selene settings > Sound & music > Get game songs shows how many games have a song.
 - Collection: the ring walks along the row and, once only one cover is left beyond it, the row glides instead, so what's next is always in view (Playnite waited for the very edge); the achievements above the covers sit higher, clear of the chosen cover.

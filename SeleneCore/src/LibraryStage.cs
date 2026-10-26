@@ -44,6 +44,19 @@ namespace Selene
             baseLayer = HomeNav.FindByName(library, "SeleneLibraryBase") as UIElement;
             HomeNav.Log("library stage: art " + (art != null) + ", wallpaper " + (wallpaper != null));
             if (list == null || library == null || host == null) { HomeNav.Log("library stage: parts not found"); list = null; return; }
+            // a held stick at Spotlight's pace: Playnite's controller repeats a held direction every 80 ms, but its list control
+            // ignores repeats for 150 ms after each move (ListBoxEx.InputRepeatInterval), so Collection moved at half the pace.
+            // Spotlight's row never meets that (Selene takes its keys first). Below 80 ms every repeat gets through
+            try
+            {
+                var interval = list.GetType().GetProperty("InputRepeatInterval", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                if (interval != null && interval.PropertyType == typeof(int) && Features.On("collectionglide") && (int)interval.GetValue(null, null) > 60)
+                {
+                    interval.SetValue(null, 60, null);
+                    HomeNav.Log("collection: held moves every repeat (input repeat interval 60 ms)");
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("collection: repeat interval: " + ex.Message); }
             arm = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(4000) };   // the art first, the trailer about 4 s in
             arm.Tick += (s, e) => { arm.Stop(); Play(); };
             list.SelectionChanged += (s, e) =>
