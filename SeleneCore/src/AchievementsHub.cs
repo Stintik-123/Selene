@@ -125,15 +125,15 @@ namespace Selene
         // the add-on's check: how far it is, the game it's on; once over, the list read again with what it found
         private void ShowChecking()
         {
-            int done, total; Guid? id;
-            bool on = AchievementsData.Checking(out done, out total, out id);
+            int done, total; double share; Guid? id;
+            bool on = AchievementsData.Checking(out done, out total, out share, out id);
             if (on)
             {
                 checkLine.Inlines.Clear();
                 checkLine.Inlines.Add(new System.Windows.Documents.Run(total > 0 ? "Checking your games  ·  " + done + " of " + total : "Checking your games") { FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.85) });
                 var g = id.HasValue ? GameFacts.Find(id.Value) : null;
                 if (g != null) checkLine.Inlines.Add(new System.Windows.Documents.Run("  ·  " + g.Name) { Foreground = Ink.Brush("SeleneInkColor", 0.5) });
-                double w = total > 0 ? CheckBar * Math.Min(done, total) / total : 0;
+                double w = CheckBar * share;
                 checkFill.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(w, TimeSpan.FromMilliseconds(300)) { EasingFunction = Ui.Out() });
                 if (!wasChecking) { checking.Visibility = Visibility.Visible; Ui.Fade(checking, 1, 240); }
                 wasChecking = true;

@@ -147,10 +147,11 @@ namespace Selene
         // a fresh read whatever the cache's age (the add-on just checked games); nothing when one is under way
         public static void Reread(Action<List<GameSet>> done) { if (!reading) Read(done); }
 
-        // the add-on's check under way, for the hub: how far (done of total) and the game it's on; false when none runs
-        public static bool Checking(out int done, out int total, out Guid? game)
+        // the add-on's check under way, for the hub: games done of all (from its line "... 12/384: <game>"; its steps are
+        // finer units, 10000 for the whole check), how far as a share (0-1, for a bar) and the game it's on; false when none runs
+        public static bool Checking(out int done, out int total, out double share, out Guid? game)
         {
-            done = total = 0; game = null;
+            done = total = 0; share = 0; game = null;
             try
             {
                 var p = Plugin();
@@ -161,8 +162,10 @@ namespace Selene
                 if (report != null)
                 {
                     var t = report.GetType();
-                    done = (int)t.GetProperty("CurrentStep").GetValue(report, null);
-                    total = (int)t.GetProperty("TotalSteps").GetValue(report, null);
+                    int step = (int)t.GetProperty("CurrentStep").GetValue(report, null), steps = (int)t.GetProperty("TotalSteps").GetValue(report, null);
+                    share = steps > 0 ? Math.Min(1.0, (double)step / steps) : 0;
+                    var m = System.Text.RegularExpressions.Regex.Match(t.GetProperty("Message").GetValue(report, null) as string ?? "", @"(\d+)\s*/\s*(\d+)");
+                    if (m.Success) { done = int.Parse(m.Groups[1].Value); total = int.Parse(m.Groups[2].Value); }
                     game = t.GetProperty("CurrentGameId").GetValue(report, null) as Guid?;
                 }
                 return true;
@@ -334,8 +337,8 @@ namespace Selene
                 }));
                 pt.GetProperty("OnRefreshCompleted").SetValue(policy, finished, null);
                 const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;   // (the add-on keeps these to itself)
-                int n, all; Guid? on;
-                if (recentOnly && Checking(out n, out all, out on)) { HomeNav.Log("achievements: the add-on is checking already"); return; }
+                int n, all; double part; Guid? on;
+                if (recentOnly && Checking(out n, out all, out part, out on)) { HomeNav.Log("achievements: the add-on is checking already"); return; }
                 var entry = p.GetType().GetProperty("RefreshEntryPoint", any).GetValue(p, null);
                 entry.GetType().GetMethod("ExecuteAsync", any, null, new[] { request.GetType(), pt }, null).Invoke(entry, new[] { request, policy });
                 if (recentOnly) { HomeNav.Log("achievements: checking the games played last"); return; }
