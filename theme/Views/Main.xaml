@@ -190,9 +190,8 @@
 
                                 <!-- achievements of the selected game (Playnite Achievements), bottom right just above the covers: a trophy badge
                                      (gold once every one is earned), the count large with the share beside it, a glowing bar -->
-                                <Border Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,100,-6" CornerRadius="22" Padding="16,14,24,16"
-                                        Background="{DynamicResource SeleneGlassSolidBrush}" BorderBrush="{DynamicResource SeleneInk15Brush}" BorderThickness="1">
-                                    <Border.Effect><DropShadowEffect ShadowDepth="0" BlurRadius="28" Opacity="0.4" Color="Black"/></Border.Effect>
+                                <!-- (no panel or shadow of its own: an effect on the whole block drew its words soft) -->
+                                <Border Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,64,-24" Padding="0">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Visibility" Value="Collapsed"/>

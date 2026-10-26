@@ -57,25 +57,9 @@ namespace Selene
         public GameOptionsScreen(Game game)
         {
             this.game = game;
-            var layout = new Grid { Margin = new Thickness(120, 100, 120, 110) };
-            layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(440) });
-            layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            // the game: its cover, name and a line about it
-            var left = new StackPanel { VerticalAlignment = VerticalAlignment.Top };
-            var cover = GameFacts.CoverTile(game, 300, 400);
-            cover.Root.HorizontalAlignment = HorizontalAlignment.Left;
-            left.Children.Add(cover.Root);
-            GameFacts.FillCovers(new List<Game> { game }, new List<Tile> { cover }, 600);
-            left.Children.Add(new TextBlock { Text = game.Name, FontSize = 30, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextWrapping = TextWrapping.Wrap, MaxWidth = 380, Margin = new Thickness(2, 24, 0, 0) });
-            var about = new List<string>();
-            if (GameFacts.Seconds(game) > 0) about.Add(GameFacts.Hours(GameFacts.Seconds(game)) + " played");
-            about.Add(game.IsInstalled ? "Installed" : "Not installed");
-            left.Children.Add(new TextBlock { Text = string.Join("  ·  ", about), FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(2, 6, 0, 0) });
-            layout.Children.Add(left);
-
+            // one column in the middle (the game's name is in the title above the rows)
+            var layout = new Grid { Margin = new Thickness(0, 90, 0, 110), Width = 1040, HorizontalAlignment = HorizontalAlignment.Center };
             var right = new StackPanel();
-            Grid.SetColumn(right, 1);
             crumbs = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), Margin = new Thickness(8, 0, 0, 4) };
             title = new TextBlock { FontSize = 40, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(6, 0, 0, 20) };
             right.Children.Add(crumbs);
@@ -365,9 +349,9 @@ namespace Selene
         private void Show(bool animate)
         {
             var l = levels.Peek();
-            title.Text = l.Title;
-            crumbs.Text = string.Join("  ›  ", levels.Reverse().Take(levels.Count - 1).Select(x => x.Title)).ToUpperInvariant();
-            crumbs.Visibility = levels.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+            title.Text = levels.Count == 1 ? game.Name : l.Title;
+            // above the title: "GAME OPTIONS", then the levels walked through
+            crumbs.Text = (levels.Count == 1 ? "Game options" : game.Name + "  ›  " + string.Join("  ›  ", levels.Reverse().Skip(1).Take(levels.Count - 2).Select(x => x.Title).ToArray())).TrimEnd(' ', '›').ToUpperInvariant();
             list.Children.Clear();
             rows.Clear();
             scroller.ScrollToVerticalOffset(0);
@@ -439,7 +423,6 @@ namespace Selene
                 bool on = i == l.Index;
                 rows[i].BorderBrush = on ? Ink.Brush("SeleneFocusColor") : Brushes.Transparent;
                 rows[i].Background = Ink.Brush("SeleneGlassColor", on ? 0.95 : 0.72);
-                Ui.ScaleTo(rows[i], on ? 1.015 : 1, 150);
             }
             if (l.Index >= rows.Count) return;
             try
