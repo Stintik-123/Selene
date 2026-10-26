@@ -2830,6 +2830,9 @@ namespace Selene
                     return;
                 }
                 if (LoginScene.HandleButton(pressed)) { e.Cancel(); return; }
+                // starting up (the home not shown yet, its intro still to come): the home takes no presses (an A then opened the
+                // card the focus sat on, unseen behind the start-up screen)
+                if (!introDone && FocusOnHome() && pressed != "Guide") { Log("pad: " + pressed + " before the home was up, ignored"); e.Cancel(); return; }
                 if (IntroRunning && pressed != "Start" && pressed != "Back" && pressed != "Guide" && FocusOnHome()) { e.Cancel(); return; }
                 if (StoreShowcase.Handle(Ui.Normalize(pressed)) || CardShowcase.Handle(Ui.Normalize(pressed))) { e.Cancel(); return; }   // the cards' pictures
                 EndQuietFocus();   // the user is moving now: their moves tick
