@@ -267,7 +267,8 @@ namespace Selene
 
             public WorkBar()
             {
-                percent = new TextBlock { FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right, MinWidth = 36, Margin = new Thickness(12, 0, 0, 0) };
+                // (the figure's box sits lower than its digits: lifted a little, so the digits centre on the bar)
+                percent = new TextBlock { FontSize = 13, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor"), VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right, MinWidth = 36, Margin = new Thickness(12, 0, 0, 3) };
                 DockPanel.SetDock(percent, Dock.Right);
                 Root.Children.Add(percent);
                 var bar = new Grid { Height = 4, ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center };
@@ -276,18 +277,17 @@ namespace Selene
                 var track = new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.14) };
                 Grid.SetColumnSpan(track, 2);
                 bar.Children.Add(track);
-                bar.Children.Add(new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("GlyphColor"), MinWidth = 6 });
-                // the light: a soft band of white gliding over the whole bar, brighter over the filled part (the fill shows through it)
-                var light = new Border
+                var fill = new Border { CornerRadius = new CornerRadius(2), Background = Ink.Brush("GlyphColor"), MinWidth = 6, ClipToBounds = true };
+                // the light: a soft band of white gliding along the filled part
+                fill.Child = new Border
                 {
-                    Background = Brushes.White, Opacity = 0.45, IsHitTestVisible = false,
+                    Background = Brushes.White, Opacity = 0.55, IsHitTestVisible = false,
                     OpacityMask = new LinearGradientBrush(new GradientStopCollection
                     {
                         new GradientStop(Color.FromArgb(0x00, 255, 255, 255), 0.25), new GradientStop(Color.FromArgb(0xFF, 255, 255, 255), 0.5), new GradientStop(Color.FromArgb(0x00, 255, 255, 255), 0.75)
                     }, new Point(0, 0.5), new Point(1, 0.5)) { RelativeTransform = slide }
                 };
-                Grid.SetColumnSpan(light, 2);
-                bar.Children.Add(light);
+                bar.Children.Add(fill);
                 Root.Children.Add(bar);
                 Root.Loaded += (s, e) => { if (Root.Visibility == Visibility.Visible) Start(); };
                 Root.Unloaded += (s, e) => Stop();   // (nothing ticking for a row gone)
