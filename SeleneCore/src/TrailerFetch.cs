@@ -94,6 +94,7 @@ namespace Selene
                 }
                 bool looked;
                 lock (gate) looked = browsed.Contains(id);
+                asked = false;
                 try { if (Fetch(id)) made++; }
                 catch (Exception ex)
                 {
@@ -104,7 +105,7 @@ namespace Selene
                     if (status == 429) { lock (gate) { tried.Remove(id); queue.AddLast(id); } System.Threading.Thread.Sleep(60000); }
                 }
                 // the library pass goes gently (Steam limits how often it's asked); the games being looked at don't wait
-                if (!looked) System.Threading.Thread.Sleep(1500);
+                if (!looked && asked) System.Threading.Thread.Sleep(1500);
             }
             if (made > 0) HomeNav.Log("trailer download: " + made + " new");
         }
@@ -118,7 +119,12 @@ namespace Selene
             bool appIdLooked = false;
             Func<string> steamId = () =>
             {
-                if (!appIdLooked) { appIdLooked = true; appId = g.PluginId.ToString() == SteamPlugin ? g.GameId : GameMedia.SteamAppIdByName(g.Name); }
+                if (!appIdLooked)
+                {
+                    appIdLooked = true;
+                    if (g.PluginId.ToString() == SteamPlugin) appId = g.GameId;
+                    else { asked = true; appId = GameMedia.SteamAppIdByName(g.Name); }   // (a search on Steam's store)
+                }
                 return appId;
             };
             if (Features.On("artdownload")) { try { FetchArt(g, steamId); } catch (Exception ex) { HomeNav.Log("art download: " + g.Name + " failed: " + ex.Message); } }
@@ -296,8 +302,11 @@ namespace Selene
             try { return System.Xml.XmlConvert.ToTimeSpan(iso).TotalSeconds; } catch { return 0; }
         }
 
+        private static bool asked;   // the last game asked Steam something (the library pass rests only after those)
+
         private static WebClient Client()
         {
+            asked = true;
             try { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; } catch { }   // (as Selene's other downloads)
             var wc = new WebClient { Encoding = System.Text.Encoding.UTF8 };
             wc.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0";
