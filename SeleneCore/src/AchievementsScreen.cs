@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Playnite.SDK.Models;
@@ -270,12 +271,85 @@ namespace Selene
             if (shown.Count == 0)
             {
                 note.Text = tab == 1 ? "Nothing unlocked yet." : "Everything's unlocked.";
-                note.Visibility = Visibility.Visible;
+                bool all = tab == 2 && set.Items.Count > 0 && Features.On("achcelebrate");
+                note.Visibility = all ? Visibility.Collapsed : Visibility.Visible;
+                if (all) Celebrate();
                 return;
             }
             note.Visibility = Visibility.Collapsed;
+            HideCelebration();
             BuildMore();
             ShowFocus();
+        }
+
+        // ---- every achievement unlocked: a gold medal in the middle, a glow, a few twinkling sparkles and a line to be proud of ----
+        private Grid celebration;
+        private static readonly string[][] Proud =
+        {
+            new[] { "You got everything.", "Every. Single. One." },
+            new[] { "Nothing left to unlock.", "Legend status: confirmed." },
+            new[] { "100%. Take a bow.", "The game has nothing more to teach you." },
+            new[] { "Completionist.", "Not one trophy escaped you." },
+        };
+
+        private void Celebrate()
+        {
+            HideCelebration();
+            var gold = Color.FromRgb(0xF2, 0xC2, 0x4B);   // the trophies' gold (the same in every theme)
+            var words = Proud[new Random().Next(Proud.Length)];
+            celebration = new Grid { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, ListTop + 20, 0, 0), IsHitTestVisible = false };
+            var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+            // the medal: a soft gold glow, a ring, the trophy
+            var medal = new Grid { Width = 260, Height = 200, HorizontalAlignment = HorizontalAlignment.Center };
+            var glow = new System.Windows.Shapes.Ellipse { Width = 220, Height = 220, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -20, 0, -20) };
+            var halo = new RadialGradientBrush();
+            halo.GradientStops.Add(new GradientStop(Color.FromArgb(0x70, gold.R, gold.G, gold.B), 0));
+            halo.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, gold.R, gold.G, gold.B), 1));
+            glow.Fill = halo;
+            medal.Children.Add(glow);
+            var ring = new System.Windows.Shapes.Ellipse { Width = 128, Height = 128, StrokeThickness = 3, Stroke = new SolidColorBrush(Color.FromArgb(0xCC, gold.R, gold.G, gold.B)), Fill = new SolidColorBrush(Color.FromArgb(0x30, gold.R, gold.G, gold.B)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            medal.Children.Add(ring);
+            medal.Children.Add(new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 68, Foreground = new SolidColorBrush(gold), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = gold, BlurRadius = 24, ShadowDepth = 0, Opacity = 0.7 } });
+            // sparkles around it, each twinkling on its own beat
+            var spots = new[] { new Point(-96, -58), new Point(100, -66), new Point(-118, 22), new Point(116, 30), new Point(-62, 74), new Point(70, 80), new Point(4, -96) };
+            var rnd = new Random();
+            for (int i = 0; i < spots.Length; i++)
+            {
+                var star = new TextBlock { Text = "\u2726", FontSize = 14 + rnd.Next(12), Foreground = new SolidColorBrush(i % 2 == 0 ? gold : Colors.White), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                    RenderTransform = new TranslateTransform(spots[i].X, spots[i].Y), Opacity = 0 };
+                var twinkle = new DoubleAnimation(0.15, 1, TimeSpan.FromMilliseconds(900 + rnd.Next(700))) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromMilliseconds(300 + i * 140), EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
+                star.BeginAnimation(UIElement.OpacityProperty, twinkle);
+                medal.Children.Add(star);
+            }
+            stack.Children.Add(medal);
+            stack.Children.Add(new TextBlock { Text = words[0], FontSize = 40, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 10, 0, 0) });
+            stack.Children.Add(new TextBlock { Text = words[1], FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
+            celebration.Children.Add(stack);
+            Root.Children.Add(celebration);
+            // in: rises and grows into place, eased (no bounce), the glow breathing after
+            var scale = new ScaleTransform(0.82, 0.82);
+            var lift = new TranslateTransform(0, 24);
+            var group = new TransformGroup();
+            group.Children.Add(scale);
+            group.Children.Add(lift);
+            celebration.RenderTransformOrigin = new Point(0.5, 0.3);
+            celebration.RenderTransform = group;
+            celebration.Opacity = 0;
+            var dur = TimeSpan.FromMilliseconds(420);
+            celebration.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(300)));
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, dur) { EasingFunction = Ui.Out() });
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, dur) { EasingFunction = Ui.Out() });
+            lift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, dur) { EasingFunction = Ui.Out() });
+            glow.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.55, 1, TimeSpan.FromMilliseconds(1800)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
+            if (Features.On("sounds")) Ui.Play("Success.wav", 0.8);
+        }
+
+        private void HideCelebration()
+        {
+            if (celebration == null) return;
+            Root.Children.Remove(celebration);
+            celebration = null;
         }
 
         // rows are built a page at a time (some games have hundreds, or thousands)
