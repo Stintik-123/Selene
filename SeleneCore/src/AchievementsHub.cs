@@ -16,7 +16,7 @@ namespace Selene
     // A opens that game's list, B goes back.
     public class AchievementsHub : Screen
     {
-        private const double Side = 96, TileW = 150, Pitch = TileW + 22, RowTop = 318, ListTop = 640;
+        private const double Side = 96, TileW = 104, Pitch = TileW + 18, RowTop = 172, ListTop = 430;
         private const int Recent = 12;
 
         private class Pick { public Guid Game; public AchievementsData.Item Item; }
@@ -31,7 +31,7 @@ namespace Selene
         private readonly Image hero = new Image { Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
         private readonly DispatcherTimer heroLater = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };
         private readonly StackPanel head;
-        private readonly Grid summary = new Grid { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 70, Side, 0) };
+        private readonly Grid summary = new Grid { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 62, Side, 0) };
         private readonly TextBlock note, recentTitle, gamesTitle;
         private int zone, col, row, keepZone, keepIndex;   // zone 0: the latest unlocks (col), 1: the games (row)
         private bool closed, loaded;
@@ -52,13 +52,7 @@ namespace Selene
             Root.Children.Add(new Border { IsHitTestVisible = false, Background = new LinearGradientBrush(new GradientStopCollection { Ink.Stop("SeleneScrimColor", 0, 0.25), Ink.Stop("SeleneScrimColor", 0.9, 1) }, 90) });
 
             head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 56, 0, 0) };
-            var title = new StackPanel { Orientation = Orientation.Horizontal };
-            var mark = AchievementsData.TrophyIcon("Gold", 44);
-            mark.Margin = new Thickness(0, 0, 14, 0);
-            title.Children.Add(mark);
-            title.Children.Add(new TextBlock { Text = "Achievements", FontSize = 44, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
-            head.Children.Add(title);
-            head.Children.Add(new TextBlock { Text = Profiles.Active != null ? Profiles.Active.Name + "'s achievements, every game together" : "Your achievements, every game together", FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), Margin = new Thickness(2, 6, 0, 0) });
+            head.Children.Add(new TextBlock { Text = "Achievements", FontSize = 44, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
             Root.Children.Add(head);
             Root.Children.Add(summary);
 
@@ -124,15 +118,6 @@ namespace Selene
             int earned = sets.Sum(s => s.Unlocked), total = sets.Sum(s => s.Total);
             int platinums = sets.Count(s => s.Platinum);
             var unlocked = sets.SelectMany(s => s.Items.Where(i => i.Unlocked).Select(i => new Pick { Game = s.GameId, Item = i })).ToList();
-            var rarest = unlocked.Where(p => p.Item.Rarity.HasValue).OrderBy(p => p.Item.Rarity.Value).FirstOrDefault();
-
-            // the cards under the title
-            var cards = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 28, 0, 0) };
-            cards.Children.Add(Card("EARNED", earned.ToString(), "of " + total + " in " + sets.Count + (sets.Count == 1 ? " game" : " games")));
-            cards.Children.Add(Card("OVERALL", (total > 0 ? (int)Math.Floor(100.0 * earned / total) : 0) + "%", "of every achievement"));
-            if (rarest != null) cards.Children.Add(Card("RAREST", rarest.Item.Name, (rarest.Item.Rarity.Value < 1 ? rarest.Item.Rarity.Value.ToString("0.0") : Math.Round(rarest.Item.Rarity.Value).ToString("0")) + "% of players have it"));
-            head.Children.Add(cards);
-            Ui.Rise(cards, 80, 14, 320);
 
             // the trophies at the top right, as a console's trophy screen: platinum, gold, silver, bronze
             var strip = new StackPanel { Orientation = Orientation.Horizontal };
@@ -190,20 +175,20 @@ namespace Selene
             for (int i = 0; i < recent.Count; i++)
             {
                 var p = recent[i];
-                var t = new Tile(TileW, TileW, 18);
-                t.Face.Child = AchievementsData.TrophyIcon(p.Item.Grade, 48);
+                var t = new Tile(TileW, TileW, 14);
+                t.Face.Child = AchievementsData.TrophyIcon(p.Item.Grade, 36);
                 ((TextBlock)t.Face.Child).HorizontalAlignment = HorizontalAlignment.Center;
                 if (p.Item.Icon != null) { files.Add(p.Item.Icon); at.Add(i); }
                 var game = GameFacts.Find(p.Game);
                 var item = new StackPanel { Width = TileW, Margin = new Thickness(0, 0, Pitch - TileW, 0) };
                 item.Children.Add(t.Root);
-                item.Children.Add(new TextBlock { Text = p.Item.Name, FontSize = 15, FontFamily = Ui.Body, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 12, 0, 0) });
-                item.Children.Add(new TextBlock { Text = game != null ? game.Name : "", FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 2, 0, 0) });
+                item.Children.Add(new TextBlock { Text = p.Item.Name, FontSize = 13, FontFamily = Ui.Body, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 9, 0, 0) });
+                item.Children.Add(new TextBlock { Text = game != null ? game.Name : "", FontSize = 12, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 1, 0, 0) });
                 var line = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 3, 0, 0) };
-                var trophy = AchievementsData.TrophyIcon(p.Item.Grade, 15);
+                var trophy = AchievementsData.TrophyIcon(p.Item.Grade, 13);
                 trophy.Margin = new Thickness(0, 0, 5, 0);
                 line.Children.Add(trophy);
-                line.Children.Add(new TextBlock { Text = GameFacts.Ago(p.Item.When), FontSize = 13, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), VerticalAlignment = VerticalAlignment.Center });
+                line.Children.Add(new TextBlock { Text = GameFacts.Ago(p.Item.When), FontSize = 12, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), VerticalAlignment = VerticalAlignment.Center });
                 item.Children.Add(line);
                 recentStrip.Children.Add(item);
                 recentTiles.Add(t);
@@ -212,7 +197,7 @@ namespace Selene
             Ui.LoadInOrder(files, 300, (k, pic) =>
             {
                 if (closed || k >= at.Count) return;
-                var face = new Border { CornerRadius = new CornerRadius(17), Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill }, Opacity = 0 };
+                var face = new Border { CornerRadius = new CornerRadius(13), Background = new ImageBrush(pic) { Stretch = Stretch.UniformToFill }, Opacity = 0 };
                 recentTiles[at[k]].Face.Child = face;
                 Ui.Fade(face, 1, 240);
             });
@@ -227,33 +212,33 @@ namespace Selene
             {
                 var s = games[i];
                 var g = GameFacts.Find(s.GameId);
-                var face = new Border { Width = 64, Height = 64, CornerRadius = new CornerRadius(10), Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
+                var face = new Border { Width = 96, Height = 96, CornerRadius = new CornerRadius(12), Background = Ink.Brush("SeleneInkColor", 0.08), ClipToBounds = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
                 var cover = g != null ? GameFacts.CoverPath(g) : null;
                 if (cover != null) { files.Add(cover); faces.Add(face); }
 
                 var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-                words.Children.Add(new TextBlock { Text = g != null ? g.Name : s.Name, FontSize = 20, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis });
+                words.Children.Add(new TextBlock { Text = g != null ? g.Name : s.Name, FontSize = 25, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis });
                 var store = g != null && g.Source != null ? g.Source.Name : null;
                 if (!string.IsNullOrEmpty(store))
-                    words.Children.Add(new Border { CornerRadius = new CornerRadius(5), Padding = new Thickness(7, 1, 7, 2), Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, BorderBrush = Ink.Brush("SeleneInkColor", 0.35), BorderThickness = new Thickness(1), Child = new TextBlock { Text = store, FontSize = 12, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.7) } });
+                    words.Children.Add(new Border { CornerRadius = new CornerRadius(5), Padding = new Thickness(7, 1, 7, 2), Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, BorderBrush = Ink.Brush("SeleneInkColor", 0.35), BorderThickness = new Thickness(1), Child = new TextBlock { Text = store, FontSize = 14, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.7) } });
 
                 // the share, a short line under it, then the trophies
                 var side = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-                var share = new StackPanel { Width = 120, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 26, 0) };
-                share.Children.Add(new TextBlock { Text = s.Percent + "%", FontSize = 26, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Right });
+                var share = new StackPanel { Width = 150, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 26, 0) };
+                share.Children.Add(new TextBlock { Text = s.Percent + "%", FontSize = 34, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Right });
                 var track = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush("SeleneInkColor", 0.2), Margin = new Thickness(20, 4, 0, 0) };
-                track.Child = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush(s.Platinum ? "GlyphColor" : "SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(2, 100 * s.Unlocked / Math.Max(1.0, s.Total)) };
+                track.Child = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush(s.Platinum ? "GlyphColor" : "SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(2, 126 * s.Unlocked / Math.Max(1.0, s.Total)) };
                 share.Children.Add(track);
                 side.Children.Add(share);
                 foreach (var grade in new[] { "Platinum", "Gold", "Silver", "Bronze" })
                 {
-                    var cell = new StackPanel { Orientation = Orientation.Horizontal, Width = grade == "Platinum" ? 56 : 76, VerticalAlignment = VerticalAlignment.Center };
+                    var cell = new StackPanel { Orientation = Orientation.Horizontal, Width = grade == "Platinum" ? 70 : 96, VerticalAlignment = VerticalAlignment.Center };
                     bool platinum = grade == "Platinum";
-                    var icon = AchievementsData.TrophyIcon(grade, 24);
+                    var icon = AchievementsData.TrophyIcon(grade, 32);
                     icon.Margin = new Thickness(0, 0, 6, 0);
                     if (platinum && !s.Platinum) icon.Opacity = 0.25;
                     cell.Children.Add(icon);
-                    if (!platinum) cell.Children.Add(new TextBlock { Text = s.Earned(grade).ToString(), FontSize = 17, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), VerticalAlignment = VerticalAlignment.Center });
+                    if (!platinum) cell.Children.Add(new TextBlock { Text = s.Earned(grade).ToString(), FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.85), VerticalAlignment = VerticalAlignment.Center });
                     side.Children.Add(cell);
                 }
 
@@ -263,7 +248,7 @@ namespace Selene
                 line.Children.Add(face);
                 line.Children.Add(side);
                 line.Children.Add(words);
-                var r = new Border { Child = line, CornerRadius = new CornerRadius(14), Padding = new Thickness(12, 10, 20, 10), Margin = new Thickness(0, 0, 0, 8), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Ink.Brush("SeleneGlassColor", 0.55) };
+                var r = new Border { Child = line, CornerRadius = new CornerRadius(18), Padding = new Thickness(14, 12, 26, 12), Margin = new Thickness(0, 0, 0, 8), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Ink.Brush("SeleneGlassColor", 0.55) };
                 list.Children.Add(r);
                 gameRows.Add(r);
                 if (i < 5) Ui.Rise(r, 200 + i * 40, 12, 280);
@@ -295,7 +280,7 @@ namespace Selene
                 gameRows[i].Background = Ink.Brush("SeleneGlassColor", on ? 0.9 : 0.55);
             }
             // the row of unlocks moves along once the focus goes past its first tiles
-            recentShift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-Math.Max(0, col - 8) * Pitch, TimeSpan.FromMilliseconds(animate ? 240 : 0)) { EasingFunction = Ui.Out() });
+            recentShift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-Math.Max(0, col - 12) * Pitch, TimeSpan.FromMilliseconds(animate ? 240 : 0)) { EasingFunction = Ui.Out() });
             if (zone == 1 && row < gameRows.Count)
             {
                 try
