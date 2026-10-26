@@ -197,7 +197,7 @@ const PAGE = `<!doctype html>
   body { margin: 0; min-height: 100vh; font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
   main { max-width: 520px; margin: 0 auto; padding: 40px 22px calc(36px + env(safe-area-inset-bottom)); }
   .brand { display: flex; justify-content: center; margin-bottom: 30px; }
-  .mark { width: 52px; height: 52px; color: var(--ink); }
+  .mark { width: 52px; height: 52px; color: var(--ink); filter: drop-shadow(0 0 10px rgba(200, 215, 255, .55)) drop-shadow(0 0 26px rgba(160, 185, 255, .25)); }
   .mark svg { width: 100%; height: 100%; display: block; }
   h1 { font-size: 26px; font-weight: 600; margin: 0 0 6px; }
   .sub { color: var(--soft); margin: 0 0 26px; }
