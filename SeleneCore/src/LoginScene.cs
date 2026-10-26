@@ -293,13 +293,17 @@ namespace Selene
         // the screen the menu was opened over (Start there): it stays in place underneath, dimmed and still, until the menu
         // closes back to it or something from the menu replaces both
         private static Screen under;
+        private static List<FrameworkElement> underPrompts = new List<FrameworkElement>();   // its button hints, hidden meanwhile
 
         private static void ShowMenuOver(Screen menu)
         {
             under = current;
             current = menu;
             under.Root.IsHitTestVisible = false;
-            Ui.Fade(under.Root, 0.35, 200);
+            Ui.Fade(under.Root, 0.25, 200);
+            // its button hints went under the menu's own (Close, Select): hidden while the menu is up
+            underPrompts = Ui.PromptRows(under.Root);
+            foreach (var row in underPrompts) Ui.Fade(row, 0, 120);
             menu.Root.Opacity = 0;
             stage.Children.Add(menu.Root);
             menu.Shown();
@@ -319,6 +323,8 @@ namespace Selene
             Ui.Fade(root, 0, 160, 0, () => stage.Children.Remove(root));
             current.Root.IsHitTestVisible = true;
             Ui.Fade(current.Root, 1, 200);
+            foreach (var row in underPrompts) Ui.Fade(row, 1, 200);
+            underPrompts = new List<FrameworkElement>();
             return true;
         }
 

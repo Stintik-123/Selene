@@ -357,7 +357,8 @@ namespace Selene
                 // old one couldn't: Steam's new achievement pages came with 4.1)
                 string version = AddonVersion(p);
                 bool recentOnly = resuming && lines[0].Trim().StartsWith("done");
-                if (recentOnly && lines[0].Trim() != "done " + version)   // (a note without a version too: checked again once) { HomeNav.Log("achievements: Playnite Achievements now " + version + " (was " + lines[0].Trim().Substring(4).Trim() + "), every game it has nothing for checked again"); recentOnly = false; lines = new string[0]; }
+                // (a note without a version too: checked again once)
+                if (recentOnly && lines[0].Trim() != "done " + version) { HomeNav.Log("achievements: Playnite Achievements now " + version + " (was " + lines[0].Trim().Substring(4).Trim() + "), every game it has nothing for checked again"); recentOnly = false; lines = new string[0]; }
                 lock (trackLock)
                 {
                     checkedIds.Clear(); trackGame = null; trackTotal = 0;

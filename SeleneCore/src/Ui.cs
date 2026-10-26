@@ -168,7 +168,24 @@ namespace Selene
                 Margin = right ? new Thickness(0, 0, 64, 48) : new Thickness(46, 0, 0, 48)
             };
             foreach (var i in items) row.Children.Add(i);
+            row.Tag = PromptsTag;   // (found again to hide while the menu is over the screen)
             return row;
+        }
+
+        public const string PromptsTag = "selene-prompts";
+
+        // a screen's button hints (the rows Prompts made), anywhere in it
+        public static List<FrameworkElement> PromptRows(DependencyObject root)
+        {
+            var found = new List<FrameworkElement>();
+            var fe = root as FrameworkElement;
+            if (fe != null && Equals(fe.Tag, PromptsTag)) { found.Add(fe); return found; }
+            foreach (var child in LogicalTreeHelper.GetChildren(root))
+            {
+                var d = child as DependencyObject;
+                if (d != null) found.AddRange(PromptRows(d));
+            }
+            return found;
         }
 
         // ---------------- motion ----------------
