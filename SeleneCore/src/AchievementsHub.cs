@@ -105,7 +105,7 @@ namespace Selene
 
             var cards = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 28, 0, 0) };
             cards.Children.Add(Card("EARNED", earned.ToString(), "of " + total + " in " + sets.Count + (sets.Count == 1 ? " game" : " games")));
-            cards.Children.Add(Card("COMPLETED", done == 1 ? "1 game" : done + " games", "every achievement earned"));
+            cards.Children.Add(Trophies(sets, done));
             cards.Children.Add(Card("OVERALL", (total > 0 ? (int)Math.Floor(100.0 * earned / total) : 0) + "%", "of every achievement"));
             if (rarest != null) cards.Children.Add(Card("RAREST", rarest.Item.Name, (rarest.Item.Rarity.Value < 1 ? rarest.Item.Rarity.Value.ToString("0.0") : Math.Round(rarest.Item.Rarity.Value).ToString("0")) + "% of players have it"));
             head.Children.Add(cards);
@@ -121,6 +121,25 @@ namespace Selene
             zone = Math.Min(keepZone, Math.Max(0, rows.Count - 1));
             col = rows.Count > 0 ? Math.Min(keepCol, rows[zone].Count - 1) : 0;
             ShowFocus(false);
+        }
+
+        // the trophies: platinums (games completed) large, then gold, silver and bronze earned
+        private static Border Trophies(List<AchievementsData.GameSet> sets, int platinums)
+        {
+            var sp = new StackPanel();
+            sp.Children.Add(new TextBlock { Text = "TROPHIES", FontSize = 12, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6) });
+            var top = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 0) };
+            top.Children.Add(new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 30, Foreground = AchievementsData.GradeBrush("Platinum"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            top.Children.Add(new TextBlock { Text = platinums + (platinums == 1 ? " platinum" : " platinums"), FontSize = 30, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Center });
+            sp.Children.Add(top);
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0) };
+            foreach (var grade in new[] { "Gold", "Silver", "Bronze" })
+            {
+                row.Children.Add(new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 15, Foreground = AchievementsData.GradeBrush(grade), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) });
+                row.Children.Add(new TextBlock { Text = sets.Sum(s => s.Earned(grade)).ToString(), FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.75), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 14, 0) });
+            }
+            sp.Children.Add(row);
+            return new Border { Child = sp, CornerRadius = new CornerRadius(16), Padding = new Thickness(22, 14, 26, 16), Margin = new Thickness(0, 0, 14, 0), MinWidth = 200, Background = Ink.Brush("SeleneGlassColor", 0.55), BorderBrush = Ink.Brush("SeleneInkColor", 0.12), BorderThickness = new Thickness(1) };
         }
 
         private static Border Card(string label, string value, string sub)
@@ -152,7 +171,10 @@ namespace Selene
                 item.Children.Add(t.Root);
                 item.Children.Add(new TextBlock { Text = p.Item.Name, FontSize = 15, FontFamily = Ui.Body, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 12, 0, 0) });
                 item.Children.Add(new TextBlock { Text = (game != null ? game.Name : "") , FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 2, 0, 0) });
-                item.Children.Add(new TextBlock { Text = GameFacts.Ago(p.Item.When), FontSize = 13, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.45), Margin = new Thickness(2, 1, 0, 0) });
+                var when = new TextBlock { FontSize = 13, FontFamily = Ui.Body, Margin = new Thickness(2, 1, 0, 0) };
+                when.Inlines.Add(new System.Windows.Documents.Run(p.Item.Grade) { Foreground = AchievementsData.GradeBrush(p.Item.Grade), FontWeight = FontWeights.SemiBold });
+                when.Inlines.Add(new System.Windows.Documents.Run("  \u00B7  " + GameFacts.Ago(p.Item.When)) { Foreground = Ink.Brush("SeleneInkColor", 0.45) });
+                item.Children.Add(when);
                 strip.Children.Add(item);
                 list.Add(t);
                 if (r < Visible) Ui.Rise(item, 140 + r * 60 + i * 35, 14, 300);
@@ -188,7 +210,14 @@ namespace Selene
                 track.Child = new Border { Height = 4, CornerRadius = new CornerRadius(2), Background = Ink.Brush(s.Unlocked == s.Total ? "GlyphColor" : "SeleneFocusColor"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(4, (TileW - 4) * (s.Total > 0 ? (double)s.Unlocked / s.Total : 0)) };
                 item.Children.Add(track);
                 item.Children.Add(new TextBlock { Text = games[i].Name, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 8, 0, 0) });
-                item.Children.Add(new TextBlock { Text = s.Unlocked + " / " + s.Total + "  ·  " + s.Percent + "%", FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(2, 2, 0, 0) });
+                if (s.Platinum)
+                {
+                    var plat = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 2, 0, 0) };
+                    plat.Children.Add(new TextBlock { Text = Ui.Icon(0xea23), FontFamily = Ui.Icons, FontSize = 15, Foreground = AchievementsData.GradeBrush("Platinum"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) });
+                    plat.Children.Add(new TextBlock { Text = "Platinum", FontSize = 14, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = AchievementsData.GradeBrush("Platinum"), VerticalAlignment = VerticalAlignment.Center });
+                    item.Children.Add(plat);
+                }
+                else item.Children.Add(new TextBlock { Text = s.Unlocked + " / " + s.Total + "  \u00B7  " + s.Percent + "%", FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(2, 2, 0, 0) });
                 strip.Children.Add(item);
                 list.Add(t);
                 if (r < Visible) Ui.Rise(item, 140 + r * 60 + i * 35, 14, 300);

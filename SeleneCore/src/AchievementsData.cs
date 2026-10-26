@@ -21,6 +21,33 @@ namespace Selene
             public double? Rarity;          // % of players who have it
             public int? ProgressNum, ProgressDenom;
             public int Order;
+            // bronze / silver / gold, PS5-style: the game's own grade (PlayStation), or from how rare it is
+            public string Grade
+            {
+                get
+                {
+                    var t = (Trophy ?? "").Trim().ToLowerInvariant();
+                    if (t == "bronze" || t == "silver" || t == "gold" || t == "platinum") return char.ToUpper(t[0]) + t.Substring(1);
+                    if (Rarity.HasValue) return Rarity.Value < 5 ? "Gold" : Rarity.Value < 25 ? "Silver" : "Bronze";
+                    return Tier == "Ultra rare" ? "Gold" : Tier == "Rare" || Tier == "Uncommon" ? "Silver" : "Bronze";
+                }
+            }
+        }
+
+        // the metals' colours (a trophy's grade is the same in every theme)
+        public static System.Windows.Media.Brush GradeBrush(string grade)
+        {
+            System.Windows.Media.Color c;
+            switch (grade)
+            {
+                case "Platinum": c = System.Windows.Media.Color.FromRgb(0xC9, 0xDD, 0xF2); break;
+                case "Gold": c = System.Windows.Media.Color.FromRgb(0xE8, 0xC4, 0x6A); break;
+                case "Silver": c = System.Windows.Media.Color.FromRgb(0xC2, 0xC9, 0xD3); break;
+                default: c = System.Windows.Media.Color.FromRgb(0xCD, 0x8E, 0x5E); break;
+            }
+            var b = new System.Windows.Media.SolidColorBrush(c);
+            b.Freeze();
+            return b;
         }
 
         public class GameSet
@@ -32,6 +59,8 @@ namespace Selene
             public List<Item> Items = new List<Item>();
             public DateTime? LastUnlock { get { var w = Items.Where(i => i.Unlocked && i.When.HasValue).Select(i => i.When.Value).ToList(); return w.Count > 0 ? w.Max() : (DateTime?)null; } }
             public int Percent { get { return Total > 0 ? (int)Math.Floor(100.0 * Unlocked / Total) : 0; } }
+            public bool Platinum { get { return Total > 0 && Unlocked == Total; } }   // every one earned, as a console's platinum
+            public int Earned(string grade) { return Items.Count(i => i.Unlocked && i.Grade == grade); }
         }
 
         private static object plugin;
