@@ -70,8 +70,7 @@ namespace Selene
             // header: the title, then the numbers in a row
             var head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 56, 0, 0) };
             head.Children.Add(new TextBlock { Text = "Activity", FontSize = 44, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
-            head.Children.Add(new TextBlock { Text = Profiles.Active != null ? "What " + Profiles.Active.Name + " has been playing" : "What you've been playing", FontSize = 20, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), Margin = new Thickness(2, 6, 0, 0) });
-            var stats = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 30, 0, 0) };
+            var stats = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 34, 0, 0) };
             stats.Children.Add(Stat(week.ToString(), week == 1 ? "GAME THIS WEEK" : "GAMES THIS WEEK", true));
             stats.Children.Add(Stat(month.ToString(), month == 1 ? "GAME THIS MONTH" : "GAMES THIS MONTH", false));
             stats.Children.Add(Stat(total < 3600 ? GameFacts.Hours(total) : (int)TimeSpan.FromSeconds(total).TotalHours + " h", "PLAY TIME", false));
@@ -98,7 +97,16 @@ namespace Selene
                     call.Children.Add(img);
                 }
                 else call.Children.Add(new TextBlock { Text = top.Name, FontSize = 34, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Right, MaxWidth = 700, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) });
-                call.Children.Add(new TextBlock { Text = GameFacts.Hours(GameFacts.Seconds(top)) + "  \u00B7  " + share + "% of your play time", FontSize = 18, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.75), HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 10, 0, 0) });
+                // its numbers, as the ones at the left: the time in it, then its share of all with a bar
+                var nums = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 16, 0, 0) };
+                nums.Children.Add(Stat(GameFacts.Hours(GameFacts.Seconds(top)), "PLAYED", true));
+                var part = Stat(share + "%", "OF YOUR PLAY TIME", false);
+                var shareBar = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush("SeleneInkColor", 0.18), Margin = new Thickness(1, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Stretch };
+                shareBar.Child = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush("SeleneFocusColor"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(4, 130 * share / 100.0) };
+                ((StackPanel)part.Children[part.Children.Count - 1]).Children.Add(shareBar);
+                ((StackPanel)part.Children[part.Children.Count - 1]).Width = 130;
+                nums.Children.Add(part);
+                call.Children.Add(nums);
                 Root.Children.Add(call);
                 Ui.Rise(call, 120, 14, 320);
             }
@@ -170,7 +178,21 @@ namespace Selene
                 list.Add(t);
                 if (r < Visible && i < Across) Ui.Rise(item, 140 + r * 60 + i * 35, 14, 300);
             }
-            panel.Children.Add(strip);
+            // the lane the row slides in: cut off just left of the margin with a soft edge (the covers slid past hung over the
+            // screen's edge), room around for the focus ring
+            const double Room = 26;
+            var lane = new Grid { ClipToBounds = true, Width = 1920 - Side + Room, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(-Room, -Room, 0, -Room) };
+            var edge = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(0, 0), EndPoint = new Point(8, 0) };
+            edge.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0));
+            edge.GradientStops.Add(new GradientStop(Colors.Black, 1));
+            lane.OpacityMask = edge;
+            // (on a canvas: a row wider than the lane is laid out whole and slides, the lane's edge cutting it)
+            strip.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            lane.Height = strip.DesiredSize.Height + 2 * Room;
+            Canvas.SetLeft(strip, Room);
+            Canvas.SetTop(strip, Room);
+            lane.Children.Add(new Canvas { Children = { strip } });
+            panel.Children.Add(lane);
             page.Children.Add(panel);
             rows.Add(games);
             tiles.Add(list);
