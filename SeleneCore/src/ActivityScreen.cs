@@ -30,6 +30,15 @@ namespace Selene
         private readonly DispatcherTimer heroLater = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };
         private int zone, col, firstRow;
         private bool closed;
+        // the panel at the right: the focused game's logo and numbers
+        private const double CallW = 520;
+        private readonly StackPanel call = new StackPanel { Width = CallW, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 62, Side - 30, 0) };
+        private readonly TextBlock callLabel = new TextBlock { FontSize = 12, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center };
+        private readonly Grid callArt = new Grid { Height = 120, Margin = new Thickness(0, 12, 0, 0) };
+        private readonly StackPanel callNums = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 16, 0, 0) };
+        private ulong totalSecs;
+        private List<Game> mostList = new List<Game>();
+        private Game callShown;
         private string heroShown;
 
         public ActivityScreen()
@@ -81,36 +90,14 @@ namespace Selene
             Root.Children.Add(head);
             Ui.Rise(head, 40, 14, 320);
 
-            // the top game, called out at the right
-            var top = most.FirstOrDefault();
-            if (top != null && total > 0)
-            {
-                int share = (int)Math.Round(100.0 * GameFacts.Seconds(top) / total);
-                var call = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 70, Side, 0) };
-                call.Children.Add(new TextBlock { Text = "YOUR TOP GAME", FontSize = 12, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Right });
-                // its logo (the one Selene shows on its page), else its name
-                var logo = HomeNav.Api != null ? System.IO.Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "games", top.Id.ToString(), "Logo.png") : null;
-                if (logo != null && System.IO.File.Exists(logo))
-                {
-                    var img = new Image { MaxHeight = 110, MaxWidth = 460, HorizontalAlignment = HorizontalAlignment.Right, Stretch = Stretch.Uniform, Margin = new Thickness(0, 10, 0, 0) };
-                    RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
-                    Ui.LoadInOrder(new List<string> { logo }, 920, (k, pic) => { if (!closed) img.Source = pic; });
-                    call.Children.Add(img);
-                }
-                else call.Children.Add(new TextBlock { Text = top.Name, FontSize = 34, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Right, MaxWidth = 700, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) });
-                // its numbers, as the ones at the left: the time in it, then its share of all with a bar
-                var nums = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 16, 0, 0) };
-                nums.Children.Add(Stat(GameFacts.Hours(GameFacts.Seconds(top)), "PLAYED", true));
-                var part = Stat(share + "%", "OF YOUR PLAY TIME", false);
-                var shareBar = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush("SeleneInkColor", 0.18), Margin = new Thickness(1, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Stretch };
-                shareBar.Child = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush("SeleneFocusColor"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(4, 130 * share / 100.0) };
-                ((StackPanel)part.Children[part.Children.Count - 1]).Children.Add(shareBar);
-                ((StackPanel)part.Children[part.Children.Count - 1]).Width = 130;
-                nums.Children.Add(part);
-                call.Children.Add(nums);
-                Root.Children.Add(call);
-                Ui.Rise(call, 120, 14, 320);
-            }
+            // the focused game at the right (your top game to begin with): label, logo and its numbers, centered
+            totalSecs = total;
+            mostList = most;
+            call.Children.Add(callLabel);
+            call.Children.Add(callArt);
+            call.Children.Add(callNums);
+            Root.Children.Add(call);
+            if (most.Count > 0 && total > 0) { FillCall(most[0], 0); Ui.Rise(call, 120, 14, 320); }
 
             // the rows, on a page that glides up (two rows at a time)
             var area = new Grid { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, RowTop - 30, 0, 0), Height = Visible * RowPitch + 60, ClipToBounds = true };
@@ -137,6 +124,49 @@ namespace Selene
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             if (rows.Count > 0) Root.Children.Add(Ui.Prompts(true, Ui.Prompt("X", "Play"), Ui.Prompt("A", "Show on Spotlight")));
             heroLater.Tick += (s, e) => { heroLater.Stop(); ShowHero(); };
+        }
+
+        // the panel at the right with a game: its place (label), its logo or name, its numbers; a quick crossfade between games
+        private void FillCall(Game g, int row)
+        {
+            if (g == null || ReferenceEquals(g, callShown)) return;
+            bool first = callShown == null;
+            callShown = g;
+            Action fill = () =>
+            {
+                callLabel.Foreground = Ink.Brush("SeleneInkColor", 0.6);
+                int rank = mostList.IndexOf(g);
+                callLabel.Text = rank == 0 ? "YOUR TOP GAME" : rank > 0 ? "#" + (rank + 1) + " MOST PLAYED" : rowNames.Count > row ? rowNames[row].ToUpperInvariant() : "";
+                callArt.Children.Clear();
+                var logo = HomeNav.Api != null ? System.IO.Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "games", g.Id.ToString(), "Logo.png") : null;
+                if (logo != null && System.IO.File.Exists(logo))
+                {
+                    var img = new Image { MaxHeight = 120, MaxWidth = 460, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
+                    RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                    callArt.Children.Add(img);
+                    Ui.LoadInOrder(new List<string> { logo }, 920, (k, pic) => { if (!closed && ReferenceEquals(callShown, g)) img.Source = pic; });
+                }
+                else callArt.Children.Add(new TextBlock { Text = g.Name, FontSize = 34, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 480, MaxHeight = 96, TextTrimming = TextTrimming.CharacterEllipsis });
+                callNums.Children.Clear();
+                ulong secs = GameFacts.Seconds(g);
+                var last = GameFacts.LastPlayed(g);
+                if (secs > 0)
+                {
+                    callNums.Children.Add(Stat(GameFacts.Hours(secs), "PLAYED", true));
+                    int share = totalSecs > 0 ? (int)Math.Round(100.0 * secs / totalSecs) : 0;
+                    var part = Stat((share < 1 ? "<1" : share.ToString()) + "%", "OF YOUR PLAY TIME", false);
+                    var words = (StackPanel)part.Children[part.Children.Count - 1];
+                    var shareBar = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush("SeleneInkColor", 0.18), Margin = new Thickness(1, 8, 0, 0) };
+                    shareBar.Child = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush("SeleneFocusColor"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(4, 130 * Math.Min(100, share) / 100.0) };
+                    words.Children.Add(shareBar);
+                    words.Width = 130;
+                    callNums.Children.Add(part);
+                    if (last.HasValue) callNums.Children.Add(Stat(GameFacts.Ago(last), "LAST PLAYED", false));
+                }
+                else callNums.Children.Add(Stat(g.IsInstalled ? "Installed" : "Not installed", "NEVER PLAYED", true));
+            };
+            if (first) { fill(); return; }
+            Ui.Fade(call, 0, 120, 0, () => { if (!ReferenceEquals(callShown, g)) return; fill(); Ui.Fade(call, 1, 220); });
         }
 
         // a number large with what it counts under it, a thin line before it (but the first)
@@ -167,15 +197,14 @@ namespace Selene
                 var t = GameFacts.CoverTile(g, TileW, TileH);
                 var item = new StackPanel { Width = TileW, Margin = new Thickness(0, 0, Pitch - TileW, 0) };
                 item.Children.Add(t.Root);
+                // under it: just the line (the cover shows the name), low enough that the focus ring stays clear; the bar under that
+                item.Children.Add(new TextBlock { Text = caption(g), FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.8), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 18, 0, 0) });
                 if (bar != null)
                 {
-                    // (low enough that the focus ring, grown with the cover, stays clear of it)
-                    var track = new Border { Height = 4, CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.18), Margin = new Thickness(2, 22, 2, 0) };
-                    track.Child = new Border { Height = 4, CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneFocusColor"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(6, (TileW - 4) * Math.Max(0.02, Math.Min(1, bar(g)))) };
+                    var track = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush("SeleneInkColor", 0.15), Margin = new Thickness(2, 8, 2, 0) };
+                    track.Child = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), Background = Ink.Brush("SeleneFocusColor"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(6, (TileW - 4) * Math.Max(0.02, Math.Min(1, bar(g)))) };
                     item.Children.Add(track);
                 }
-                item.Children.Add(new TextBlock { Text = g.Name, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, bar != null ? 8 : 12, 0, 0) });
-                item.Children.Add(new TextBlock { Text = caption(g), FontSize = 14, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(2, 2, 0, 0) });
                 strip.Children.Add(item);
                 list.Add(t);
                 if (r < Visible && i < Across) Ui.Rise(item, 140 + r * 60 + i * 35, 14, 300);
@@ -239,6 +268,7 @@ namespace Selene
         private void ShowHero()
         {
             var g = Focused;
+            FillCall(g, zone);
             var path = g != null ? GameFacts.BackgroundPath(g) : null;
             if (path == heroShown) return;
             heroShown = path;
