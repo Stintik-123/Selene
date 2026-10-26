@@ -36,6 +36,13 @@ namespace Selene
         private readonly TextBlock note, recentTitle, gamesTitle;
         private int zone, col, row, keepZone, keepIndex;   // zone 0: the latest unlocks (col), 1: the games (row)
         private bool closed, loaded;
+        // the add-on checking games: a line and a bar under the title while it runs
+        private readonly StackPanel checking = new StackPanel { Margin = new Thickness(2, 10, 0, 0), Visibility = Visibility.Collapsed, Opacity = 0 };
+        private readonly TextBlock checkLine = new TextBlock { FontSize = 17, FontFamily = Ui.Body };
+        private readonly Border checkFill = new Border { Height = 4, CornerRadius = new CornerRadius(2), HorizontalAlignment = HorizontalAlignment.Left, Width = 0 };
+        private readonly DispatcherTimer checkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        private bool wasChecking;
+        private const double CheckBar = 420;
         private string heroShown;
 
         public override bool Overlay { get { return true; } }
@@ -56,6 +63,11 @@ namespace Selene
 
             head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 56, 0, 0) };
             head.Children.Add(new TextBlock { Text = "Achievements", FontSize = 44, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
+            checking.Children.Add(checkLine);
+            checkFill.Background = Ink.Brush("SeleneFocusColor");
+            checking.Children.Add(new Border { Width = CheckBar, Height = 4, CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.15), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 8, 0, 0), Child = checkFill });
+            head.Children.Add(checking);
+            checkTimer.Tick += (s, e) => ShowChecking();
             Root.Children.Add(head);
             Root.Children.Add(summary);
 
@@ -104,9 +116,48 @@ namespace Selene
                 loaded = true;
                 Build(sets);
             });
+            ShowChecking();
+            checkTimer.Start();
         }
 
-        public override void Hidden() { closed = true; heroLater.Stop(); }
+        public override void Hidden() { closed = true; heroLater.Stop(); checkTimer.Stop(); }
+
+        // the add-on's check: how far it is, the game it's on; once over, the list read again with what it found
+        private void ShowChecking()
+        {
+            int done, total; Guid? id;
+            bool on = AchievementsData.Checking(out done, out total, out id);
+            if (on)
+            {
+                checkLine.Inlines.Clear();
+                checkLine.Inlines.Add(new System.Windows.Documents.Run(total > 0 ? "Checking your games  ·  " + done + " of " + total : "Checking your games") { FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.85) });
+                var g = id.HasValue ? GameFacts.Find(id.Value) : null;
+                if (g != null) checkLine.Inlines.Add(new System.Windows.Documents.Run("  ·  " + g.Name) { Foreground = Ink.Brush("SeleneInkColor", 0.5) });
+                double w = total > 0 ? CheckBar * Math.Min(done, total) / total : 0;
+                checkFill.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(w, TimeSpan.FromMilliseconds(300)) { EasingFunction = Ui.Out() });
+                if (!wasChecking) { checking.Visibility = Visibility.Visible; Ui.Fade(checking, 1, 240); }
+                wasChecking = true;
+                return;
+            }
+            if (!wasChecking) return;
+            wasChecking = false;
+            checkLine.Inlines.Clear();
+            checkLine.Inlines.Add(new System.Windows.Documents.Run("Every game checked") { FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.85) });
+            checkFill.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(CheckBar, TimeSpan.FromMilliseconds(300)) { EasingFunction = Ui.Out() });
+            Ui.Fade(checking, 0, 400, 2500, () => { if (!wasChecking) checking.Visibility = Visibility.Collapsed; });
+            AchievementsData.Reread(sets => { if (!closed) Rebuild(sets); });
+        }
+
+        // the list again with what the check found, the focus kept where it was
+        private void Rebuild(List<AchievementsData.GameSet> sets)
+        {
+            keepZone = zone; keepIndex = zone == 0 ? col : row;
+            summary.Children.Clear();
+            recent.Clear(); recentTiles.Clear(); recentStrip.Children.Clear();
+            games.Clear(); gameRows.Clear(); list.Children.Clear();
+            note.Visibility = Visibility.Visible;
+            Build(sets);
+        }
 
         private void Build(List<AchievementsData.GameSet> sets)
         {

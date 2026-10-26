@@ -144,6 +144,32 @@ namespace Selene
             Read(done);
         }
 
+        // a fresh read whatever the cache's age (the add-on just checked games); nothing when one is under way
+        public static void Reread(Action<List<GameSet>> done) { if (!reading) Read(done); }
+
+        // the add-on's check under way, for the hub: how far (done of total) and the game it's on; false when none runs
+        public static bool Checking(out int done, out int total, out Guid? game)
+        {
+            done = total = 0; game = null;
+            try
+            {
+                var p = Plugin();
+                var prop = p != null ? p.GetType().GetProperty("RefreshRuntime", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) : null;
+                var rt = prop != null ? prop.GetValue(p, null) : null;
+                if (rt == null || !(bool)rt.GetType().GetProperty("IsRebuilding").GetValue(rt, null)) return false;
+                var report = rt.GetType().GetMethod("GetLastRebuildProgress", Type.EmptyTypes).Invoke(rt, null);
+                if (report != null)
+                {
+                    var t = report.GetType();
+                    done = (int)t.GetProperty("CurrentStep").GetValue(report, null);
+                    total = (int)t.GetProperty("TotalSteps").GetValue(report, null);
+                    game = t.GetProperty("CurrentGameId").GetValue(report, null) as Guid?;
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
         private static void Read(Action<List<GameSet>> done)
         {
             reading = true;
