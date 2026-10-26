@@ -228,14 +228,12 @@ namespace Selene
             Ui.Key();
             sortLabel.Text = Sorts[sort];
             Ui.Pop(sortLabel);
-            // the rows already made, put in the new order (building them and their covers again took a moment with hundreds)
-            BuildAllRows();
-            var rowOf = new Dictionary<AchievementsData.GameSet, Border>();
-            for (int i = 0; i < games.Count && i < gameRows.Count; i++) rowOf[games[i]] = gameRows[i];
-            var ordered = Order(allSets).Where(rowOf.ContainsKey).ToList();
+            // the first rows made again in the new order (only those in sight: quick), a short fade over the change
             list.Children.Clear(); games.Clear(); gameRows.Clear();
-            foreach (var g in ordered) { games.Add(g); gameRows.Add(rowOf[g]); list.Children.Add(rowOf[g]); }
-            list.Opacity = 0; Ui.Fade(list, 1, 180);   // (a quick fade: the rows rising again left them soft)
+            games.AddRange(Order(allSets));
+            keepIndex = 0;
+            reordering = true; BuildRows(FirstRows); reordering = false;   // (no rise: the fade says it)
+            list.Opacity = 0; Ui.Fade(list, 1, 180);
             zone = 1; row = 0;
             scroller.ScrollToVerticalOffset(0);
             PeekScroller.Refresh(scroller);
@@ -305,27 +303,15 @@ namespace Selene
         }
 
         // ---- every game, as a console lists them: picture, name and store, share with a line, trophies ----
-        // the rows: the first ones at once (the screen shows straight away), the rest a batch at a time behind (all of them in
-        // one go held the screen for a moment with hundreds of games, opening it and coming back to it)
-        private int buildGen;
-        private const int FirstRows = 14, Batch = 30;
+        // the rows: only those in sight, more as the focus goes down to them (all of them, hundreds, made opening and leaving
+        // the screen slow, and making them behind stuttered its slide)
+        private const int FirstRows = 14, Batch = 10;
+        private bool reordering;
 
         private void BuildGames()
         {
-            int gen = ++buildGen;
             BuildRows(Math.Max(FirstRows, Math.Min(keepIndex + 8, games.Count)));
-            Action more = null;
-            more = () =>
-            {
-                if (closed || gen != buildGen || gameRows.Count >= games.Count) return;
-                BuildRows(gameRows.Count + Batch);
-                if (gameRows.Count < games.Count) Dispatcher.CurrentDispatcher.BeginInvoke(more, DispatcherPriority.Background);
-            };
-            if (gameRows.Count < games.Count) Dispatcher.CurrentDispatcher.BeginInvoke(more, DispatcherPriority.Background);
         }
-
-        // every row made now (an order change or a move past the made ones needs them all there)
-        private void BuildAllRows() { if (gameRows.Count < games.Count) BuildRows(games.Count); }
 
         // the rows up to `upTo` (from the last made one), their covers loading behind
         private void BuildRows(int upTo)
@@ -376,7 +362,7 @@ namespace Selene
                 var r = new Border { Child = line, CornerRadius = new CornerRadius(18), Padding = new Thickness(14, 12, 26, 12), Margin = new Thickness(0, 0, 0, 8), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Ink.Brush("SeleneGlassColor", 0.55) };
                 list.Children.Add(r);
                 gameRows.Add(r);
-                if (i < 5 && from == 0) Ui.Rise(r, 60 + i * 30, 12, 240);
+                if (i < 5 && from == 0 && !reordering) Ui.Rise(r, 60 + i * 30, 12, 240);
             }
             if (files.Count == 0) return;
             Ui.LoadInOrder(files, 160, (k, pic) =>
