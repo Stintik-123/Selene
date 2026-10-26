@@ -50,7 +50,7 @@
                                     </Grid.OpacityMask>
                                 </Grid>
                                 <!-- over the art, the legacy theme's two shades: from the bottom, and from the left out to the middle -->
-                                <Border Grid.RowSpan="5" IsHitTestVisible="False" Panel.ZIndex="-2">
+                                <Border x:Name="SeleneLibraryShadeBottom" Grid.RowSpan="5" IsHitTestVisible="False" Panel.ZIndex="-2">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
                                             <GradientStop Color="#F0000000" Offset="0"/>
@@ -63,7 +63,7 @@
                                         </LinearGradientBrush>
                                     </Border.Background>
                                 </Border>
-                                <Border Grid.RowSpan="5" IsHitTestVisible="False" Panel.ZIndex="-2">
+                                <Border x:Name="SeleneLibraryShadeArt" Grid.RowSpan="5" IsHitTestVisible="False" Panel.ZIndex="-2">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                             <GradientStop Color="#F0000000" Offset="0"/>
@@ -118,7 +118,7 @@
                                     </TextBlock>
                                 </Grid>
                                 <!-- the game at a glance: playtime, last played, where it's from (the store's own logo), its year -->
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,28,0,0">
+                                <StackPanel x:Name="SeleneLibraryStats" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,28,0,0">
                                     <StackPanel.Style>
                                         <Style TargetType="StackPanel">
                                             <Style.Triggers>
@@ -173,7 +173,7 @@
                                     </StackPanel>
                                 </StackPanel>
                                 <!-- genres, quieter, under the stats -->
-                                <ItemsControl ItemsSource="{Binding SelectedGame.Genres}" HorizontalAlignment="Center" Margin="0,16,0,0" Focusable="False">
+                                <ItemsControl x:Name="SeleneLibraryGenres" ItemsSource="{Binding SelectedGame.Genres}" HorizontalAlignment="Center" Margin="0,16,0,0" Focusable="False">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/></ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
@@ -264,7 +264,7 @@
                                 </Border>
 
                                 <!-- button hints along the bottom, split like the home -->
-                                <Border Grid.Row="3" Margin="64,0,64,0" VerticalAlignment="Center">
+                                <Border x:Name="SeleneLibraryHints" Grid.Row="3" Margin="64,0,64,0" VerticalAlignment="Center">
                                     <Border.Resources>
                                         <Style x:Key="HintBadge" TargetType="Border">
                                             <Setter Property="Width" Value="30"/>

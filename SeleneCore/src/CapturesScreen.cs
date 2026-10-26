@@ -27,7 +27,9 @@ namespace Selene
         private const int Columns = 5, Visible = 3, MaxItems = 150;
         private static readonly string[] ImageExt = { ".jpg", ".jpeg", ".png", ".bmp" };
         private static readonly string[] VideoExt = { ".mp4", ".mov", ".mkv", ".avi", ".wmv" };
-        private static readonly Regex DateTail = new Regex(@"\s*[\d]{4}[.\-_][\d]{2}[.\-_][\d]{2}.*$");
+        // the date and what follows it: "2026-10-23 15-39-06", "2026.10.23 - 15.39.06.47", and Game Bar's short date "10_25_2026 9_45_56 PM"
+        private static readonly Regex DateTail = new Regex(@"\s*(\d{4}[.\-_]\d{2}[.\-_]\d{2}|\d{1,2}[.\-_/]\d{1,2}[.\-_/]\d{4}).*$");
+        private static readonly Regex FileNameInJson = new Regex(@"""FileName""\s*:\s*""((?:[^""\\]|\\.)*)""");
 
         private static readonly string[] Filters = { "All", "Screenshots", "Clips" };
         private static int filter;   // remembered while Playnite runs
@@ -808,6 +810,37 @@ namespace Selene
         {
             var list = new List<Capture>();
             var videos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+            // ScreenshotsVisualizer's index when it's installed: its files by game, whatever they're named (first, so its word on
+            // a file's game wins): ExtensionsData\<its id>\ScreenshotsVisualizer\<game id>.json -> Items[].FileName
+            try
+            {
+                var index = HomeNav.Api != null ? Path.Combine(HomeNav.Api.Paths.ExtensionsDataPath, "c6c8276f-91bf-48e5-a1d1-4bee0b493488", "ScreenshotsVisualizer") : null;
+                if (index != null && Directory.Exists(index))
+                {
+                    int found = 0;
+                    foreach (var file in Directory.GetFiles(index, "*.json"))
+                    {
+                        Guid id;
+                        if (!Guid.TryParse(Path.GetFileNameWithoutExtension(file), out id)) continue;
+                        var g = HomeNav.Api.Database.Games.Get(id);
+                        if (g == null) continue;
+                        foreach (Match m in FileNameInJson.Matches(File.ReadAllText(file)))
+                        {
+                            var path = m.Groups[1].Value.Replace("\\\\", "\\").Replace("\\/", "/");
+                            if (!Path.IsPathRooted(path) || !File.Exists(path)) continue;
+                            var ext = Path.GetExtension(path).ToLowerInvariant();
+                            bool video = VideoExt.Contains(ext);
+                            if (!video && !ImageExt.Contains(ext)) continue;
+                            DateTime when;
+                            try { when = File.GetLastWriteTime(path); } catch { when = DateTime.MinValue; }
+                            list.Add(new Capture { Path = path, Game = g.Name, When = when, IsVideo = video });
+                            found++;
+                        }
+                    }
+                    if (found > 0) HomeNav.Log("captures: " + found + " from ScreenshotsVisualizer's index");
+                }
+            }
+            catch (Exception ex) { HomeNav.Log("captures: ScreenshotsVisualizer: " + ex.Message); }
             try
             {
                 // Steam: userdata\<account>\760\remote\<app>\screenshots
@@ -839,15 +872,53 @@ namespace Selene
                     foreach (var dir in Directory.GetDirectories(videos))
                     {
                         var n = Path.GetFileName(dir);
-                        if (n.Equals("Captures", StringComparison.OrdinalIgnoreCase) || n.Equals("NVIDIA", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (n.Equals("Captures", StringComparison.OrdinalIgnoreCase) || n.Equals("NVIDIA", StringComparison.OrdinalIgnoreCase) || SystemFolder(n)) continue;
                         Add(list, Directory.GetFiles(dir), n);
                     }
             }
             catch (Exception ex) { HomeNav.Log("captures: videos: " + ex.Message); }
             // folders added in Selene Core's settings (files in them and one level of subfolders)
             foreach (var extra in SelenePaths.CapturesFolders) Folder(list, extra, null, true);
+            Canon(list);
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             return list.Where(c => seen.Add(c.Path)).OrderByDescending(c => c.When).Take(max).ToList();
+        }
+
+        // a drive's own folders (a Videos library on a network share or another drive shows them)
+        private static bool SystemFolder(string name)
+        {
+            return name.StartsWith("$") || name.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // a name as a filename carries it: lower-case, the characters Windows forbids (and the "_" Game Bar writes for them)
+        // and other punctuation as one space, marks like (TM) dropped; so "Onimusha_ Way of the Sword" is "Onimusha: Way of the Sword"
+        public static string Fold(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            var sb = new System.Text.StringBuilder(s.Length);
+            bool gap = false;
+            foreach (var ch in s.ToLowerInvariant())
+            {
+                if (char.IsWhiteSpace(ch) || "_:\"/\\|?*<>-.',!".IndexOf(ch) >= 0) { gap = true; continue; }
+                if (ch == '\u2122' || ch == '\u00AE' || ch == '\u00A9') continue;
+                if (gap && sb.Length > 0) sb.Append(' ');
+                gap = false;
+                sb.Append(ch);
+            }
+            return sb.ToString();
+        }
+
+        // captures named by a game's file-safe name take the library's name (so they group with it, and its page finds them)
+        private static void Canon(List<Capture> list)
+        {
+            try
+            {
+                if (HomeNav.Api == null) return;
+                var names = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var g in HomeNav.Api.Database.Games) { var k = Fold(g.Name); if (k.Length > 0 && !names.ContainsKey(k)) names[k] = g.Name; }
+                foreach (var c in list) { string n; if (c.Game != null && names.TryGetValue(Fold(c.Game), out n)) c.Game = n; }
+            }
+            catch (Exception ex) { HomeNav.Log("captures: names: " + ex.Message); }
         }
 
         private static void Folder(List<Capture> list, string folder, string name, bool subfolders)
@@ -857,7 +928,7 @@ namespace Selene
                 if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return;
                 Add(list, Directory.GetFiles(folder), name);
                 if (!subfolders) return;
-                foreach (var dir in Directory.GetDirectories(folder)) Add(list, Directory.GetFiles(dir), Path.GetFileName(dir));
+                foreach (var dir in Directory.GetDirectories(folder)) { var n = Path.GetFileName(dir); if (!SystemFolder(n)) Add(list, Directory.GetFiles(dir), n); }
             }
             catch (Exception ex) { HomeNav.Log("captures: " + folder + ": " + ex.Message); }
         }

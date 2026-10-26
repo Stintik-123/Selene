@@ -284,11 +284,13 @@ namespace Selene
             new Option { Group = "Spotlight", Key = "artdownload", Label = "Download logos and backgrounds", About = "Selene gets a game's logo and wide background from Steam when it has none (about 1 MB a game), for Spotlight, Collection and a game's page.", Note = Background.ArtNote, Progress = Background.ArtProgress },
             new Option { Group = "Spotlight", Key = "trailersound", Label = "Trailer sound", About = "Trailer cards start with sound. R3 switches it either way.", DefaultOn = false },
             new Option { Group = "Spotlight", Key = "filtertabs", Label = "Filter tabs", About = "The tabs LB / RB go through, here and in Collection.", Choices = new[] { "selene", "playnite", "both" }, Names = new[] { "Selene's", "Playnite's presets", "Both" }, Default = "selene" },
-            new Option { Group = "Spotlight", Key = "shade", Label = "Shade over the art", About = "How much the art darkens behind the words.", Choices = new[] { "0.7", "1", "1.3" }, Names = new[] { "Lighter", "As needed", "Deeper" }, Default = "1" },
+            new Option { Group = "Spotlight", Key = "shade", Label = "Shade over the art", About = "How much the art darkens behind the words, on Spotlight and in Collection.", Choices = new[] { "0", "0.7", "1", "1.3" }, Names = new[] { "Off", "Lighter", "As needed", "Deeper" }, Default = "1" },
             new Option { Group = "Spotlight", Key = "idle", Label = "Idle screen after", About = "Left alone, Spotlight dims and drifts through your games' art. Any button wakes it.", Choices = new[] { "0", "5", "10", "20" }, Names = new[] { "Never", "5 minutes", "10 minutes", "20 minutes" }, Default = "10" },
             // ---- Collection ----
             new Option { Group = "Collection", Key = "collectionglide", Label = "Gliding row", About = "Collection's covers slide from game to game instead of jumping, a held stick moves at Spotlight's pace, and a cover cut by the screen's edge dissolves." },
             new Option { Group = "Collection", Key = "librarytrailer", Label = "Collection trailers", About = "Rest on a game and its trailer plays. R3 for its sound." },
+            new Option { Group = "Collection", Key = "collectioninfo", Label = "Details under the logo", About = "Playtime, last played, where it's from, its year and genres under the game's logo. Off: the logo alone over the art." },
+            new Option { Group = "Collection", Key = "collectionhints", Label = "Button hints", About = "The controller hints along the bottom of Collection." },
             new Option { Group = "Collection", Key = "cardcollection", Label = "Collection card on Spotlight", About = "A card that opens Collection (the View button does too).", DefaultOn = false },
             // ---- Notifications ----
             new Option { Group = "Notifications", Key = "notifysound", Label = "Notification sound", About = "A soft sound as a card comes in." },

@@ -104,10 +104,10 @@ namespace Selene
             var artOpacity = Application.Current.Resources["SeleneArtOpacity"];
             bool artShown = art.Count > 0 && !(artOpacity is double && (double)artOpacity < 0.05);   // a profile that keeps the wallpaper
             double need = artShown ? art.Values.Max(i => Need(i)) : wallpaperNeed;
-            // the Shade over the art setting scales it (Lighter / As needed / Deeper)
+            // the Shade over the art setting scales it (Off / Lighter / As needed / Deeper)
             double scale = Features.Number("shade");
-            if (scale <= 0) scale = 1;
-            double strength = Math.Max(Base * scale, Math.Min(Max, (Base + (need - 0.35) * 1.5) * scale));
+            if (scale < 0) scale = 1;
+            double strength = scale <= 0 ? 0 : Math.Max(Base * scale, Math.Min(Max, (Base + (need - 0.35) * 1.5) * scale));
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             foreach (var name in new[] { "SeleneHubShadeLeft", "SeleneHubShadeBottom", "SeleneHubShadeTop" })
             {
@@ -117,6 +117,12 @@ namespace Selene
                 // clock) and the bottom (the hints), all as deep as the picture needs
                 double to = strength;
                 shade.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(450)) { EasingFunction = ease });
+            }
+            // Collection's two (from the bottom, from the left) follow the setting too: off with it, a little lighter with Lighter
+            foreach (var name in new[] { "SeleneLibraryShadeBottom", "SeleneLibraryShadeArt" })
+            {
+                var shade = HomeNav.FindByName(w, name) as UIElement;
+                if (shade != null) shade.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(Math.Min(1, scale), TimeSpan.FromMilliseconds(450)) { EasingFunction = ease });
             }
             shadeStrength = strength;
             var changed = Changed;

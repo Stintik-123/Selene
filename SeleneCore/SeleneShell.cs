@@ -205,6 +205,9 @@ namespace Selene
             Switch(Part("SeleneHubShadeRight"), "rowedges");
             Switch(Part("SeleneHltbStatLibrary"), "hltb");
             Switch(Part("SeleneAchievementsStatHub"), "achievements");
+            Switch(Part("SeleneLibraryStats"), "collectioninfo");
+            Switch(Part("SeleneLibraryGenres"), "collectioninfo");
+            Switch(Part("SeleneLibraryHints"), "collectionhints");
         }
 
         // Switching between Spotlight and Collection is a crossfade: the screen you leave stays up while the other one gets

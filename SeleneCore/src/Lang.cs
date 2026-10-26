@@ -27,16 +27,22 @@ namespace Selene
             {
                 Language = PlayniteLanguage(api);
                 if (string.IsNullOrEmpty(Language) || Language == "english") Language = System.Globalization.CultureInfo.CurrentUICulture.Name.Replace('-', '_');
-                var folder = SelenePaths.ThemeFile("Localization");
+                // in Selene Core's own data folder first (a theme update leaves it alone), then the theme's Localization folder
+                var folders = new[] { Path.Combine(SelenePaths.DataFolder, "Localization"), SelenePaths.ThemeFile("Localization") };
                 string file = null;
-                if (!string.IsNullOrEmpty(Language) && Directory.Exists(folder))
-                {
-                    var exact = Path.Combine(folder, Language + ".txt");
-                    var prefix = Path.Combine(folder, Language.Split('_', '-')[0] + ".txt");
-                    file = File.Exists(exact) ? exact : File.Exists(prefix) ? prefix : null;
-                }
+                var looked = new List<string>();
+                if (!string.IsNullOrEmpty(Language))
+                    foreach (var folder in folders)
+                    {
+                        if (file != null) break;
+                        var exact = Path.Combine(folder, Language + ".txt");
+                        var prefix = Path.Combine(folder, Language.Split('_', '-')[0] + ".txt");
+                        looked.Add(exact); if (prefix != exact) looked.Add(prefix);
+                        file = File.Exists(exact) ? exact : File.Exists(prefix) ? prefix : null;
+                    }
                 table = file != null ? Read(file) : null;
-                if (table != null) HomeNav.Log("language: " + Language + ", " + table.Count + " phrases from " + Path.GetFileName(file));
+                if (table != null) HomeNav.Log("language: " + Language + ", " + table.Count + " phrases from " + file);
+                else HomeNav.Log("language: " + Language + ": no translation (looked for " + string.Join(", ", looked.ToArray()) + ")");
             }
             catch (Exception ex) { HomeNav.Log("language: " + ex.Message); }
         }
@@ -52,7 +58,9 @@ namespace Selene
             Collect(Features.On("translatecollect") || marker);
         }
 
-        public static string PhrasesFile { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Selene phrases.txt"); } }
+        // (the Desktop as the user sees it: with OneDrive it's the OneDrive one, not the folder under the profile)
+        public static string PhrasesFile { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Selene phrases.txt"); } }
+        private static int written;   // phrases written this session (the first and a failure go to the log)
 
         public static void Collect(bool on)
         {
@@ -106,7 +114,12 @@ namespace Selene
             if (BindingOperations.GetBindingExpressionBase(t, TextBlock.TextProperty) != null) return;
             if (collectFile != null && seen.Add(text))
             {
-                try { File.AppendAllText(collectFile, text.Replace("\r", " ").Replace("\n", " ") + " = " + Environment.NewLine); } catch { }
+                try
+                {
+                    File.AppendAllText(collectFile, text.Replace("\r", " ").Replace("\n", " ") + " = " + Environment.NewLine);
+                    if (++written == 1) HomeNav.Log("language: phrases being written to " + collectFile);
+                }
+                catch (Exception ex) { if (written >= 0) { written = -1; HomeNav.Log("language: can't write a phrase to " + collectFile + ": " + ex.Message); } }
             }
             string translated;
             if (table != null && table.TryGetValue(text, out translated)) t.Text = translated;

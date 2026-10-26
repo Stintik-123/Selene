@@ -33,6 +33,7 @@ namespace Selene
         private static Guid shownId;
         private static DispatcherTimer shotsWatch;
         private static int shotsSeen;
+        private static Guid shotsFor;   // the game whose pictures the band shows
 
         public static void Attach(Window w)
         {
@@ -106,7 +107,7 @@ namespace Selene
                 var activity = Part<Border>("SeleneDetailsBand2b");
                 if (activity != null && activity.Child != null && activity.Child.CacheMode == null) activity.Child.CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = true };
                 if (shownId != g.Id || zone == 0) { zone = 0; if (shift != null) { shift.BeginAnimation(TranslateTransform.YProperty, null); shift.Y = 0; } }
-                if (shownId != g.Id) GameMedia.OnSelected(g, null);   // the screenshots follow Spotlight's row; here the game may be another (Collection's pick)
+                if (shownId != g.Id) GameMedia.ShowNow(g);   // the screenshots follow Spotlight's row; here the game may be another (Collection's pick): loaded now
                 shownId = g.Id;
                 Fill(g);
                 Blur(false);
@@ -205,8 +206,9 @@ namespace Selene
             FillMore(g);
             ShowFocus();
             // the screenshots arrive a moment after the selection: looked at again for a while
-            shotsSeen = GameMedia.Current.Count;
-            if (shotsWatch == null) { shotsWatch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) }; shotsWatch.Tick += (s, e) => { if (details == null || !details.IsVisible) { shotsWatch.Stop(); return; } if (GameMedia.Current.Count != shotsSeen) { shotsSeen = GameMedia.Current.Count; FillShots(); ShowFocus(); } }; }
+            shotsSeen = GameMedia.Current.Count; shotsFor = GameMedia.ShownId;
+            // (by the game they belong to as well as their count: another game's cached list of the same length never changed the count)
+            if (shotsWatch == null) { shotsWatch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) }; shotsWatch.Tick += (s, e) => { if (details == null || !details.IsVisible) { shotsWatch.Stop(); return; } if (GameMedia.Current.Count != shotsSeen || GameMedia.ShownId != shotsFor) { shotsSeen = GameMedia.Current.Count; shotsFor = GameMedia.ShownId; FillShots(); ShowFocus(); } }; }
             shotsWatch.Stop();
             shotsWatch.Start();
         }
@@ -222,7 +224,8 @@ namespace Selene
             var panel = Part<StackPanel>("SeleneDetailsShots");
             if (panel == null) return;
             panel.Children.Clear(); tiles[0].Clear(); opens[0].Clear();
-            var shots = GameMedia.Current.Take(6).ToList();
+            // only this game's pictures (the list still holds the game before's until its own are loaded)
+            var shots = GameMedia.Current.Take(GameMedia.ShownId == shownId ? 6 : 0).ToList();
             for (int i = 0; i < shots.Count; i++)
             {
                 var t = new Tile(272, 153, 12, 5) { FocusScale = 1.05 };
@@ -244,7 +247,8 @@ namespace Selene
             var note = Part<TextBlock>("SeleneDetailsCapturesNote");
             if (panel == null) return;
             panel.Children.Clear(); tiles[1].Clear(); opens[1].Clear();
-            var mine = CapturesScreen.Known.Where(c => string.Equals(c.Game, g.Name, StringComparison.OrdinalIgnoreCase)).Take(4).ToList();
+            var key = CapturesScreen.Fold(g.Name);   // (as a filename carries the name: "Onimusha_ Way of the Sword" is this game's)
+            var mine = CapturesScreen.Known.Where(c => CapturesScreen.Fold(c.Game) == key).Take(4).ToList();
             if (note != null) note.Visibility = Visibility.Collapsed;
             if (mine.Count == 0)
             {

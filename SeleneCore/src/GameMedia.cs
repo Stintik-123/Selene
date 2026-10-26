@@ -55,6 +55,17 @@ namespace Selene
             debounce.Start();
         }
 
+        // the details page: its game's pictures at once (the wait is for Spotlight's row to settle; a page is open already)
+        public static void ShowNow(object game)
+        {
+            OnSelected(game, null);
+            if (debounce != null) debounce.Stop();
+            if (!HomeNav.SigningIn) { Load(game); Preload(null); }
+        }
+
+        // the game whose pictures Current holds (Guid.Empty: none)
+        public static Guid ShownId { get { return shown; } }
+
         private const int Tiles = 6;
         private static List<ShotItem> current = new List<ShotItem>();
 
