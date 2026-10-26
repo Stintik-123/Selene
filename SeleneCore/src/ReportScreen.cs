@@ -168,7 +168,7 @@ namespace Selene
             noteText = new TextBlock { FontSize = 21, FontFamily = Ui.Body, TextWrapping = TextWrapping.Wrap };
             noteBox = new Border { Child = noteText, MinHeight = 96, CornerRadius = new CornerRadius(18), Padding = new Thickness(24, 18, 24, 18), Background = Ink.Brush("SeleneInkColor", 0.08), BorderBrush = Ink.Brush("SeleneFocusColor", 0.7), BorderThickness = new Thickness(2) };
             col.Children.Add(noteBox);
-            noteHint = new TextBlock { Text = "Nothing to add? Press Send as it is, with A on it or the Start button.", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), Margin = new Thickness(6, 10, 0, 0) };
+            noteHint = new TextBlock { Text = "Nothing to add? Press Send as it is, with A on it or the Start button.", FontSize = 16, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 12, 0, 0) };
             col.Children.Add(noteHint);
             pad = new KeyPad("Send");
             pad.Root.Margin = new Thickness(0, 20, 0, 0);
@@ -176,11 +176,6 @@ namespace Selene
             pad.Erased = Erase;
             pad.Done = Send;
             col.Children.Add(pad.Root);
-            col.Children.Add(new TextBlock
-            {
-                Text = "Sent with it: your Selene, Playnite and Windows versions and Selene's recent logs, with names, folders and emails taken out. It shows up publicly on GitHub. No account needed.",
-                FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.5), TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, Margin = new Thickness(40, 18, 40, 0)
-            });
             page.Children.Add(col);
 
             // or type on a phone: its code, ready as the page opens
