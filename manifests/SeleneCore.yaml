@@ -1,5 +1,94 @@
 AddonId: SeleneCore_cd424c29-97f4-4dd0-aa66-4d8e01cc8724
 Packages:
+  - Version: 1.2.0
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2026-10-26
+    PackageUrl: https://github.com/mattxslv/Selene/releases/download/v1.2.0/SeleneCore.pext
+    Changelog:
+      - >-
+        Spotlight and Collection take the same buttons on a game: A plays, X opens its details, Y its game options (from Spotlight with a Move option to arrange the row; Favorite is a switch there and on the heart). The questions before removing, uninstalling, resetting settings and power actions show their icons again.
+      - >-
+        Playnite Achievements sets itself up: its first-time page (desktop only) is done for you and every game is checked once in the background (if Playnite is closed before it finishes, the next start goes on from the game it reached), instead of only the games played since it was installed; after that, each start checks the games you played last, and an update of Playnite Achievements gets every game it has nothing for checked again. Stores still need signing in to once in its settings; Steam uses Playnite's Steam sign-in. Switch: "Achievements: set up on its own".
+      - >-
+        The Achievements screen shows when Playnite Achievements is checking your games: how many of how many, the game it's on, and a bar; when it finishes, the list fills in with what it found.
+      - >-
+        Achievements: "Recently unlocked" moves from the Achievements screen into each game's own list, under its logo (Up from the top of the list goes into it, A opens a trophy); the Achievements screen's game list moves up in its place.
+      - >-
+        On a game's page the right stick scrolls the description up and down, smoothly, faster the further it's pushed.
+      - >-
+        Presses while Selene is still starting up no longer reach the hidden home (an A opened Captures behind the start-up screen).
+      - >-
+        Games missing details (added by hand or by a script) are completed in the background a while after the start: every empty field (description, genres, developers, publishers, release date, features, series, age rating, scores, links, cover, background, icon) from your metadata add-ons, in the order Playnite's metadata settings give. What the add-ons can't find comes from the Steam store page of a game with exactly the same name. Nothing already there is replaced. Switch: "Complete missing game details".
+      - >-
+        Activity and Achievements open quicker (shorter rise-ins, rows built as needed), and Activity's covers rise left to right instead of the far ones first.
+      - >-
+        Activity, Surprise me and the other cards list only games Spotlight shows (in TV mode, games in the Handheld category stay off, checked across all a game's categories), so a pick always lands.
+      - >-
+        A game's page says "No description for this game yet." instead of a blank space.
+      - >-
+        Achievements: Y orders your games (last unlocked, most or least complete, name A-Z or Z-A, most trophies).
+      - >-
+        A game's page: the description takes only the room left above the screenshots (no more overlapping), and Released is left out for games without a date.
+      - >-
+        Surprise me waits for its covers before spinning, so the first spin no longer flicks past bare names or lands on an empty card.
+      - >-
+        The store shows Selene's breathing mark while it loads, also after a currency change (instead of "Nothing here right now").
+      - >-
+        Picking a game from Activity finds it on Spotlight even when DuplicateHider shows another copy of it.
+      - >-
+        Start opens Selene's menu everywhere, as a console's control center: over Activity, Achievements, the store, captures, Selene settings and a game's page, with the screen kept underneath; B or Start goes back to exactly where you were.
+      - >-
+        Activity, with the GameActivity add-on: this week day by day (a bar a day, today highlighted), your streak, a row for this month so far (how it compares with last month, your top game), and each game's sessions (how many, longest, average) in the panel. The panel also shows the game's trophy progress. Switch: "Activity: your play sessions".
+      - >-
+        Details: a long description fades out at the bottom instead of running into the screenshots.
+      - >-
+        Activity's panel at the right follows the game you're on (its logo, centered, its play time, share and when you last played it), and the covers carry just their line under them.
+      - >-
+        Activity looks cleaner: its numbers in one row under the title instead of boxes, your top game's logo at the right, rows of up to 20 games across the whole screen that slide along, the most-played bar clear of the focus ring, and the background crossfading between games.
+      - >-
+        The library update at start no longer waits for you to leave a card's screen (Activity, Achievements...) first; only the sign-in and profile screens hold it back.
+      - >-
+        A game picked in Activity or another card is selected on Spotlight reliably; one Spotlight's row doesn't have (left out by Playnite's filter) opens its game options instead of nothing.
+      - >-
+        Achievement pictures on the Achievements card are sharp: small store icons are no longer stretched while they load.
+      - >-
+        Nothing shakes any more at the end of a list or on a press that goes nowhere.
+      - >-
+        Game options (Y in Collection, Game Options on a game's page) are a Selene screen: the cover beside glass rows, switches for Favorite, Hidden and HDR, the completion status, Edit details (your score, categories, tags, genres... with tick lists), Extensions (every add-on's and script's actions for the game, in their sections), Remove and Uninstall with a question first. Switch: Games > "Game options, Selene's way" (off: Playnite's menu). Playnite's own pop-up menus are dark glass instead of blue.
+      - >-
+        Achievements come as trophies, like a console's: bronze, silver and gold (the game's own grade on PlayStation, else from how rare it is: gold under 5% of players, silver under 25%), and a platinum for every game completed. A game's list shows each one's trophy and the ones earned per grade; the Achievements card counts your platinums and trophies.
+      - >-
+        Collection's achievements block sits lower and has a trophy badge (gold when complete), the count large with its share, and a glowing bar.
+      - >-
+        Translating: Selene settings > Advanced > "Collect words to translate" writes every phrase Selene shows to "Selene phrases.txt" on the Desktop (the old empty-file trick in %TEMP% failed silently when it was a folder or a .txt; it works either way now).
+      - >-
+        Achievements (with the Playnite Achievements add-on): a game's page and Spotlight show its count with a thin bar among the stats, Y on the page opens its list like a console's trophy list (completion ring, All / Unlocked / Locked on LB / RB, order on Y, locked ones in grey, hidden ones kept hidden until X, A for one large), and a new Achievements card on Spotlight opens every game's achievements together (totals, the latest unlocks, games close to done, every game's progress). Switches: Games > Achievements on a game's page, Spotlight > Achievements card.
+      - >-
+        The library update at start begins a couple of seconds after the home and its intro are up (it waited a fixed 20 seconds from launch).
+      - >-
+        Notification cards work like a console's: none over the start-up or Spotlight's intro (they wait for it), each comes in one of three widths and keeps it while its words change, a new one (or a new message from the same task) slides the old one away instead of reshaping it, and they come in as a console's do: a short quick slide from the right with a fade, smooth at the screen's own rate. A game's page shows HowLongToBeat as one quiet line under its stats (11h 41m main story · 19h 14m with extras · 29h 1m completionist).
+      - >-
+        Playnite's library update ("Importing Steam games...", "Library update finished") shows as Selene's notification card instead of a line of words at the top right.
+      - >-
+        Spotlight and Collection show TIME TO BEAT (HowLongToBeat's main story time) beside the other stats when the add-on has it.
+      - >-
+        Quitting Playnite is clean: the screen goes dark at once and Playnite's "Closing" screen no longer flashes up. Sleep from the power menu no longer turns Selene's progress cards off afterwards.
+      - >-
+        HowLongToBeat times come by themselves: opening a game's page asks the add-on for that game's times when it has none yet. Selene settings > Games > "HowLongToBeat: fetch new games" switches the add-on's own automatic download (shown when HowLongToBeat is installed).
+      - >-
+        Picking a game in Activity, Find a game or Surprise me lands on that game on Spotlight with its art and logo (it sometimes landed on a neighbour with a blank background).
+      - >-
+        From amogh-w (#3): animations follow the screen's refresh rate (no longer capped at 144), Spotlight trailer cards play a game's full trailer when there's no preview clip, a game's page shows HowLongToBeat times (with that add-on; switch: Games > HowLongToBeat times), the top bar can show what UniPlaySong is playing (off by default: Look > Now playing in the top bar), the page behind a game's options menu stays still, and Collection's first and last games stay fully in view.
+      - >-
+        Report a problem: click both sticks in together anywhere to report with a picture of the screen (you see it and can leave it out), and "Type on your phone" opens a page on your phone to type and send from. The Power menu opens centred over Power.
+      - >-
+        Selene settings: Up from the first group goes round to the last (Advanced), Down from the last back to the first.
+      - >-
+        Report a problem (Selene settings > Advanced), no GitHub account needed: three quick steps (what went wrong, where you were, a few words with the on-screen keys or a keyboard), then it's sent as a GitHub issue with your versions and Selene's logs (names, folders and emails taken out), and a code to scan follows it.
+      - >-
+        Exit Playnite no longer freezes on the last picture. A capture picked on a game's details page fades in straight over the page (it opened hidden behind it, then flashed the Captures grid or the home), and B goes back to the details page on the first press, without lighting up Play. Start-up is quiet but for Selene's chime: the music (UniPlaySong) starts with the home, not over the intro and the profile picker. Backing out of Edit profile returns to the menu over the home (it came back on the login background).
+      - >-
+        Settings lists show there's more like the details page does: the rows at the edge blur and fade into the dark (the last row looked evenly faded, and a bright line flickered at the top while moving). The menu opens on Power, now in the middle, with Selene settings to its left, Playnite settings to its right and Setup check at the end.
   - Version: 1.1.0
     RequiredApiVersion: 6.0.0
     ReleaseDate: 2026-10-25

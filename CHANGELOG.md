@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+## 1.2.0 - 2026-10-26
+
 - Spotlight and Collection take the same buttons on a game: A plays, X opens its details, Y its game options (from Spotlight with a Move option to arrange the row; Favorite is a switch there and on the heart). The questions before removing, uninstalling, resetting settings and power actions show their icons again.
 - Playnite Achievements sets itself up: its first-time page (desktop only) is done for you and every game is checked once in the background (if Playnite is closed before it finishes, the next start goes on from the game it reached), instead of only the games played since it was installed; after that, each start checks the games you played last, and an update of Playnite Achievements gets every game it has nothing for checked again. Stores still need signing in to once in its settings; Steam uses Playnite's Steam sign-in. Switch: "Achievements: set up on its own".
 - The Achievements screen shows when Playnite Achievements is checking your games: how many of how many, the game it's on, and a bar; when it finishes, the list fills in with what it found.

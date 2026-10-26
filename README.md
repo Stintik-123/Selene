@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.1.0-9CCBFF?style=flat-square" alt="Version 0.9.0">
+  <img src="https://img.shields.io/badge/version-1.2.0-9CCBFF?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Playnite-10%2B-1A2A4A?style=flat-square" alt="Playnite 10+">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-1A2A4A?style=flat-square" alt="Windows 10 | 11">
   <img src="https://img.shields.io/badge/controller-first-1A2A4A?style=flat-square" alt="Controller first">
@@ -12,7 +12,7 @@
 
 <p align="center">
   <b>A calm, console-style fullscreen theme for <a href="https://playnite.link">Playnite</a></b>, named after the Greek goddess of the moon.<br>
-  The theme plus <b>Selene Core</b>, the add-on that brings it to life: Spotlight, profiles, the store, your captures, the launch experience.
+  The theme plus <b>Selene Core</b>, the add-on that brings it to life: Spotlight, profiles, the store, your captures, achievements, the launch experience.
 </p>
 
 <p align="center">
@@ -36,6 +36,14 @@ Playnite 10 or newer, Windows 10 / 11, a controller recommended. Everything Sele
 
 <table>
   <tr>
+    <td width="50%"><img src="docs/readme/achievements.gif" alt="Achievements"><p align="center"><sub><b>Achievements</b> Every game's trophies, sorted your way; a game's own list like a console's</sub></p></td>
+    <td width="50%"><img src="docs/readme/activity.gif" alt="Activity"><p align="center"><sub><b>Activity</b> Your play time, this week day by day, and each game's place in it</sub></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/readme/collection.gif" alt="Collection"><p align="center"><sub><b>Collection</b> Rest on a game and its trailer plays</sub></p></td>
+    <td width="50%"><img src="docs/readme/report.gif" alt="Report a problem"><p align="center"><sub><b>Report a problem</b> Three quick steps, or type on your phone; no account needed</sub></p></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/readme/spotlight.gif" alt="Spotlight"><p align="center"><sub><b>Spotlight</b> One row: your cards, then your games</sub></p></td>
     <td width="50%"><img src="docs/readme/launch.gif" alt="Play"><p align="center"><sub><b>Play</b> The game's art fades in at once and stays until the game is really on screen</sub></p></td>
   </tr>
@@ -55,8 +63,20 @@ Playnite 10 or newer, Windows 10 / 11, a controller recommended. Everything Sele
     <td width="50%"><img src="docs/screenshots/store.png" alt="Store"><p align="center"><sub><b>Store</b></sub></p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/captures.png" alt="Captures"><p align="center"><sub><b>Captures</b></sub></p></td>
+    <td width="50%"><img src="docs/screenshots/achievements.png" alt="Achievements"><p align="center"><sub><b>Achievements</b></sub></p></td>
+    <td width="50%"><img src="docs/screenshots/trophies.png" alt="A game's trophies"><p align="center"><sub><b>A game's trophies</b></sub></p></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/screenshots/activity.png" alt="Activity"><p align="center"><sub><b>Activity</b></sub></p></td>
+    <td width="50%"><img src="docs/screenshots/game-options.png" alt="Game options"><p align="center"><sub><b>Game options</b></sub></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/captures.png" alt="Captures"><p align="center"><sub><b>Captures</b></sub></p></td>
+    <td width="50%"><img src="docs/screenshots/captures-player.png" alt="Clip player"><p align="center"><sub><b>Clip player</b></sub></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/menu.png" alt="Menu"><p align="center"><sub><b>Menu</b> Start, anywhere</sub></p></td>
+    <td width="50%"><img src="docs/screenshots/report.png" alt="Report a problem"><p align="center"><sub><b>Report a problem</b></sub></p></td>
   </tr>
 </table>
 
