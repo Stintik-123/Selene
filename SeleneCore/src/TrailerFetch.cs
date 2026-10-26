@@ -298,6 +298,7 @@ namespace Selene
 
         private static WebClient Client()
         {
+            try { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; } catch { }   // (as Selene's other downloads)
             var wc = new WebClient { Encoding = System.Text.Encoding.UTF8 };
             wc.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0";
             return wc;
