@@ -107,7 +107,9 @@ namespace Selene
                 var activity = Part<Border>("SeleneDetailsBand2b");
                 if (activity != null && activity.Child != null && activity.Child.CacheMode == null) activity.Child.CacheMode = new System.Windows.Media.BitmapCache { RenderAtScale = 1, SnapsToDevicePixels = true };
                 if (shownId != g.Id || zone == 0) { zone = 0; if (shift != null) { shift.BeginAnimation(TranslateTransform.YProperty, null); shift.Y = 0; } }
-                if (shownId != g.Id) GameMedia.ShowNow(g);   // the screenshots follow Spotlight's row; here the game may be another (Collection's pick): loaded now
+                // the screenshots follow Spotlight's row; here the game may be another (Collection's pick), or the row moved on since
+                // this page was last open: its own game's, loaded now
+                if (shownId != g.Id || GameMedia.ShownId != g.Id) GameMedia.ShowNow(g);
                 shownId = g.Id;
                 Fill(g);
                 Blur(false);

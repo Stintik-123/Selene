@@ -872,7 +872,7 @@ namespace Selene
                     foreach (var dir in Directory.GetDirectories(videos))
                     {
                         var n = Path.GetFileName(dir);
-                        if (n.Equals("Captures", StringComparison.OrdinalIgnoreCase) || n.Equals("NVIDIA", StringComparison.OrdinalIgnoreCase) || SystemFolder(n)) continue;
+                        if (n.Equals("Captures", StringComparison.OrdinalIgnoreCase) || n.Equals("NVIDIA", StringComparison.OrdinalIgnoreCase) || SystemFolder(n, dir)) continue;
                         Add(list, Directory.GetFiles(dir), n);
                     }
             }
@@ -884,10 +884,15 @@ namespace Selene
             return list.Where(c => seen.Add(c.Path)).OrderByDescending(c => c.When).Take(max).ToList();
         }
 
-        // a drive's own folders (a Videos library on a network share or another drive shows them)
+        // a drive's own and hidden folders (a Videos library on a network share or another drive shows them)
         private static bool SystemFolder(string name)
         {
             return name.StartsWith("$") || name.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase);
+        }
+        private static bool SystemFolder(string name, string dir)
+        {
+            if (SystemFolder(name)) return true;
+            try { return (File.GetAttributes(dir) & FileAttributes.Hidden) != 0; } catch { return true; }
         }
 
         // a name as a filename carries it: lower-case, the characters Windows forbids (and the "_" Game Bar writes for them)
@@ -928,7 +933,7 @@ namespace Selene
                 if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return;
                 Add(list, Directory.GetFiles(folder), name);
                 if (!subfolders) return;
-                foreach (var dir in Directory.GetDirectories(folder)) { var n = Path.GetFileName(dir); if (!SystemFolder(n)) Add(list, Directory.GetFiles(dir), n); }
+                foreach (var dir in Directory.GetDirectories(folder)) { var n = Path.GetFileName(dir); if (!SystemFolder(n, dir)) Add(list, Directory.GetFiles(dir), n); }
             }
             catch (Exception ex) { HomeNav.Log("captures: " + folder + ": " + ex.Message); }
         }

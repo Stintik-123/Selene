@@ -6,7 +6,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 - A game's page: captures named the way Game Bar writes them ("Onimusha_ Way of the Sword 10_25_2026 9_45_56 PM") are matched to the game (the short date is stripped, names are compared as a filename carries them), ScreenshotsVisualizer's own index is used when it's installed, and a drive's $RECYCLE.BIN no longer shows as a source (#16).
 - A game's page opened from Collection showed the game before's screenshots until reopened; it shows the right ones, loaded at once (#17).
-- Shade over the art has an Off choice, and covers Collection's two gradients as well as Spotlight's (#18).
+- Shade over the art is a slider, from Off to 150%, and covers Collection's two gradients as well as Spotlight's (#18).
 - Collection: switches for the details under the logo and for the button hints along the bottom (#19).
 - Translating: the phrases file goes to the Desktop as you see it (OneDrive's when it's redirected), a translation is also read from Selene Core's data folder (ExtensionsData\cd424c29-...\Localization, which a theme update leaves alone), and the log says which file was looked for, loaded, or couldn't be written (#20).
 - Settings, Advanced: Report a problem comes first; the Check for updates row is gone (the menu's Update item checks on its own).
