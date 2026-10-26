@@ -60,7 +60,7 @@ namespace Selene
             var list = new List<Device>();
             try
             {
-                var en = (IMMDeviceEnumerator)new MMDeviceEnumeratorCom();
+                var en = Enumerator();
                 string defaultId = null;
                 try { IMMDevice d; if (en.GetDefaultAudioEndpoint(0, 1, out d) == 0 && d != null) { d.GetId(out defaultId); Marshal.ReleaseComObject(d); } } catch { }
                 IMMDeviceCollection all;
@@ -88,7 +88,7 @@ namespace Selene
         {
             try
             {
-                var pc = (IPolicyConfig)new PolicyConfigClientCom();
+                var pc = (IPolicyConfig)Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("870af99c-171d-4f9e-af0d-e63df40c2bc9")));
                 int a = pc.SetDefaultEndpoint(id, 0), b = pc.SetDefaultEndpoint(id, 1);
                 Marshal.ReleaseComObject(pc);
                 if (a != 0 || b != 0) HomeNav.Log("audio: set default: " + a.ToString("x") + " / " + b.ToString("x"));
@@ -100,7 +100,7 @@ namespace Selene
         // ---- Core Audio, the little of it this needs ----
         private static IAudioEndpointVolume Endpoint()
         {
-            var en = (IMMDeviceEnumerator)new MMDeviceEnumeratorCom();
+            var en = Enumerator();
             IMMDevice d;
             int hr = en.GetDefaultAudioEndpoint(0, 1, out d);
             Marshal.ReleaseComObject(en);
@@ -131,8 +131,11 @@ namespace Selene
 
         [DllImport("ole32.dll")] private static extern int PropVariantClear(ref PropVariant pvar);
 
-        [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] private class MMDeviceEnumeratorCom { }
-        [ComImport, Guid("870af99c-171d-4f9e-af0d-e63df40c2bc9")] private class PolicyConfigClientCom { }
+        // (the system's objects made by CLSID: a ComImport class nested in here came back as a bare __ComObject the cast refused)
+        private static IMMDeviceEnumerator Enumerator()
+        {
+            return (IMMDeviceEnumerator)Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")));
+        }
 
         [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
         private interface IMMDeviceEnumerator

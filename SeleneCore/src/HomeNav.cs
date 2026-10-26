@@ -4616,7 +4616,7 @@ namespace Selene
                 LastError = ex.ToString();
             }
             var res = Application.Current.Resources;
-            if (!Equals(res["SelenePadBattery"], value)) res["SelenePadBattery"] = value;
+            if (!Equals(res["SelenePadBattery"], value)) { res["SelenePadBattery"] = value; Log("battery: " + value + (LastError != null && value == "none" ? "" : "")); }
             PadBattery.Show(value);   // beside the clock (the "Controller battery" switch), and a card as it runs low
         }
 
