@@ -4,64 +4,43 @@ labels: [bug]
 body:
   - type: markdown
     attributes:
-      value: Thanks for taking the time to report this. The details below make it much faster to fix.
+      value: |
+        **Quicker from Selene itself:** press both sticks in (or Selene settings > Advanced > Report a problem). It sends a picture of the screen, your versions and the logs for you, no account needed.
   - type: textarea
     id: what
     attributes:
       label: What happened?
-      description: What you expected, and what happened instead. Screenshots or a short video help a lot.
-    validations:
-      required: true
-  - type: textarea
-    id: steps
-    attributes:
-      label: How can we make it happen?
-      placeholder: |
-        1. Open Playnite in fullscreen
-        2. Select a game on the home row
-        3. Press Play
-    validations:
-      required: true
-  - type: input
-    id: selene
-    attributes:
-      label: Selene version
-      description: Fullscreen mode, Menu > Settings > Appearance > Theme, or the file name you downloaded.
-      placeholder: "0.9.0"
-    validations:
-      required: true
-  - type: input
-    id: playnite
-    attributes:
-      label: Playnite version
-      description: Menu > About (or Help > About in desktop mode).
-      placeholder: "10.63"
+      description: What you did, what you expected, and what happened instead. A screenshot or a short video helps a lot.
     validations:
       required: true
   - type: dropdown
-    id: windows
+    id: where
     attributes:
-      label: Windows version
+      label: Where in Selene?
       options:
-        - Windows 11
-        - Windows 10
-        - Other (please say in the description)
+        - Starting Playnite
+        - Spotlight
+        - Collection
+        - A game's page
+        - Store
+        - Captures
+        - Settings or menu
+        - Starting or playing a game
+        - Quitting
+        - Somewhere else
     validations:
       required: true
-  - type: dropdown
-    id: input
+  - type: input
+    id: versions
     attributes:
-      label: What are you using to control Playnite?
-      options:
-        - Xbox controller
-        - Other controller
-        - Keyboard and mouse
+      label: Versions
+      description: Selene (in Playnite's Add-ons list, or the file you downloaded), Playnite (Menu > About) and Windows.
+      placeholder: "Selene 1.2.1, Playnite 10.63, Windows 11"
+    validations:
+      required: true
   - type: textarea
     id: logs
     attributes:
       label: Logs
       description: |
-        Drag the log files here if you can:
-        - Playnite: `%AppData%\Playnite\playnite.log` (portable installs: `playnite.log` in the Playnite folder)
-        - Selene Core: `%TEMP%\selene.log`
-        Paste `%AppData%` or `%TEMP%` into the File Explorer address bar to open those folders.
+        Drag them in if you can: `%AppData%\Playnite\playnite.log` (portable: in the Playnite folder) and `%TEMP%\selene.log`. Paste `%AppData%` or `%TEMP%` into File Explorer's address bar to open those folders.

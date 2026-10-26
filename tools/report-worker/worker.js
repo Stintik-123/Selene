@@ -178,35 +178,33 @@ function build(r, shotUrl) {
   const field = (v, max) => scrub(String(v ?? "").slice(0, max)).trim();
   const note = field(r.note, 2000);
   const where = field(r.place, 60);
+  const tag = (v) => (v ? "`" + v.replace(/`/g, "'") + "`" : null);
   const lines = [
-    `**${r.category}**${where ? "  ·  " + where : ""}`,
+    `### ${r.category}${where ? " · " + where : ""}`,
     "",
-    note ? note : "_No description given._",
+    note ? note.split(/\r?\n/).map((l) => "> " + l).join("\n") : "> _No description given._",
     "",
   ];
-  if (shotUrl) lines.push(`![The screen when this was reported](${shotUrl})`, "");
-  lines.push(
-    "| | |",
-    "|---|---|",
-    `| Selene | ${cell(field(r.selene, 40))} |`,
-    `| Playnite | ${cell(field(r.playnite, 40))} |`,
-    `| Windows | ${cell(field(r.windows, 80))} |`,
-    "",
-    "_Sent from Selene's Report a problem screen._",
-  );
+  if (shotUrl) lines.push(`<img src="${shotUrl}" alt="The screen when this was reported" width="720">`, "");
+  const selene = field(r.selene, 40), playnite = field(r.playnite, 40), windows = field(r.windows, 80);
+  lines.push([tag(selene && "Selene " + selene), tag(playnite && "Playnite " + playnite), tag(windows)].filter(Boolean).join(" · "));
   let body = lines.join("\n");
   // the logs fill what's left, newest lines kept
-  const logs = [["Problems in selene.log", r.seleneProblems], ["selene.log (recent)", r.seleneLog], ["playnite.log (warnings and errors)", r.playniteLog]]
+  const logs = [["Problems in selene.log", r.seleneProblems], ["selene.log, recent lines", r.seleneLog], ["playnite.log, warnings and errors", r.playniteLog]]
     .filter(([, v]) => typeof v === "string" && v.length);
-  const room = Math.max(0, MAX_BODY - body.length - 600);
+  const room = Math.max(0, MAX_BODY - body.length - 700);
   const each = logs.length ? Math.floor(room / logs.length) : 0;
+  if (logs.length) body += "\n";
   for (const [name, content] of logs) {
     let log = scrub(content).replace(/````/g, "'''");
     if (log.length > each) log = "(older lines cut)\n" + log.slice(log.length - each + 20);
-    body += `\n\n<details><summary>${name}</summary>\n\n\`\`\`\`\n${log}\n\`\`\`\`\n</details>`;
+    body += `\n<details><summary>${name}</summary>\n\n\`\`\`\`text\n${log}\n\`\`\`\`\n</details>\n`;
   }
-  const short = note.replace(/\s+/g, " ").slice(0, 60);
-  return { title: `[Report] ${r.category}${where ? " (" + where + ")" : ""}${short ? ": " + short : ""}`, body, labels: ["bug"] };
+  body += "\n<sub>Sent from Selene's Report a problem screen</sub>";
+  // the title: what the player wrote (the category and place are in the body and the label)
+  const short = note.replace(/\s+/g, " ").trim();
+  const title = short ? (short.length > 80 ? short.slice(0, 77).trimEnd() + "..." : short) : `${r.category}${where ? " · " + where : ""}`;
+  return { title, body, labels: ["bug"] };
 }
 
 // ---- the picture, shown in the issue ----
@@ -311,9 +309,6 @@ function scrub(s) {
     .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "<email>");
 }
 
-function cell(s) {
-  return (s || "-").replace(/\|/g, "/").replace(/\r?\n/g, " ");
-}
 
 function base64ToBytes(b64) {
   const bin = atob(b64);
