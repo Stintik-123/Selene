@@ -45,6 +45,15 @@ namespace Selene
             return new Ellipse { Width = 10, Height = 10, Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 2, 0, 0) };
         }
 
+        // how far each is, 0..1 (below 0: not running), for the bar under the setting
+        public static double ArtProgress() { try { return TrailerFetch.Progress; } catch { return -1; } }
+        public static double SongsProgress() { try { return SongSetup.Progress; } catch { return -1; } }
+        public static double AchievementsProgress()
+        {
+            try { int n, all; double part; Guid? on; return AchievementsData.Checking(out n, out all, out part, out on) && all > 0 ? (double)n / all : -1; }
+            catch { return -1; }
+        }
+
         // a line under the setting while its work runs: where it's at
         public static string ArtNote()
         {

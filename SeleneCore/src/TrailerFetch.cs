@@ -32,6 +32,11 @@ namespace Selene
         // trailers, logos or backgrounds still coming (for the red dot on the menu and the Spotlight group)
         public static bool Busy { get { lock (gate) return worker != null; } }
         public static int Pending { get { lock (gate) return queue.Count + (worker != null ? 1 : 0); } }
+        private static int done;   // games taken off the queue since the worker started (the bar under the setting)
+        public static double Progress
+        {
+            get { lock (gate) { if (worker == null) return -1; int left = queue.Count + 1, all = done + left; return all > 0 ? (double)done / all : -1; } }
+        }
 
         public static string PathFor(Guid id)
         {
@@ -91,9 +96,10 @@ namespace Selene
                 Guid id;
                 lock (gate)
                 {
-                    if (queue.Count == 0 || (Mode == "off" && !Features.On("artdownload"))) { worker = null; break; }
+                    if (queue.Count == 0 || (Mode == "off" && !Features.On("artdownload"))) { worker = null; done = 0; break; }
                     id = queue.First.Value;
                     queue.RemoveFirst();
+                    done++;
                     if (!tried.Add(id)) continue;
                 }
                 bool looked;

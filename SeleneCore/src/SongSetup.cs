@@ -43,6 +43,16 @@ namespace Selene
         // Selene's downloads are running (its own tools, songs still missing)
         private static bool Fetching { get { return started && File.Exists(YtDlp) && File.Exists(Ffmpeg); } }
 
+        // how far the songs are (the bar under the setting); below 0: not running
+        public static double Progress
+        {
+            get
+            {
+                try { if (!Busy) return -1; int have, total; Count(out have, out total); return total > 0 ? (double)have / total : -1; }
+                catch { return -1; }
+            }
+        }
+
         // songs still on their way (for the red dot on the menu and the Sound & music group)
         public static bool Busy
         {

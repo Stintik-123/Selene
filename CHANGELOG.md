@@ -4,8 +4,9 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Settings: backing out of a group's options to the groups leaves the list where it was (it jumped to the top), and A goes back to the row left.
 - Spotlight: the name beside the selected card (Achievements, Captures, Activity) sits clear of the card again.
-- Settings: the red dot also marks the option whose work still runs, with where it's at (games to go, achievements checked so far).
+- Settings: the red dot also marks the option whose work still runs, with where it's at (games to go, achievements checked so far) and a thin bar of how far it has got.
 - The menu opened from a game's details page shows the page dimmed underneath instead of a black screen.
 - A red dot on the menu's Selene settings while something still runs behind the scenes (songs, trailers or art coming in, the achievements check), and on the settings group that owns it.
 - Logos taken from Steam's own cache are cut to the logo itself (they come on a whole 1280 x 720 canvas, so the logo landed small or off to one side); the ones saved before are cut on the next pass.

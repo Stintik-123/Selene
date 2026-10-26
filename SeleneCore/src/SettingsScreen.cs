@@ -125,6 +125,15 @@ namespace Selene
                 string note = null;
                 if (f.Note != null) { try { note = f.Note(); } catch { } }
                 if (!string.IsNullOrEmpty(note)) text.Children.Add(new TextBlock { Text = note, FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, Foreground = Ink.Brush("GlyphColor"), Margin = new Thickness(0, 5, 0, 0) });
+                // the work's bar: a thin line filled as far as it has got (as the notification cards')
+                double share = -1;
+                if (f.Progress != null) { try { share = f.Progress(); } catch { } }
+                if (share >= 0)
+                {
+                    var bar = new Border { Height = 4, Width = 260, CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.14), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 9, 0, 2), ClipToBounds = true };
+                    bar.Child = new Border { Width = Math.Round(260 * Math.Min(1, share)), CornerRadius = new CornerRadius(2), Background = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Left };
+                    text.Children.Add(bar);
+                }
                 var knob = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(11), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(4, 0, 0, 0), Background = Brushes.White, RenderTransform = new TranslateTransform() };
                 var track = new Border { Width = 56, Height = 30, CornerRadius = new CornerRadius(15), VerticalAlignment = VerticalAlignment.Center, Child = knob, Margin = new Thickness(24, 0, 0, 0) };
                 TextBlock value = null;
@@ -207,7 +216,6 @@ namespace Selene
                 }
                 catch { }
             }
-            else if (!inOptions && scroller != null) scroller.ScrollToVerticalOffset(0);
         }
 
         public override void Handle(string b)
@@ -218,13 +226,15 @@ namespace Selene
             if (!inOptions)
             {
                 if (b == "B") { Ui.Back(); if (fromMenu) LoginScene.Show(new MenuScreen(true), -1); else LoginScene.Finish(); return; }
-                if ((b == "A" || b == "DPadRight") && options.Count > 0) { inOptions = true; index = 0; Ui.Tick(); ShowFocus(); return; }
+                if ((b == "A" || b == "DPadRight") && options.Count > 0) { inOptions = true; index = Math.Min(index, options.Count - 1); Ui.Tick(); ShowFocus(); return; }   // (back on the row left)
                 int next = group + (b == "DPadDown" ? 1 : b == "DPadUp" ? -1 : 0);
                 if (next == group) return;
                 next = (next + groupRows.Count) % groupRows.Count;   // round from the first group to the last and back
                 group = next;
+                index = 0;
                 Ui.Tick();
                 ShowGroup(true);
+                if (scroller != null) scroller.ScrollToVerticalOffset(0);
                 ShowFocus();
                 return;
             }
