@@ -3,6 +3,8 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/mattxslv/Selene/releases"><img src="https://img.shields.io/github/downloads/mattxslv/Selene/total?style=flat-square&label=total%20downloads&color=9CCBFF" alt="Total downloads"></a>
+  <a href="https://github.com/mattxslv/Selene/releases/latest"><img src="https://img.shields.io/github/downloads/mattxslv/Selene/latest/total?style=flat-square&label=downloads%40latest&color=9CCBFF" alt="Downloads of the latest version"></a>
   <img src="https://img.shields.io/badge/version-1.2.1-9CCBFF?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Playnite-10%2B-1A2A4A?style=flat-square" alt="Playnite 10+">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-1A2A4A?style=flat-square" alt="Windows 10 | 11">
