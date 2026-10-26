@@ -27,7 +27,7 @@ namespace Selene
         [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
         [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left, Top, Right, Bottom; }
 
-        private const double CardWidth = 480, CardHeight = 76, Edge = 28, ShadowRoom = 24, Drift = 26;   // one size for every card (slim, as a console's)
+        private const double CardWidth = 560, CardHeight = 128, Edge = 28, ShadowRoom = 24, Drift = 26;   // one frame for every card: a task's, a note's, the session's
         private const int MinShownMs = 2600, AfterDoneMs = 1100, InMs = 260, OutMs = 220;
         private static Window hiddenProgress;   // Playnite's own window, kept out of sight
         private static DateTime busyUntil = DateTime.MinValue;
@@ -40,31 +40,32 @@ namespace Selene
         // the full-screen window made Windows present Playnite's frames the slow way: everything stuttered while it showed)
         private static Grid layer;
         private static Border icon;
-        private static TextBlock downloadGlyph;
+        private static FrameworkElement downloadGlyph;   // a task's icon (centred by its outline)
+        private static int downloadGlyphCode;
         private static ContentControl titleLine;
         private static StackPanel text;
-        private const double SessionWidth = 560, SessionHeight = 150;   // the session card: Selene Legacy's
+        private const double SessionWidth = CardWidth, SessionHeight = CardHeight;   // the session card: the same frame, its own insides
         private static DockPanel row;
         private static Brush glass, sessionGlass;
 
         // a progress card's shape (wide, one row: icon tile and words) or the session card's (Legacy's: words left, logo right)
         private static void Shape(bool session)
         {
-            card.Width = session ? SessionWidth : Widths[0];   // a task's or note's width is set by Size() (one of three)
+            card.Width = CardWidth;
             card.MaxWidth = double.PositiveInfinity;
-            card.Height = session ? SessionHeight : CardHeight;
-            card.Padding = session ? new Thickness(0) : new Thickness(14, 0, 22, 0);
-            card.CornerRadius = new CornerRadius(session ? 14 : 10);
+            card.Height = CardHeight;
+            card.Padding = session ? new Thickness(0) : new Thickness(18, 0, 24, 0);
+            card.CornerRadius = new CornerRadius(14);
             card.Background = session ? sessionGlass : glass;
             if (!session && !ReferenceEquals(card.Child, row)) card.Child = row;
-            layer.Width = session ? card.Width + ShadowRoom + Edge : double.NaN;
+            layer.Width = CardWidth + ShadowRoom + Edge;
             text.HorizontalAlignment = HorizontalAlignment.Left;
             titleLine.HorizontalAlignment = HorizontalAlignment.Left;
             words.HorizontalAlignment = HorizontalAlignment.Left;
             words.TextAlignment = TextAlignment.Left;
-            words.MaxWidth = CardWidth - 100;
+            words.MaxWidth = CardWidth - Around;
             words.Visibility = session ? Visibility.Collapsed : Visibility.Visible;
-            titleLine.Margin = session ? new Thickness(0) : new Thickness(0, 0, 0, 4);
+            titleLine.Margin = session ? new Thickness(0) : new Thickness(0, 0, 0, 5);
         }
         private static Border card, track, fill;
         private static TextBlock words;
@@ -244,13 +245,13 @@ namespace Selene
             icon.Child = downloadGlyph;
             icon.Visibility = Visibility.Visible;
             titleLine.Visibility = Visibility.Collapsed;
-            words.FontSize = 15;
+            words.FontSize = 16;
             words.Foreground = Ink.Brush("SeleneInkColor", 0.95);
             words.TextWrapping = TextWrapping.Wrap;
             Shape(false);
             var text = TaskText(vm);
             if (text.Length > 0) { shownText = text; ShowWords(text); IconFor(text); }
-            Size(Need(titleLine.Visibility == Visibility.Visible ? ((TextBlock)titleLine.Content).Text : "", words.Text, 12, 15));
+            Size(Need(titleLine.Visibility == Visibility.Visible ? ((TextBlock)titleLine.Content).Text : "", words.Text, 20, 16));
             if (leaveTimer != null) leaveTimer.Stop();
             barShown = -1;
             Place(main);
@@ -275,9 +276,8 @@ namespace Selene
             return t != null ? t.Trim() : "";
         }
 
-        // ---- the three widths a card comes in: the smallest its words fit, kept while it's up ----
-        private static readonly double[] Widths = { 320, 400, 480 };
-        private const double Around = 116;   // the icon tile, its gap and the card's padding
+        // ---- one width for every card (three sizes by the words made them uneven) ----
+        private const double Around = 120;   // the icon tile, its gap and the card's padding
 
         private static double Need(string head, string line, double headSize, double lineSize)
         {
@@ -295,11 +295,9 @@ namespace Selene
 
         private static void Size(double need)
         {
-            double w = Widths[Widths.Length - 1];
-            foreach (var option in Widths) if (option >= need) { w = option; break; }
-            card.Width = w;
+            card.Width = CardWidth;
             card.MaxWidth = double.PositiveInfinity;
-            words.MaxWidth = w - Around;
+            words.MaxWidth = CardWidth - Around;
         }
 
         // the card on screen out past the right edge, then the next one
@@ -356,11 +354,11 @@ namespace Selene
         {
             words = new TextBlock
             {
-                FontFamily = Ui.Body, FontSize = 15, Foreground = Ink.Brush("SeleneInkColor", 0.95), TextWrapping = TextWrapping.Wrap, LineHeight = 20,
-                MaxWidth = CardWidth - 90, TextTrimming = TextTrimming.CharacterEllipsis, MaxHeight = 42
+                FontFamily = Ui.Body, FontSize = 16, Foreground = Ink.Brush("SeleneInkColor", 0.95), TextWrapping = TextWrapping.Wrap, LineHeight = 22,
+                MaxWidth = CardWidth - Around, TextTrimming = TextTrimming.CharacterEllipsis, MaxHeight = 46
             };
             var title = new TextBlock { Text = "Selene", FontFamily = Ui.Display, FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.55), Margin = new Thickness(0, 0, 0, 3) };
-            track = new Border { Height = 4, CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.14), Margin = new Thickness(0, 9, 0, 0), ClipToBounds = true };
+            track = new Border { Height = 5, CornerRadius = new CornerRadius(2.5), Background = Ink.Brush("SeleneInkColor", 0.14), Margin = new Thickness(0, 10, 0, 0), ClipToBounds = true };
             fill = new Border
             {
                 CornerRadius = new CornerRadius(3), HorizontalAlignment = HorizontalAlignment.Left, Width = 0, Background = Ink.Brush("GlyphColor"),
@@ -371,11 +369,12 @@ namespace Selene
             track.Child = fill;
             // like a console's notification: an icon tile on the left, the task's words beside it (the bar is kept, unshown, so
             // the task's progress code has somewhere to go)
-            downloadGlyph = new TextBlock { Text = Ui.Icon(0xE2C4 /* file_download */), FontFamily = Ui.Icons, FontSize = 22, Foreground = Ink.Brush("GlyphColor"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            downloadGlyphCode = 0xE2C4;   /* file_download */
+            downloadGlyph = Ui.Glyph(Ui.Icon(downloadGlyphCode), Ui.Icons, 26, Ink.Brush("GlyphColor"));
             icon = new Border
             {
-                Width = 44, Height = 44, CornerRadius = new CornerRadius(8), Background = Ink.Brush("GlyphColor", 0.18), VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 14, 0), Child = downloadGlyph, ClipToBounds = true
+                Width = 60, Height = 60, CornerRadius = new CornerRadius(12), Background = Ink.Brush("GlyphColor", 0.18), VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 16, 0), Child = downloadGlyph, ClipToBounds = true
             };
             titleLine = new ContentControl { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 0, 0, 4), HorizontalAlignment = HorizontalAlignment.Left };
             text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
@@ -390,7 +389,7 @@ namespace Selene
             sessionGlass = Ink.Brush("SeleneGlassColor", 0.92);   // the session card: darker, the game's art shows faintly in it
             card = new Border
             {
-                Width = CardWidth, CornerRadius = new CornerRadius(10), Padding = new Thickness(16, 0, 22, 0), Height = CardHeight,
+                Width = CardWidth, CornerRadius = new CornerRadius(14), Padding = new Thickness(18, 0, 24, 0), Height = CardHeight,
                 Background = glass, BorderBrush = Ink.Brush("SeleneInkColor", 0.08), BorderThickness = new Thickness(1),   // see-through
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
                 Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
@@ -426,10 +425,14 @@ namespace Selene
         {
             if (downloadGlyph == null || !ReferenceEquals(icon.Child, downloadGlyph)) return;
             var t = text.ToLowerInvariant();
+            int was = downloadGlyphCode;
             int glyph = t.Contains("download") || t.Contains("fetch") || t.Contains("logo") || t.Contains("trailer") || t.Contains("video") ? 0xE2C4 /* file_download */
                       : t.Contains("updat") || t.Contains("import") || t.Contains("library") || t.Contains("sync") || t.Contains("scan") ? 0xE627 /* sync */
                       : 0xE8B8 /* settings */;
-            downloadGlyph.Text = Ui.Icon(glyph);
+            if (glyph == was) return;
+            downloadGlyphCode = glyph;
+            downloadGlyph = Ui.Glyph(Ui.Icon(glyph), Ui.Icons, 26, Ink.Brush("GlyphColor"));
+            icon.Child = downloadGlyph;
         }
 
         // words and bar from the task (polled: Playnite changes them on its worker thread)
@@ -476,11 +479,12 @@ namespace Selene
             if (line.Length > 0) line = char.ToUpper(line[0]) + line.Substring(1);
             if (head != null)
             {
-                titleLine.Content = new TextBlock { Text = head, FontFamily = Ui.Display, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.55), TextTrimming = TextTrimming.CharacterEllipsis };
-                titleLine.Margin = new Thickness(0, 0, 0, 2);
+                titleLine.Content = new TextBlock { Text = head, FontFamily = Ui.Display, FontSize = 20, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - Around };
+                titleLine.Margin = new Thickness(0, 0, 0, 4);
                 titleLine.Visibility = Visibility.Visible;
+                words.Foreground = Ink.Brush("SeleneInkColor", 0.72);
             }
-            else titleLine.Visibility = Visibility.Collapsed;
+            else { titleLine.Visibility = Visibility.Collapsed; words.Foreground = Ink.Brush("SeleneInkColor", 0.95); }
             words.TextWrapping = head != null ? TextWrapping.NoWrap : TextWrapping.Wrap;
             words.Text = line;
         }
@@ -731,14 +735,14 @@ namespace Selene
             inside.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             inside.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             var left = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            left.Children.Add(new TextBlock { Text = "Session ended", FontFamily = Ui.Body, FontSize = 13, Foreground = Ink.Brush("SeleneInkColor", 0.62) });
-            left.Children.Add(new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 20, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 12) });
+            left.Children.Add(new TextBlock { Text = "Session ended", FontFamily = Ui.Body, FontSize = 15, Foreground = Ink.Brush("SeleneInkColor", 0.62) });
+            left.Children.Add(new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 8) });
             var figures = new StackPanel { Orientation = Orientation.Horizontal };
-            figures.Children.Add(Figure("THIS SESSION", Duration(seconds), new Thickness(0, 0, 20, 0)));
+            figures.Children.Add(Figure(Duration(seconds), "this session"));
             if (game.Playtime > 0)
             {
-                figures.Children.Add(new System.Windows.Shapes.Rectangle { Width = 1, Fill = Ink.Brush("SeleneInkColor", 0.2), Margin = new Thickness(0, 3, 20, 3) });
-                figures.Children.Add(Figure("TOTAL PLAYTIME", Duration(game.Playtime), new Thickness(0)));
+                figures.Children.Add(new TextBlock { Text = "\u00B7", FontFamily = Ui.Body, FontSize = 18, Foreground = Ink.Brush("SeleneInkColor", 0.45), VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(12, 0, 12, 3) });
+                figures.Children.Add(Figure(Duration(game.Playtime), "total"));
             }
             left.Children.Add(figures);
             inside.Children.Add(left);
@@ -746,7 +750,7 @@ namespace Selene
             {
                 var logoImage = new Image
                 {
-                    Source = pic, MaxWidth = 220, MaxHeight = 100, Stretch = Stretch.Uniform, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 4, 0),
+                    Source = pic, MaxWidth = 200, MaxHeight = 88, Stretch = Stretch.Uniform, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 4, 0),
                     Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 10, Opacity = 0.6, Color = Colors.Black }
                 };
                 RenderOptions.SetBitmapScalingMode(logoImage, BitmapScalingMode.Fant);
@@ -794,15 +798,14 @@ namespace Selene
             icon.Background = Ink.Brush("GlyphColor", 0.18);
             icon.Child = Ui.Glyph(Ui.Icon(glyph), Ui.Icons, 22, Ink.Brush("GlyphColor"));
             icon.Visibility = Visibility.Visible;
-            titleLine.Content = new TextBlock { Text = title, FontFamily = Ui.Display, FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - 96 };
+            titleLine.Content = new TextBlock { Text = title, FontFamily = Ui.Display, FontSize = 20, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = CardWidth - Around };
             titleLine.Visibility = Visibility.Visible;
-            titleLine.Margin = new Thickness(0, 0, 0, 3);
-            words.TextWrapping = TextWrapping.Wrap;
+            titleLine.Margin = new Thickness(0, 0, 0, 4);
             words.Text = line;
-            words.FontSize = 14;
-            words.Foreground = Ink.Brush("SeleneInkColor", 0.65);
+            words.FontSize = 16;
+            words.Foreground = Ink.Brush("SeleneInkColor", 0.72);
             words.TextWrapping = TextWrapping.NoWrap;
-            Size(Need(title, line, 16, 14));
+            Size(Need(title, line, 20, 16));
             if (leaveTimer != null) leaveTimer.Stop();
             leaving = false;
             shownAt = DateTime.Now;
@@ -840,12 +843,12 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("session card: no " + name + " for " + appId + " (" + ex.Message + ")"); try { System.IO.File.Delete(file + ".part"); } catch { } }
         }
 
-        // one of the session card's figures: a small caps label over the value
-        private static FrameworkElement Figure(string label, string value, Thickness margin)
+        // one of the session card's figures: the value, its words after it on the same line
+        private static FrameworkElement Figure(string value, string label)
         {
-            var sp = new StackPanel { Margin = margin };
-            sp.Children.Add(new TextBlock { Text = label, FontFamily = Ui.Body, FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor", 0.6) });
-            sp.Children.Add(new TextBlock { Text = value, FontFamily = Ui.Display, FontSize = 19, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), Margin = new Thickness(0, 2, 0, 0) });
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(new TextBlock { Text = value, FontFamily = Ui.Display, FontSize = 20, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), VerticalAlignment = VerticalAlignment.Bottom });
+            sp.Children.Add(new TextBlock { Text = label, FontFamily = Ui.Body, FontSize = 15, Foreground = Ink.Brush("SeleneInkColor", 0.6), VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(7, 0, 0, 2) });
             return sp;
         }
 

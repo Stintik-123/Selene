@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Notification cards: one frame for every card (560 x 128, like the session card's), a 60 px icon, the title at 20 px and the line at 16 px, the session card's figures on one line (they came in three widths with small words).
 - Icons in circles (dialogs, the menu, notification cards, achievements, the report's badge) sit exactly in the middle: centred by the glyph's own outline, not its text box.
 - Back from Setup check, Check for updates, Report a problem or the Store region lands on that row in Selene settings, not on the group list.
 - Collection's row: scrolled to its end, the last cover and its ring sit inside the screen (the last one was cut off); a cover cut by the screen's edge dissolves into the screen's darkened sides; a held stick moves at Spotlight's pace (Playnite's list dropped every other repeat).
