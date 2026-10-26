@@ -32,7 +32,7 @@ namespace Selene
         private bool closed;
         // the panel at the right: the focused game's logo and numbers
         private const double CallW = 520;
-        private readonly StackPanel call = new StackPanel { Width = CallW, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 62, Side - 30, 0) };
+        private readonly StackPanel call = new StackPanel { MinWidth = CallW - 80, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 62, Side - 30, 0) };
         private readonly TextBlock callLabel = new TextBlock { FontSize = 12, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Body, HorizontalAlignment = HorizontalAlignment.Center };
         private readonly Grid callArt = new Grid { Height = 100, Margin = new Thickness(0, 10, 0, 0) };
         private readonly StackPanel callNums = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 16, 0, 0) };
@@ -81,7 +81,7 @@ namespace Selene
             // header: the title, then the numbers in a row
             var head = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, 56, 0, 0) };
             head.Children.Add(new TextBlock { Text = "Activity", FontSize = 44, FontFamily = Ui.Display, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor") });
-            var stats = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 34, 0, 0) };
+            var stats = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 72, 0, 0) };   // (centered between the title and the first row)
             stats.Children.Add(Stat(week.ToString(), week == 1 ? "GAME THIS WEEK" : "GAMES THIS WEEK", true));
             stats.Children.Add(Stat(month.ToString(), month == 1 ? "GAME THIS MONTH" : "GAMES THIS MONTH", false));
             stats.Children.Add(Stat(total < 3600 ? GameFacts.Hours(total) : (int)TimeSpan.FromSeconds(total).TotalHours + " h", "PLAY TIME", false));
@@ -136,13 +136,11 @@ namespace Selene
                     about += "  \u00B7  " + (diff == 0 ? "as much as " + before : Math.Abs(diff) + "% " + (diff > 0 ? "more" : "less") + " than " + before);
                 }
                 if (monthGames.Count > 0) about += "  \u00B7  most in " + monthGames[0].Name;
-                ulong monthTop = monthGames.Count > 0 ? monthNow[monthGames[0].Id] : 1;
-                AddRow(DateTime.Today.ToString("MMMM") + " so far", monthGames, g => GameFacts.Hours(monthNow[g.Id]), g => (double)monthNow[g.Id] / Math.Max(1, monthTop), about);
+                AddRow(DateTime.Today.ToString("MMMM") + " so far", monthGames, g => GameFacts.Hours(monthNow[g.Id]), null, about);
             }
-            ulong maxSecs = most.Count > 0 ? GameFacts.Seconds(most[0]) : 1;
-            AddRow("Most played", most, g => GameFacts.Hours(GameFacts.Seconds(g)), g => (double)GameFacts.Seconds(g) / Math.Max(1, maxSecs));
+                        AddRow("Most played", most, g => GameFacts.Hours(GameFacts.Seconds(g)), null);
             AddRow("Played last", recent, g => GameFacts.Ago(GameFacts.LastPlayed(g)), null);
-            AddRow("Pick up again", again, g => "Last " + GameFacts.Ago(GameFacts.LastPlayed(g)).ToLowerInvariant() + " · " + GameFacts.Hours(GameFacts.Seconds(g)), null);
+            AddRow("Pick up again", again, g => GameFacts.Ago(GameFacts.LastPlayed(g)), null);   // (its hours: in the panel)
             AddRow("Still waiting", waiting, g => g.IsInstalled ? "Installed, never played" : "Never played", null);
             if (rows.Count == 0)
                 Root.Children.Add(new TextBlock { Text = "Nothing played yet. Your most played and last played games show here.", FontSize = 21, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(Side, RowTop + 20, 0, 0) });
@@ -187,10 +185,10 @@ namespace Selene
                     words.Children.Add(shareBar);
                     words.Width = 130;
                     callNums.Children.Add(part);
-                    if (last.HasValue) callNums.Children.Add(Stat(GameFacts.Ago(last), "LAST PLAYED", false));
                 }
                 else callNums.Children.Add(Stat(g.IsInstalled ? "Installed" : "Not installed", "NEVER PLAYED", true));
                 callMore.Children.Clear();
+                if (last.HasValue) callMore.Children.Add(Line(null, "Last played " + GameFacts.Ago(last).ToLowerInvariant()));
                 int count; ulong longest, average;
                 if (Sessions.Facts(g.Id, out count, out longest, out average))
                     callMore.Children.Add(Line(null, (count == 1 ? "1 session" : count + " sessions") + "  \u00B7  longest " + GameFacts.Hours(longest) + "  \u00B7  about " + GameFacts.Hours(average) + " each"));
@@ -215,7 +213,7 @@ namespace Selene
         // and the streak over it
         private static StackPanel WeekChart(ulong[] days, int streak)
         {
-            var box = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(990, 118, 0, 0) };
+            var box = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(990, 166, 0, 0) };
             ulong week = 0; foreach (var d in days) week += d;
             string label = "THIS WEEK  \u00B7  " + (week > 0 ? GameFacts.Hours(week).ToUpperInvariant() : "NOTHING YET");
             if (streak > 1) label += "  \u00B7  " + streak + " DAYS IN A ROW";
