@@ -327,6 +327,22 @@ namespace Selene
             t.Start();
         }
 
+        // closes the layer and does something on the home once it has really gone (picking a game on Spotlight while a full
+        // screen was still fading away lost the pick to the row's own guard, and the home showed no art: it was still covered)
+        public static void FinishThen(Action then)
+        {
+            Finish();
+            int waited = 0;
+            var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+            t.Tick += (s, e) =>
+            {
+                if (loginRoot != null && loginRoot.IsVisible && ++waited < 40) return;
+                t.Stop();
+                then();
+            };
+            t.Start();
+        }
+
         // signing in changes the home (new profile, its favorites): it starts fresh instead of as it was
         public static void HomeChanged() { keepHome = false; }
 

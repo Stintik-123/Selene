@@ -270,8 +270,8 @@ namespace Selene
             var g = results[i];
             Ui.Confirm();
             LoginScene.ForgetReturnFocus();   // the pick gets the focus, not what had it before the search
-            LoginScene.Finish();
-            HomeNav.ShowGame(g.Id);
+            var id = g.Id;
+            LoginScene.FinishThen(() => HomeNav.ShowGame(id));
         }
 
         public override void Handle(string b)

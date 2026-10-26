@@ -226,8 +226,8 @@ namespace Selene
                     if (g == null) return;
                     Ui.Confirm();
                     LoginScene.ForgetReturnFocus();   // the pick gets the focus on Spotlight
-                    LoginScene.Finish();
-                    HomeNav.ShowGame(g.Id);
+                    var id = g.Id;
+                    LoginScene.FinishThen(() => HomeNav.ShowGame(id));
                     return;
                 case "X":
                     if (g == null) return;

@@ -247,8 +247,8 @@ namespace Selene
                     if (spinning || pick == null) return;
                     Ui.Confirm();
                     LoginScene.ForgetReturnFocus();
-                    LoginScene.Finish();
-                    HomeNav.ShowGame(pick.Id);
+                    var pickId = pick.Id;
+                    LoginScene.FinishThen(() => HomeNav.ShowGame(pickId));
                     return;
             }
         }
