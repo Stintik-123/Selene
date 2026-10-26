@@ -280,7 +280,8 @@ namespace Selene
                 }
                 strip.Children.Add(item);
                 list.Add(t);
-                if (r < Visible && i < Across) Ui.Rise(item, 140 + r * 60 + i * 35, 14, 300);
+                // every cover rises, left to right (the ones past the screen's edge came at once, before the rest); quick
+                if (r < Visible) Ui.Rise(item, 40 + r * 40 + Math.Min(i, Across) * 18, 12, 240);
             }
             // the lane the row slides in: cut off just left of the margin with a soft edge (the covers slid past hung over the
             // screen's edge), room around for the focus ring

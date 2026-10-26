@@ -235,7 +235,7 @@ namespace Selene
             var ordered = Order(allSets).Where(rowOf.ContainsKey).ToList();
             list.Children.Clear(); games.Clear(); gameRows.Clear();
             foreach (var g in ordered) { games.Add(g); gameRows.Add(rowOf[g]); list.Children.Add(rowOf[g]); }
-            for (int i = 0; i < Math.Min(5, gameRows.Count); i++) Ui.Rise(gameRows[i], i * 35, 10, 220);
+            list.Opacity = 0; Ui.Fade(list, 1, 180);   // (a quick fade: the rows rising again left them soft)
             zone = 1; row = 0;
             scroller.ScrollToVerticalOffset(0);
             ShowFocus(false);
@@ -375,7 +375,7 @@ namespace Selene
                 var r = new Border { Child = line, CornerRadius = new CornerRadius(18), Padding = new Thickness(14, 12, 26, 12), Margin = new Thickness(0, 0, 0, 8), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Ink.Brush("SeleneGlassColor", 0.55) };
                 list.Children.Add(r);
                 gameRows.Add(r);
-                if (i < 5) Ui.Rise(r, 200 + i * 40, 12, 280);
+                if (i < 5 && from == 0) Ui.Rise(r, 60 + i * 30, 12, 240);
             }
             if (files.Count == 0) return;
             Ui.LoadInOrder(files, 160, (k, pic) =>
