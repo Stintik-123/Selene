@@ -190,7 +190,7 @@
 
                                 <!-- who made it, and the scores -->
                                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="2,16,0,0">
-                                    <TextBlock FontSize="17" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk90Brush}" VerticalAlignment="Center" Margin="0,0,18,0">
+                                    <TextBlock x:Name="SeleneDevelopers" FontSize="17" FontFamily="Segoe UI" Foreground="{DynamicResource SeleneInk90Brush}" VerticalAlignment="Center" Margin="0,0,18,0">
                                         <Run Text="{Binding Developers, Converter={StaticResource ListToStringConverter}, Mode=OneWay}"/>
                                     </TextBlock>
                                     <Border>

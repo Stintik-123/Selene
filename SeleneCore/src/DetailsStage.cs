@@ -180,9 +180,25 @@ namespace Selene
             return Regex.Replace(s, @"^(\s*<br\s*/?>)+", "", RegexOptions.IgnoreCase).Trim();
         }
 
+        // who made it, without the company's legal ending ("IO Interactive A/S", "Valve Corporation", "Ubisoft Inc.")
+        private static void FillDevelopers(Game g)
+        {
+            var line = Part<TextBlock>("SeleneDevelopers");
+            if (line == null) return;
+            var names = (g.Developers ?? new List<Company>()).Where(c => c != null && !string.IsNullOrWhiteSpace(c.Name)).Select(c => PlainCompany(c.Name)).Distinct().ToList();
+            line.Text = string.Join(", ", names);
+        }
+
+        internal static string PlainCompany(string name)
+        {
+            var s = Regex.Replace(name.Trim(), @"[,\s]+(A/S|AS|AB|ApS|Inc\.?|Incorporated|Ltd\.?|Limited|LLC|L\.L\.C\.|GmbH|AG|S\.?A\.?S?|S\.r\.l\.|SRL|Co\.,?\s*Ltd\.?|Co\.|Corp\.?|Corporation|Pty\.?\s*Ltd\.?|K\.K\.|B\.V\.|BV|Oy|Sp\.\s*z\s*o\.o\.|PLC|plc)$", "", RegexOptions.IgnoreCase).Trim().TrimEnd(',');
+            return s.Length > 0 ? s : name.Trim();
+        }
+
         private static void Fill(Game g)
         {
             FillDescription(g);
+            FillDevelopers(g);
             FillShots();
             FillCaptures(g);
             FillActivity(g);
@@ -464,6 +480,7 @@ namespace Selene
                 Ui.Tick();
                 Glide();
                 ShowFocus();
+                FocusBand();   // the keyboard focus leaves the buttons too (Play stayed lit with the screenshots chosen)
                 return true;
             }
             var list = tiles[zone - 1];
