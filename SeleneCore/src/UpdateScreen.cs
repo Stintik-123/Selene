@@ -49,7 +49,10 @@ namespace Selene
             // the right stick scrolls a long one, smoothly
             var notesScroll = new ScrollViewer { Content = notes, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false, CanContentScroll = false };
             stick = new StickScroll(notesScroll, () => !closed);
-            notesScroll.OpacityMask = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Colors.Black, 0), new GradientStop(Colors.Black, 0.85), new GradientStop(Color.FromArgb(0x30, 0, 0, 0), 1) }, 90);
+            // the words fade at an edge only with more past it: the foot while there's more below, the top once scrolled
+            var fadeTop = new GradientStop(Colors.Black, 0); var top2 = new GradientStop(Colors.Black, 0.12);
+            var bottom2 = new GradientStop(Colors.Black, 0.88); var fadeBottom = new GradientStop(Colors.Black, 1);
+            notesScroll.OpacityMask = new LinearGradientBrush(new GradientStopCollection { fadeTop, top2, bottom2, fadeBottom }, 90);
             // a slim bar at the right: there's more, and where you are in it (only when it scrolls)
             var thumb = new Border { Width = 4, CornerRadius = new CornerRadius(2), Background = Ink.Brush("SeleneInkColor", 0.6), VerticalAlignment = VerticalAlignment.Top };
             var track = new Grid { Width = 4, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, -16, 0), Visibility = Visibility.Collapsed };
@@ -58,6 +61,8 @@ namespace Selene
             notesScroll.ScrollChanged += (sv, e) =>
             {
                 bool more = notesScroll.ScrollableHeight > 1 && notesScroll.ExtentHeight > 0;
+                fadeTop.Color = more && notesScroll.VerticalOffset > 1 ? Color.FromArgb(0x10, 0, 0, 0) : Colors.Black;
+                fadeBottom.Color = more && notesScroll.VerticalOffset < notesScroll.ScrollableHeight - 1 ? Color.FromArgb(0x10, 0, 0, 0) : Colors.Black;
                 track.Visibility = more ? Visibility.Visible : Visibility.Collapsed;
                 if (!more) return;
                 double h = notesScroll.ViewportHeight, size = Math.Max(24, h * h / notesScroll.ExtentHeight);

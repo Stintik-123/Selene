@@ -4,6 +4,7 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- The new-version card comes first: Selene looks for an update right at start, and a progress card (the library update...) steps aside for it and comes back after.
 - When a newer Selene is out, the menu's Update icon carries a red dot. On the Update screen the right stick scrolls a long list of what's new.
 - The right stick scrolls a game's description smoothly (on every frame, easing in and out; it moved in uneven steps).
 - Notification cards are slimmer (lower, narrower, a smaller icon and words), and a note (a new version, achievements...) stays 6 seconds before a progress card takes its place (the library update's card replaced the new-version note within a second).

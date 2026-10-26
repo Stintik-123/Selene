@@ -28,7 +28,7 @@ namespace Selene
             var dev = Path.Combine(Path.GetTempPath(), "selene-dev-update");
             bool pretend = File.Exists(dev);
             if (pretend) try { File.Delete(dev); } catch { }
-            var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(pretend ? 6 : 30) };
+            var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };   // (early: its card goes before the library update's)
             t.Tick += (s, e) => { t.Stop(); Check(pretend); };
             t.Start();
         }
@@ -80,7 +80,7 @@ namespace Selene
             if (!pretend && !IsNewer(newest)) return;
             Available = newest; Notes = notes; Preview = pretend;
             if (!pretend && newest == told) return;   // (told once; the menu's Update item stays)
-            ProgressToast.ShowNote("Selene " + newest + " is available", "Press Start, then Update.", 0xE923 /* update */);
+            ProgressToast.ShowNote("Selene " + newest + " is available", "Press Start, then Update.", 0xE923 /* update */, true);   // (before any task's card)
         }
 
         // Selene settings > Check for updates: looks now; the Update screen when there's one, else a note

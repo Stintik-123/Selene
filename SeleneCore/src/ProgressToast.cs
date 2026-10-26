@@ -771,14 +771,22 @@ namespace Selene
 
         // a short note of Selene's own (a new version is out...): the usual card with an icon, a bold line and a line under it,
         // held for a few seconds
-        public static void ShowNote(string title, string line, int glyph)
+        public static void ShowNote(string title, string line, int glyph) { ShowNote(title, line, glyph, false); }
+
+        // first: a note that goes before any task's card (a new Selene): the task's card steps aside for it and comes back after
+        public static void ShowNote(string title, string line, int glyph, bool first)
         {
             var main = Application.Current.MainWindow;
             if (main == null) return;
-            if (source != null || !Ready || swapping) { Later(1500, () => ShowNote(title, line, glyph)); return; }   // a task's card up, or the start-up: after it
+            if ((source != null && !first) || !Ready || swapping) { Later(first ? 300 : 1500, () => ShowNote(title, line, glyph, first)); return; }   // a task's card up, or the start-up: after it
+            if (first && source != null)
+            {
+                var task = source;
+                Later(NoteHoldMs + 400, () => { if (ReferenceEquals(source, task) && Equals(displayed, title)) { HomeNav.Log("card: back to " + TaskText(task)); Show(main, task); } });
+            }
             if (layer == null) Build();
-            if (NoteHoldLeft > 0) { Later(NoteHoldLeft + 50, () => ShowNote(title, line, glyph)); return; }   // (the note up keeps its time)
-            if (layer.Visibility == Visibility.Visible && !leaving) { SwapOut(() => ShowNote(title, line, glyph)); return; }
+            if (NoteHoldLeft > 0) { Later(NoteHoldLeft + 50, () => ShowNote(title, line, glyph, first)); return; }   // (the note up keeps its time)
+            if (layer.Visibility == Visibility.Visible && !leaving) { SwapOut(() => ShowNote(title, line, glyph, first)); return; }
             Place(main);
             Shape(false);
             displayed = title;
