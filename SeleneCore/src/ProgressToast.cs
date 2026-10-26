@@ -302,9 +302,11 @@ namespace Selene
             if (swapping) return;
             swapping = true;
             if (leaveTimer != null) leaveTimer.Stop();
-            var slide = new DoubleAnimation(OffEdge, TimeSpan.FromMilliseconds(200)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+            var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
+            var slide = Ui.Fast(new DoubleAnimation(PeekIn, TimeSpan.FromMilliseconds(180)) { EasingFunction = easeIn });
             slide.Completed += (s, e) => { swapping = false; layer.Visibility = Visibility.Collapsed; then(); };
             slideIn.BeginAnimation(TranslateTransform.XProperty, slide);
+            card.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, TimeSpan.FromMilliseconds(180)) { EasingFunction = easeIn }));
         }
 
         // ---- not over the start-up: the home up and its intro done ----
@@ -385,7 +387,8 @@ namespace Selene
                 Background = glass, BorderBrush = Ink.Brush("SeleneInkColor", 0.08), BorderThickness = new Thickness(1),   // see-through
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 30, Opacity = 0.45, Color = Colors.Black },
                 Child = row, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(ShadowRoom, ShadowRoom, Edge, ShadowRoom), RenderTransform = slideIn
+                Margin = new Thickness(ShadowRoom, ShadowRoom, Edge, ShadowRoom), RenderTransform = slideIn,
+                CacheMode = new BitmapCache { SnapsToDevicePixels = true }   // drawn once: the shadow's blur wasn't redrawn every frame of a slide
             };
             layer = new Grid
             {
@@ -581,14 +584,34 @@ namespace Selene
 
         // task and note cards: solid, sliding the whole way in and out past the right edge (the layer clips there)
         private static bool sessionCard;
-        private static double OffEdge { get { return Math.Max(card.ActualWidth, 360) + Edge + ShadowRoom; } }
 
         private static void SlideIn()
         {
             sessionCard = false;
-            card.BeginAnimation(UIElement.OpacityProperty, null);
-            card.Opacity = 1;
-            slideIn.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(OffEdge, 0, TimeSpan.FromMilliseconds(300)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            Sharpen();
+            // as a console's: a short quick slide from the right with a fade, the fade over in the first moments (so it's only
+            // see-through for a blink), at the screen's own rate
+            slideIn.BeginAnimation(TranslateTransform.XProperty, Ui.Fast(new DoubleAnimation(PeekIn, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } }));
+            card.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(150)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } }));
+        }
+
+        private const double PeekIn = 40;   // how far a card slides in and out
+
+        // the card's texture at the size it really has on the screen (Playnite scales its whole window to the display, and
+        // the display may scale too): drawn at 1:1 its words went soft
+        private static void Sharpen()
+        {
+            try
+            {
+                var cache = card.CacheMode as BitmapCache;
+                var root = Application.Current.MainWindow;
+                var src = root != null ? PresentationSource.FromVisual(root) : null;
+                if (cache == null || src == null || !card.IsDescendantOf(root)) return;
+                var t = card.TransformToAncestor(root);
+                double scale = Math.Abs(t.Transform(new Point(100, 0)).X - t.Transform(new Point(0, 0)).X) / 100 * src.CompositionTarget.TransformToDevice.M11;
+                cache.RenderAtScale = Math.Max(1, Math.Min(4, scale));
+            }
+            catch { }
         }
 
         private static void Leave()
@@ -596,8 +619,8 @@ namespace Selene
             if (source != null || layer == null) return;
             leaving = true;
             var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
-            var slide = sessionCard ? new DoubleAnimation(Drift, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn }
-                                    : new DoubleAnimation(OffEdge, TimeSpan.FromMilliseconds(260)) { EasingFunction = easeIn };
+            var slide = Ui.Fast(sessionCard ? new DoubleAnimation(Drift, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn }
+                                            : new DoubleAnimation(PeekIn, TimeSpan.FromMilliseconds(200)) { EasingFunction = easeIn });
             slide.Completed += (s, e) =>
             {
                 if (!leaving) return;   // a new task brought it back meanwhile
@@ -609,7 +632,7 @@ namespace Selene
                 fill.BeginAnimation(FrameworkElement.WidthProperty, null); fill.Width = 0;
             };
             slideIn.BeginAnimation(TranslateTransform.XProperty, slide);
-            if (sessionCard) card.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(OutMs)) { EasingFunction = easeIn });
+            card.BeginAnimation(UIElement.OpacityProperty, Ui.Fast(new DoubleAnimation(0, TimeSpan.FromMilliseconds(sessionCard ? OutMs : 200)) { EasingFunction = easeIn }));
         }
 
         // Playnite's dim layer off now (it was switched on as the progress window loaded, before Selene saw it)
