@@ -814,6 +814,7 @@ namespace Selene
             Log("dev blank: root opacity 0 (as behind a game)");
         }
         public static void DevCycleFilter(int dir) { CycleRowFilter(dir); }
+        public static void DevGuide() { Log("dev guide: as the Guide button"); GoHomeFromGuide(); }
         public static void DevFront()
         {
             var w = Application.Current.MainWindow;
@@ -3588,7 +3589,7 @@ namespace Selene
         private static bool PlayniteInFront()
         {
             // (a hidden test desktop never has Windows' foreground window: there, Playnite's active window counts)
-            if (Isolated) { var mw = Application.Current.MainWindow; return mw != null && mw.IsActive; }
+            if (Isolated && GetForegroundWindow() == IntPtr.Zero) { var mw = Application.Current.MainWindow; return mw != null && mw.IsActive; }
             uint pid;
             GetWindowThreadProcessId(GetForegroundWindow(), out pid);
             return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id;

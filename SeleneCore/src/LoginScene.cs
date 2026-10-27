@@ -205,6 +205,8 @@ namespace Selene
                 else if (step[1] == "blank") HomeNav.DevBlank();
                 else if (step[1] == "fakequit") HomeNav.BeginQuit();
                 else if (step[1] == "front?") HomeNav.DevFront();
+                else if (step[1] == "guide") HomeNav.DevGuide();
+                else if (step[1] == "helpersetup") LocalGames.DevSetUpHelper();
                 else if (step[1].StartsWith("filter:")) { int d; if (int.TryParse(step[1].Substring(7), out d)) HomeNav.DevCycleFilter(d); }
                 else if (step[1].StartsWith("type:") && current != null) current.Type(step[1].Substring(5));
                 else if (IsActive) HandleButton(step[1]);

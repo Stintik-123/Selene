@@ -353,6 +353,13 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("admin launcher failed: " + ex.Message); }
         }
 
+        // dev key "helpersetup": the helper's part of the after-game setup, without a game (tests)
+        public static void DevSetUpHelper()
+        {
+            helperDeclined = false;
+            try { SetUpAdmin(null); } catch (Exception ex) { HomeNav.Log("dev helper setup: " + ex.Message); }
+        }
+
         private static string Xml(string s) { return System.Security.SecurityElement.Escape(s ?? ""); }
 
         private static string TaskXml(string description, string exe, string args, string work, bool hidden)
@@ -376,7 +383,7 @@ namespace Selene
             var files = new List<string>();
             Action applyLauncher = null;
             // the game's launcher (a task that starts it with its rights, so Play never shows the Windows prompt again)
-            var play = g.GameActions != null ? g.GameActions.FirstOrDefault(a => a.IsPlayAction) : null;
+            var play = g != null && g.GameActions != null ? g.GameActions.FirstOrDefault(a => a.IsPlayAction) : null;   // (g null: the helper alone)
             if (play != null && play.Type == GameActionType.File && !string.IsNullOrWhiteSpace(play.Path) && !string.Equals(play.Path, Schtasks, StringComparison.OrdinalIgnoreCase))
             {
                 var dir = g.InstallDirectory ?? "";
@@ -414,7 +421,7 @@ namespace Selene
                 tasks.Add(HelperTaskName); tasks.Add(file); files.Add(file);
             }
             if (tasks.Count == 0) return;
-            HomeNav.Log("admin launcher: asking Windows once for " + g.Name + (wantHelper ? " and Selene's helper" : ""));
+            HomeNav.Log("admin launcher: asking Windows once for " + (g != null ? g.Name : "nothing but") + (wantHelper ? " and Selene's helper" : ""));
             try
             {
                 System.Diagnostics.ProcessStartInfo psi;
@@ -428,7 +435,7 @@ namespace Selene
                 else psi = new System.Diagnostics.ProcessStartInfo(Schtasks, "/create /tn \"" + tasks[0] + "\" /xml \"" + tasks[1] + "\" /f") { UseShellExecute = true, Verb = "runas", WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden };
                 using (var p = System.Diagnostics.Process.Start(psi)) p.WaitForExit(60000);
             }
-            catch (System.ComponentModel.Win32Exception) { declined.Add(g.Id); helperDeclined = true; HomeNav.Log("admin launcher: declined for " + g.Name); return; }
+            catch (System.ComponentModel.Win32Exception) { if (g != null) declined.Add(g.Id); helperDeclined = true; HomeNav.Log("admin launcher: declined for " + (g != null ? g.Name : "the helper")); return; }
             finally { foreach (var f in files) try { File.Delete(f); } catch { } }
             if (applyLauncher != null) applyLauncher();
             if (wantHelper)

@@ -6,8 +6,9 @@
 #   -Keys   button presses after start (selene-dev-keys: "menu", "A", "B", "DPadDown", "type:abc"...)
 #   -Shots  "10,20": seconds after start at which a picture of the test Playnite is saved as <Root>\shots\shot-<s>.png
 #   -Values "filtertabs=playnite;shade=1": Selene settings for the run
+#   -Visible on the real desktop instead (it takes the screen!); -Shots are then pictures of the whole main screen
 #   -Wait   seconds to let it run; still running then = closed by PID (the result says so)
-param([string]$Keys = "", [string]$Values = "", [int]$Wait = 40, [string]$Shots = "", [string]$Root = "$env:USERPROFILE\selene-fresh", [scriptblock]$Prep = $null,
+param([string]$Keys = "", [string]$Values = "", [switch]$Visible, [int]$Wait = 40, [string]$Shots = "", [string]$Root = "$env:USERPROFILE\selene-fresh", [scriptblock]$Prep = $null,
       [string[]]$Disable = @('PlayniteAudioSwitcher_708b6ec4-bf96-4c0d-bd9d-fe0aa04d6bf1', 'UniPlaySong.a1b2c3d4-e5f6-7890-abcd-ef1234567890'))
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
@@ -70,12 +71,21 @@ try {
     New-Item -ItemType Directory -Force $shotDir | Out-Null
 
     # ---- run it on the hidden desktop ----
-    $name = 'SeleneTest' + (Get-Random -Maximum 100000)
-    $desk = [HiddenDesk]::CreateDesktop($name, [IntPtr]::Zero, [IntPtr]::Zero, 0, 0x10000000 <# GENERIC_ALL #>, [IntPtr]::Zero)
-    if ($desk -eq [IntPtr]::Zero) { throw "CreateDesktop failed" }
     $env:TEMP = $temp; $env:TMP = $temp   # inherited: the test copy's own selene.log and dev switches
-    $procId = [HiddenDesk]::Start("WinSta0\$name", $exe, "`"$exe`" --masterinstance --nolibupdate", $pn, $false)
-    "started $procId on hidden desktop $name"
+    if ($Visible) {
+        $name = 'Default'
+        $procId = [HiddenDesk]::Start("WinSta0\Default", $exe, "`"$exe`" --masterinstance --nolibupdate", $pn, $false)
+        Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+        Add-Type -Namespace Dpi -Name U -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();'
+        [Dpi.U]::SetProcessDPIAware() | Out-Null
+        "started $procId on the real desktop (visible)"
+    } else {
+        $name = 'SeleneTest' + (Get-Random -Maximum 100000)
+        $desk = [HiddenDesk]::CreateDesktop($name, [IntPtr]::Zero, [IntPtr]::Zero, 0, 0x10000000 <# GENERIC_ALL #>, [IntPtr]::Zero)
+        if ($desk -eq [IntPtr]::Zero) { throw "CreateDesktop failed" }
+        $procId = [HiddenDesk]::Start("WinSta0\$name", $exe, "`"$exe`" --masterinstance --nolibupdate", $pn, $false)
+        "started $procId on hidden desktop $name"
+    }
     $t0 = Get-Date
     $exitedAt = $null
     $shotQueue = New-Object System.Collections.Generic.Queue[int]
@@ -87,6 +97,14 @@ try {
         while ($shotQueue.Count -gt 0 -and $secs -ge $shotQueue.Peek()) {
             $s = $shotQueue.Dequeue()
             $out = Join-Path $shotDir "shot-$s.png"
+            if ($Visible) {
+                $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+                $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+                $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size); $g.Dispose()
+                (New-Object System.Drawing.Bitmap $bmp, 1280, ([int](1280 * $b.Height / $b.Width))).Save($out, [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
+                "screen at $s s -> $out"
+                continue
+            }
             $ps = (Get-Command powershell).Source
             $slog = Join-Path $shotDir "shot-$s.log"
             $sp = [HiddenDesk]::Start("WinSta0\$name", $ps, "`"$ps`" -NoProfile -ExecutionPolicy Bypass -Command `"& '$PSScriptRoot\screenshot.ps1' '$out' 1280 $procId *> '$slog'`"", $repo, $true)

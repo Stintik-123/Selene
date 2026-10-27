@@ -93,6 +93,8 @@ namespace Selene
         {
             try
             {
+                if (w.Resources.Contains("SeleneQuitHidden")) return;   // (Activated and Loaded both bring it here: once per window)
+                w.Resources["SeleneQuitHidden"] = true;
                 w.BeginAnimation(UIElement.OpacityProperty, null);
                 w.Opacity = 0;
                 double left = w.Left, top = w.Top, width = w.ActualWidth, height = w.ActualHeight;
