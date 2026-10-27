@@ -4,8 +4,12 @@
 // starts that task when it needs it; the task runs this with the game's rights.
 //
 // Requests are lines in %LOCALAPPDATA%\Selene\elevated.txt, written by Selene Core just before the task starts:
-//   focus <hwnd>    bring that window (Playnite's) to the front
-//   close <pid>     close that process (its window first, ended if it is still there after 4 s)
+//   focus <hwnd>         bring that window (Playnite's) to the front
+//   close <pid>          close that process (its window first, ended if it is still there after 4 s)
+//   freeze <pid> <hwnd>  Home while playing: the game's window minimized (so Windows doesn't ghost it), then the game suspended
+//   thaw <pid> <hwnd>    back to the game: resumed, its window restored and given the screen
+// While a game is frozen the helper stays running and looks at the request file every 20 ms, so going back is instant;
+// it thaws everything when Playnite is gone (closed, crashed) or after 30 minutes without a word.
 //
 // Command line:   (none)                                        handle the request file, then exit
 //                 install <task> <xml> [<task> <xml> ...]       register scheduled tasks from XML files (run elevated by
@@ -64,15 +68,62 @@ namespace Selene
         // ---- requests ----
         // The task is set to ignore a second start while one runs, so after the file is handled this keeps looking for
         // a request that arrived meanwhile, for a short while.
+        private static readonly Dictionary<int, IntPtr> frozen = new Dictionary<int, IntPtr>();
+
         private static void HandleRequests()
         {
             var idleSince = Environment.TickCount;
-            while (Environment.TickCount - idleSince < 1200)
+            int lastPlayniteCheck = 0;
+            while (true)
             {
                 var lines = TakeRequests();
                 if (lines.Count > 0) { Handle(lines); idleSince = Environment.TickCount; }
-                Thread.Sleep(100);
+                int idle = Environment.TickCount - idleSince;
+                if (frozen.Count == 0) { if (idle >= 1200) break; Thread.Sleep(100); continue; }
+                // a game is frozen: never left that way
+                if (Environment.TickCount - lastPlayniteCheck > 2000)
+                {
+                    lastPlayniteCheck = Environment.TickCount;
+                    if (Process.GetProcessesByName("Playnite.FullscreenApp").Length == 0 && Process.GetProcessesByName("Playnite.DesktopApp").Length == 0)
+                    { Log("Playnite is gone: thawing " + frozen.Count + " game(s)"); ThawAll(); break; }
+                }
+                if (idle > 30 * 60 * 1000) { Log("30 minutes without a request: thawing"); ThawAll(); break; }
+                Thread.Sleep(20);
             }
+        }
+
+        private static void ThawAll()
+        {
+            foreach (var kv in new List<KeyValuePair<int, IntPtr>>(frozen)) Thaw(kv.Key, kv.Value, false);
+        }
+
+        private static void Freeze(int pid, IntPtr hwnd)
+        {
+            if (hwnd != IntPtr.Zero && IsWindow(hwnd))
+            {
+                ShowWindow(hwnd, 7);   // SW_SHOWMINNOACTIVE
+                for (int i = 0; i < 25 && !IsIconic(hwnd); i++) Thread.Sleep(20);
+            }
+            var h = OpenProcess(0x0800 /* PROCESS_SUSPEND_RESUME */, false, pid);
+            if (h == IntPtr.Zero) { Log("freeze " + pid + ": can't open the process"); return; }
+            int r;
+            try { r = NtSuspendProcess(h); } finally { CloseHandle(h); }
+            if (r == 0) frozen[pid] = hwnd;
+            Log("freeze " + pid + ": " + (r == 0 ? "frozen" : "failed (" + r + ")") + (hwnd != IntPtr.Zero ? ", minimized=" + IsIconic(hwnd) : ""));
+        }
+
+        private static void Thaw(int pid, IntPtr hwnd, bool focus)
+        {
+            var h = OpenProcess(0x0800, false, pid);
+            int r = -1;
+            if (h != IntPtr.Zero) { try { r = NtResumeProcess(h); } finally { CloseHandle(h); } }
+            frozen.Remove(pid);
+            if (hwnd != IntPtr.Zero && IsWindow(hwnd))
+            {
+                if (IsIconic(hwnd)) ShowWindowAsync(hwnd, 9);   // SW_RESTORE, async: never wait on a window still waking up
+                if (focus) ForceForeground(hwnd);
+            }
+            Log("thaw " + pid + ": " + (r == 0 ? "resumed" : "resume failed (" + r + ")") + (focus && hwnd != IntPtr.Zero ? ", game in front=" + (GetForegroundWindow() == hwnd) : ""));
         }
 
         private static List<string> TakeRequests()
@@ -115,6 +166,14 @@ namespace Selene
                         if (pr.MainWindowHandle != IntPtr.Zero) pr.CloseMainWindow();
                     }
                     catch (Exception ex) { Log("close " + pid + ": " + ex.Message); }
+                }
+                else if (l.StartsWith("freeze ") || l.StartsWith("thaw "))
+                {
+                    var parts = l.Split(' ');
+                    int pid; long hw = 0;
+                    if (parts.Length < 2 || !int.TryParse(parts[1], out pid)) continue;
+                    if (parts.Length >= 3) long.TryParse(parts[2], out hw);
+                    if (parts[0] == "freeze") Freeze(pid, new IntPtr(hw)); else Thaw(pid, new IntPtr(hw), true);
                 }
                 else Log("unknown request: " + l);
             }
@@ -164,6 +223,13 @@ namespace Selene
         [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
         [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint from, uint to, bool attach);
         [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+        [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hwnd, int cmd);
+        [DllImport("user32.dll")] private static extern bool ShowWindowAsync(IntPtr hwnd, int cmd);
+        [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
+        [DllImport("kernel32.dll")] private static extern IntPtr OpenProcess(int access, bool inherit, int pid);
+        [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr h);
+        [DllImport("ntdll.dll")] private static extern int NtSuspendProcess(IntPtr h);
+        [DllImport("ntdll.dll")] private static extern int NtResumeProcess(IntPtr h);
 
         private static void SendVk(ushort vk, bool down)
         {

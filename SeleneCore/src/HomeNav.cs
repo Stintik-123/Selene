@@ -806,6 +806,7 @@ namespace Selene
         public static void GameEnded()
         {
             gameEndedAt = DateTime.Now;
+            guideAtHome = false;
             var app = Application.Current;
             if (app == null) return;
             app.Dispatcher.BeginInvoke(new Action(() =>
@@ -5078,9 +5079,9 @@ namespace Selene
             var root = w.Content as FrameworkElement;
             if (root == null) { RemoveSnapAdorner(); return; }
             // a gentle curve over a little longer than a tap's feedback: a whole-screen change read as a jump with the sharper one
-            var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
-            var gameOut = TimeSpan.FromMilliseconds(420);
-            var homeIn = TimeSpan.FromMilliseconds(500);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var gameOut = TimeSpan.FromMilliseconds(240);
+            var homeIn = TimeSpan.FromMilliseconds(300);
             root.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
             var fadeIn = new DoubleAnimation(0, 1, homeIn) { EasingFunction = ease };
             fadeIn.Completed += (s, e) => root.CacheMode = null;
@@ -5176,6 +5177,8 @@ namespace Selene
         private static bool leftFromHub = true;  // where Playnite was when it lost focus (game start): hub or library
         private static IntPtr gameWindow = IntPtr.Zero;
         private static bool guideSwitching;  // GoHomeFromGuide runs its own enter animation
+        private static bool guideAtHome;      // Home put Selene over the running game: the next press goes back to it
+        private static int guideSeq;          // each Home press: timers of an older one leave the screen alone
         // Games that just started often pull themselves to the front once more (PoE2 did ~3 s after Guide brought
         // Playnite up). For a few seconds after Guide, a jump back by the game's own process is undone.
         private static DateTime stealGuardUntil = DateTime.MinValue;
@@ -5230,6 +5233,12 @@ namespace Selene
                 if (name == null || proc == "explorer" || proc == "shellexperiencehost" || proc == "startmenuexperiencehost" || proc == "searchhost")
                 {
                     Log("pause skipped: " + (name == null ? "no game running" : proc));
+                    return;
+                }
+                // a game run as administrator: frozen by Selene's helper (Selene itself may not minimize or suspend it)
+                if (Features.On("freeze") && LocalGames.IsElevated((int)pid) && (LocalGames.HelperReady || !string.IsNullOrWhiteSpace(SelenePaths.HelperTask)))
+                {
+                    GamePause.PauseViaHelper((int)pid, name ?? "", gameWindow);
                     return;
                 }
                 // freezing switched off: every game is treated like an online one (only muted)
@@ -6578,6 +6587,7 @@ namespace Selene
             var target = gameWindow;
             var root = w.Content as FrameworkElement;
             CloseSnapWindow(); RemoveSnapAdorner();
+            GamePause.Resume();   // at once: the game wakes (and a helper-frozen one comes back) while Selene fades
             StopStealGuard(w);  // the user asked for the game
             HidePreview();
             Action go = () =>
@@ -6602,7 +6612,7 @@ namespace Selene
             };
             if (root == null) { go(); return; }
             var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
-            var dur = TimeSpan.FromMilliseconds(220);
+            var dur = TimeSpan.FromMilliseconds(160);
             root.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
             var fade = new DoubleAnimation(0, dur) { EasingFunction = ease, FillBehavior = FillBehavior.HoldEnd };
             fade.Completed += (s, e) => { root.CacheMode = null; go(); };
@@ -6819,7 +6829,7 @@ namespace Selene
                         }
                     }
                     catch (Exception ex) { Log("guide watcher stopped: " + ex.Message); return; }
-                    if (down && !wasDown && (DateTime.Now - last).TotalMilliseconds > 600)
+                    if (down && !wasDown && (DateTime.Now - last).TotalMilliseconds > 200)
                     {
                         last = DateTime.Now;
                         dispatcher.BeginInvoke(new Action(GoHomeFromGuide));
@@ -7010,6 +7020,10 @@ namespace Selene
                 var hwnd = new System.Windows.Interop.WindowInteropHelper(w).Handle;
                 DisableWindowTransitions(hwnd);
                 if (launching) { Log("guide ignored: game still loading"); return; }  // stay on the loading screen until the game starts
+                // Home brought Selene up over the game: the next press goes back, even while Selene is still coming forward
+                // (Windows hadn't handed Selene the screen yet, so that press was taken for "go home" again and did nothing)
+                if (guideAtHome && gameWindow != IntPtr.Zero && GetForegroundWindow() == gameWindow && !IsIconic(gameWindow)) guideAtHome = false;   // went back some other way
+                if (guideAtHome && CanReturnToGame()) { guideAtHome = false; guideSeq++; ReturnToGame(w); return; }
                 bool wasBehind = GetForegroundWindow() != hwnd;
                 if (!wasBehind && CanReturnToGame()) { ReturnToGame(w); return; }  // like the PS button: toggle back
                 if (wasBehind && ForegroundIsAdmin() && string.IsNullOrWhiteSpace(SelenePaths.HelperTask) && !LocalGames.HelperReady)
@@ -7021,6 +7035,8 @@ namespace Selene
                 }
                 if (wasBehind)
                 {
+                    guideAtHome = true;
+                    var seq = ++guideSeq;
                     guideSwitching = true;
                     // the game's picture over everything at once (or black when it can't be pictured): no desktop, no taskbar
                     bool adminGame = ForegroundIsAdmin();
@@ -7047,7 +7063,7 @@ namespace Selene
                     focusCheck.Tick += (sf, ef) =>
                     {
                         focusCheck.Stop();
-                        if (PlayniteInFront() || helperAsked) return;
+                        if (PlayniteInFront() || helperAsked || seq != guideSeq) return;
                         // Windows won't let a normal program take the focus from one running as administrator: Playnite was
                         // on screen but deaf to the controller until the mouse was clicked
                         Log("guide: focus refused (game running as admin?) -> admin helper");
@@ -7081,6 +7097,7 @@ namespace Selene
                     {
                         if (revealed) return;
                         revealed = true;
+                        if (seq != guideSeq) { CompositionTarget.Rendering -= reveal; return; }   // already back in the game
                         CompositionTarget.Rendering -= reveal;
                         SetCloak(cloakHwnd, false);
                         HideShield();
@@ -7091,7 +7108,7 @@ namespace Selene
                     reveal = (s2, e2) => { if (++frames >= 3 && PlayniteInFront()) doReveal(); };
                     CompositionTarget.Rendering += reveal;
                     var safety = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };
-                    safety.Tick += (s3, e3) => { safety.Stop(); if (!revealed) Log("guide: Selene not in front after 2 s -> shown anyway"); doReveal(); };  // never stay invisible
+                    safety.Tick += (s3, e3) => { safety.Stop(); if (!revealed && seq == guideSeq) Log("guide: Selene not in front after 2 s -> shown anyway"); doReveal(); };  // never stay invisible
                     safety.Start();
                     guideSwitching = false;
                     PauseRunningGame();
