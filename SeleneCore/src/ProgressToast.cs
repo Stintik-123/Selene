@@ -86,9 +86,7 @@ namespace Selene
         // Playnite's progress window draws its first frame (an opaque dark screen) before it is Loaded: it is made invisible as
         // it activates, which comes first (the black flash before the card)
         // Playnite closing: its progress window stays invisible and off the screen
-        // Playnite's "Closing Playnite" screen is kept out of sight (it only flashed up), but a close that takes long (an add-on
-        // slow to stop, a download that won't cancel) showed nothing but black (#27, #26): after 3 s it is brought back,
-        // dressed, so the wait is seen for what it is
+        // Playnite's "Closing Playnite" screen is never shown: quitting looks instant, Playnite closes out of sight
         public static void HideForQuit(Window w)
         {
             try
@@ -97,25 +95,9 @@ namespace Selene
                 w.Resources["SeleneQuitHidden"] = true;
                 w.BeginAnimation(UIElement.OpacityProperty, null);
                 w.Opacity = 0;
-                double left = w.Left, top = w.Top, width = w.ActualWidth, height = w.ActualHeight;
                 var hwnd = new WindowInteropHelper(w).Handle;
                 if (hwnd != IntPtr.Zero) SetWindowPos(hwnd, IntPtr.Zero, -32000, -32000, 1, 1, 0x0010 | 0x0004 | 0x0200);
-                var stall = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-                stall.Tick += (s, e) =>
-                {
-                    stall.Stop();
-                    try
-                    {
-                        if (PresentationSource.FromVisual(w) == null) return;   // closed meanwhile: the normal case
-                        HomeNav.Log("quit: closing is taking long -> Playnite's closing screen shown");
-                        DialogLook.DressProgress(w);
-                        if (width > 1 && height > 1) { w.Width = width; w.Height = height; }
-                        w.Left = left; w.Top = top;
-                        w.Opacity = 1;
-                    }
-                    catch (Exception ex) { HomeNav.Log("quit: showing the closing screen failed: " + ex.Message); }
-                };
-                stall.Start();
+                HomeNav.HideForQuit(w);   // cloaked, and the focus stays with what had the screen
             }
             catch (Exception ex) { HomeNav.Log("quit: hiding the closing screen failed: " + ex.Message); }
         }

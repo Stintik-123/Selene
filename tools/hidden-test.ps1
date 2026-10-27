@@ -6,9 +6,10 @@
 #   -Keys   button presses after start (selene-dev-keys: "menu", "A", "B", "DPadDown", "type:abc"...)
 #   -Shots  "10,20": seconds after start at which a picture of the test Playnite is saved as <Root>\shots\shot-<s>.png
 #   -Values "filtertabs=playnite;shade=1": Selene settings for the run
+#   -Relaunch <s>: a second, normal start of the test Playnite <s> seconds in (as a user starting it again right after quitting)
 #   -Visible on the real desktop instead (it takes the screen!); -Shots are then pictures of the whole main screen
 #   -Wait   seconds to let it run; still running then = closed by PID (the result says so)
-param([string]$Keys = "", [string]$Values = "", [switch]$Visible, [int]$Wait = 40, [string]$Shots = "", [string]$Root = "$env:USERPROFILE\selene-fresh", [scriptblock]$Prep = $null,
+param([string]$Keys = "", [string]$Values = "", [switch]$Visible, [int]$Relaunch = 0, [int]$Wait = 40, [string]$Shots = "", [string]$Root = "$env:USERPROFILE\selene-fresh", [scriptblock]$Prep = $null,
       [string[]]$Disable = @('PlayniteAudioSwitcher_708b6ec4-bf96-4c0d-bd9d-fe0aa04d6bf1', 'UniPlaySong.a1b2c3d4-e5f6-7890-abcd-ef1234567890'))
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
@@ -90,9 +91,14 @@ try {
     $exitedAt = $null
     $shotQueue = New-Object System.Collections.Generic.Queue[int]
     foreach ($v in ($Shots -split "[,; ]+" | Where-Object { $_ } | ForEach-Object { [int]$_ } | Sort-Object)) { $shotQueue.Enqueue($v) }
+    $procId2 = 0
     while (((Get-Date) - $t0).TotalSeconds -lt $Wait) {
         Start-Sleep -Milliseconds 500
         $secs = ((Get-Date) - $t0).TotalSeconds
+        if ($Relaunch -gt 0 -and $procId2 -eq 0 -and $secs -ge $Relaunch) {
+            $procId2 = [HiddenDesk]::Start("WinSta0\$name", $exe, "`"$exe`" --nolibupdate", $pn, $false)
+            "relaunched at {0:N1} s: pid $procId2" -f $secs
+        }
         if (-not (Get-Process -Id $procId -ErrorAction SilentlyContinue)) { $exitedAt = $secs; break }
         while ($shotQueue.Count -gt 0 -and $secs -ge $shotQueue.Peek()) {
             $s = $shotQueue.Dequeue()
@@ -117,6 +123,11 @@ try {
         "test Playnite still running after $Wait s -> closed by PID"
         Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 2
+    }
+    if ($procId2 -ne 0) {
+        Start-Sleep -Seconds 12
+        $p2 = Get-Process -Id $procId2 -ErrorAction SilentlyContinue
+        "second start: " + $(if ($p2) { "running ($($p2.ProcessName), window '$($p2.MainWindowTitle)')" } else { "not running" })
     }
 }
 finally {

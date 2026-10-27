@@ -5217,7 +5217,11 @@ namespace Selene
         public static bool Quitting;   // Playnite is being closed for real (Exit, Alt+F4, power actions)
         private static bool quitFaded;
 
-        // Playnite closing: Selene's screen goes dark at once, so nothing (the login layer, a card) shows while it shuts down
+        // Playnite closing: Selene's windows leave the screen at once (no dark screen, no "Exiting Playnite" screen) and
+        // Windows hands the screen to what is underneath; Playnite finishes closing out of sight (saving its library, the
+        // add-ons' last steps), which takes a few seconds
+        public static bool ShutdownBegun;          // Playnite's own close has started (SeleneCore.OnApplicationStopped)
+        public static IntPtr QuitHandoff;           // the window that had the screen after Selene's left it
         public static void BeginQuit()
         {
             Quitting = true;
@@ -5226,29 +5230,88 @@ namespace Selene
             try
             {
                 var w = Application.Current.MainWindow;
-                var root = w != null ? w.Content as UIElement : null;
-                if (root != null && w.IsVisible) root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(150)));
-                // never a dark screen that stays: if Playnite hasn't begun shutting down in 8 s and no dialog or closing screen is up,
-                // the quit did not happen (#27, #26) and the screen comes back
+                var hwnd = w != null ? new System.Windows.Interop.WindowInteropHelper(w).Handle : IntPtr.Zero;
+                if (w != null && w.IsVisible && hwnd != IntPtr.Zero)
+                {
+                    SetCloak(hwnd, true);   // off the screen this very frame
+                    HideShield();
+                    w.Hide();               // and Windows gives the focus to the window beneath (the desktop, a game)
+                    uint pid;
+                    var fg = GetForegroundWindow();
+                    GetWindowThreadProcessId(fg, out pid);
+                    QuitHandoff = pid != (uint)System.Diagnostics.Process.GetCurrentProcess().Id ? fg : IntPtr.Zero;
+                    Log("quit: Selene's windows hidden, Playnite closes out of sight");
+                    StopStealGuard(w);   // (Guide's guard must not pull Playnite back now)
+                    // Playnite's closing window activates itself (an invisible window would hold the focus for the seconds
+                    // Playnite takes to close: the game under it deaf to the pad): the focus goes straight back
+                    var handoff = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                    var handoffEnd = DateTime.Now.AddSeconds(40);
+                    int handedBack = 0;
+                    handoff.Tick += (s, e) =>
+                    {
+                        if (!Quitting || DateTime.Now > handoffEnd) { handoff.Stop(); return; }
+                        uint fp; var fgw = GetForegroundWindow(); GetWindowThreadProcessId(fgw, out fp);
+                        if (fp != (uint)System.Diagnostics.Process.GetCurrentProcess().Id)
+                        {
+                            // (right after the hide Windows hasn't moved the focus yet: the window it lands on is learnt here)
+                            if (fgw != IntPtr.Zero && (QuitHandoff == IntPtr.Zero || !IsWindow(QuitHandoff))) QuitHandoff = fgw;
+                            return;
+                        }
+                        if (QuitHandoff == IntPtr.Zero || !IsWindow(QuitHandoff)) { if (handedBack++ < 3) Log("quit: Playnite's closing window has the focus, nothing to hand it back to"); return; }
+                        bool ok = SetForegroundWindow(QuitHandoff);
+                        if (handedBack++ < 5) Log("quit: focus handed back from Playnite's window " + fgw + " (" + (ok ? "done" : "refused") + ")");
+                    };
+                    handoff.Start();
+                }
+                // never gone for good when the quit didn't happen: Playnite hasn't begun closing 8 s later -> Selene comes back (#27, #26)
                 var guard = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
                 guard.Tick += (s, e) =>
                 {
                     guard.Stop();
                     try
                     {
-                        if (CloseToTray.AppShuttingDown()) return;
-                        var main = Application.Current.MainWindow;
-                        foreach (Window other in Application.Current.Windows) if (!ReferenceEquals(other, main) && other.IsVisible) { Log("quit: still here after 8 s, a window is up (" + other.GetType().Name + ")"); return; }
-                        var r = main != null ? main.Content as UIElement : null;
+                        if (ShutdownBegun || CloseToTray.AppShuttingDown()) return;
                         Quitting = false; quitFaded = false;
-                        if (r != null && r.Opacity < 0.99) FadeInRoot(r);
-                        Log("quit: Playnite did not close in 8 s -> screen back");
+                        var main = Application.Current.MainWindow;
+                        if (main != null)
+                        {
+                            main.Show();
+                            var mh = new System.Windows.Interop.WindowInteropHelper(main).Handle;
+                            SetCloak(mh, false);
+                            // back in front the way Guide does it (the window that got the screen may be a game run as admin)
+                            ForceForegroundAsync(mh, () => { main.Activate(); if (!PlayniteInFront()) RequestElevated("focus " + mh.ToInt64()); });
+                            var r = main.Content as UIElement;
+                            if (r != null && r.Opacity < 0.99) FadeInRoot(r);
+                        }
+                        Log("quit: Playnite did not close in 8 s -> Selene back");
                     }
                     catch (Exception ex) { Log("quit guard: " + ex.Message); }
                 };
                 guard.Start();
+                // and never left running out of sight: still closing after 30 s = stuck; it is ended, with Playnite's crash
+                // marker cleared (a normal close clears it too) so the next start isn't offered safe mode
+                var configDir = Api != null ? Api.Paths.ConfigurationPath : null;
+                new System.Threading.Thread(() =>
+                {
+                    System.Threading.Thread.Sleep(30000);
+                    if (!Quitting || !ShutdownBegun) return;
+                    Log("quit: Playnite still closing after 30 s -> ended");
+                    try { if (configDir != null) System.IO.File.Delete(System.IO.Path.Combine(configDir, "safestart.flag")); } catch { }
+                    try { System.Diagnostics.Process.GetCurrentProcess().Kill(); } catch { }
+                }) { IsBackground = true, Name = "SeleneQuitWatch" }.Start();
             }
-            catch (Exception ex) { Log("quit fade: " + ex.Message); }
+            catch (Exception ex) { Log("quit: " + ex.Message); }
+        }
+
+        // a window Playnite opens while it closes (its "Closing" progress screen): never shown, never given the focus
+        public static void HideForQuit(Window w)
+        {
+            try
+            {
+                var h = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+                if (h != IntPtr.Zero) SetCloak(h, true);   // (the focus: BeginQuit's hand-back)
+            }
+            catch { }
         }
         public static bool GameRunning()
         {

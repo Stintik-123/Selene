@@ -62,16 +62,25 @@ namespace Selene
             HomeNav.Log("Selene Core started");
         }
 
-        // developer switch %TEMP%\selene-dev-slowquit: Selene Core takes 6 s to close, inside Playnite's "Closing" step, to see
+        // developer switch %TEMP%\selene-dev-slowquit: Selene Core takes 6 s (or the seconds in the file) to close, inside Playnite's "Closing" step, to see
         // the closing screen that comes back when quitting takes long
         public override void Dispose()
         {
-            if (System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-slowquit")))
+            var slow = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-slowquit");
+            if (System.IO.File.Exists(slow))
             {
-                HomeNav.Log("dev slow quit: closing takes 6 s");
-                System.Threading.Thread.Sleep(6000);
+                int secs; if (!int.TryParse(System.IO.File.ReadAllText(slow).Trim(), out secs) || secs <= 0) secs = 6;   // (the file may hold the seconds)
+                HomeNav.Log("dev slow quit: closing takes " + secs + " s");
+                System.Threading.Thread.Sleep(secs * 1000);
             }
             base.Dispose();
+        }
+
+        // Playnite's close has really begun (its quit step tells every add-on): Selene's quit watch stops waiting for it
+        public override void OnApplicationStopped(OnApplicationStoppedEventArgs args)
+        {
+            HomeNav.ShutdownBegun = true;
+            HomeNav.Log("quit: Playnite is closing");
         }
 
         public override void OnGameStarting(OnGameStartingEventArgs args)
