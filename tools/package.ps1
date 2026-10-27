@@ -30,6 +30,14 @@ foreach ($need in 'Fonts\MaterialIcons-Regular.ttf', 'Fonts\PlayStation4.ttf', '
     if ($names -notcontains $need) { throw "theme package is missing $need" }
 }
 "theme package: $($names.Count) files, fonts added"
+# the add-on package must carry the helper exe (Home / Close game for games that run as administrator)
+$pext = (Get-ChildItem $dist -Filter 'SeleneCore_*.pext' | Select-Object -First 1).FullName
+$zip = [System.IO.Compression.ZipFile]::OpenRead($pext)
+try { $coreNames = @($zip.Entries | ForEach-Object { $_.FullName }) } finally { $zip.Dispose() }
+foreach ($need in 'SeleneCore.dll', 'SeleneHelper.exe', 'extension.yaml') {
+    if ($coreNames -notcontains $need) { throw "add-on package is missing $need" }
+}
+"add-on package: $($coreNames.Count) files, helper included"
 # fixed names for GitHub releases: the installer manifests (manifests\*.yaml) link to Selene.pthm and SeleneCore.pext
 Get-ChildItem $dist -Filter 'Selene_*.pthm' | Copy-Item -Destination (Join-Path $dist 'Selene.pthm')
 Get-ChildItem $dist -Filter 'SeleneCore_*.pext' | Copy-Item -Destination (Join-Path $dist 'SeleneCore.pext')

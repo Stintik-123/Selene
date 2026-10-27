@@ -57,6 +57,7 @@ namespace Selene
             SeleneShell.Start();
             SongSetup.StartLater();                   // game songs: UniPlaySong's downloads set up once
             if (string.IsNullOrWhiteSpace(settings.Settings.AvatarPath)) AnimatedAvatar.Fetch(SelenePaths.SteamId);
+            LocalGames.CheckHelper();                 // Selene's admin helper task: there or not (Home / Close game on admin games)
             HomeNav.Log("Selene Core started");
         }
 
@@ -228,7 +229,7 @@ namespace Selene
             field("Login name. Empty = your Steam name:", s.DisplayName, v => s.DisplayName = v);
             field("Login picture (image file). Empty = your Steam avatar:", s.AvatarPath, v => s.AvatarPath = v);
             field("Optional companion helper (.exe) with admin rights. Empty = off:", s.HelperPath, v => s.HelperPath = v);
-            field("Optional admin helper scheduled task (focus/close games that run as administrator). Empty = off:", s.HelperTask, v => s.HelperTask = v);
+            field("Custom admin helper scheduled task (focus/close games that run as administrator). Empty = Selene's own helper, set up after an admin game's first run:", s.HelperTask, v => s.HelperTask = v);
             field("Optional game-streaming host log folder (a streaming client sees every game). Empty = off:", s.StreamLogsFolder, v => s.StreamLogsFolder = v);
             field("Streaming client name to react to (regular expression). Empty = any client:", s.StreamClientMatch, v => s.StreamClientMatch = v);
             field("Streaming host credentials file (disconnect clients before sleep). Empty = off:", s.StreamCredentialsFile, v => s.StreamCredentialsFile = v);
@@ -335,7 +336,7 @@ namespace Selene
             new Option { Group = "Games", Key = "storeregion", Label = "Store currency", About = "The currency the stores show their prices in.", Action = "Change" },
             new Option { Group = "Games", Key = "surprisepool", Label = "Surprise me picks from", About = "Where Surprise me draws from. LB / RB change it there too.", Choices = new[] { "installed", "fresh", "all" }, Names = new[] { "Installed games", "Games not played yet", "All games" }, Default = "installed" },
             new Option { Group = "Games", Key = "surprisenorepeat", Label = "Surprise me without repeats", About = "Every game comes up once before any comes round again." },
-            new Option { Group = "Games", Key = "admin", Label = "No-prompt launchers", About = "Admin games skip the Windows prompt after their first run." },
+            new Option { Group = "Games", Key = "admin", Label = "Games as administrator", About = "After an admin game's first run, one Windows prompt: it then starts without the prompt, and Home / Close game reach it through Selene's helper." },
             new Option { Group = "Games", Key = "quietbackups", Label = "Quiet save backups", About = "Ludusavi backs up saves after playing without asking." },
             // ---- Advanced ----
             new Option { Group = "Advanced", Key = "report", Label = "Report a problem", About = "Tell us what went wrong in a few presses. No GitHub account needed. Anywhere: click both sticks, with a picture.", Action = "Open" },

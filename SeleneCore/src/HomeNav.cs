@@ -4907,19 +4907,38 @@ namespace Selene
             try { return !pr.HasExited; } catch { return true; }
         }
 
-        // Optional companion helper with admin rights, started through a scheduled task (settings: admin helper task): it reads
-        // these requests ("focus", "close <pid>") from %TEMP%\selene-elevated.txt. Games running as administrator can't be
-        // focused or closed by a normal program.
-        public static void RequestElevated(params string[] lines)
+        // Games running as administrator can't be focused or closed by a normal program: a helper with admin rights does it,
+        // started through a scheduled task. Selene's own (SeleneHelper.exe, task Selene\Helper, set up by LocalGames after such a
+        // game's first run) reads the requests ("focus <hwnd>", "close <pid>") from %LOCALAPPDATA%\Selene\elevated.txt; a custom
+        // task from the add-on settings takes its place and reads %TEMP%\selene-elevated.txt. False when no helper is set up.
+        public static bool RequestElevated(params string[] lines)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(SelenePaths.HelperTask)) return;
-                System.IO.File.AppendAllLines(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-elevated.txt"), lines);
-                var psi = new System.Diagnostics.ProcessStartInfo(System.IO.Path.Combine(Environment.SystemDirectory, "schtasks.exe"), "/run /tn \"" + SelenePaths.HelperTask + "\"") { UseShellExecute = false, CreateNoWindow = true };
+                string task = SelenePaths.HelperTask, file;
+                if (!string.IsNullOrWhiteSpace(task)) file = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-elevated.txt");
+                else if (LocalGames.HelperReady) { task = LocalGames.HelperTaskName; file = LocalGames.RequestFile; }
+                else { Log("admin helper: none set up (" + string.Join(", ", lines) + ")"); return false; }
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file));
+                System.IO.File.AppendAllLines(file, lines);
+                var psi = new System.Diagnostics.ProcessStartInfo(System.IO.Path.Combine(Environment.SystemDirectory, "schtasks.exe"), "/run /tn \"" + task + "\"") { UseShellExecute = false, CreateNoWindow = true };
                 System.Diagnostics.Process.Start(psi);
+                return true;
             }
-            catch (Exception ex) { Log("admin helper request failed: " + ex.Message); }
+            catch (Exception ex) { Log("admin helper request failed: " + ex.Message); return false; }
+        }
+
+        // the window in front belongs to a program running as administrator (Playnite can't take the screen back from it alone)
+        private static bool ForegroundIsAdmin()
+        {
+            try
+            {
+                uint pid;
+                GetWindowThreadProcessId(GetForegroundWindow(), out pid);
+                if (pid == 0 || pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id) return false;
+                return LocalGames.IsElevated((int)pid);
+            }
+            catch { return false; }
         }
 
         // the closing screen's backdrop: Selene's wide art when there is some, else the game's own background (a new install has
@@ -6452,6 +6471,13 @@ namespace Selene
                 if (launching) { Log("guide ignored: game still loading"); return; }  // stay on the loading screen until the game starts
                 bool wasBehind = GetForegroundWindow() != hwnd;
                 if (!wasBehind && CanReturnToGame()) { ReturnToGame(w); return; }  // like the PS button: toggle back
+                if (wasBehind && ForegroundIsAdmin() && string.IsNullOrWhiteSpace(SelenePaths.HelperTask) && !LocalGames.HelperReady)
+                {
+                    // nothing here can take the screen from a game running as administrator (the helper is set up after its
+                    // first run): no black cover that would only flicker over the game
+                    Log("guide: the game runs as administrator and no admin helper is set up yet -> stays on the game");
+                    return;
+                }
                 if (wasBehind)
                 {
                     guideSwitching = true;

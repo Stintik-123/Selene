@@ -16,6 +16,9 @@ $refs = @('System.dll', 'System.Core.dll', 'System.Xaml.dll', 'System.Drawing.dl
         ForEach-Object { "/r:$_" }
 & "$fw\csc.exe" /nologo /target:library /optimize+ /nowarn:1701,1702 "/out:$stage\SeleneCore.dll" $refs $sources
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
+# Selene Helper: the small admin-rights program (SeleneCore\helper), a windowless exe next to the dll
+& "$fw\csc.exe" /nologo /target:winexe /optimize+ /platform:anycpu "/out:$stage\SeleneHelper.exe" /r:System.dll /r:System.Core.dll (Join-Path $core 'helper\SeleneHelper.cs')
+if ($LASTEXITCODE -ne 0) { throw "helper build failed" }
 Copy-Item (Join-Path $core 'extension.yaml'), (Join-Path $core 'icon.png') $stage -Force
 Copy-Item (Join-Path $core 'Localization') $stage -Recurse -Force
 # Playnite keeps the loaded DLL open, but a file in use can still be renamed: move it aside and put the new one in its

@@ -4,6 +4,8 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+- Home (the Guide button) while a game that runs as administrator is playing brought the screen back for a moment and the game stayed in front; Close game on such a game did nothing. Selene now ships a small helper with admin rights (SeleneHelper.exe, registered once as the scheduled task Selene\Helper in the same Windows prompt that makes the game's no-prompt launcher after its first run); Home and Close game go through it (Games > Games as administrator). A game's first session, before that prompt, leaves Home alone instead of flickering.
+
 ## 1.2.2 - 2026-10-27
 
 - Sound in the Start menu: Windows' volume (Left / Right, X mutes) and which speakers or headset play (Left / Right switches the default device), in a card over the menu like Power's (switch: Sound & music > Sound in the menu) (#15).

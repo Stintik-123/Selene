@@ -286,7 +286,7 @@ namespace Selene
         [System.Runtime.InteropServices.DllImport("advapi32.dll")] private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
         [System.Runtime.InteropServices.DllImport("advapi32.dll")] private static extern bool GetTokenInformation(IntPtr token, int cls, out int value, int size, out int returned);
 
-        private static bool IsElevated(int pid)
+        public static bool IsElevated(int pid)
         {
             var h = OpenProcess(0x1000 /* QUERY_LIMITED_INFORMATION */, false, pid);
             if (h == IntPtr.Zero) return false;
@@ -324,56 +324,118 @@ namespace Selene
             timer.Start();
         }
 
+        // ---- Selene Helper: the small admin-rights program shipped beside the add-on (SeleneCore\helper), registered once as the
+        // scheduled task Selene\Helper. Home while an admin game plays and Close game on one go through it (HomeNav.RequestElevated).
+        // A custom helper task in the add-on settings takes its place.
+        public const string HelperTaskName = @"Selene\Helper";
+        public static readonly string RequestFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Selene", "elevated.txt");
+        public static string HelperExe { get { try { return Path.Combine(Path.GetDirectoryName(typeof(LocalGames).Assembly.Location), "SeleneHelper.exe"); } catch { return ""; } } }
+        private static bool helperDeclined;
+        private static volatile bool helperReady;   // the Selene\Helper task is registered (checked off the UI thread at start and after installing)
+
+        public static bool HelperReady { get { return helperReady && Features.On("admin"); } }
+
+        public static void CheckHelper()
+        {
+            System.Threading.Tasks.Task.Factory.StartNew(() =>
+            {
+                helperReady = TaskExists(HelperTaskName);
+                HomeNav.Log("admin helper: " + (helperReady ? "task registered" : "no task yet") + (File.Exists(HelperExe) ? "" : ", exe missing"));
+            });
+        }
+
+        // a game that ran as administrator has stopped: one Windows prompt sets up what is still missing, Selene's helper task
+        // and the game's own no-prompt launcher
         public static void AfterGameStopped(Game g)
         {
             if (g == null || !ranAsAdmin.Contains(g.Id) || declined.Contains(g.Id)) return;
-            try { MakeAdminLauncher(g); }
+            try { SetUpAdmin(g); }
             catch (Exception ex) { HomeNav.Log("admin launcher failed: " + ex.Message); }
         }
 
         private static string Xml(string s) { return System.Security.SecurityElement.Escape(s ?? ""); }
 
-        private static void MakeAdminLauncher(Game g)
+        private static string TaskXml(string description, string exe, string args, string work, bool hidden)
         {
-            var api = HomeNav.Api;
-            var play = g.GameActions != null ? g.GameActions.FirstOrDefault(a => a.IsPlayAction) : null;
-            if (api == null || play == null || play.Type != GameActionType.File || string.IsNullOrWhiteSpace(play.Path)) return;
-            if (string.Equals(play.Path, Schtasks, StringComparison.OrdinalIgnoreCase)) return;  // already has one
-            var dir = g.InstallDirectory ?? "";
-            var exe = play.Path.Replace("{InstallDir}", dir);
-            if (!Path.IsPathRooted(exe)) exe = Path.Combine(dir, exe);
-            if (!File.Exists(exe)) return;
-            var args = (play.Arguments ?? "").Replace("{InstallDir}", dir);
-            var work = string.IsNullOrWhiteSpace(play.WorkingDir) ? Path.GetDirectoryName(exe) : play.WorkingDir.Replace("{InstallDir}", dir);
-            var name = Regex.Replace(g.Name ?? "Game", @"[\\/:*?""<>|]", "").Trim();
-            var task = @"Selene\" + name;
-            var xml = "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\n" +
+            return "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\n" +
                 "<Task version=\"1.4\" xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit/task\">\n" +
-                "  <RegistrationInfo><Description>Started by Selene (Playnite) so this game launches without a UAC prompt</Description></RegistrationInfo>\n" +
+                "  <RegistrationInfo><Description>" + Xml(description) + "</Description></RegistrationInfo>\n" +
                 "  <Principals><Principal id=\"Author\"><LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel></Principal></Principals>\n" +
                 "  <Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>" +
-                "<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><AllowStartOnDemand>true</AllowStartOnDemand><ExecutionTimeLimit>PT0S</ExecutionTimeLimit><Priority>5</Priority></Settings>\n" +
-                "  <Actions Context=\"Author\"><Exec><Command>\"" + Xml(exe) + "\"</Command>" + (args != "" ? "<Arguments>" + Xml(args) + "</Arguments>" : "") +
+                "<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><AllowStartOnDemand>true</AllowStartOnDemand><ExecutionTimeLimit>PT0S</ExecutionTimeLimit>" +
+                (hidden ? "<Hidden>true</Hidden>" : "") + "<Priority>5</Priority></Settings>\n" +
+                "  <Actions Context=\"Author\"><Exec><Command>\"" + Xml(exe) + "\"</Command>" + (string.IsNullOrEmpty(args) ? "" : "<Arguments>" + Xml(args) + "</Arguments>") +
                 "<WorkingDirectory>" + Xml(work) + "</WorkingDirectory></Exec></Actions>\n</Task>\n";
-            var file = Path.Combine(Path.GetTempPath(), "selene-task-" + g.Id + ".xml");
-            File.WriteAllText(file, xml, System.Text.Encoding.Unicode);
-            HomeNav.Log("admin launcher: asking Windows once for " + g.Name);
+        }
+
+        private static void SetUpAdmin(Game g)
+        {
+            var api = HomeNav.Api;
+            if (api == null) return;
+            var tasks = new List<string>();        // name, xml file, name, xml file ...
+            var files = new List<string>();
+            Action applyLauncher = null;
+            // the game's launcher (a task that starts it with its rights, so Play never shows the Windows prompt again)
+            var play = g.GameActions != null ? g.GameActions.FirstOrDefault(a => a.IsPlayAction) : null;
+            if (play != null && play.Type == GameActionType.File && !string.IsNullOrWhiteSpace(play.Path) && !string.Equals(play.Path, Schtasks, StringComparison.OrdinalIgnoreCase))
+            {
+                var dir = g.InstallDirectory ?? "";
+                var exe = play.Path.Replace("{InstallDir}", dir);
+                if (!Path.IsPathRooted(exe)) exe = Path.Combine(dir, exe);
+                if (File.Exists(exe))
+                {
+                    var args = (play.Arguments ?? "").Replace("{InstallDir}", dir);
+                    var work = string.IsNullOrWhiteSpace(play.WorkingDir) ? Path.GetDirectoryName(exe) : play.WorkingDir.Replace("{InstallDir}", dir);
+                    var name = Regex.Replace(g.Name ?? "Game", @"[\\/:*?""<>|]", "").Trim();
+                    var task = @"Selene\" + name;
+                    var file = Path.Combine(Path.GetTempPath(), "selene-task-" + g.Id + ".xml");
+                    File.WriteAllText(file, TaskXml("Started by Selene (Playnite) so this game launches without a UAC prompt", exe, args, work, false), System.Text.Encoding.Unicode);
+                    tasks.Add(task); tasks.Add(file); files.Add(file);
+                    var exeDir = Path.GetDirectoryName(exe);
+                    applyLauncher = () =>
+                    {
+                        if (!TaskExists(task)) { HomeNav.Log("admin launcher: task not created for " + g.Name); return; }
+                        play.Path = Schtasks;
+                        play.Arguments = "/run /tn \"" + task + "\"";
+                        play.WorkingDir = null;
+                        play.TrackingMode = TrackingMode.Directory;
+                        play.TrackingPath = exeDir;
+                        api.Database.Games.Update(g);
+                        HomeNav.Log("admin launcher: " + g.Name + " now starts without the admin prompt (" + task + ")");
+                    };
+                }
+            }
+            // Selene's helper task, unless a custom one is set up or it is already there
+            bool wantHelper = string.IsNullOrWhiteSpace(SelenePaths.HelperTask) && !helperDeclined && File.Exists(HelperExe) && !helperReady && !TaskExists(HelperTaskName);
+            if (wantHelper)
+            {
+                var file = Path.Combine(Path.GetTempPath(), "selene-task-helper.xml");
+                File.WriteAllText(file, TaskXml("Selene (Playnite): brings Selene back and closes games that run as administrator", HelperExe, "", Path.GetDirectoryName(HelperExe), true), System.Text.Encoding.Unicode);
+                tasks.Add(HelperTaskName); tasks.Add(file); files.Add(file);
+            }
+            if (tasks.Count == 0) return;
+            HomeNav.Log("admin launcher: asking Windows once for " + g.Name + (wantHelper ? " and Selene's helper" : ""));
             try
             {
-                var psi = new System.Diagnostics.ProcessStartInfo(Schtasks, "/create /tn \"" + task + "\" /xml \"" + file + "\" /f")
-                    { UseShellExecute = true, Verb = "runas", WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden };
+                System.Diagnostics.ProcessStartInfo psi;
+                if (File.Exists(HelperExe))
+                {
+                    // the helper registers every task in one go (one prompt)
+                    var sb = new System.Text.StringBuilder("install");
+                    foreach (var t in tasks) sb.Append(" \"").Append(t).Append("\"");
+                    psi = new System.Diagnostics.ProcessStartInfo(HelperExe, sb.ToString()) { UseShellExecute = true, Verb = "runas", WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden };
+                }
+                else psi = new System.Diagnostics.ProcessStartInfo(Schtasks, "/create /tn \"" + tasks[0] + "\" /xml \"" + tasks[1] + "\" /f") { UseShellExecute = true, Verb = "runas", WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden };
                 using (var p = System.Diagnostics.Process.Start(psi)) p.WaitForExit(60000);
             }
-            catch (System.ComponentModel.Win32Exception) { declined.Add(g.Id); HomeNav.Log("admin launcher: declined for " + g.Name); return; }
-            finally { try { File.Delete(file); } catch { } }
-            if (!TaskExists(task)) { HomeNav.Log("admin launcher: task not created for " + g.Name); return; }
-            play.Path = Schtasks;
-            play.Arguments = "/run /tn \"" + task + "\"";
-            play.WorkingDir = null;
-            play.TrackingMode = TrackingMode.Directory;
-            play.TrackingPath = Path.GetDirectoryName(exe);
-            api.Database.Games.Update(g);
-            HomeNav.Log("admin launcher: " + g.Name + " now starts without the admin prompt (" + task + ")");
+            catch (System.ComponentModel.Win32Exception) { declined.Add(g.Id); helperDeclined = true; HomeNav.Log("admin launcher: declined for " + g.Name); return; }
+            finally { foreach (var f in files) try { File.Delete(f); } catch { } }
+            if (applyLauncher != null) applyLauncher();
+            if (wantHelper)
+            {
+                helperReady = TaskExists(HelperTaskName);
+                HomeNav.Log("admin helper: " + (helperReady ? "task registered" : "task not created"));
+            }
         }
 
         // ---- automatic: wrong or generic game folder, learned from where the game actually runs ----
