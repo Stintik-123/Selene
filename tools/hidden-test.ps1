@@ -125,6 +125,7 @@ finally {
     Start-Sleep -Milliseconds 800
     foreach ($f in $files) { if (Test-Path "$f.bak-hidden") { Move-Item "$f.bak-hidden" $f -Force } elseif ($f -like '*selene-row-filter.txt') { Remove-Item $f -ErrorAction SilentlyContinue } }
     Remove-Item (Join-Path $pn 'safestart.flag') -ErrorAction SilentlyContinue
+    foreach ($flag in 'selene-dev-isolated', 'selene-skip-login', 'selene-dev-keys') { Remove-Item (Join-Path $Root "temp\$flag") -ErrorAction SilentlyContinue }
     if ($desk -ne [IntPtr]::Zero) { [HiddenDesk]::CloseDesktop($desk) | Out-Null }
     "log: $(Join-Path $Root 'temp\selene.log')"
 }
