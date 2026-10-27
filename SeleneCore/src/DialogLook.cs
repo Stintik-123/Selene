@@ -186,7 +186,7 @@ namespace Selene
 
         // Playnite's progress window (downloading an add-on, updating the library): Selene's moving background behind the
         // breathing logo instead of Playnite's plain gradient, fading in
-        private static void DressProgress(Window w)
+        internal static void DressProgress(Window w)
         {
             var grid = w.FindName("GridMain") as Grid;
             if (grid == null) return;

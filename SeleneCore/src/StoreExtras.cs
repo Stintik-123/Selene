@@ -10,7 +10,7 @@ namespace Selene
     // Picking the Store's currency: asked the first time the Store opens, and with X in the Store after that
     public class StoreCurrencyScreen : Screen
     {
-        private const int Columns = 5;
+        private const int Columns = 6;   // 36 currencies: six rows of six fit a 1080-line screen with the title
         private readonly bool first;
         private readonly List<Tile> tiles = new List<Tile>();
         private int index;
@@ -27,12 +27,12 @@ namespace Selene
             var grid = new System.Windows.Controls.Primitives.UniformGrid { Columns = Columns, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 48, 0, 0) };
             foreach (var c in StoreData.Currencies)
             {
-                var tile = new Tile(220, 112, 16, 5);
+                var tile = new Tile(206, 96, 16, 5);
                 var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-                sp.Children.Add(new TextBlock { Text = c.Code, FontSize = 30, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center });
-                sp.Children.Add(new TextBlock { Text = c.Name, FontSize = 15, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 4, 0, 0) });
+                sp.Children.Add(new TextBlock { Text = c.Code, FontSize = 26, FontWeight = FontWeights.SemiBold, FontFamily = Ui.Display, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center });
+                sp.Children.Add(new TextBlock { Text = c.Name, FontSize = 13, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor", 0.65), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(6, 3, 6, 0), TextTrimming = TextTrimming.CharacterEllipsis, TextAlignment = TextAlignment.Center });
                 tile.Face.Child = sp;
-                tile.Root.Margin = new Thickness(12);
+                tile.Root.Margin = new Thickness(9);
                 grid.Children.Add(tile.Root);
                 tiles.Add(tile);
             }
@@ -41,7 +41,9 @@ namespace Selene
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Use this currency")));
             // this PC's own currency (or the one picked before) starts focused
-            index = Math.Max(0, Array.FindIndex(StoreData.Currencies, c => c.Code == StoreData.CurrencyCode));
+            // (by country first: two entries share the dollar)
+            index = Array.FindIndex(StoreData.Currencies, c => c.Country == StoreData.ChosenCountry);
+            if (index < 0) index = Math.Max(0, Array.FindIndex(StoreData.Currencies, c => c.Code == StoreData.CurrencyCode));
         }
 
         public override void Shown()

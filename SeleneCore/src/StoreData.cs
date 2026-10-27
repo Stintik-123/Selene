@@ -54,6 +54,28 @@ namespace Selene
             new Currency { Code = "MYR", Name = "Malaysian ringgit", Country = "MY" },
             new Currency { Code = "THB", Name = "Thai baht", Country = "TH" },
             new Currency { Code = "MXN", Name = "Mexican peso", Country = "MX" },
+            // Middle East and North Africa: Steam prices Saudi Arabia, the UAE, Qatar, Kuwait and Israel in their own money and
+            // the rest of the region (Egypt, Iraq, Jordan, Lebanon, Oman, Bahrain...) in a dollar price list of its own (#29)
+            new Currency { Code = "SAR", Name = "Saudi riyal", Country = "SA" },
+            new Currency { Code = "AED", Name = "UAE dirham", Country = "AE" },
+            new Currency { Code = "QAR", Name = "Qatari riyal", Country = "QA" },
+            new Currency { Code = "KWD", Name = "Kuwaiti dinar", Country = "KW" },
+            new Currency { Code = "ILS", Name = "Israeli new shekel", Country = "IL" },
+            new Currency { Code = "USD", Name = "US dollar, Middle East prices", Country = "EG" },
+            new Currency { Code = "ZAR", Name = "South African rand", Country = "ZA" },
+            new Currency { Code = "PLN", Name = "Polish złoty", Country = "PL" },
+            new Currency { Code = "CHF", Name = "Swiss franc", Country = "CH" },
+            new Currency { Code = "NOK", Name = "Norwegian krone", Country = "NO" },
+            new Currency { Code = "UAH", Name = "Ukrainian hryvnia", Country = "UA" },
+            new Currency { Code = "KZT", Name = "Kazakhstani tenge", Country = "KZ" },
+            new Currency { Code = "NZD", Name = "New Zealand dollar", Country = "NZ" },
+            new Currency { Code = "HKD", Name = "Hong Kong dollar", Country = "HK" },
+            new Currency { Code = "TWD", Name = "New Taiwan dollar", Country = "TW" },
+            new Currency { Code = "CNY", Name = "Chinese yuan", Country = "CN" },
+            new Currency { Code = "VND", Name = "Vietnamese dong", Country = "VN" },
+            new Currency { Code = "CLP", Name = "Chilean peso", Country = "CL" },
+            new Currency { Code = "COP", Name = "Colombian peso", Country = "CO" },
+            new Currency { Code = "PEN", Name = "Peruvian sol", Country = "PE" },
         };
 
         private static string RegionFile { get { return Path.Combine(SelenePaths.DataFolder, "store-region.txt"); } }
@@ -248,7 +270,10 @@ namespace Selene
         private static readonly Dictionary<string, string> Symbols = new Dictionary<string, string>
         {
             { "USD", "$" }, { "PHP", "₱" }, { "EUR", "€" }, { "GBP", "£" }, { "JPY", "¥" }, { "INR", "₹" }, { "KRW", "₩" }, { "BRL", "R$" },
-            { "AUD", "A$" }, { "CAD", "C$" }, { "SGD", "S$" }, { "MYR", "RM " }, { "IDR", "Rp " }, { "THB", "฿" }, { "VND", "₫" }
+            { "AUD", "A$" }, { "CAD", "C$" }, { "SGD", "S$" }, { "MYR", "RM " }, { "IDR", "Rp " }, { "THB", "฿" }, { "VND", "₫" },
+            { "SAR", "SR " }, { "AED", "AED " }, { "QAR", "QR " }, { "KWD", "KD " }, { "ILS", "₪" }, { "ZAR", "R " }, { "PLN", "zł " }, { "CHF", "CHF " },
+            { "NOK", "kr " }, { "UAH", "₴" }, { "KZT", "₸" }, { "NZD", "NZ$" }, { "HKD", "HK$" }, { "TWD", "NT$" }, { "CNY", "¥" }, { "CLP", "CLP$ " },
+            { "COP", "COL$ " }, { "PEN", "S/ " }
         };
         public static string Money(double amount, string currency)
         {

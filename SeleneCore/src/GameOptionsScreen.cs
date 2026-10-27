@@ -286,8 +286,8 @@ namespace Selene
                     {
                         var menus = Get(script, "SupportedMenus") as IEnumerable;
                         if (menus == null || !menus.Cast<object>().Any(m => m.ToString() == menu)) continue;
-                        var get = script.GetType().GetMethod(getter);
-                        var invoke = script.GetType().GetMethod("InvokeFunction");
+                        var get = Method(script.GetType(), getter, 1);
+                        var invoke = Method(script.GetType(), "InvokeFunction", 2);
                         var items = get != null ? get.Invoke(script, new object[] { getArgs }) as IEnumerable : null;
                         if (items == null || invoke == null || argsType == null) continue;
                         foreach (var it in items)
@@ -325,6 +325,19 @@ namespace Selene
         }
 
         private static string Clean(string s) { return (s ?? "").Replace("_", "").Trim(); }
+
+        // by name and parameter count: GetMethod(name) alone throws "Ambiguous match found" on a script class that overloads it
+        private static System.Reflection.MethodInfo Method(Type t, string name, int args)
+        {
+            System.Reflection.MethodInfo any = null;
+            foreach (var m in t.GetMethods())
+            {
+                if (m.Name != name) continue;
+                if (m.GetParameters().Length == args) return m;
+                if (any == null) any = m;
+            }
+            return any;
+        }
 
         private static object Get(object o, string name)
         {

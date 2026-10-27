@@ -240,7 +240,8 @@ namespace Selene
                     {
                         // (not for Sleep: Playnite carries on after it)
                         if (what < 0) HomeNav.BeginQuit(); else if (what > 0) HomeNav.Quitting = true;
-                        if (what < 0) Later(() => PlayniteMenu.Run("ExitCommand"));
+                        // the same way out as Alt+F4 (Playnite's Exit command closes its own menu first and hangs on a menu never opened: #27, #26)
+                        if (what < 0) Later(() => { HomeNav.Log("menu: quit"); CloseToTray.QuitNow("power menu"); });
                         else Power.Run(what);
                     }
                     catch (Exception ex) { HomeNav.Log("menu: power failed: " + ex); Ui.Shake(powerRows[powerIndex]); }

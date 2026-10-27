@@ -252,11 +252,16 @@ namespace Selene
         }
 
         // Alt+F4: quit for real, the way Alt+F4 quits Playnite without Selene (its main window closes, Playnite shuts down)
-        public static void AltF4()
+        public static void AltF4() { QuitNow("Alt+F4"); }
+
+        // Playnite closed for real, from anywhere (Alt+F4, the power menu's Quit): the main window is closed, which is Playnite's
+        // own way out. (Playnite's Exit command was not used: it first closes its menu window, and on a menu that was never
+        // opened that call waits forever, so the screen went dark and stayed (#27, #26).)
+        public static void QuitNow(string why)
         {
             HomeNav.BeginQuit();
             if (reallyQuit) return;
-            HomeNav.Log("tray: Alt+F4 -> quit");
+            HomeNav.Log("tray: " + why + " -> quit");
             reallyQuit = true;
             if (tray != null) tray.Visible = false;
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -296,7 +301,7 @@ namespace Selene
         }
 
         // Application.Shutdown closes windows too; never block that (Playnite restarting itself, updates, exit paths)
-        private static bool AppShuttingDown()
+        public static bool AppShuttingDown()
         {
             foreach (var name in new[] { "_appIsShutdown", "_isShuttingDown" })
             {

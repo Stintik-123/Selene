@@ -5,6 +5,11 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 ## Unreleased
 
 - Home (the Guide button) while a game that runs as administrator is playing brought the screen back for a moment and the game stayed in front; Close game on such a game did nothing. Selene now ships a small helper with admin rights (SeleneHelper.exe, registered once as the scheduled task Selene\Helper in the same Windows prompt that makes the game's no-prompt launcher after its first run); Home and Close game go through it (Games > Games as administrator). A game's first session, before that prompt, leaves Home alone instead of flickering.
+- Quit from the power menu faded to black and Playnite stayed, frozen, until it was ended from Task Manager: it went through Playnite's Exit command, which first closes Playnite's own menu and waits forever on the menu Selene never opens. Quit now leaves the way Alt+F4 does. Should Playnite ever not close within 8 s, the screen comes back instead of staying dark, and a close that takes long shows Playnite's closing screen after 3 s rather than black (#27, #26).
+- Back from a game, Playnite was sometimes black with its sounds still playing until Alt+Tab (the fade-in waited for a window activation that never came): Playnite in front yet blank for 2 s is shown (#24).
+- Spotlight on one of Playnite's own filter presets kept its usual last-played order; it now follows the preset's own sorting (Newest by date added, a custom preset by whatever it sorts on) (#23).
+- Spotlight and Collection play Extra Metadata's short looping trailer (VideoMicrotrailer.mp4, what it downloads by default) when a game has no full trailer or preview clip; a trailer file Windows can't decode is named in the log (#28).
+- Store currency: Saudi riyal, UAE dirham, Qatari riyal, Kuwaiti dinar, Israeli shekel and Steam's Middle East dollar prices, plus the rand, złoty, franc, krone, hryvnia, tenge, NZ, HK and Taiwan dollars, yuan, dong and the Chilean, Colombian and Peruvian currencies (#29). The game menu's add-on entries failed with "Ambiguous match found" for some script add-ons; fixed.
 
 ## 1.2.2 - 2026-10-27
 

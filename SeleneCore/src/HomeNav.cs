@@ -86,7 +86,7 @@ namespace Selene
             var tvBackup = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "fullscreenConfig.tv.json");
             RowMode = System.IO.File.Exists(tvBackup) ? "all" : "tv";
             var app = Application.Current;
-            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Unhush(); GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); StartBatteryPolling(); if (Features.On("tray")) CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
+            if (app != null) app.Dispatcher.BeginInvoke(new Action(() => { app.Resources["SeleneRowMode"] = RowMode; app.Exit += (s, e) => { GamePause.Unhush(); GamePause.Resume(); RestoreTaskbar(); }; AutoHideTaskbar(); KeepPlayniteOpenOnLaunch(); StartGuideWatcher(); WarmShield(); StartBlankWatch(); StartDeviceModeWatch(); EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnAnyWindowLoaded)); Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged; HookExistingRows(); StartBatteryPolling(); if (Features.On("tray")) CloseToTray.Install(); InputManager.Current.PreProcessInput += OnPreProcessInput; }));
         }
 
         private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -765,6 +765,33 @@ namespace Selene
         // Optional (settings: streaming host log folder + client name): the newest streaming-host log (Sunshine-style)
         // says whether a client is connected and its name. A Playnite started for a stream (RowMode "all") is not watched.
         private static bool startedAsChild;
+
+        // Playnite in front yet blank: its root is kept at opacity 0 behind a running game and fades back in on Activated,
+        // but a game that closes without Windows re-activating Playnite left a black screen with the sounds still playing
+        // (#24). Two checks a second apart, then it is shown.
+        private static int blankTicks;
+        private static void StartBlankWatch()
+        {
+            var since = DateTime.Now;
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            t.Tick += (s, e) =>
+            {
+                try
+                {
+                    if ((DateTime.Now - since).TotalSeconds < 20) return;   // (the intro has its own covers)
+                    var w = Application.Current.MainWindow;
+                    var root = w != null ? w.Content as UIElement : null;
+                    bool blank = root != null && root.Opacity < 0.01 && w.IsVisible && !launching && !guideSwitching && !Quitting && PlayniteInFront();
+                    blankTicks = blank ? blankTicks + 1 : 0;
+                    if (blankTicks < 2) return;
+                    blankTicks = 0;
+                    Log("screen: Playnite in front but blank for 2 s -> shown");
+                    PlayEnterAnimation(w);
+                }
+                catch (Exception ex) { Log("blank watch: " + ex.Message); }
+            };
+            t.Start();
+        }
 
         private static void StartDeviceModeWatch()
         {
@@ -1912,7 +1939,7 @@ namespace Selene
         {
             path = game is string ? null : FullTrailerPath(game);
             hasSound = path != null;
-            if (path == null && !(game is string)) path = TrailerPath(game);
+            if (path == null && !(game is string)) path = TrailerPath(game) ?? MicroTrailerPath(game);
             return path != null;
         }
 
@@ -1924,11 +1951,15 @@ namespace Selene
         private static bool clipPlaying;
         public static bool ClipIsPlaying { get { return clipPlaying; } }
 
-        private static string FullTrailerPath(object game)
+        private static string FullTrailerPath(object game) { return ExtraMetadataVideo(game, "VideoTrailer.mp4"); }
+        // Extra Metadata's short looping clip (what it downloads by default): silent, shown when there is no full trailer or preview clip (#28)
+        private static string MicroTrailerPath(object game) { return ExtraMetadataVideo(game, "VideoMicrotrailer.mp4"); }
+
+        private static string ExtraMetadataVideo(object game, string file)
         {
             var id = Prop(game, "Id");
             if (id == null || Api == null) return null;
-            var path = System.IO.Path.Combine(Api.Paths.ConfigurationPath, "ExtraMetadata", "games", id.ToString(), "VideoTrailer.mp4");
+            var path = System.IO.Path.Combine(Api.Paths.ConfigurationPath, "ExtraMetadata", "games", id.ToString(), file);
             return System.IO.File.Exists(path) ? path : null;
         }
 
@@ -2235,6 +2266,8 @@ namespace Selene
                 Name = "TileVideo", LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close, Volume = 1,
                 Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false
             };
+            // a file Windows has no decoder for (HEVC, AV1, VP9, Opus sound...) plays nothing: said in the log at least (#28)
+            video.MediaFailed += (s, e) => Log("preview: can't play " + ((MediaElement)s).Source + ": " + (e.ErrorException != null ? e.ErrorException.Message : "unknown error") + " (no Windows decoder for it? H.264 video with AAC sound always plays)");
             host.Children.Add(video);
             return video;
         }
@@ -4035,7 +4068,7 @@ namespace Selene
         private static string[] RowFilters = BuiltInFilters;
         private static string[] RowFilterLabels = BuiltInFilterLabels;
         private const string PresetKey = "preset:";
-        private static readonly HashSet<Guid> presetGames = new HashSet<Guid>();
+        private static readonly Dictionary<Guid, int> presetGames = new Dictionary<Guid, int>();   // game -> its place in Playnite's order for the preset
         private static Guid presetGamesFor = Guid.Empty;
         private static bool presetsWatched;
 
@@ -4079,6 +4112,7 @@ namespace Selene
         }
 
         private static bool IsPresetTab(string key) { return key != null && key.StartsWith(PresetKey); }
+        private static int PresetPlace(object game) { var id = Prop(game, "Id"); int i; return id is Guid && presetGames.TryGetValue((Guid)id, out i) ? i : int.MaxValue; }
         private static Guid PresetOf(string key) { Guid id; return IsPresetTab(key) && Guid.TryParse(key.Substring(PresetKey.Length), out id) ? id : Guid.Empty; }
 
         // a preset tab: Playnite applies the preset (as Collection does) and the row shows the games it leaves
@@ -4090,7 +4124,9 @@ namespace Selene
             {
                 if (Api.MainView.GetActiveFilterPreset() != id) Api.MainView.ApplyFilterPreset(id);
                 presetGames.Clear();
-                foreach (var g in Api.MainView.FilteredGames) presetGames.Add(g.Id);
+                // Playnite's filtered list comes in the preset's own sorting (Newest = by date added...): kept for the row (#23)
+                int place = 0;
+                foreach (var g in Api.MainView.FilteredGames) if (!presetGames.ContainsKey(g.Id)) presetGames[g.Id] = place++;
                 presetGamesFor = id;
             }
             catch (Exception ex) { Log("filter preset: " + ex.Message); }
@@ -4124,7 +4160,7 @@ namespace Selene
             {
                 if (presetGamesFor != PresetOf(key)) PreparePresetFilter();
                 var idObj = Prop(game, "Id");
-                return idObj is Guid && presetGames.Contains((Guid)idObj);
+                return idObj is Guid && presetGames.ContainsKey((Guid)idObj);
             }
             switch (key)
             {
@@ -4483,8 +4519,16 @@ namespace Selene
             foreach (var g in gameSource) if (IsShown(g)) list.Add(g);
             // Recently played is strictly last-played first (no manual order there)
             if (RowFilters[RowFilter] == "recent") pinned.Clear();
+            // one of Playnite's own filter presets: the row follows the order Playnite sorted it in (#23)
+            bool presetOrder = IsPresetTab(RowFilters[RowFilter]) && presetGamesFor != Guid.Empty && presetGamesFor == PresetOf(RowFilters[RowFilter]);
+            if (presetOrder) pinned.Clear();
             list.Sort((a, b) =>
             {
+                if (presetOrder)
+                {
+                    int ia = PresetPlace(a), ib = PresetPlace(b);
+                    if (ia != ib) return ia.CompareTo(ib);
+                }
                 int pa = pinned.IndexOf(Convert.ToString(Prop(a, "Id"))), pb = pinned.IndexOf(Convert.ToString(Prop(b, "Id")));
                 if (pa < 0) pa = int.MaxValue;
                 if (pb < 0) pb = int.MaxValue;
@@ -5120,6 +5164,25 @@ namespace Selene
                 var w = Application.Current.MainWindow;
                 var root = w != null ? w.Content as UIElement : null;
                 if (root != null && w.IsVisible) root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(150)));
+                // never a dark screen that stays: if Playnite hasn't begun shutting down in 8 s and no dialog or closing screen is up,
+                // the quit did not happen (#27, #26) and the screen comes back
+                var guard = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+                guard.Tick += (s, e) =>
+                {
+                    guard.Stop();
+                    try
+                    {
+                        if (CloseToTray.AppShuttingDown()) return;
+                        var main = Application.Current.MainWindow;
+                        foreach (Window other in Application.Current.Windows) if (!ReferenceEquals(other, main) && other.IsVisible) { Log("quit: still here after 8 s, a window is up (" + other.GetType().Name + ")"); return; }
+                        var r = main != null ? main.Content as UIElement : null;
+                        Quitting = false; quitFaded = false;
+                        if (r != null && r.Opacity < 0.99) FadeInRoot(r);
+                        Log("quit: Playnite did not close in 8 s -> screen back");
+                    }
+                    catch (Exception ex) { Log("quit guard: " + ex.Message); }
+                };
+                guard.Start();
             }
             catch (Exception ex) { Log("quit fade: " + ex.Message); }
         }
