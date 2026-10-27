@@ -4,6 +4,10 @@ Selene (theme) and Selene Core (add-on) share one version number and are release
 
 ## Unreleased
 
+## 1.3.1 - 2026-10-27
+
+- UniPlaySong stayed silent (or showed Now playing with no sound) in other themes after using Selene: Selene's music hold was saved in the add-on's own settings. It is put back when Playnite closes, and at the next start in any theme, so it also repairs installs already left that way.
+
 ## 1.3.0 - 2026-10-27
 
 - News (#14): a News card on Spotlight shows the latest headlines from the RSS and Atom feeds you follow, as picture tiles with the numbers under the headline (new today, this week, sources, latest). Down goes into them, A opens an article in your browser. The full News screen (A on the card) shows the picked article's picture large with its source, headline and the start of its text, a row of picture tiles that glides as you move, and the sources as tabs (LB / RB). "Steam: your games" follows the news and patch notes of the Steam games you play, with their pictures, and is followed with Selene's other suggestions (PC Gamer and more) until you change it; Y on the News screen opens Manage feeds, a card per feed (A turns one on or off, X removes it, the last card adds one) with a row of suggested feeds. Selene settings > Spotlight > News feeds opens the same. Switch: Spotlight, News card.

@@ -2435,11 +2435,39 @@ namespace Selene
         // music control switched off: every pause Selene set on the music add-on is let go now
         public static void ReleaseMusic()
         {
+            if (musicGuard != null) { musicGuard.Stop(); musicGuard = null; }
             musicMode = null;
             videoPause = null;
             SetUpsSetting("ForceDefaultMusicOverride", false);
             SetUpsSetting("ThemeOverlayActive", false);
             SetUpsVideoPlaying(false);
+        }
+
+        // UniPlaySong keeps its settings in its own file, and what Selene put in them (play the default music only, a theme is
+        // showing) was saved along with them when Playnite closed. In any other theme the add-on then played nothing (it was
+        // asked for a default track that isn't there) or paused itself. Put back to normal when Playnite closes, and again at the
+        // next start whatever theme is in use, for the ones already left that way.
+        public static void CleanMusicLeftovers(Playnite.SDK.IPlayniteAPI api)
+        {
+            try
+            {
+                foreach (var plugin in api.Addons.Plugins)
+                {
+                    if (plugin.Id != UniPlaySongId) continue;
+                    var settings = FindSettingsWith(plugin, "ForceDefaultMusicOverride", 3);
+                    if (settings == null) return;
+                    var fixedNames = new List<string>();
+                    foreach (var name in new[] { "ForceDefaultMusicOverride", "ThemeOverlayActive", "VideoIsPlaying" })
+                    {
+                        var prop = settings.GetType().GetProperty(name);
+                        if (prop == null || !prop.CanWrite || prop.PropertyType != typeof(bool) || !(bool)prop.GetValue(settings, null)) continue;
+                        prop.SetValue(settings, false, null);
+                        fixedNames.Add(name);
+                    }
+                    if (fixedNames.Count > 0) Log("UPS: put back " + string.Join(", ", fixedNames.ToArray()));
+                }
+            }
+            catch (Exception ex) { Log("UPS clean: " + ex.Message); }
         }
 
         private static void SetUpsSetting(string name, bool value)

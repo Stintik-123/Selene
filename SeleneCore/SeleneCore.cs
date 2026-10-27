@@ -37,7 +37,12 @@ namespace Selene
 
         public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
         {
-            if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use (fullscreen theme: " + SelenePaths.ActiveThemeId + "), staying off"); return; }
+            if (!Active)
+            {
+                logger.Info("Selene Core: the Selene theme isn't in use (fullscreen theme: " + SelenePaths.ActiveThemeId + "), staying off");
+                HomeNav.CleanMusicLeftovers(PlayniteApi);   // what Selene left in the music add-on's saved settings must not silence another theme
+                return;
+            }
             HomeNav.Log("paths: config " + SelenePaths.PlayniteConfig + " | theme " + SelenePaths.ThemeDir + (PlayniteApi.Paths.IsPortable ? " | portable" : ""));
             HomeNav.Api = PlayniteApi;
             StartupWork.Start(() => SeleneShell.Ready && Application.Current.MainWindow != null && Application.Current.MainWindow.IsVisible
@@ -84,6 +89,7 @@ namespace Selene
         {
             HomeNav.ShutdownBegun = true;
             HomeNav.Log("quit: Playnite is closing");
+            if (Active) { HomeNav.ReleaseMusic(); HomeNav.CleanMusicLeftovers(PlayniteApi); }   // the music add-on is saved as it should be
         }
 
         public override void OnGameStarting(OnGameStartingEventArgs args)
