@@ -1,11 +1,11 @@
 # Selene — полная русская локализация
 # Живой, человеческий перевод. Фразы без перевода остаются на английском.
-# Положите файл в theme/Localization/ или в ExtensionsData\...\Localization\
 
 # --- Основное ---
 Settings = Настройки
 Back = Назад
 Select = Выбрать
+Close = Закрыть
 More = Ещё
 Edit = Изменить
 Menu = Меню
@@ -53,6 +53,35 @@ Sound & music = Звук и музыка
 Look = Внешний вид
 Games = Игры
 Advanced = Дополнительно
+Open = Открыть
+Add = Добавить
+Remove = Удалить
+Manage = Управление
+Adjust = Настроить
+View = Обзор
+Scroll = Прокрутка
+Install = Установить
+Move = Переместить
+Favorite = В избранное
+Hidden = Скрытая
+HDR = HDR
+Played = Играли
+Never = Никогда
+Local = Локально
+Filter = Фильтр
+Click = Нажать
+Copy log = Скопировать лог
+Resume = Продолжить
+Play = Играть
+Details = Подробнее
+Game options = Параметры игры
+Close Game = Закрыть игру
+Trailer sound = Звук трейлера
+
+# --- Первый запуск / без Core ---
+Selene Core isn't running = Selene Core не запущен
+Selene is this theme plus its add-on, Selene Core. Install SeleneCore.pext from github.com/mattxslv/Selene/releases (open the file, or drag it onto Playnite's window), then restart Playnite. If it is installed already, make sure it is enabled under Add-ons. = Selene — это тема плюс дополнение Selene Core. Скачайте SeleneCore.pext с github.com/mattxslv/Selene/releases (откройте файл или перетащите в окно Playnite), затем перезапустите Playnite. Если уже установлено — убедитесь, что оно включено в дополнениях.
+Playnite's menu still opens from here (the Start / Menu button on a controller) to pick another theme meanwhile. = Меню Playnite по-прежнему открывается отсюда (кнопка Start / Menu на контроллере), чтобы пока выбрать другую тему.
 
 # --- Язык ---
 Choose your language = Выберите язык
@@ -62,7 +91,7 @@ Restart now to apply the selected language? = Перезапустить сей�
 Restart now = Перезапустить сейчас
 Later = Позже
 
-# --- Профили и первый запуск ---
+# --- Профили ---
 What should we call you? = Как тебя зовут?
 All set = Всё готово
 All add-ons installed = Все дополнения установлены
@@ -81,7 +110,7 @@ Or your own picture = Или свою картинку
 Preview = Предпросмотр
 Live preview = Живой предпросмотр
 
-# --- Spotlight и навигация ---
+# --- Spotlight / фильтры ---
 All games = Все игры
 Installed = Установленные
 Recently played = Недавно играли
@@ -89,16 +118,13 @@ Favorites = Избранное
 Not played yet = Ещё не играли
 Surprise me = Удиви меня
 News = Новости
-Play = Играть
-Details = Подробнее
-Favorite = В избранное
 Unfavorite = Убрать из избранного
-Trailer sound = Звук трейлера
 Trailer sound off = Звук трейлера выкл
 Trailer cards after = Трейлеры через
 never = никогда
 1 s = 1 с
 2.5 s = 2,5 с
+2.5 seconds = 2,5 секунды
 5 s = 5 с
 Starting tab = Вкладка при старте
 Filter tabs = Вкладки фильтров
@@ -108,6 +134,7 @@ Activity card = Карточка «Активность»
 Captures card = Карточка «Записи»
 Surprise me card = Карточка «Удиви меня»
 News card = Карточка «Новости»
+Achievements card = Карточка «Достижения»
 Button hints = Подсказки кнопок
 View button = Кнопка View
 Button names = Названия кнопок
@@ -117,8 +144,230 @@ Logo intro = Заставка с логотипом
 Start on = Открывать при запуске
 Library update at start = Обновлять библиотеку при старте
 where you left it = там, где остановились
+Where you left it = Там, где остановились
+The screen Playnite opens on. = Какой экран открывать при запуске.
+The filter tab Spotlight opens on. = На какой вкладке фильтров открывать Spotlight.
+Looks for new and removed games shortly after start and when back from the tray. = Ищет новые и удалённые игры вскоре после запуска и при возврате из трея.
+Pick a profile at start. Off: the last one signs in by itself. = Выбирать профиль при запуске. Выкл: входит последний.
+The chime with the logo. = Звук вместе с логотипом.
+Start-up sound = Звук при запуске
+The Selene logo as Playnite starts. = Логотип Selene при запуске Playnite.
+START-UP = ЗАПУСК
+SPOTLIGHT = SPOTLIGHT
+Hold: Settings = Зажать: Настройки
+Hold: Search = Зажать: Поиск
+PgUp = PgUp
+PgDn = PgDn
+PgUp/Dn = PgUp/Dn
+Enter = Enter
+Space = Пробел
+A = A
+B = B
+X = X
+Y = Y
+LB = LB
+RB = RB
+RS = RS
+LT = LT
+RT = RT
 
-# --- Меню и питание ---
+# --- Карточки Spotlight ---
+What you've been playing, with the numbers. = Во что играли, с цифрами.
+This week day by day, your streak, this month and each game's sessions on the Activity screen (with the GameActivity add-on). = Эта неделя день за днём, серия, этот месяц и сессии каждой игры на экране Активности (нужно дополнение GameActivity).
+Activity: your play sessions = Активность: ваши сессии
+Your screenshots and clips. = Ваши скриншоты и клипы.
+Every game's achievements together, the latest unlocks first. = Все достижения вместе, сначала свежие.
+Covers flick past and stop on a game to play. = Обложки пролистываются и останавливаются на игре.
+Headlines from the RSS and Atom feeds you follow, or a few feeds to follow. = Заголовки из RSS/Atom-лент, на которые вы подписаны, или несколько лент на выбор.
+Latest captures, last played and a few ideas. Down goes into them. = Последние записи, недавно играли и несколько идей. Вниз — внутрь.
+A game picked elsewhere (a search, More like this, Activity) is reached by a quick scroll along the row. = Игра, выбранная в другом месте (поиск, Похожие, Активность), находится быстрой прокруткой по ряду.
+Scroll to a picked game = Прокрутка к выбранной игре
+Scrolled, the row runs to both edges of the screen and a cut tile dissolves at the edge. = При прокрутке ряд идёт до краёв экрана, обрезанная плитка растворяется у края.
+Row to the edges = Ряд до краёв
+How long you rest on a game before its tile plays its trailer. = Сколько ждать, прежде чем плитка начнёт показывать трейлер.
+Trailer cards start with sound. R3 switches it either way. = Трейлеры стартуют со звуком. R3 переключает в любую сторону.
+Selene gets a game's trailer from Steam (its first minute, 720p, about 20 MB) so trailer cards and Collection can play it. Whole library: every game in the background. = Selene берёт трейлер со Steam (первая минута, 720p, ~20 МБ), чтобы показывать его на карточках и в Коллекции. Вся библиотека — в фоне.
+Download trailers = Скачивать трейлеры
+Games you look at = Игры, на которые смотрите
+Selene gets a game's logo and wide background from Steam when it has none (about 1 MB a game), for Spotlight, Collection and a game's page. = Selene берёт логотип и широкий фон со Steam, если их нет (~1 МБ на игру), для Spotlight, Коллекции и страницы игры.
+Download logos and backgrounds = Скачивать логотипы и фоны
+The tabs LB / RB go through, here and in Collection. = Вкладки, по которым ходят LB / RB, здесь и в Коллекции.
+Selene's = От Selene
+How much the art darkens behind the words, on Spotlight and in Collection. 100% is as much as each picture needs; Off leaves the art bare. = Насколько затемняется арт за текстом в Spotlight и Коллекции. 100% — столько, сколько нужно картинке; Выкл — арт без затемнения.
+Shade over the art = Затемнение арта
+Left alone, Spotlight dims and drifts through your games' art. Any button wakes it. = Если оставить, Spotlight затемняется и медленно листает арты игр. Любая кнопка будит.
+Idle screen after = Экран бездействия через
+10 minutes = 10 минут
+Add, remove and enable RSS or Atom feeds. Their latest headlines show on the News card on Spotlight. = Добавляйте, удаляйте и включайте RSS/Atom-ленты. Свежие заголовки появляются на карточке Новостей в Spotlight.
+News feeds = Ленты новостей
+No favorites yet = Пока нет избранного
+Press X on a game to add it to your favorites. = Нажмите X на игре, чтобы добавить в избранное.
+Nothing played lately = В последнее время ничего не играли
+Games you play show up here for a month. = Игры, в которые вы играете, появляются здесь на месяц.
+Nothing unlocked yet. = Пока ничего не получено.
+Recently unlocked = Недавно получено
+Order = Порядок
+Default order = По умолчанию
+Hidden achievement = Скрытое достижение
+Keep playing to find out. X shows it. = Играйте дальше, чтобы узнать. X покажет.
+More like this = Похожие
+
+# --- Активность ---
+ALL PLAY TIME = ВСЁ ВРЕМЯ В ИГРАХ
+AMONG YOUR MOST PLAYED = СРЕДИ САМЫХ ИГРАЕМЫХ
+YOUR TOP GAME = ВАША ЛУЧШАЯ ИГРА
+Your activity = Ваша активность
+Your play time, most played and last played games show here. = Здесь — время в играх, самые играемые и последние.
+This week = На этой неделе
+Today = Сегодня
+Yesterday = Вчера
+Past Week = За неделю
+Past Month = За месяц
+Past Year = За год
+More than a year ago = Больше года назад
+Under a minute = Меньше минуты
+Under an hour = Меньше часа
+hours = ч
+minutes = мин
+PLAY TIME = ВРЕМЯ В ИГРЕ
+PLAYED THIS WEEK = ИГРАЛИ НА ЭТОЙ НЕДЕЛЕ
+PLAYED THIS MONTH = ИГРАЛИ В ЭТОМ МЕСЯЦЕ
+Not yet = Ещё нет
+A history of when and how long you played each game. = История, когда и сколько вы играли в каждую игру.
+671 hours in all, most of them in Metro 2033 Redux (168 h). Down for the games you played last. = Всего 671 час, больше всего в Metro 2033 Redux (168 ч). Вниз — последние игры.
+10 games this week = 10 игр на этой неделе
+Open your collection = Открыть коллекцию
+
+# --- Записи ---
+CAPTURES = ЗАПИСИ
+Your captures = Ваши записи
+Your screenshot = Ваш скриншот
+Clip player = Проигрыватель клипов
+No captures yet = Пока нет записей
+No captures of this game yet = Пока нет записей этой игры
+Take a screenshot or record a clip while playing. = Сделайте скриншот или запишите клип во время игры.
+2 screenshots · 2 clips, newest first. Down for the latest ones. = 2 скриншота · 2 клипа, сначала новые. Вниз — последние.
+New from 4K Video Downloader+ = Новое из 4K Video Downloader+
+Screenshots = Скриншоты
+
+# --- Поиск / коллекция ---
+Type a game's name = Введите название игры
+Your games show here as you type. = Игры появляются по мере ввода.
+No games found = Игры не найдены
+Every game you have in one place: filter, search and sort the whole collection. = Все ваши игры в одном месте: фильтр, поиск и сортировка всей коллекции.
+Применены другие фильтры. = Применены другие фильтры.
+Результаты поиска для: = Результаты поиска для:
+Не найдено игр по заданным критериям поиска/фильтра = Не найдено игр по заданным критериям поиска/фильтра
+Uninstalled games show darker in Collection. = Неустановленные игры в Коллекции темнее.
+
+# --- Детали / параметры игры ---
+Play time = Время в игре
+Last played = Последний раз
+Never played = Никогда не играли
+Not installed = Не установлена
+PLATFORM = ПЛАТФОРМА
+Platforms = Платформы
+Genres = Жанры
+Release date = Дата выхода
+RELEASED = ВЫШЛА
+Developer = Разработчик
+Publisher = Издатель
+Description = Описание
+No description for this game yet. = Пока нет описания этой игры.
+Screenshots = Скриншоты
+No screenshots for this game = Нет скриншотов этой игры
+Trailers = Трейлеры
+What your add-ons can do with this game. = Что могут сделать дополнения с этой игрой.
+Where its screenshots come from: Steam or IGDB, or a Steam AppID / IGDB id of your own. = Откуда брать скриншоты: Steam или IGDB, либо свой Steam AppID / IGDB id.
+Metadata source = Источник метаданных
+Score, tags, categories, genres and the rest. = Оценка, теги, категории, жанры и остальное.
+Edit details = Редактировать данные
+Completion status = Статус прохождения
+Windows' HDR switched on while this game runs. = Windows включает HDR, пока идёт эта игра.
+Hidden games stay out of your lists. = Скрытые игры не показываются в списках.
+On your Favorites tab. = На вкладке Избранное.
+Change its place on Spotlight. = Изменить место в Spotlight.
+GAME OPTIONS = ПАРАМЕТРЫ ИГРЫ
+Настройки игры = Настройки игры
+Установить = Установить
+Играть = Играть
+Remove from library = Удалить из библиотеки
+TIME TO BEAT = ВРЕМЯ ПРОХОЖДЕНИЯ
+LAST PLAYED = ПОСЛЕДНИЙ РАЗ
+PLAYTIME = ВРЕМЯ В ИГРЕ
+Continue where you left off = Продолжить с того места
+NOW PLAYING = СЕЙЧАС ИГРАЕТЕ
+Critics  = Критики  
+Players  = Игроки  
+
+# --- Достижения ---
+ACHIEVEMENTS = ДОСТИЖЕНИЯ
+Unlocked = Получено
+Locked = Ещё нет
+Bronze = Бронза
+Silver = Серебро
+Gold = Золото
+Platinum = Платина
+BRONZE = БРОНЗА
+SILVER = СЕРЕБРО
+GOLD = ЗОЛОТО
+PLATINUM = ПЛАТИНА
+EARNED = ПОЛУЧЕНО
+Ultra rare = Ультра-редкое
+Rare = Редкое
+Uncommon = Необычное
+Common = Обычное
+Your score = Ваш счёт
+A game's trophies = Трофеи игры
+Achievements need the Playnite Achievements add-on. = Для достижений нужно дополнение Playnite Achievements.
+Turn it on in Playnite's Add-ons. = Включите его в дополнениях Playnite.
+Latest: Marxman in Team Fortress 2 (bronze). Down for your newest unlocks. = Последнее: Marxman в Team Fortress 2 (бронза). Вниз — свежие разблокировки.
+339 trophies earned = 339 трофеев получено
+0 of 18 unlocked = 0 из 18 получено
+Locked  18 = Ещё нет  18
+Unlocked  0 = Получено  0
+All  18 = Все  18
+
+# --- Новости / магазин ---
+What's new = Что нового
+LATEST = СВЕЖЕЕ
+SOURCES = ИСТОЧНИКИ
+THIS WEEK = НА ЭТОЙ НЕДЕЛЕ
+NEW TODAY = НОВОЕ СЕГОДНЯ
+Just now = Только что
+Latest from 3 sources. Down for the headlines. = Свежее из 3 источников. Вниз — заголовки.
+2 free games this week = 2 бесплатные игры на этой неделе
+Sker Ritual and Home - A Unique Horror Adventure are free to keep on Epic Games until Oct 29. = Sker Ritual и Home - A Unique Horror Adventure бесплатно навсегда в Epic Games до 29 октября.
+FREE = БЕСПЛАТНО
+Free until Oct 29 = Бесплатно до 29 октября
+Best deals = Лучшие скидки
+Bestsellers = Бестселлеры
+Top sellers = Хиты продаж
+Free games = Бесплатные игры
+New releases = Новинки
+Sales = Скидки
+Buy on = Купить в
+% off = % скидка
+A game's page = Страница игры
+Web page = Веб-страница
+Up to 96% off = Скидки до 96%
+Sale ends Nov 2 = Скидка до 2 ноября
+Eternal Threads is 80% off on Epic Games, RUB 119.80 until then. = Eternal Threads со скидкой 80% в Epic Games, 119,80 ₽ до этой даты.
+The Boss Gangster: Criminal Empire just came out · 539,10 руб. = The Boss Gangster: Criminal Empire только вышла · 539,10 ₽
+New on Steam = Новое в Steam
+The Black Within is $0.15 on GOG, down from $3.35. = The Black Within за $0.15 на GOG, было $3.35.
+
+# --- Магазины ---
+Steam = Steam
+Epic Games = Epic Games
+Xbox = Xbox
+Microsoft Store = Microsoft Store
+Steam · Epic Games · Xbox · Microsoft Store = Steam · Epic Games · Xbox · Microsoft Store
+EA app = EA app
+Epic = Epic
+Steam Family Sharing = Семейный доступ Steam
+
+# --- Меню / питание ---
 A Sleep item. = Пункт «Сон».
 A Hibernate item. = Пункт «Гибернация».
 A Restart item in Playnite's menu. = Пункт «Перезапуск» в меню Playnite.
@@ -145,127 +394,59 @@ Blur on that art = Размытие фона
 Idle screen = Экран бездействия
 Session card = Карточка сессии
 Update notices = Уведомления об обновлениях
+Selene is up to date (1.3.1). = Selene актуальна (1.3.1).
 
-# --- Магазин ---
-Best deals = Лучшие скидки
-Bestsellers = Бестселлеры
-Top sellers = Хиты продаж
-Free games = Бесплатные игры
-New releases = Новинки
-Sales = Скидки
-Buy on = Купить в
-% off = % скидка
-A game's page = Страница игры
-Web page = Веб-страница
+# --- Настройки Playnite ---
+GENERAL = ОСНОВНОЕ
+VISUALS = ВНЕШНИЙ ВИД
+AUDIO = ЗВУК
+LAYOUT = РАСКЛАДКА
+MENUS = МЕНЮ
+INPUT = ВВОД
+General = Основное
+Visuals = Внешний вид
+Audio = Звук
+Layout = Раскладка
+Menus = Меню
+Input = Ввод
+Playnite = Playnite
+The monitor, the theme and everything else, on Playnite's pages. = Монитор, тема и всё остальное — на страницах Playnite.
+Playnite's own settings = Собственные настройки Playnite
+How fast lists move while a direction is held. = Как быстро двигаются списки при удержании направления.
+Held-button speed = Скорость при удержании
+Normal = Обычная
+Lists glide instead of stepping. = Списки скользят, а не шагают.
+Smooth scrolling = Плавная прокрутка
+Lists stay smooth while their pictures load. = Списки остаются плавными, пока грузятся картинки.
+Load pictures in the background = Грузить картинки в фоне
+The controller's battery in the top bar, as a percentage. = Заряд контроллера в верхней панели в процентах.
+Controller battery = Заряд контроллера
+The time in the top bar. = Время в верхней панели.
+Clock = Часы
+Playnite gets out of the way as a game starts. = Playnite уходит с пути, когда игра запускается.
+Minimize when a game starts = Сворачивать при запуске игры
+The pointer stays hidden while you use a controller. = Указатель мыши скрыт, пока пользуетесь контроллером.
+Hide the mouse pointer = Скрывать указатель мыши
+Fullscreen mode opens on Windows' main display. = Полноэкранный режим открывается на основном мониторе Windows.
+Open on the main display = Открывать на основном мониторе
+B confirms and A goes back. = B подтверждает, A — назад.
+Swap A and B = Поменять A и B
+Start plays, A opens details (or the other way round). = Start запускает, A открывает подробности (или наоборот).
+Swap A and Start on a game = Поменять A и Start на игре
+Guide leaves a running game alone. = Guide не трогает запущенную игру.
+…only when no game runs = …только когда игра не запущена
+The Guide button brings Playnite to the front. = Кнопка Guide выводит Playnite на передний план.
+Guide brings Playnite up = Guide поднимает Playnite
+Playnite listens to controllers. = Playnite слушает контроллеры.
+Controller = Контроллер
 
-# --- Достижения ---
-ACHIEVEMENTS = ДОСТИЖЕНИЯ
-Unlocked = Получено
-Locked = Ещё нет
-Bronze = Бронза
-Silver = Серебро
-Gold = Золото
-Platinum = Платина
-Ultra rare = Ультра-редкое
-Rare = Редкое
-Uncommon = Необычное
-Common = Обычное
-Your score = Ваш счёт
-A game's trophies = Трофеи игры
-Achievements need the Playnite Achievements add-on. = Для достижений нужно дополнение Playnite Achievements.
-Turn it on in Playnite's Add-ons. = Включите его в дополнениях Playnite.
-
-# --- Активность ---
-ALL PLAY TIME = ВСЁ ВРЕМЯ В ИГРАХ
-AMONG YOUR MOST PLAYED = СРЕДИ САМЫХ ИГРАЕМЫХ
-YOUR TOP GAME = ВАША ЛУЧШАЯ ИГРА
-Your activity = Ваша активность
-Your play time, most played and last played games show here. = Здесь — время в играх, самые играемые и последние.
-This week = На этой неделе
-Today = Сегодня
-Yesterday = Вчера
-Past Week = За неделю
-Past Month = За месяц
-Past Year = За год
-More than a year ago = Больше года назад
-Under a minute = Меньше минуты
-Under an hour = Меньше часа
-hours = ч
-minutes = мин
-A history of when and how long you played each game. = История, когда и сколько вы играли в каждую игру.
-
-# --- Записи (Captures) ---
-CAPTURES = ЗАПИСИ
-Your captures = Ваши записи
-Your screenshot = Ваш скриншот
-Clip player = Проигрыватель клипов
-No captures yet = Пока нет записей
-Take a screenshot or record a clip while playing. = Сделайте скриншот или запишите клип во время игры.
-
-# --- Поиск ---
-Type a game's name = Введите название игры
-Your games show here as you type. = Игры появляются по мере ввода.
-No games found = Игры не найдены
-
-# --- Детали игры ---
-Play time = Время в игре
-Last played = Последний раз
-Never played = Никогда не играли
-Not installed = Не установлена
-Platforms = Платформы
-Genres = Жанры
-Release date = Дата выхода
-Developer = Разработчик
-Publisher = Издатель
-Description = Описание
-Screenshots = Скриншоты
-Trailers = Трейлеры
-Game options = Параметры игры
-What your add-ons can do with this game. = Что могут сделать дополнения с этой игрой.
-Back up save data? = Сделать бэкап сохранений?
-Unsaved progress will be lost. = Несохранённый прогресс пропадёт.
-Close Game = Закрыть игру
-Guide = Guide
-
-# --- Магазин и новости ---
-Add a feed = Добавить ленту
-Add feed = Добавить ленту
-Your feeds = Ваши ленты
-Add and enable feeds to see their updates here. = Добавьте и включите ленты — здесь появятся обновления.
-What you follow shows up in News and on its card. = То, на что вы подписаны, видно в Новостях и на карточке.
-What's new = Что нового
-
-# --- Обновления ---
+# --- Обновления / библиотека ---
+Library update = Обновление библиотеки
+Обновление библиотеки завершено = Обновление библиотеки завершено
 Update ready = Обновление готово
 A new version is ready. You have = Вышла новая версия. У вас
 Update now = Обновить сейчас
 Updating your library in the background. = Обновляем библиотеку в фоне.
-
-# --- Разное ---
-Try again = Попробовать ещё раз
-You got everything. = У вас уже всё есть.
-You've played them all = Вы уже всё прошли
-You've started everything = Вы уже всё начинали
-Add games and Selene picks one for you. = Добавьте игры — Selene выберет одну.
-Whole library = Вся библиотека
-Change its place on Spotlight. = Изменить место в Spotlight.
-Change layout = Изменить раскладку
-Zoom in = Увеличить
-Zoom out = Уменьшить
-Use it = Использовать
-Use this currency = Использовать эту валюту
-Turn on or off = Включить или выключить
-Turned off = Выключено
-Automatic = Автоматически
-Back to automatic = Вернуться к авто
-Background only = Только фон
-A little = Немного
-Adjust = Настроить
-About = О программе
-Help = Помощь
-Report a problem = Сообщить о проблеме
-Too many reports in a row for now. Send it from here. = Слишком много жалоб подряд. Отправьте отсюда.
-Three quick steps, or type on your phone; no account needed. = Три быстрых шага или напишите с телефона — аккаунт не нужен.
 
 # --- Состояния ---
 Loading… = Загрузка…
@@ -280,10 +461,32 @@ Connected = Подключено
 CONNECTED = ПОДКЛЮЧЕНО
 Offline = Офлайн
 No internet = Нет интернета
+Try again = Попробовать ещё раз
+You got everything. = У вас уже всё есть.
+You've played them all = Вы уже всё прошли
+You've started everything = Вы уже всё начинали
+Add games and Selene picks one for you. = Добавьте игры — Selene выберет одну.
+Not sure what to play? = Не знаете, во что поиграть?
+Selene picks from your 16 installed games, or the 126 you haven't played yet. Down for a few ideas. = Selene выбирает из 16 установленных игр или из 126, в которые ещё не играли. Вниз — несколько идей.
+Whole library = Вся библиотека
+Change layout = Изменить раскладку
+Zoom in = Увеличить
+Zoom out = Уменьшить
+Use it = Использовать
+Use this currency = Использовать эту валюту
+Turn on or off = Включить или выключить
+Turned off = Выключено
+Automatic = Автоматически
+Back to automatic = Вернуться к авто
+Background only = Только фон
+A little = Немного
+About = О программе
+Help = Помощь
+Report a problem = Сообщить о проблеме
+Too many reports in a row for now. Send it from here. = Слишком много жалоб подряд. Отправьте отсюда.
+Three quick steps, or type on your phone; no account needed. = Три быстрых шага или напишите с телефона — аккаунт не нужен.
 
-# --- Кнопки и подсказки ---
-A confirms and A goes back. = A подтверждает, B — назад.
-B confirms and A goes back. = B подтверждает, A — назад.
+# --- Подсказки кнопок ---
 Hold View to search = Зажмите View для поиска
 Hold Start for Selene settings = Зажмите Start для настроек Selene
 Press A to play = Нажмите A, чтобы играть
@@ -291,7 +494,7 @@ Press Y to move = Нажмите Y, чтобы переместить
 Press X for details = Нажмите X для подробностей
 Press B to go back = Нажмите B, чтобы вернуться
 
-# --- Тема и внешний вид ---
+# --- Тема / внешний вид ---
 Color theme = Цветовая тема
 Wallpaper = Обои
 Your wallpapers = Ваши обои
@@ -309,13 +512,16 @@ Ludusavi = Ludusavi
 HowLongToBeat = HowLongToBeat
 GameActivity = GameActivity
 Playnite Achievements = Playnite Achievements
+Playnite Достижения = Playnite Достижения
+Достижения = Достижения
 DuplicateHider = DuplicateHider
 UniPlaySong = UniPlaySong
 Audio Switcher = Audio Switcher
+Игровая Активность = Игровая Активность
 Turn it off in Add-ons so the two don't fight = Выключите в дополнениях, чтобы они не мешали друг другу
 Turn it off in Playnite's Add-ons so the two don't fight. = Выключите в дополнениях Playnite, чтобы они не мешали друг другу.
 
-# --- Прочее полезное ---
+# --- Прочее ---
 All Games = Все игры
 Presets = Пресеты
 Categories = Категории
@@ -327,7 +533,6 @@ Source = Источник
 Platform = Платформа
 Library = Библиотека
 Installed games = Установленные игры
-Uninstalled games show darker in Collection. = Неустановленные игры в Коллекции темнее.
 Search = Поиск
 Filter Active = Фильтр активен
 Clear filter = Сбросить фильтр
@@ -336,3 +541,6 @@ Name = Название
 Last activity = Последняя активность
 Added = Добавлено
 Random = Случайно
+GAMES = ИГРЫ
+INSTALLED = УСТАНОВЛЕННЫЕ
+Game songs = Музыка игр
