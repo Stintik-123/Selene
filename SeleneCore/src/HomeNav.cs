@@ -4970,16 +4970,8 @@ namespace Selene
                 SelectObject(mem, old); old = IntPtr.Zero;
                 var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(bmp, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
                 src.Freeze();
-                // all (nearly) black: an exclusive-fullscreen game, which a screen copy can't see
-                var px = new byte[4];
-                int lit = 0;
-                for (int gy = 1; gy <= 6; gy++)
-                    for (int gx = 1; gx <= 8; gx++)
-                    {
-                        src.CopyPixels(new Int32Rect(src.PixelWidth * gx / 9, src.PixelHeight * gy / 7, 1, 1), px, 4, 0);
-                        if (px[0] > 12 || px[1] > 12 || px[2] > 12) lit++;
-                    }
-                if (lit < 3) { Log("guide: the game's picture came back black (exclusive fullscreen?) -> fade from black"); return null; }
+                // (a dark scene, or a game the copy can't see that comes back black: crossfading from it is the same as the
+                // fade from black, so the picture is always used)
                 snapBounds = b;
                 Log("guide: game pictured (" + b.Width + "x" + b.Height + ", " + sw.ElapsedMilliseconds + " ms)");
                 return src;
@@ -5024,8 +5016,8 @@ namespace Selene
                 SetWindowPos(wh, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
                 SetCloak(wh, false);
                 snapWindow = win;
-                var safety = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
-                safety.Tick += (s, e) => { safety.Stop(); if (snapWindow == win) { CloseSnapWindow(); Log("guide: picture window still up after 1.5 s -> removed"); } };
+                var safety = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) };
+                safety.Tick += (s, e) => { safety.Stop(); if (snapWindow == win) { CloseSnapWindow(); Log("guide: picture window still up after 3 s -> removed"); } };
                 safety.Start();
             }
             catch (Exception ex) { Log("guide: picture window failed: " + ex.Message); snapWindow = null; }
@@ -5085,9 +5077,10 @@ namespace Selene
             if (ad == null) { PlayEnterAnimation(w); return; }
             var root = w.Content as FrameworkElement;
             if (root == null) { RemoveSnapAdorner(); return; }
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            var gameOut = TimeSpan.FromMilliseconds(340);
-            var homeIn = TimeSpan.FromMilliseconds(420);
+            // a gentle curve over a little longer than a tap's feedback: a whole-screen change read as a jump with the sharper one
+            var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+            var gameOut = TimeSpan.FromMilliseconds(420);
+            var homeIn = TimeSpan.FromMilliseconds(500);
             root.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
             var fadeIn = new DoubleAnimation(0, 1, homeIn) { EasingFunction = ease };
             fadeIn.Completed += (s, e) => root.CacheMode = null;
@@ -5128,8 +5121,8 @@ namespace Selene
                 shield.Left = main.Left; shield.Top = main.Top; shield.Width = main.ActualWidth; shield.Height = main.ActualHeight;
                 bool firstTimeHere = !shield.IsVisible;
                 shield.Show();
-                var autoHide = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
-                autoHide.Tick += (s2, e2) => { autoHide.Stop(); if (shield != null && shield.IsVisible) { shield.Hide(); Log("shield: still up after 1 s -> removed"); } };
+                var autoHide = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2500) };
+                autoHide.Tick += (s2, e2) => { autoHide.Stop(); if (shield != null && shield.IsVisible) { shield.Hide(); Log("shield: still up after 2.5 s -> removed"); } };
                 autoHide.Start();
                 SetWindowPos(new System.Windows.Interop.WindowInteropHelper(shield).Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
                 if (firstTimeHere && main.ActualWidth > 100)
@@ -7030,6 +7023,7 @@ namespace Selene
                 {
                     guideSwitching = true;
                     // the game's picture over everything at once (or black when it can't be pictured): no desktop, no taskbar
+                    bool adminGame = ForegroundIsAdmin();
                     var snap = Features.On("guidefade") ? SnapScreen(hwnd) : null;
                     if (snap != null) ShowSnapWindow(w, snap);
                     if (snapWindow == null) { snap = null; ShowShield(w); }
@@ -7047,11 +7041,13 @@ namespace Selene
                     SetForegroundWindow(hwnd);
                     if (attached) AttachThreadInput(me, fg, false);
                     w.Activate();
+                    bool helperAsked = false;
+                    if (adminGame && !PlayniteInFront()) { helperAsked = RequestElevated("focus " + hwnd.ToInt64()); if (helperAsked) Log("guide: the game runs as administrator -> admin helper asked at once"); }
                     var focusCheck = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
                     focusCheck.Tick += (sf, ef) =>
                     {
                         focusCheck.Stop();
-                        if (PlayniteInFront()) return;
+                        if (PlayniteInFront() || helperAsked) return;
                         // Windows won't let a normal program take the focus from one running as administrator: Playnite was
                         // on screen but deaf to the controller until the mouse was clicked
                         Log("guide: focus refused (game running as admin?) -> admin helper");
@@ -7060,7 +7056,7 @@ namespace Selene
                     focusCheck.Start();
                     // never left on a black screen (the game's music-less home playing behind black): whatever happened
                     // above, once Playnite is in front it is visible
-                    var neverBlack = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+                    var neverBlack = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2700) };   // (after the reveal wait and its crossfade)
                     neverBlack.Tick += (sb, eb) =>
                     {
                         neverBlack.Stop();
@@ -7072,7 +7068,7 @@ namespace Selene
                         SetCloak(hwnd, false);
                         var r = w.Content as UIElement;
                         if (r != null && r.Opacity < 0.99) { FadeInRoot(r); fixedUp = true; }
-                        if (fixedUp) Log("guide: Playnite was still hidden/black after 1.2 s -> shown");
+                        if (fixedUp) Log("guide: Playnite was still hidden/black after 2.7 s -> shown");
                     };
                     neverBlack.Start();
                     // Windows would first show the picture it kept of Playnite from before the game (a bright flash).
@@ -7090,10 +7086,12 @@ namespace Selene
                         HideShield();
                         PlayGuideEnter(w);
                     };
-                    reveal = (s2, e2) => { if (++frames >= 3) doReveal(); };
+                    // shown once Selene has drawn a few frames AND Windows has really put it in front (a game run as administrator
+                    // gives the screen up only when the helper asks): until then the game's picture (or black) stays
+                    reveal = (s2, e2) => { if (++frames >= 3 && PlayniteInFront()) doReveal(); };
                     CompositionTarget.Rendering += reveal;
-                    var safety = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
-                    safety.Tick += (s3, e3) => { safety.Stop(); doReveal(); };  // never stay invisible
+                    var safety = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };
+                    safety.Tick += (s3, e3) => { safety.Stop(); if (!revealed) Log("guide: Selene not in front after 2 s -> shown anyway"); doReveal(); };  // never stay invisible
                     safety.Start();
                     guideSwitching = false;
                     PauseRunningGame();
