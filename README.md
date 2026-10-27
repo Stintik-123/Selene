@@ -96,6 +96,10 @@ tools\package.ps1        # Selene.pthm + SeleneCore.pext in dist\
 
 More in the guide: [building](docs/guide/building.md).
 
+## How it is developed
+
+Selene is worked on in releases with a short list. How a release is chosen, what "done" means and how requests are answered (planned, later, or not planned) is in [ROADMAP.md](ROADMAP.md).
+
 ## Credits
 
 Built on [Playnite](https://github.com/JosefNemec/Playnite)'s fullscreen theme template (MIT). Menu icons:

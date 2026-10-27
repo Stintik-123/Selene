@@ -132,7 +132,10 @@ namespace Selene
                 if (!appIdLooked)
                 {
                     appIdLooked = true;
-                    if (g.PluginId.ToString() == SteamPlugin) appId = g.GameId;
+                    var chosen = MediaSource.Override(g.Id);   // (Game options > Metadata source)
+                    if (chosen != null && !string.IsNullOrEmpty(chosen.SteamId)) appId = chosen.SteamId;
+                    else if (chosen != null && chosen.Source == "igdb") appId = null;
+                    else if (g.PluginId.ToString() == SteamPlugin) appId = g.GameId;
                     else { asked = true; appId = GameMedia.SteamAppIdByName(g.Name); }   // (a search on Steam's store)
                 }
                 return appId;
@@ -314,6 +317,7 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("art: crop " + System.IO.Path.GetFileName(path) + ": " + ex.Message); }
         }
 
+        // (ink = clearly visible pixels: the soft shadow many logos carry across their whole canvas isn't, or nothing would ever be cut)
         // Steam's client cache keeps a logo on a whole 1280 x 720 canvas, the logo somewhere inside it with empty space around:
         // fitted to the logo's box that canvas fits and the letters land wherever they were. Cut to the ink (a little room kept),
         // as the store's logos come. Nothing for a logo already tight.
@@ -334,7 +338,7 @@ namespace Selene
                 {
                     int rowAt = y * stride;
                     for (int x = 0; x < w; x++)
-                        if (px[rowAt + x * 4 + 3] > 8) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+                        if (px[rowAt + x * 4 + 3] > 40) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
                 }
                 if (maxX < 0) return;
                 int bw = maxX - minX + 1, bh = maxY - minY + 1;
@@ -355,6 +359,41 @@ namespace Selene
 
         // the logos saved in the last days (Selene's, before the trim), looked at once a session
         private static readonly HashSet<Guid> trimLooked = new HashSet<Guid>();
+        // Every game's logo, trimmed once: Extra Metadata and others keep a logo on a 640 x 360 canvas with the lettering in a strip of
+        // it, and fitted to the logo box that left the name small (Monster Hunter Wilds). Looked at in the background after start-up;
+        // a file already seen (same size and time) is skipped next time.
+        public static void TrimAllLogos()
+        {
+            if (!Features.On("trimlogos") || HomeNav.Api == null) return;
+            var folder = System.IO.Path.Combine(HomeNav.Api.Paths.ConfigurationPath, "ExtraMetadata", "games");
+            if (!System.IO.Directory.Exists(folder)) return;
+            System.Threading.Tasks.Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    var state = System.IO.Path.Combine(SelenePaths.DataFolder, "logos-checked-2.txt");
+                    var seen = new HashSet<string>();
+                    if (System.IO.File.Exists(state)) foreach (var line in System.IO.File.ReadAllLines(state)) seen.Add(line);
+                    var added = new List<string>();
+                    foreach (var dir in System.IO.Directory.GetDirectories(folder))
+                    {
+                        var logo = System.IO.Path.Combine(dir, "logo.png");
+                        if (!System.IO.File.Exists(logo)) continue;
+                        var name = System.IO.Path.GetFileName(dir);
+                        var info = new System.IO.FileInfo(logo);
+                        if (seen.Contains(name + "|" + info.Length + "|" + info.LastWriteTimeUtc.Ticks)) continue;
+                        TrimLogo(logo);
+                        info = new System.IO.FileInfo(logo);
+                        added.Add(name + "|" + info.Length + "|" + info.LastWriteTimeUtc.Ticks);
+                        System.Threading.Thread.Sleep(5);   // (a long library isn't read in one go)
+                    }
+                    if (added.Count > 0) { System.IO.Directory.CreateDirectory(SelenePaths.DataFolder); System.IO.File.AppendAllLines(state, added); }
+                    HomeNav.Log("logos: " + added.Count + " looked at");
+                }
+                catch (Exception ex) { HomeNav.Log("logos: " + ex.Message); }
+            });
+        }
+
         private static void TrimLogoOnce(Guid id, string logo)
         {
             lock (gate) { if (!trimLooked.Add(id)) return; }

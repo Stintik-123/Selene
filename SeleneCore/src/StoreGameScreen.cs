@@ -322,7 +322,8 @@ namespace Selene
             var dot = row.Children[0] as Grid;
             if (dot != null && dot.Children.Count >= 2)
             {
-                ((System.Windows.Shapes.Ellipse)dot.Children[0]).Fill = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.9);
+                var badge = dot.Children[0] as Border;
+                if (badge != null) badge.Background = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor", 0.9);
                 Ui.LetterBrush(dot.Children[1], on ? Ink.Brush("SeleneFocusColor") : Ink.Brush("SeleneScrimColor"));
             }
             ((TextBlock)row.Children[1]).Foreground = on ? Ink.Brush("SeleneOnFocusColor") : Ink.Brush("SeleneInkColor");

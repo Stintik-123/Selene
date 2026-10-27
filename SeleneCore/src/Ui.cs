@@ -14,6 +14,28 @@ namespace Selene
     // focus look, motion and sounds, so every screen moves and sounds the same (see docs/guide/building.md).
     public static class Ui
     {
+        public static Button MouseButton(string label, Action action)
+        {
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(10));
+            border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
+            border.SetBinding(Border.PaddingProperty, new System.Windows.Data.Binding("Padding") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            border.AppendChild(presenter);
+            var button = new Button
+            {
+                Content = new TextBlock { Text = label, FontSize = 17, FontFamily = Body, Foreground = Ink.Brush("SeleneInkColor") },
+                Background = Ink.Brush("SeleneGlassColor", 0.95), Padding = new Thickness(14, 7, 14, 7),
+                Margin = new Thickness(3), MinWidth = 46, Focusable = false,
+                Template = new ControlTemplate(typeof(Button)) { VisualTree = border }
+            };
+            button.MouseEnter += (s, e) => button.Background = Ink.Brush("SeleneFocusColor", 0.35);
+            button.MouseLeave += (s, e) => button.Background = Ink.Brush("SeleneGlassColor", 0.95);
+            button.Click += (s, e) => action();
+            return button;
+        }
         public static readonly FontFamily Display = new FontFamily("Segoe UI Variable Display, Segoe UI");
         public static readonly FontFamily Body = new FontFamily("Segoe UI");
         public static readonly FontFamily Glyphs = new FontFamily("Segoe MDL2 Assets");
@@ -152,11 +174,28 @@ namespace Selene
                 foreach (var b in new[] { "A", "B", "X", "Y", "LB", "RB", "LT", "RT", "RS" }) res["SelenePrompt" + b] = PromptLabel(b);
             }
             catch { }
+            InputHints.Refresh();
             if (changed) { HomeNav.Log("prompts: " + (ps ? "PlayStation" : "Xbox")); try { HomeHints.Update(); } catch { } }
+        }
+
+        public static void PublishPrompts()
+        {
+            var app = Application.Current; if (app == null) return;
+            foreach (var button in new[] { "A", "B", "X", "Y", "LB", "RB", "LT", "RT", "RS", "Start", "View" }) app.Resources["SelenePrompt" + button] = PromptLabel(button);
+            app.Resources["SeleneScrollPrompt"] = InputHints.Kind == InputKind.Controller ? PromptLabel("RS") : InputHints.Kind == InputKind.Mouse ? "Wheel" : "PgUp/Dn";
+        }
+
+        public static void LiveHint(FrameworkElement element, Action refresh)
+        {
+            bool attached = false;
+            element.Loaded += (s, e) => { if (!attached) { attached = true; InputHints.Changed += refresh; } refresh(); };
+            element.Unloaded += (s, e) => { if (attached) { attached = false; InputHints.Changed -= refresh; } };
+            refresh();
         }
 
         public static string PromptLabel(string button)
         {
+            var desktop = InputHints.Label(button); if (desktop != null) return desktop;
             if (!PlayStationPrompts) return button;
             switch (button)
             {
@@ -177,11 +216,18 @@ namespace Selene
         {
             var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(18, 0, 0, 0) };
             var dot = new Grid { Width = 32, Height = 32 };
-            dot.Children.Add(new Ellipse { Fill = Ink.Brush("SeleneInkColor") });
-            button = PromptLabel(button);
-            dot.Children.Add(Letter(button, button.Length > 1 ? 11 : 16, FontWeights.SemiBold, Ink.Brush("SeleneScrimColor")));
+            LiveHint(dot, () =>
+            {
+                string shown = PromptLabel(button);
+                dot.Width = Math.Max(32, shown.Length > 1 ? shown.Length * 8 + 16 : 32);
+                dot.Children.Clear();
+                dot.Children.Add(new Border { CornerRadius = new CornerRadius(InputHints.Kind == InputKind.Controller ? 16 : 7), Background = Ink.Brush("SeleneInkColor") });
+                dot.Children.Add(Letter(shown, shown.Length > 1 ? 12 : 16, FontWeights.SemiBold, Ink.Brush("SeleneScrimColor")));
+            });
             sp.Children.Add(dot);
             sp.Children.Add(new TextBlock { Text = label, FontSize = 21, FontFamily = Body, Foreground = Ink.Brush("SeleneInkColor", 0.9), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) });
+            sp.Background = Brushes.Transparent;
+            sp.MouseLeftButtonUp += (s, e) => { if (LoginScene.IsActive) { LoginScene.MousePress(button); e.Handled = true; } };
             return sp;
         }
 
@@ -849,6 +895,8 @@ namespace Selene
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 34, 0, 0) };
             no = new Pill(noLabel, 190);
             yes = new Pill(yesLabel, 190);
+            no.Root.MouseLeftButtonUp += (s, e) => { Answer(false); e.Handled = true; };
+            yes.Root.MouseLeftButtonUp += (s, e) => { Answer(true); e.Handled = true; };
             buttons.Children.Add(no.Root);
             buttons.Children.Add(yes.Root);
             col.Children.Add(buttons);

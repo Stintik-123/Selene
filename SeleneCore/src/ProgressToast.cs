@@ -46,7 +46,7 @@ namespace Selene
         private static int downloadGlyphCode;
         private static ContentControl titleLine;
         private static StackPanel text;
-        private const double SessionWidth = 560, SessionHeight = 128;   // the session card: the one panel-sized card
+        private const double SessionWidth = 640, SessionHeight = 128;   // the session card: the one panel-sized card
         private static DockPanel row;
         private static Brush glass, sessionGlass;
 
@@ -764,7 +764,7 @@ namespace Selene
             var left = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             left.Children.Add(new TextBlock { Text = "Session ended", FontFamily = Ui.Body, FontSize = 15, Foreground = Ink.Brush("SeleneInkColor", 0.62) });
             left.Children.Add(new TextBlock { Text = game.Name, FontFamily = Ui.Display, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = Ink.Brush("SeleneInkColor"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 8) });
-            var figures = new StackPanel { Orientation = Orientation.Horizontal };
+            var figures = new WrapPanel { Orientation = Orientation.Horizontal };   // (wraps rather than cutting a long total off)
             figures.Children.Add(Figure(Duration(seconds), "this session"));
             if (game.Playtime > 0)
             {
@@ -777,7 +777,7 @@ namespace Selene
             {
                 var logoImage = new Image
                 {
-                    Source = pic, MaxWidth = 200, MaxHeight = 88, Stretch = Stretch.Uniform, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 4, 0),
+                    Source = pic, MaxWidth = 170, MaxHeight = 88, Stretch = Stretch.Uniform, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 4, 0),
                     Effect = new System.Windows.Media.Effects.DropShadowEffect { ShadowDepth = 0, BlurRadius = 10, Opacity = 0.6, Color = Colors.Black }
                 };
                 RenderOptions.SetBitmapScalingMode(logoImage, BitmapScalingMode.Fant);

@@ -296,6 +296,22 @@ namespace Selene
 
         private static List<string> ScreenshotUrls(Guid id, string name, string pluginId, string gameId)
         {
+            // the game's own choice (Game options > Metadata source): the source and the id it names, no guessing by name
+            var chosen = MediaSource.Override(id);
+            if (chosen != null)
+            {
+                var found = new List<string>();
+                bool igdbOnly = chosen.Source == "igdb" || (chosen.Source == "auto" && string.IsNullOrEmpty(chosen.SteamId) && !string.IsNullOrEmpty(chosen.IgdbId));
+                if (!igdbOnly)
+                {
+                    string app = !string.IsNullOrEmpty(chosen.SteamId) ? chosen.SteamId
+                               : pluginId == SteamPlugin && Regex.IsMatch(gameId ?? "", @"^\d+$") ? gameId : SearchAppId(name);
+                    if (app != null) found = ParseScreenshots(Download("https://store.steampowered.com/api/appdetails?appids=" + app + "&filters=screenshots"));
+                }
+                if (found.Count == 0 && chosen.Source != "steam") found = !string.IsNullOrEmpty(chosen.IgdbId) ? IgdbScreenshotsById(chosen.IgdbId) : (igdbOnly ? IgdbScreenshots(name) : found);
+                HomeNav.Log("screenshots " + name + ": chosen source " + chosen.Source + " (steam " + (chosen.SteamId ?? "-") + ", igdb " + (chosen.IgdbId ?? "-") + "): " + found.Count + " found");
+                return found;
+            }
             var eml = System.IO.Path.Combine(SelenePaths.PlayniteConfig, "ExtensionsData", EmlData, id + "_SteamAppDetails.json");
             if (System.IO.File.Exists(eml))
             {
@@ -331,6 +347,12 @@ namespace Selene
                 if (d != null && Norm(Convert.ToString(d["name"])) == want) { igdbId = Convert.ToString(d["id"]); break; }
             }
             if (igdbId == null) return list;  // no exact name match: better nothing than another game's pictures
+            return IgdbScreenshotsById(igdbId);
+        }
+
+        private static List<string> IgdbScreenshotsById(string igdbId)
+        {
+            var list = new List<string>();
             var game = Json(Download(PlayniteBackend + "game/" + igdbId));
             object g, shots;
             if (game == null || !game.TryGetValue("data", out g) || !(g is Dictionary<string, object>)) return list;
@@ -342,6 +364,19 @@ namespace Selene
                 if (d != null && d.TryGetValue("image_id", out imageId)) list.Add("https://images.igdb.com/igdb/image/upload/t_1080p/" + imageId + ".jpg");
             }
             return list;
+        }
+
+        // a game's screenshots looked up again (after its metadata source changed): the saved ones go, the strip loads afresh
+        public static void Refresh(Playnite.SDK.Models.Game g)
+        {
+            if (g == null) return;
+            var id = g.Id;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try { lock (diskLock) { var dir = System.IO.Path.Combine(CacheRoot, id.ToString()); if (System.IO.Directory.Exists(dir)) System.IO.Directory.Delete(dir, true); } }
+                catch (Exception ex) { HomeNav.Log("screenshots refresh: " + ex.Message); }
+                Application.Current.Dispatcher.BeginInvoke(new Action(() => { cache.Remove(id); loading.Remove(id); if (shown == id) shown = Guid.Empty; Fetch(g); }));
+            });
         }
 
         internal static string SteamAppIdByName(string name) { return SearchAppId(name); }

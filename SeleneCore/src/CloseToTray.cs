@@ -372,6 +372,8 @@ namespace Selene
         }
 
         private static bool ownMuted;
+        // Playnite quit while hidden in the tray: Windows remembers an app's mute, so it is lifted on the way out (another theme would start silent)
+        public static void UnmuteOnExit() { if (ownMuted && !HomeNav.Isolated) SetOwnAudioMute(false); }
 
         public static void SetOwnAudioMute(bool mute)
         {

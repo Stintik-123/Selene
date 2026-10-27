@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -23,6 +25,7 @@ namespace Selene
         private static MediaElement video;
         private static bool videoHasSound, soundOn;
         private static DispatcherTimer arm;
+        private static DispatcherTimer relatedWork;
 
         public static bool Playing { get { return video != null; } }
 
@@ -64,21 +67,41 @@ namespace Selene
                 Rearm(true);
                 AttachGlide();   // (the list's parts aren't made yet when this is set up, and it may never load again)
                 KeepNearLeft();
-                TrailerFetch.Want(list.SelectedItem, null);
-                var entry = list.SelectedItem;
-                var gp = entry != null ? entry.GetType().GetProperty("Game") : null;
-                var game = gp != null ? gp.GetValue(entry, null) as Playnite.SDK.Models.Game : entry as Playnite.SDK.Models.Game;
-                try { HltbFetch.ForPage(game); } catch (Exception ex) { HomeNav.Log("hltb: " + ex.Message); }   // its times under its name
+                QueueRelatedWork();
             };
+            list.SizeChanged += (s, e) => measuredPitch = 0;
             library.IsVisibleChanged += (s, e) =>
             {
-                if (!(bool)e.NewValue) { Stop(); return; }
+                if (!(bool)e.NewValue) { Stop(); if (relatedWork != null) relatedWork.Stop(); return; }
                 Rearm(false);
+                QueueRelatedWork();
                 // the row's edges as soon as it shows (not from the first move)
                 list.Dispatcher.BeginInvoke(new Action(() => { var sv = RowScroller(); if (sv != null) { HookScroll(sv); ShowFades(sv); } }), DispatcherPriority.Loaded);
             };
             HookArtCrossfade(grid);
             HookGlide();
+        }
+
+        // Browsing past a cover should not start its downloads/metadata work in the input handler.
+        // The latest selection is still fetched as soon as the user rests on it.
+        private static void QueueRelatedWork()
+        {
+            if (relatedWork == null)
+            {
+                relatedWork = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(200) };
+                relatedWork.Tick += (s, e) =>
+                {
+                    relatedWork.Stop();
+                    if (library == null || !library.IsVisible) return;
+                    var entry = list.SelectedItem;
+                    TrailerFetch.Want(entry, null);
+                    var property = entry != null ? entry.GetType().GetProperty("Game") : null;
+                    var game = property != null ? property.GetValue(entry, null) as Playnite.SDK.Models.Game : entry as Playnite.SDK.Models.Game;
+                    try { HltbFetch.ForPage(game); } catch (Exception ex) { HomeNav.Log("hltb: " + ex.Message); }
+                };
+            }
+            relatedWork.Stop();
+            if (library != null && library.IsVisible) relatedWork.Start();
         }
 
         // ---- the row glides: Playnite scrolls it a whole cover at a time (a jump); the covers are shifted back by that much
@@ -95,16 +118,50 @@ namespace Selene
 
         private static void AttachGlide()
         {
-            if (glideAttached) return;
+            if (glideAttached || library == null || !library.IsVisible) return;
             var sv = RowScroller();
             if (sv == null) { HomeNav.Log("collection glide: no scroll viewer yet (list children " + VisualTreeHelper.GetChildrenCount(list) + ", template " + (list.Template != null) + ")"); return; }
             HookScroll(sv);
         }
 
         private static ScrollViewer hooked;
+        private static ItemsPresenter rowPresenter;
+        private static VirtualizingPanel rowPanel;
+        private static DependencyProperty nativeSmooth;
+        private static BindingBase nativeSmoothBinding;
+        private static object nativeSmoothLocal;
+        private static double measuredPitch;
+        private static bool positionQueued;
+
+        // Native pixel-by-pixel scrolling invalidates the panel's layout on every frame.
+        // Let it make one logical step and use Spotlight's render-transform spring for motion.
+        public static void ApplyNavigationSettings()
+        {
+            if (rowPanel == null || nativeSmooth == null) return;
+            if (Features.On("collectionglide"))
+            {
+                double offset = hooked != null ? hooked.HorizontalOffset : 0;
+                rowPanel.SetValue(nativeSmooth, false);
+                var field = rowPanel.GetType().GetField("HorizontalOffsetProperty", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.FlattenHierarchy);
+                var animatedOffset = field != null ? field.GetValue(null) as DependencyProperty : null;
+                if (animatedOffset != null && DependencyPropertyHelper.GetValueSource(rowPanel, animatedOffset).IsAnimated)
+                {
+                    rowPanel.BeginAnimation(animatedOffset, null);
+                    var scroll = rowPanel as IScrollInfo; if (scroll != null) scroll.SetHorizontalOffset(offset);
+                }
+            }
+            else
+            {
+                HomeNav.CancelGlide(rowPresenter != null ? rowPresenter.RenderTransform as TranslateTransform : null);
+                if (nativeSmoothBinding != null) BindingOperations.SetBinding(rowPanel, nativeSmooth, nativeSmoothBinding);
+                else if (nativeSmoothLocal == DependencyProperty.UnsetValue) rowPanel.ClearValue(nativeSmooth);
+                else rowPanel.SetValue(nativeSmooth, nativeSmoothLocal);
+            }
+        }
         // the row's edges: a cover cut by the screen dissolves over the last 200 px (an opacity mask on the row, its end stops
         // animated clear or solid), so nothing is a black slab; a side with nothing cut off (the row's start or end) stays solid
         private static GradientStop maskLeft, maskRight, maskLeftIn, maskRightIn;
+        private static bool? leftFade, rightFade;
 
         private const double EdgePx = 200;
 
@@ -121,6 +178,7 @@ namespace Selene
                 brush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0) };
                 brush.GradientStops.Add(maskLeft); brush.GradientStops.Add(maskLeftIn); brush.GradientStops.Add(maskRightIn); brush.GradientStops.Add(maskRight);
                 list.OpacityMask = brush;
+                leftFade = rightFade = null;
             }
             double w = list.ActualWidth;
             if (w > EdgePx * 3) { maskLeftIn.Offset = EdgePx / w; maskRightIn.Offset = 1 - EdgePx / w; }
@@ -129,6 +187,7 @@ namespace Selene
         private static void SetEdge(GradientStop stop, bool dissolve)
         {
             var to = dissolve ? Color.FromArgb(0, 0, 0, 0) : Colors.Black;
+            if (stop.Color == to && !stop.HasAnimatedProperties) return;
             stop.BeginAnimation(GradientStop.ColorProperty, new ColorAnimation(to, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         }
         private static TranslateTransform endShift;
@@ -162,8 +221,8 @@ namespace Selene
             EnsureMask();
             if (maskLeft == null || !Features.On("collectionglide")) return;
             bool left = sv.HorizontalOffset > 1, right = sv.HorizontalOffset < sv.ScrollableWidth - 1;
-            SetEdge(maskLeft, left);
-            SetEdge(maskRight, right);
+            if (leftFade != left) { leftFade = left; SetEdge(maskLeft, left); }
+            if (rightFade != right) { rightFade = right; SetEdge(maskRight, right); }
         }
 
         // the row's scroll viewer watched for its one-cover steps (hooked again if the list got a new one)
@@ -171,6 +230,20 @@ namespace Selene
         {
             if (sv == null || ReferenceEquals(hooked, sv)) return;
             hooked = sv;
+            rowPresenter = FindChild<ItemsPresenter>(list);
+            rowPanel = FindChild<VirtualizingPanel>(list);
+            measuredPitch = 0;
+            if (rowPanel != null)
+            {
+                var property = DependencyPropertyDescriptor.FromName("SmoothScrollEnabled", rowPanel.GetType(), rowPanel.GetType());
+                nativeSmooth = property != null ? property.DependencyProperty : null;
+                if (nativeSmooth != null)
+                {
+                    nativeSmoothBinding = BindingOperations.GetBindingBase(rowPanel, nativeSmooth);
+                    nativeSmoothLocal = rowPanel.ReadLocalValue(nativeSmooth);
+                    ApplyNavigationSettings();
+                }
+            }
             glideAttached = true;
             HomeNav.Log("collection glide: attached (" + sv.GetType().Name + ")");
             int told = 0;
@@ -180,7 +253,7 @@ namespace Selene
                 ShowFades(sv);
                 if (!Features.On("collectionglide")) return;
                 if (!list.IsKeyboardFocusWithin) { if (told++ < 3) HomeNav.Log("collection glide: scrolled " + e.HorizontalChange + " without the focus in the row"); return; }
-                var presenter = FindChild<ItemsPresenter>(list);
+                var presenter = rowPresenter;
                 double pitch = Pitch();
                 if (presenter == null || pitch <= 0) return;
                 // the scroll counts in pixels here (in covers only with item scrolling): either way, the distance the covers jumped
@@ -201,11 +274,14 @@ namespace Selene
         // scroll into view runs first, so this comes right after it
         private static void KeepNearLeft()
         {
-            if (!Features.On("collectionglide") || !list.IsKeyboardFocusWithin) return;
+            if (positionQueued || !Features.On("collectionglide") || !list.IsKeyboardFocusWithin) return;
+            positionQueued = true;
             list.Dispatcher.BeginInvoke(new Action(() =>
             {
+                positionQueued = false;
                 try
                 {
+                    if (!library.IsVisible || !Features.On("collectionglide") || !list.IsKeyboardFocusWithin) return;
                     var sv = RowScroller();
                     int idx = list.SelectedIndex;
                     if (sv == null || idx < 0) return;
@@ -218,8 +294,11 @@ namespace Selene
                     int lo = first + 1, hi = first + visible - 2;   // where the ring may be with a cover still beyond it
                     int firstWant = idx > hi ? idx - (visible - 2) : idx < lo ? idx - 1 : first;
                     double want = Math.Max(0, Math.Min(firstWant * pitch, sv.ScrollableWidth));
-                    if (Math.Abs(sv.HorizontalOffset - want) > 0.01) sv.ScrollToHorizontalOffset(want);
-                    list.UpdateLayout();
+                    if (Math.Abs(sv.HorizontalOffset - want) > 0.01)
+                    {
+                        sv.ScrollToHorizontalOffset(want);
+                        list.UpdateLayout();
+                    }
                     KeepEndsInside(sv);
                     ShowFades(sv);
                 }
@@ -230,6 +309,7 @@ namespace Selene
         // the row's scroll viewer: in the list's own parts, else up from a cover (the list's parts weren't found that way once)
         private static ScrollViewer RowScroller()
         {
+            if (hooked != null && list.IsAncestorOf(hooked)) return hooked;
             var sv = FindChild<ScrollViewer>(list);
             if (sv != null) return sv;
             var item = list.SelectedIndex >= 0 ? list.ItemContainerGenerator.ContainerFromIndex(list.SelectedIndex) as DependencyObject : null;
@@ -245,13 +325,18 @@ namespace Selene
         private static double Pitch()
         {
             var gen = list.ItemContainerGenerator;
-            for (int i = 0; i < list.Items.Count - 1; i++)
+            int selected = Math.Max(0, list.SelectedIndex);
+            for (int i = Math.Max(0, selected - 2); i < Math.Min(list.Items.Count - 1, selected + 3); i++)
             {
                 var a = gen.ContainerFromIndex(i) as FrameworkElement;
                 var b = gen.ContainerFromIndex(i + 1) as FrameworkElement;
-                if (a != null && b != null && a.IsVisible && b.IsVisible) return Math.Abs(b.TranslatePoint(new Point(0, 0), a).X);
+                if (a != null && b != null && a.IsVisible && b.IsVisible)
+                {
+                    double pitch = Math.Abs(b.TranslatePoint(new Point(0, 0), a).X);
+                    if (pitch > 1) return measuredPitch = pitch;
+                }
             }
-            return 0;
+            return measuredPitch;
         }
 
         private static T FindChild<T>(DependencyObject root) where T : DependencyObject
@@ -278,7 +363,8 @@ namespace Selene
         {
             var fe = art as FrameworkElement;
             if (fe == null || grid == null) return;
-            artSnap = new Image { Stretch = Stretch.UniformToFill, IsHitTestVisible = false, Opacity = 0 };
+            artSnap = new Image { Stretch = BackgroundFit.Current, IsHitTestVisible = false, Opacity = 0 };
+            artSnap.SetResourceReference(Image.StretchProperty, "SeleneBackgroundStretch");
             RenderOptions.SetBitmapScalingMode(artSnap, BitmapScalingMode.Fant);
             Grid.SetRowSpan(artSnap, Grid.GetRowSpan(fe));
             Panel.SetZIndex(artSnap, Panel.GetZIndex(fe));

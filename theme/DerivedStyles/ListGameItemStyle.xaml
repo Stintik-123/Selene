@@ -33,6 +33,10 @@
                     <Grid Margin="14,18,0,18"
                           RenderTransformOrigin="0.5,0.5"
                           d:DataContext="{x:Static DesignMainViewModel.DesignSelectedGameIntance}">
+                        <!-- Cache the face/ring once; the focus transform and row slide then move its texture. -->
+                        <Grid.CacheMode>
+                            <BitmapCache RenderAtScale="1.1" SnapsToDevicePixels="False"/>
+                        </Grid.CacheMode>
                         <Grid.RenderTransform>
                             <ScaleTransform x:Name="ScaleTransform" ScaleX="1" ScaleY="1" />
                         </Grid.RenderTransform>

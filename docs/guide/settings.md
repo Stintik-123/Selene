@@ -15,7 +15,8 @@ under Playnite → Add-ons → Generic → **Selene Core**. Settings with a choi
 | | Button hints | What each button does, along the bottom |
 | | Playnite settings, Selene's way | The menu's Playnite settings open as a Selene screen |
 | | Button names | Which controller's buttons the hints name: as Playnite's setting, Xbox, or PlayStation |
-| Spotlight | Activity card, Captures card, Surprise me card | Each card on or off |
+| Spotlight | Activity card, Captures card, Surprise me card, News card | Each card on or off |
+| | News feeds | Add, remove and enable RSS/Atom URLs. Their latest headlines show on the News card; select an article to open it in the browser. With no feed yet the card offers a few to follow |
 | | Collection card | A card that opens Collection (off by default: the View button does it) |
 | | Pictures under the cards | The latest captures, the games you played last and a few ideas under their cards |
 | | Trailer cards after | 1 s, 2.5 s, 5 s or never |
@@ -27,12 +28,18 @@ under Playnite → Add-ons → Generic → **Selene Core**. Settings with a choi
 | | Quiet loading screen | A starting game stays quiet until it shows |
 | | Sound volume | How loud Selene's own sounds are |
 | Look | Selene logo | The logo in Selene settings and on empty screens |
+| | Background sizing | Fill crops proportionally; Fit shows the whole picture with space around it; Stretch changes its proportions to fill the screen |
+| | Language | Follow Playnite or choose English, German, Spanish, French, Brazilian Portuguese, Simplified Chinese, Japanese or Filipino. A changed selection offers Restart now or Later. Language selection is also the first step on a new Selene installation. Bundled translations cover common navigation/settings; missing phrases remain English |
 | | Profile in the top bar | Your avatar beside the clock |
 | | Readable text | A soft halo behind text so it reads over bright pictures |
 | | Animated background | The moving backdrop behind the login and cards |
 | | Collection trailers | Rest on a game in Collection and its trailer plays |
 | | Shade over the art | Lighter, as needed, or deeper |
 | Games | Store page | The Store card opens free games, sales and new releases. Off: it picks a store app |
+| | Focus on Guide | Turn off Selene's Guide foreground switching for other overlays. Also turn off Playnite settings > Input > Guide brings Playnite up if enabled |
+| | Launch screen style | Art and logo, art only, logo on black, or minimal game title |
+| | Launch screen motion | Slow art zoom while launching. Fit backgrounds remain still |
+| | Launch screen shade | None, soft or dark shading over launch art |
 | | Store trailers | A game's trailer plays behind its Store page |
 | | Store opens on | The tab the Store page starts on |
 | | Surprise me picks from | Installed, not played yet, or all |

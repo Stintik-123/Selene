@@ -82,6 +82,13 @@ namespace Selene
                 var row = new Border { Child = line, CornerRadius = new CornerRadius(14), Padding = new Thickness(20, 14, 20, 14), Margin = new Thickness(0, 0, 24, 6) };
                 left.Children.Add(row);
                 groupRows.Add(row);
+                int selectedGroup = i;
+                row.MouseLeftButtonUp += (s, e) =>
+                {
+                    if (ask != null || (picker != null && picker.IsOpen)) return;
+                    group = selectedGroup; index = 0; inOptions = false;
+                    ShowGroup(false); scroller.ScrollToVerticalOffset(0); ShowFocus(); e.Handled = true;
+                };
             }
             layout.Children.Add(left);
 
@@ -182,6 +189,15 @@ namespace Selene
                 line.Children.Add(text);
                 var row = new Border { Child = line, CornerRadius = new CornerRadius(16), Padding = new Thickness(26, 18, 24, 18), Margin = new Thickness(0, 0, 0, 8), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Ink.Brush("SeleneGlassColor", 0.7) };
                 optionList.Children.Add(row);
+                int selectedRow = i;
+                row.MouseLeftButtonUp += (s, e) =>
+                {
+                    if (ask != null || (picker != null && picker.IsOpen)) return;
+                    index = selectedRow; inOptions = true; ShowFocus();
+                    if (f.IsChoice && f.Slider) { Features.Cycle(f.Key, 1); ShowSwitch(index, true); AfterChoice(f); }
+                    else Handle("A");
+                    e.Handled = true;
+                };
                 rows.Add(row); knobs.Add(knob); tracks.Add(track); values.Add(value); sliders.Add(slider);
                 ShowSwitch(i, false);
                 if (animate) Ui.Rise(row, i * 40, 10, 220);
@@ -402,9 +418,10 @@ namespace Selene
                 var names = opt.Names ?? opt.Choices;
                 picker = ChoiceList.Open(Root, tracks[row], names, Math.Max(0, Array.IndexOf(opt.Choices, Features.Value(opt.Key))), k =>
                 {
+                    bool changed = Features.Value(opt.Key) != opt.Choices[k];
                     Features.SetValue(opt.Key, opt.Choices[k]);
                     ShowSwitch(row, true);
-                    AfterChoice(opt);
+                    if (changed) AfterChoice(opt);
                 });
                 return;
             }
@@ -416,6 +433,7 @@ namespace Selene
                 if (opt.Key == "shade") LoginScene.Show(new ShadePreviewScreen(fromMenu), 1);   // set with the home in view
                 else if (opt.Key == "setupcheck") { bool back = fromMenu; LoginScene.Show(new SetupScreen(false) { Back = () => new SettingsScreen(back, "Advanced", "setupcheck") }, 1); }
                 else if (opt.Key == "report") { bool back = fromMenu; LoginScene.Show(new ReportScreen(() => new SettingsScreen(back, "Advanced", "report")), 1); }
+                else if (opt.Key == "newsfeeds") LoginScene.Show(new NewsFeedsScreen(() => new SettingsScreen(fromMenu, "Spotlight", "newsfeeds")), 1);
                 else if (opt.Key == "storeregion") LoginScene.Show(new StoreCurrencyScreen(false, () => new SettingsScreen(true, "Games", "storeregion")), 1);
                 else if (opt.Key == "reset")
                 {
@@ -438,6 +456,7 @@ namespace Selene
                 ShowSwitch(index, true);
                 if (key == "hints") HomeHints.Update();
                 if (key == "fullrate") Ui.FullRateChanged();
+                if (key == "collectionglide") LibraryStage.ApplyNavigationSettings();
                 if (key == "glow") LoginScene.RefreshBackdrop();
                 if (key == "music" && !Features.On(key)) HomeNav.ReleaseMusic();
                 if (key == "cardpictures") { GameFacts.CardStats(); CapturesScreen.CountInBackground(); }
@@ -462,7 +481,7 @@ namespace Selene
             try
             {
                 Brand.Apply(); TopProfile.Refresh(); SeleneShell.ApplyNowPlaying(); HomeHints.Update(); LoginScene.RefreshBackdrop(); Contrast.Apply();
-                HomeNav.ApplyValueSettings(); Ui.FullRateChanged(); Profiles.ApplyLook(); IdleScreen.Restart();
+                HomeNav.ApplyValueSettings(); Ui.FullRateChanged(); Profiles.ApplyLook(); IdleScreen.Restart(); BackgroundFit.Apply(); LibraryStage.ApplyNavigationSettings();
                 GameFacts.CardStats(); CapturesScreen.CountInBackground();
             }
             catch (Exception ex) { HomeNav.Log("settings reset: " + ex.Message); }
@@ -471,10 +490,12 @@ namespace Selene
         // what a changed choice sets going at once
         private void AfterChoice(Features.Option opt)
         {
+            if (opt.Key == "language") ask = LanguageSetup.Restart(Root, () => ask = null, () => { });
             if (opt.Key == "trailersound") HomeNav.ApplyValueSettings();
             if (opt.Key == "shade") Contrast.Apply();
             if (opt.Key == "prompts") Ui.RefreshPrompts();   // the hints show the new button names
             if (opt.Key == "homebackground") Profiles.ApplyLook();
+            if (opt.Key == "backgroundfit") BackgroundFit.Apply();
             if (opt.Key == "idle") IdleScreen.Restart();
             if (opt.Key == "clipvolume") CapturesScreen.ClipVolumeChanged();
             if (opt.Key == "starttab" || opt.Key == "filtertabs") HomeNav.ApplyValueSettings();

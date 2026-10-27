@@ -40,11 +40,14 @@ namespace Selene
             if (!Active) { logger.Info("Selene Core: the Selene theme isn't in use (fullscreen theme: " + SelenePaths.ActiveThemeId + "), staying off"); return; }
             HomeNav.Log("paths: config " + SelenePaths.PlayniteConfig + " | theme " + SelenePaths.ThemeDir + (PlayniteApi.Paths.IsPortable ? " | portable" : ""));
             HomeNav.Api = PlayniteApi;
-            HomeNav.Install();
+            StartupWork.Start(() => SeleneShell.Ready && Application.Current.MainWindow != null && Application.Current.MainWindow.IsVisible
+                && !LoginScene.StartingUp && !LoginScene.InSetup && !HomeNav.IntroRunning && HomeNav.StartupReady);
             if (Features.On("translate")) Lang.Load(PlayniteApi);
+            HomeNav.Install();
+            BackgroundFit.Apply();
             Lang.CollectIfAsked();   // the words to translate, collected on the Desktop (Advanced switch)
-            try { if (Features.On("quietbackups")) LudusaviApp.Quiet(PlayniteApi); }
-            catch (Exception ex) { logger.Warn("Selene Core: couldn't quieten Ludusavi: " + ex.Message); }
+            Lang.Refresh();
+            StartupWork.AfterHome("save backup settings", () => { if (Features.On("quietbackups")) LudusaviApp.Quiet(PlayniteApi); });
             try { Profiles.ApplyLook(); }
             catch (Exception ex)
             {
@@ -55,8 +58,8 @@ namespace Selene
             HomeNav.RefreshRowFilters();              // the five tabs, then your own filter presets
             Ui.RefreshPrompts();                      // Xbox or PlayStation names in the hints
             SeleneShell.Start();
-            SongSetup.StartLater();                   // game songs: UniPlaySong's downloads set up once
-            if (string.IsNullOrWhiteSpace(settings.Settings.AvatarPath)) AnimatedAvatar.Fetch(SelenePaths.SteamId);
+            StartupWork.AfterHome("game songs", SongSetup.StartLater);
+            StartupWork.AfterHome("Steam avatar", () => { if (string.IsNullOrWhiteSpace(settings.Settings.AvatarPath)) AnimatedAvatar.Fetch(SelenePaths.SteamId); });
             HomeNav.StartIsolatedMute();              // (dev: a test copy beside a PC in use stays silent)
             LocalGames.CheckHelper();                 // Selene's admin helper task: there or not (Home / Close game on admin games)
             HomeNav.Log("Selene Core started");
@@ -300,6 +303,7 @@ namespace Selene
             new Option { Group = "Spotlight", Key = "cardcaptures", Label = "Captures card", About = "Your screenshots and clips." },
             new Option { Group = "Spotlight", Key = "cardachievements", Label = "Achievements card", About = "Every game's achievements together, the latest unlocks first.", Available = AchievementsData.Available },
             new Option { Group = "Spotlight", Key = "cardsurprise", Label = "Surprise me card", About = "Covers flick past and stop on a game to play." },
+            new Option { Group = "Spotlight", Key = "cardnews", Label = "News card", About = "Headlines from the RSS and Atom feeds you follow, or a few feeds to follow." },
             new Option { Group = "Spotlight", Key = "cardpictures", Label = "Pictures under the cards", About = "Latest captures, last played and a few ideas. Down goes into them." },
             new Option { Group = "Spotlight", Key = "pickscroll", Label = "Scroll to a picked game", About = "A game picked elsewhere (a search, More like this, Activity) is reached by a quick scroll along the row." },
             new Option { Group = "Spotlight", Key = "rowedges", Label = "Row to the edges", About = "Scrolled, the row runs to both edges of the screen and a cut tile dissolves at the edge." },
@@ -331,6 +335,12 @@ namespace Selene
             new Option { Group = "Sound & music", Key = "music", Label = "Background music", About = "The default track while browsing, a game's song with its trailer (with the UniPlaySong add-on).", Available = () => HomeNav.Api != null && HomeNav.Api.Addons.Addons.Any(a => a.StartsWith("UniPlaySong", StringComparison.OrdinalIgnoreCase)) },
             new Option { Group = "Sound & music", Key = "launchquiet", Label = "Quiet loading screen", About = "A starting game stays quiet until it shows." },
             // ---- Look ----
+            new Option { Group = "Games", Key = "metasource", Label = "Choose a game's metadata source", About = "Game options > Metadata source: pick Steam or IGDB, or give its Steam AppID or IGDB id, when a game's screenshots come from the wrong game." },
+            new Option { Group = "Look", Key = "trimlogos", Label = "Fit game logos", About = "Cuts the empty space around a game's logo so its name shows as large as the others. Changes the logo files in Extra Metadata once." },
+            new Option { Group = "Look", Key = "smartcrop", Label = "Smart cover crop", About = "A cover that is not square is cropped where the detail is, not always from the top." },
+            new Option { Group = "Look", Key = "backgroundfit", Label = "Background sizing", About = "Fill crops the picture to cover the screen. Fit shows the whole picture with space around it. Stretch fills the screen without cropping.", Choices = new[] { "fill", "fit", "stretch" }, Names = new[] { "Fill", "Fit", "Stretch" }, Default = "fill" },
+            new Option { Group = "Look", Key = "language", Label = "Language", About = "Choose Selene's language. You can restart now or apply it later. Missing phrases stay in English.", Choices = new[] { "auto", "en", "de", "es", "fr", "pt_BR", "zh_CN", "ja", "fil" }, Names = new[] { "Follow Playnite", "English", "Deutsch", "Español", "Français", "Português (Brasil)", "简体中文", "日本語", "Filipino" }, Default = "auto" },
+            new Option { Group = "Games", Key = "guidefocus", Label = "Focus on Guide", About = "The Guide button brings Selene to the foreground. Disable this when another overlay handles Guide. Also disable Playnite's own Guide focus setting if enabled." },
             new Option { Group = "Look", Key = "homebackground", Label = "Spotlight background", About = "Behind the picked game: its own art, or always your wallpaper.", Choices = new[] { "art", "wallpaper" }, Names = new[] { "Game art", "Wallpaper only" }, Default = "art" },
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
             new Option { Group = "Look", Key = "guidefade", Label = "Home over a game", About = "Home while playing: the game's picture fades into Selene instead of a cut to black. Games in exclusive fullscreen still fade from black." },
@@ -349,6 +359,10 @@ namespace Selene
             new Option { Group = "Look", Key = "hints", Label = "Button hints", About = "What each button does, along the bottom." },
             new Option { Group = "Look", Key = "prompts", Label = "Button names", About = "Which controller's buttons the hints name.", Choices = new[] { "playnite", "xbox", "playstation" }, Names = new[] { "As Playnite's setting", "Xbox", "PlayStation" }, Default = "playnite" },
             // ---- Games ----
+            new Option { Group = "Spotlight", Key = "newsfeeds", Label = "News feeds", About = "Add, remove and enable RSS or Atom feeds. Their latest headlines show on the News card on Spotlight.", Action = "Manage" },
+            new Option { Group = "Games", Key = "launchstyle", Label = "Launch screen style", About = "Choose the picture shown while a game starts.", Choices = new[] { "artlogo", "art", "logo", "minimal" }, Names = new[] { "Art and logo", "Art only", "Logo on black", "Minimal" }, Default = "artlogo" },
+            new Option { Group = "Games", Key = "launchmotion", Label = "Launch screen motion", About = "Slowly zoom the art while the game starts. Fit backgrounds keep the whole picture visible." },
+            new Option { Group = "Games", Key = "launchshade", Label = "Launch screen shade", About = "Darken the launch art to help the logo stand out.", Choices = new[] { "0", "0.5", "1" }, Names = new[] { "None", "Soft", "Dark" }, Default = "0.5" },
             new Option { Group = "Games", Key = "loadingscreen", Label = "Loading screen", About = "A game's art and logo while it starts. Off: Playnite's plain start." },
             new Option { Group = "Games", Key = "aftergame", Label = "After a game", About = "Where Selene comes back to.", Choices = new[] { "spotlight", "where" }, Names = new[] { "Spotlight, on that game", "Where you were" }, Default = "spotlight" },
             new Option { Group = "Games", Key = "freeze", Label = "Freeze on Guide", About = "Guide pauses offline games. Off: they're only muted." },

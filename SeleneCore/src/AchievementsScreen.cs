@@ -101,7 +101,7 @@ namespace Selene
 
         private static Border Badge(string text)
         {
-            return new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(7, 2, 7, 3), Margin = new Thickness(4, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center, Background = Ink.Brush("SeleneInkColor", 0.9), Child = new TextBlock { Text = text, FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneScrimColor") } };
+            return HomeNav.FilterBadge(text);
         }
 
         public override void Shown()

@@ -32,6 +32,9 @@ namespace Selene
                 line.Children.Add(tick);
                 line.Children.Add(new TextBlock { Text = names[i], FontSize = 19, FontFamily = Ui.Body, VerticalAlignment = VerticalAlignment.Center });
                 var row = new Border { Height = RowHeight, CornerRadius = new CornerRadius(12), Padding = new Thickness(18, 0, 12, 2), Child = line };
+                int selectedRow = i;
+                row.Background = Brushes.Transparent;
+                row.MouseLeftButtonUp += (s, e) => { index = selectedRow; Handle("A"); e.Handled = true; };
                 rows.Add(row);
                 list.Children.Add(row);
             }

@@ -6,6 +6,8 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     mc:Ignorable="d">
 
+    <Stretch x:Key="SeleneBackgroundStretch">UniformToFill</Stretch>
+
     <!-- Google's Material Icons, for the menus Playnite builds (game options, its settings) -->
     <FontFamily x:Key="FontMaterialIcons">./Fonts/#Material Icons</FontFamily>
     <!-- Selene's display font, for every window (it lived in the main screen only: the game menu, dialogs and settings

@@ -4,7 +4,8 @@
 # server fails to start in the test copy, which is harmless).
 # Usage: fresh-test.ps1 [-Root <folder>] [-ThemeOnly] [-Wait 25] [-Shot out.png]
 #   First time: unpack a portable Playnite (the .7z from Playnite's releases) into <Root>\Playnite. Run package.ps1 first.
-param([string]$Root = "$env:USERPROFILE\selene-fresh", [switch]$ThemeOnly, [int]$Wait = 25, [string]$Shot = "$env:TEMP\selene-fresh.png")
+#   -Keep: install and start it, then leave it running (no picture, no closing) to try it by hand
+param([string]$Root = "$env:USERPROFILE\selene-fresh", [switch]$ThemeOnly, [int]$Wait = 25, [string]$Shot = "$env:TEMP\selene-fresh.png", [switch]$Keep)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $pn = Join-Path $Root 'Playnite'
@@ -32,6 +33,7 @@ New-Item -ItemType Directory -Force $temp | Out-Null
 Remove-Item (Join-Path $temp 'selene.log') -ErrorAction SilentlyContinue
 $env:TEMP = $temp; $env:TMP = $temp   # its own selene.log, not the one of the Playnite in use
 $p = Start-Process -FilePath (Join-Path $pn 'Playnite.FullscreenApp.exe') -ArgumentList '--masterinstance', '--nolibupdate' -WorkingDirectory $pn -PassThru
+if ($Keep) { "started $($p.Id) with the newest packages; left running"; return }
 "started $($p.Id); waiting $Wait s"
 Start-Sleep -Seconds $Wait
 & (Join-Path $PSScriptRoot 'screenshot.ps1') $Shot 1400 $p.Id

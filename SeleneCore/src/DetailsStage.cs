@@ -235,6 +235,7 @@ namespace Selene
                 if (shots[i].Thumb != null) t.Face.Child = new Border { CornerRadius = new CornerRadius(11), Background = new ImageBrush(shots[i].Thumb) { Stretch = Stretch.UniformToFill } };
                 panel.Children.Add(t.Root);
                 tiles[0].Add(t);
+                BindPointer(t, 0, tiles[0].Count - 1);
                 int idx = i;
                 opens[0].Add(() => GameMedia.OpenViewerAt(idx));
                 Ui.Rise(t.Root, i * 40, 10, 240);
@@ -264,6 +265,7 @@ namespace Selene
                 empty.Face.Child = words;
                 panel.Children.Add(empty.Root);
                 tiles[1].Add(empty);
+                BindPointer(empty, 1, 0);
                 opens[1].Add(() => LoginScene.OpenWith(() => new CapturesScreen()));
                 Ui.Rise(empty.Root, 0, 10, 240);
             }
@@ -284,6 +286,7 @@ namespace Selene
                 }
                 panel.Children.Add(t.Root);
                 tiles[1].Add(t);
+                BindPointer(t, 1, tiles[1].Count - 1);
                 var path = c.Path;
                 opens[1].Add(() => LoginScene.OpenWith(() => new CapturesScreen(path)));
                 Ui.Rise(t.Root, i * 40, 10, 240);
@@ -354,6 +357,7 @@ namespace Selene
                 item.Children.Add(t.Root);
                 panel.Children.Add(item);
                 tiles[2].Add(t);
+                BindPointer(t, 2, tiles[2].Count - 1);
                 var id = x.Id;
                 opens[2].Add(() =>
                 {
@@ -370,12 +374,21 @@ namespace Selene
         }
 
         // ---- moving ----
-        private static bool Active { get { return details != null && details.IsVisible && !LoginScene.IsActive && !GameMedia.ViewerOpen; } }
+        internal static bool Active { get { return details != null && details.IsVisible && !LoginScene.IsActive && !GameMedia.ViewerOpen; } }
 
         private static int NextBand(int from, int dir)
         {
             for (int z = from + dir; z >= 1 && z <= 3; z += dir) if (tiles[z - 1].Count > 0) return z;
             return -1;
+        }
+
+        private static void BindPointer(Tile tile, int band, int index)
+        {
+            tile.Root.MouseLeftButtonUp += (s, e) =>
+            {
+                if (!Active || LoginScene.IsActive) return;
+                zone = band + 1; at[band] = index; ShowFocus(); Handle("A"); e.Handled = true;
+            };
         }
 
         private static void ShowFocus()
@@ -435,6 +448,12 @@ namespace Selene
             if (!on) a2.Completed += (s, e) => { if (ReferenceEquals(band.OpacityMask, mask)) { mask.GradientStops[0].BeginAnimation(GradientStop.ColorProperty, null); mask.GradientStops[1].BeginAnimation(GradientStop.ColorProperty, null); band.OpacityMask = null; } };
             mask.GradientStops[0].BeginAnimation(GradientStop.ColorProperty, a1);
             mask.GradientStops[1].BeginAnimation(GradientStop.ColorProperty, a2);
+        }
+
+        internal static void ScrollPage(bool down)
+        {
+            var scroller = Part<ScrollViewer>("PART_ScrollHtmlDescription");
+            if (scroller != null) { if (down) scroller.PageDown(); else scroller.PageUp(); }
         }
 
         private static bool InDescription(DependencyObject d)

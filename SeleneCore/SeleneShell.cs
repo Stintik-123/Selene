@@ -26,6 +26,7 @@ namespace Selene
         private static Window main;
         private static ICommand seleneMenu;
         private static System.Windows.Threading.DispatcherTimer attachTimer;
+        internal static bool Ready { get; private set; }
 
         // the media folder for the theme's Square / Hero art, or "" when that folder has none (a new install never has
         // any: without this every tile and every move asked Playnite for a missing file, a warning each in its log)
@@ -56,7 +57,7 @@ namespace Selene
             // the main screen's template is applied a moment after start: retry until its parts exist
             attachTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
             int tries = 0;
-            attachTimer.Tick += (s, e) => { if (TryAttach() || ++tries > 120) attachTimer.Stop(); };
+            attachTimer.Tick += (s, e) => { if (TryAttach()) { Ready = true; attachTimer.Stop(); } else if (++tries > 120) attachTimer.Stop(); };
             attachTimer.Start();
         }
 
@@ -121,6 +122,7 @@ namespace Selene
             Wire("SeleneNav_activity", () => new ActivityScreen());
             Wire("SeleneNav_captures", () => new CapturesScreen());
             Wire("SeleneNav_surprise", () => new SurpriseScreen());
+            Wire("SeleneNav_news", () => new NewsPage(null));
             Wire("SeleneNav_achievements", () => new AchievementsHub());
             HomeNav.ApplyValueSettings();
             Ui.WatchFullRate(main);            // the screen's own refresh rate while Playnite is in front
@@ -128,6 +130,7 @@ namespace Selene
             ApplyNowPlaying();
             ProgressToast.WatchLibraryStatus(main);   // the library update's words as a notification card
             GameFacts.CardStats();
+            NewsCard.Refresh(false);
             CapturesScreen.CountInBackground();
             HomeNav.Log("shell: home/library wired");
             DevView();

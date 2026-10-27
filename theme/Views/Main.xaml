@@ -39,7 +39,7 @@
                                 <Border x:Name="SeleneLibraryBase" Grid.RowSpan="5" Background="{DynamicResource SeleneBaseBrush}" Panel.ZIndex="-3"/>
                                 <Image Panel.ZIndex="-3" x:Name="SeleneLibraryWallpaper" Grid.RowSpan="5" Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant" Opacity="0.6"/>
                                 <!-- (AnimationEnabled: the art crossfades from game to game instead of cutting; the small wait lets a held stick settle) -->
-                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" Panel.ZIndex="-3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="150" AnimationEnabled="True" Stretch="UniformToFill"/>
+                                <FadeImage x:Name="PART_ImageBackground" Grid.RowSpan="5" Panel.ZIndex="-3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SourceUpdateDelay="150" AnimationEnabled="True" Stretch="{DynamicResource SeleneBackgroundStretch}"/>
                                 <!-- the trailer, full screen over the art (faded in by Selene Core) -->
                                 <!-- the trailer, like the legacy theme: a 16:9 box 800 high on the right, top edge, masked by its picture
                                      (fades in from the left over the first half, fades out toward the bottom) -->
@@ -267,7 +267,8 @@
                                 <Border x:Name="SeleneLibraryHints" Grid.Row="3" Margin="64,0,64,0" VerticalAlignment="Center">
                                     <Border.Resources>
                                         <Style x:Key="HintBadge" TargetType="Border">
-                                            <Setter Property="Width" Value="30"/>
+                                            <Setter Property="MinWidth" Value="30"/>
+                                            <Setter Property="Padding" Value="8,0"/>
                                             <Setter Property="Height" Value="30"/>
                                             <Setter Property="CornerRadius" Value="15"/>
                                             <Setter Property="Background" Value="{DynamicResource SeleneInkBrush}"/>
@@ -358,7 +359,7 @@
                                             <TextBlock Text="Game options" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <StackPanel Style="{StaticResource HintItem}">
-                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="RS" Style="{StaticResource HintKey}" FontSize="11"/></Border>
+                                            <Border Style="{StaticResource HintBadge}"><TextBlock Text="{DynamicResource SelenePromptRS}" Style="{StaticResource HintKey}" FontSize="11"/></Border>
                                             <!-- Selene Core shows "Trailer sound" here while a trailer plays -->
                                             <TextBlock x:Name="SeleneLibraryRsHint" Text="Filter" Style="{StaticResource HintLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
@@ -431,7 +432,7 @@
                                     <Image Source="{DynamicResource SeleneWallpaper}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="Fant"/>
                                     <!-- the game's art; the wallpaper shows where there is none (or always, for a profile that wants that) -->
                                     <Grid x:Name="SeleneHubArt" Opacity="{DynamicResource SeleneArtOpacity}">
-                                    <FadeImage Source="{Binding SelectedGame.DisplayBackgroundImage}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant"/>
+                                    <FadeImage Source="{Binding SelectedGame.DisplayBackgroundImage}" SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant" Stretch="{DynamicResource SeleneBackgroundStretch}"/>
                                     <TextBlock x:Name="SeleneHeroPath" Tag="{DynamicResource SeleneHeroRoot}" Visibility="Collapsed">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
@@ -452,7 +453,7 @@
                                         </TextBlock.Style>
                                     </TextBlock>
                                     <!-- no game selected (a card): no hero picture at all; a path to a missing file kept the last game's art up -->
-                                    <FadeImage SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant">
+                                    <FadeImage SourceUpdateDelay="250" AnimationEnabled="True" RenderOptions.BitmapScalingMode="Fant" Stretch="{DynamicResource SeleneBackgroundStretch}">
                                         <FadeImage.Style>
                                             <Style TargetType="FadeImage">
                                                 <Setter Property="Source" Value="{Binding Text, ElementName=SeleneHeroPath}"/>
@@ -501,6 +502,7 @@
                                 <ButtonEx x:Name="SeleneNav_activity" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
                                 <ButtonEx x:Name="SeleneNav_captures" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
                                 <ButtonEx x:Name="SeleneNav_surprise" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
+                                <ButtonEx x:Name="SeleneNav_news" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
                                 <ButtonEx x:Name="SeleneNav_achievements" Visibility="Collapsed" Focusable="False" IsTabStop="False"/>
 
                                 <Grid Margin="0,120,0,0">
@@ -537,7 +539,7 @@
                                                                             <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.55" Color="Black"/>
                                                                         </Border.Effect>
                                                                         <Grid>
-                                                                            <Border CornerRadius="12">
+                                                                            <Border x:Name="SeleneCoverFace" CornerRadius="12">
                                                                                 <Border.Background>
                                                                                     <ImageBrush ImageSource="{Binding CoverImage, Converter={StaticResource ImageStringToImageConverterCached}}" Stretch="UniformToFill" AlignmentY="Top"/>
                                                                                 </Border.Background>
@@ -673,6 +675,11 @@
                                                                     <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
                                                                     <Setter TargetName="CardGlyph" Property="Text" Value="&#xE8B1;"/>
                                                                 </DataTrigger>
+                                                                <DataTrigger Binding="{Binding}" Value="nav:news">
+                                                                    <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
+                                                                    <Setter TargetName="CardIcon" Property="Visibility" Value="Visible"/>
+                                                                    <Setter TargetName="CardIcon" Property="Text" Value="&#xEB81;"/>
+                                                                </DataTrigger>
                                                                 <DataTrigger Binding="{Binding}" Value="nav:achievements">
                                                                     <Setter TargetName="CardFace" Property="Visibility" Value="Visible"/>
                                                                     <Setter TargetName="CardIcon" Property="Visibility" Value="Visible"/>
@@ -734,7 +741,7 @@
                                                        Background="Transparent" BorderThickness="0" FocusVisualStyle="{x:Null}"
                                                        ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                                        ScrollViewer.CanContentScroll="True"
-                                                       VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Standard" VirtualizingPanel.CacheLengthUnit="Item" VirtualizingPanel.CacheLength="12,16"
+                                                       VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Standard" VirtualizingPanel.CacheLengthUnit="Item" VirtualizingPanel.CacheLength="1,2"
                                                        KeyboardNavigation.DirectionalNavigation="Continue">
                                                 <ListBoxEx.ItemsSource>
                                                     <CompositeCollection>
@@ -743,6 +750,7 @@
                                                         <sys:String>nav:activity</sys:String>
                                                         <sys:String>nav:achievements</sys:String>
                                                         <sys:String>nav:surprise</sys:String>
+                                                        <sys:String>nav:news</sys:String>
                                                         <sys:String>nav:store</sys:String>
                                                         <sys:String>nav:library</sys:String>
                                                         <CollectionContainer Collection="{Binding Source={StaticResource SeleneGames}}"/>
@@ -778,6 +786,9 @@
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:surprise">
                                                                     <Setter Property="Text" Value="Surprise me"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:news">
+                                                                    <Setter Property="Text" Value="News"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:achievements">
                                                                     <Setter Property="Text" Value="Achievements"/>
@@ -964,6 +975,55 @@
                                                 </StackPanel>
                                                 <StackPanel x:Name="SeleneSurpriseShowcase" Orientation="Horizontal" Margin="10,28,-80,10" HorizontalAlignment="Left"/>
                                             </StackPanel>
+                                            <!-- the news card selected: a headline, a line, headlines below (Selene Core fills them; Down goes into them) -->
+                                            <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1760" Opacity="0">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:news">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" BeginTime="0:0:0.12" Duration="0:0:0.3"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/></Storyboard></BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <StackPanel x:Name="SeleneNewsHead" Width="1000" HorizontalAlignment="Left" Margin="0,40,0,0">
+                                                    <TextBlock Text="{DynamicResource SeleneNewsHeadline}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="60" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{DynamicResource SeleneNewsAbout}" Foreground="{DynamicResource SeleneInk90Brush}" FontSize="22" FontFamily="{DynamicResource FontMain}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="2,10,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="4,24,0,0">
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="NEW TODAY" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneNewsStatToday}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="THIS WEEK" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneNewsStatWeek}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="SOURCES" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneNewsStatSources}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <Rectangle Width="1" Fill="{DynamicResource SeleneInk25Brush}" Margin="0,4,26,4"/>
+                                                    <StackPanel Margin="0,0,26,0">
+                                                        <TextBlock Text="LATEST" Foreground="{DynamicResource SeleneInk60Brush}" FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                                                        <TextBlock Text="{DynamicResource SeleneNewsStatLatest}" Foreground="{DynamicResource SeleneInkBrush}" FontSize="21" FontFamily="{DynamicResource FontMain}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel x:Name="SeleneNewsShowcase" Orientation="Horizontal" Margin="10,54,-80,10" HorizontalAlignment="Left"/>
+                                            </StackPanel>
                                             <!-- the achievements card selected: a headline, a few numbers, pictures below (Selene Core fills them; Down goes into them) -->
                                             <StackPanel Margin="0,40,0,0" HorizontalAlignment="Left" Width="1760" Opacity="0">
                                                 <StackPanel.Style>
@@ -1119,6 +1179,9 @@
                                                             <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:surprise">
                                                                 <Setter Property="Visibility" Value="Hidden"/>
                                                             </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:news">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
                                                             <DataTrigger Binding="{Binding SelectedItem, ElementName=SeleneGameRow}" Value="nav:achievements">
                                                                 <Setter Property="Visibility" Value="Hidden"/>
                                                             </DataTrigger>
@@ -1135,7 +1198,7 @@
                                                 </TextBlock>
                                                 <Grid Height="170" HorizontalAlignment="Left">
                                                     <Image x:Name="SeleneLogo" Source="{Binding ElementName=SeleneLogoPath, Path=Text, Converter={StaticResource ImageStringToImageConverter}, NotifyOnTargetUpdated=True}"
-                                                           MaxWidth="620" MaxHeight="170" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Bottom" RenderOptions.BitmapScalingMode="Fant">
+                                                           MaxWidth="620" MaxHeight="215" Margin="0,-45,0,0" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Bottom" RenderOptions.BitmapScalingMode="Fant">
                                                         <Image.RenderTransform><TranslateTransform x:Name="LogoShift" X="0"/></Image.RenderTransform>
                                                         <Image.Triggers>
                                                             <EventTrigger RoutedEvent="Binding.TargetUpdated">

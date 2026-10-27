@@ -59,6 +59,7 @@ namespace Selene
             {
                 var e = s.Entries[i];
                 var tile = new Tile(420, 236, 14, 5) { FocusScale = 1.04 };
+                tile.Root.MouseLeftButtonUp += (sender, args) => { if (e.Open != null) { Ui.Confirm(); e.Open(); } args.Handled = true; };
                 tile.Root.Margin = new Thickness(0, 0, 22, 0);
                 if (e.Icon != null || e.Grade != null) { tile.Face.Child = AchievementFace(e); panel.Children.Add(tile.Root); s.Tiles.Add(tile); Ui.Rise(tile.Root, i * 50, 12, 280); continue; }
                 var frame = new Grid();

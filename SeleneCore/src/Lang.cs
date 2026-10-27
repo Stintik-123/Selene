@@ -25,26 +25,31 @@ namespace Selene
         {
             try
             {
-                Language = PlayniteLanguage(api);
-                if (string.IsNullOrEmpty(Language) || Language == "english") Language = System.Globalization.CultureInfo.CurrentUICulture.Name.Replace('-', '_');
+                Language = Features.Value("language");
+                if (Language == "auto" || string.IsNullOrEmpty(Language)) Language = PlayniteLanguage(api);
+                if (string.IsNullOrEmpty(Language)) Language = System.Globalization.CultureInfo.CurrentUICulture.Name;
+                if (string.Equals(Language, "english", StringComparison.OrdinalIgnoreCase)) Language = "en_US";
+                Language = Language.Replace('-', '_');
                 // in Selene Core's own data folder first (a theme update leaves it alone), then the theme's Localization folder
                 var folders = new[] { Path.Combine(SelenePaths.DataFolder, "Localization"), SelenePaths.ThemeFile("Localization") };
                 string file = null;
                 var looked = new List<string>();
-                if (!string.IsNullOrEmpty(Language))
-                    foreach (var folder in folders)
+                table = new Dictionary<string, string>(StringComparer.Ordinal);
+                // Base language first, then region; user files override shipped phrases without hiding the rest.
+                for (int i = folders.Length - 1; i >= 0; i--)
+                    foreach (var name in new[] { Language.Split('_')[0], Language })
                     {
-                        if (file != null) break;
-                        var exact = Path.Combine(folder, Language + ".txt");
-                        var prefix = Path.Combine(folder, Language.Split('_', '-')[0] + ".txt");
-                        looked.Add(exact); if (prefix != exact) looked.Add(prefix);
-                        file = File.Exists(exact) ? exact : File.Exists(prefix) ? prefix : null;
+                        var candidate = Path.Combine(folders[i], name + ".txt");
+                        if (looked.Contains(candidate)) continue;
+                        looked.Add(candidate);
+                        if (!File.Exists(candidate)) continue;
+                        foreach (var pair in Read(candidate)) table[pair.Key] = pair.Value;
+                        file = candidate;
                     }
-                table = file != null ? Read(file) : null;
-                if (table != null) HomeNav.Log("language: " + Language + ", " + table.Count + " phrases from " + file);
+                if (file != null) HomeNav.Log("language: " + Language + ", " + table.Count + " phrases from " + file);
                 else HomeNav.Log("language: " + Language + ": no translation (looked for " + string.Join(", ", looked.ToArray()) + ")");
             }
-            catch (Exception ex) { HomeNav.Log("language: " + ex.Message); }
+            catch (Exception ex) { table = null; HomeNav.Log("language: " + ex.Message); }
         }
 
         // ---- collecting the English phrases to translate: Advanced > "Collect words to translate" writes each phrase shown
@@ -105,11 +110,67 @@ namespace Selene
             return map;
         }
 
+        // Loaded can precede plugin startup; revisit the existing visual tree too.
+        public static void Refresh()
+        {
+            if (!Active && collectFile == null) return;
+            var app = System.Windows.Application.Current;
+            if (app == null) return;
+            var pending = new Stack<System.Windows.DependencyObject>();
+            foreach (System.Windows.Window window in app.Windows) pending.Push(window);
+            Action visit = null;
+            visit = () =>
+            {
+                var budget = System.Diagnostics.Stopwatch.StartNew();
+                while (pending.Count > 0)
+                {
+                    var node = pending.Pop();
+                    var text = node as TextBlock;
+                    if (text != null) Track(text);
+                    for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(node); i++)
+                        pending.Push(System.Windows.Media.VisualTreeHelper.GetChild(node, i));
+                    if (budget.ElapsedMilliseconds >= 2) break;
+                }
+                if (pending.Count > 0 && !app.Dispatcher.HasShutdownStarted)
+                    app.Dispatcher.BeginInvoke(visit, System.Windows.Threading.DispatcherPriority.Background);
+            };
+            app.Dispatcher.BeginInvoke(visit, System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        private class TextState { public bool Updating; public string Original, Translated; public bool Watching; }
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TextBlock, TextState> states = new System.Runtime.CompilerServices.ConditionalWeakTable<TextBlock, TextState>();
+        private static readonly System.ComponentModel.DependencyPropertyDescriptor textProperty = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
+
+        public static void Track(TextBlock text)
+        {
+            if (text == null || (!Active && collectFile == null)) return;
+            if (BindingOperations.GetBindingExpressionBase(text, TextBlock.TextProperty) != null) return;
+            var state = states.GetOrCreateValue(text);
+            if (!state.Watching)
+            {
+                state.Watching = true;
+                textProperty.AddValueChanged(text, TextChanged);
+                text.Unloaded += Unloaded;
+            }
+            Apply(text);
+        }
+
+        private static void TextChanged(object sender, EventArgs args) { Apply((TextBlock)sender); }
+        private static void Unloaded(object sender, System.Windows.RoutedEventArgs args)
+        {
+            var text = (TextBlock)sender;
+            textProperty.RemoveValueChanged(text, TextChanged);
+            text.Unloaded -= Unloaded;
+            states.GetOrCreateValue(text).Watching = false;
+        }
+
         // a TextBlock as it loads: its English text swapped for the translation (texts that are bound stay Playnite's)
         public static void Apply(TextBlock t)
         {
             if (t == null || (table == null && collectFile == null)) return;
-            var text = t.Text;
+            var state = states.GetOrCreateValue(t);
+            if (state.Updating) return;
+            var text = t.Text == state.Translated ? state.Original : t.Text;
             if (string.IsNullOrEmpty(text) || text.Length > 400 || !HasLetters(text)) return;
             if (BindingOperations.GetBindingExpressionBase(t, TextBlock.TextProperty) != null) return;
             if (collectFile != null && seen.Add(text))
@@ -122,7 +183,13 @@ namespace Selene
                 catch (Exception ex) { if (written >= 0) { written = -1; HomeNav.Log("language: can't write a phrase to " + collectFile + ": " + ex.Message); } }
             }
             string translated;
-            if (table != null && table.TryGetValue(text, out translated)) t.Text = translated;
+            if (table != null && table.TryGetValue(text, out translated))
+            {
+                state.Original = text; state.Translated = translated;
+                state.Updating = true;
+                try { t.SetCurrentValue(TextBlock.TextProperty, translated); }
+                finally { state.Updating = false; }
+            }
         }
 
         private static bool HasLetters(string s)

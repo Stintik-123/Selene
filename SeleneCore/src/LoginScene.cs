@@ -97,7 +97,7 @@ namespace Selene
         public static bool IsActive { get { return loginRoot != null && loginRoot.IsVisible && scene != null && current != null; } }
 
         // the sign-in, a profile being made or the first setup up (not a card's screen: Activity, Achievements...)
-        public static bool InSetup { get { return IsActive && (current is IntroScreen || current is WhoScreen || current is ProfileSteps || current is SetupScreen); } }
+        public static bool InSetup { get { return IsActive && (current is IntroScreen || current is LanguageScreen || current is WhoScreen || current is ProfileSteps || current is SetupScreen); } }
 
         // controller buttons (from HomeNav's input hook): everything goes to the screen while the login layer is up
         // Playnite turns each controller press into a fake arrow-key press as well; those copies arrive right after the
@@ -116,6 +116,8 @@ namespace Selene
             if ((DateTime.Now - lastPad).TotalMilliseconds < 120) return true;   // the copy of a pad press: already handled
             return Press(pressed);
         }
+
+        public static bool MousePress(string pressed) { return Press(pressed); }
 
         private static bool Press(string pressed)
         {
@@ -149,7 +151,8 @@ namespace Selene
                      : key == Key.Escape || key == Key.Back ? "B"
                      : key == Key.Left ? "DPadLeft" : key == Key.Right ? "DPadRight"
                      : key == Key.Up ? "DPadUp" : key == Key.Down ? "DPadDown"
-                     : key == Key.Delete ? "X" : key == Key.F2 ? "Y" : key == Key.Tab ? "Start"
+                     : key == Key.Delete ? "X" : key == Key.F2 ? "Y" : key == Key.F3 ? "RightStick" : key == Key.Tab ? "Start"
+                     : key == Key.PageUp ? "LeftShoulder" : key == Key.PageDown ? "RightShoulder"
                      : key == Key.OemMinus || key == Key.Subtract ? "TriggerLeft" : key == Key.OemPlus || key == Key.Add ? "TriggerRight" : null;
             if (b != null) { FromKeyboard(b); e.Handled = true; }
         }
@@ -298,7 +301,7 @@ namespace Selene
         // where the login starts after the intro
         public static Screen Start()
         {
-            if (Profiles.LoadError == null && Profiles.FirstRun) return new SetupScreen(true);
+            if (Profiles.LoadError == null && Profiles.FirstRun) return LanguageSetup.Complete ? (Screen)new SetupScreen(true) : new LanguageScreen();
             return new WhoScreen(null);
         }
 
@@ -379,6 +382,7 @@ namespace Selene
             if (old != null) { old.Hidden(); old.Root.IsHitTestVisible = false; }
             Ui.HoldVisuals(400);
             next.Shown();
+            Lang.Refresh();
             var leaving = old != null ? old.Root : null;
             stage.Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -934,6 +938,12 @@ namespace Selene
             item.Children.Add(tile.Root);
             item.Children.Add(new TextBlock { Text = name, FontSize = 24, FontFamily = Ui.Body, Foreground = Ink.Brush("SeleneInkColor"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 26, 0, 0), MaxWidth = 220, TextTrimming = TextTrimming.CharacterEllipsis });
             row.Children.Add(item);
+            int selectedProfile = tiles.Count;
+            tile.Root.MouseLeftButtonUp += (sender, e) =>
+            {
+                if (leaving || confirm != null) return;
+                index = selectedProfile; onPower = false; ShowFocus(); Handle("A"); e.Handled = true;
+            };
             tiles.Add(tile);
             items.Add(item);
         }

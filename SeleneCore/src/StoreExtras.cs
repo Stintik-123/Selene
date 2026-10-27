@@ -276,6 +276,12 @@ namespace Selene
             // Selene's tile (as on the Store page): the picture as its rounded fill, the focus ring glowing and the tile
             // growing a little when it's picked
             var tile = new Tile(420, 236, 14, 5) { FocusScale = 1.04 };
+            tile.Root.MouseLeftButtonUp += (sender, args) =>
+            {
+                try { Ui.Confirm(); HomeNav.OpenOutside(item.Link); }
+                catch (Exception ex) { HomeNav.Log("store card: open failed: " + ex.Message); }
+                args.Handled = true;
+            };
             tile.Root.Margin = new Thickness(0, 0, 22, 0);
             var frame = new Grid();
             var pic = new Border { CornerRadius = new CornerRadius(14), Opacity = 0 };

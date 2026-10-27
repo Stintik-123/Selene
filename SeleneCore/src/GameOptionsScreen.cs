@@ -62,7 +62,7 @@ namespace Selene
         // no game: the add-ons' and scripts' main menus (Playnite's Extensions menu), opened from Selene's menu
         public static GameOptionsScreen Extensions() { return new GameOptionsScreen(null); }
 
-        public GameOptionsScreen(Game game, Action move = null)
+        public GameOptionsScreen(Game game, Action move = null, bool toMetadata = false)
         {
             this.game = game;
             this.move = move;
@@ -80,6 +80,7 @@ namespace Selene
             Root.Children.Add(Ui.Prompts(false, Ui.Prompt("B", "Back")));
             Root.Children.Add(Ui.Prompts(true, Ui.Prompt("A", "Select")));
             levels.Push(game != null ? MainLevel() : SectionLevel("Extensions", MenuItems(), 0));
+            if (toMetadata && game != null) levels.Push(MetadataLevel());   // back from typing an id
         }
 
         public override void Shown()
@@ -101,9 +102,31 @@ namespace Selene
             l.Entries.Add(new Entry { Label = "HDR", Sub = "Windows' HDR switched on while this game runs.", Icon = 0xe3ee, Toggle = () => game.EnableSystemHdr, Run = () => { game.EnableSystemHdr = !game.EnableSystemHdr; Save(); } });
             l.Entries.Add(new Entry { Label = "Completion status", Icon = 0xe86c, Value = () => Name(api.Database.CompletionStatuses, game.CompletionStatusId, "Not set"), Run = () => PickOne("Completion status", api.Database.CompletionStatuses.OrderBy(c => c.Name).Cast<DatabaseObject>(), game.CompletionStatusId, id => game.CompletionStatusId = id) });
             l.Entries.Add(new Entry { Label = "Edit details", Sub = "Score, tags, categories, genres and the rest.", Icon = 0xe3c9, Opens = true, Run = () => Push(DetailsLevel()) });
+            if (Features.On("metasource")) l.Entries.Add(new Entry { Label = "Metadata source", Sub = "Where its screenshots come from: Steam or IGDB, or a Steam AppID / IGDB id of your own.", Icon = 0xe8b6, Opens = true, Run = () => Push(MetadataLevel()) });
             l.Entries.Add(new Entry { Label = "Extensions", Sub = "What your add-ons can do with this game.", Icon = 0xe87b, Opens = true, Run = () => Push(ExtensionsLevel()) });
             l.Entries.Add(new Entry { Label = "Remove from library", Icon = 0xe5cd, Warn = true, Run = AskRemove });
             if (game.IsInstalled) l.Entries.Add(new Entry { Label = "Uninstall", Icon = 0xe872, Warn = true, Run = AskUninstall });
+            return l;
+        }
+
+        // when a game is matched with the wrong one (an older or emulated game with a name another game shares): choose the source,
+        // or name the exact Steam AppID or IGDB id; the screenshots are fetched again after each change
+        private Level MetadataLevel()
+        {
+            var g = game; var id = g.Id; var mv = move;
+            var l = new Level { Title = "Metadata source" };
+            l.Entries.Add(new Entry { Label = "Source", Sub = "Automatic tries Steam first, then IGDB. Choose one to use only that.", Icon = 0xe8b6, Value = () => MediaSource.SourceName(id),
+                Run = () => { MediaSource.CycleSource(id); GameMedia.Refresh(g); } });
+            l.Entries.Add(new Entry { Label = "Steam AppID", Sub = "The number in the game's Steam store address (store.steampowered.com/app/<number>).", Icon = 0xe3f4, Value = () => { var c = MediaSource.Get(id); return string.IsNullOrEmpty(c.SteamId) ? "Automatic" : c.SteamId; },
+                Run = () => LoginScene.Show(new MediaIdScreen("Steam AppID", "The number in the game's Steam store address, for example 1172470. Leave it empty for automatic.", MediaSource.Get(id).SteamId,
+                    v => { var c = MediaSource.Get(id); c.SteamId = v.Length == 0 ? null : v; if (v.Length > 0 && c.Source == "igdb") c.Source = "steam"; MediaSource.Set(id, c); GameMedia.Refresh(g); },
+                    () => new GameOptionsScreen(g, mv, true)), 1) });
+            l.Entries.Add(new Entry { Label = "IGDB game ID", Sub = "The game's number on IGDB, for the games Steam doesn't have.", Icon = 0xe3f4, Value = () => { var c = MediaSource.Get(id); return string.IsNullOrEmpty(c.IgdbId) ? "Automatic" : c.IgdbId; },
+                Run = () => LoginScene.Show(new MediaIdScreen("IGDB game ID", "The game's IGDB number. Leave it empty for automatic.", MediaSource.Get(id).IgdbId,
+                    v => { var c = MediaSource.Get(id); c.IgdbId = v.Length == 0 ? null : v; if (v.Length > 0 && c.Source == "steam" && string.IsNullOrEmpty(c.SteamId)) c.Source = "igdb"; MediaSource.Set(id, c); GameMedia.Refresh(g); },
+                    () => new GameOptionsScreen(g, mv, true)), 1) });
+            l.Entries.Add(new Entry { Label = "Refresh screenshots", Sub = "Fetch this game's screenshots again.", Icon = 0xe5d5, Run = () => { GameMedia.Refresh(g); Ui.Notice("Fetching the screenshots of " + g.Name + " again."); } });
+            l.Entries.Add(new Entry { Label = "Back to automatic", Sub = "Forget your choices for this game.", Icon = 0xe8b3, Run = () => { MediaSource.Set(id, new MediaChoice()); GameMedia.Refresh(g); Ui.Notice("Back to automatic for " + g.Name + "."); } });
             return l;
         }
 

@@ -23,12 +23,16 @@ namespace Selene
         private TextBlock doneLabel;
         private int row = 1, col;
         private bool shift, upperNext = true;
+        private readonly bool sentenceCase;
 
-        public KeyPad(string doneText, double key = 62, double gap = 9)
+        public KeyPad(string doneText, double key = 62, double gap = 9, string[] characterRows = null, bool sentenceCase = true)
         {
-            var allRows = Rows.Select(r => r.Select(c => c.ToString()).ToList()).ToList();
+            this.sentenceCase = sentenceCase;
+            upperNext = sentenceCase;
+            var inputRows = characterRows ?? Rows;
+            var allRows = inputRows.Select(r => r.Select(c => c.ToString()).ToList()).ToList();
             allRows.Add(new List<string> { "shift", "space", "erase", "done" });
-            double widest = Rows.Max(r => r.Length) * (key + gap);
+            double widest = inputRows.Max(r => r.Length) * (key + gap);
             foreach (var r in allRows)
             {
                 var rowPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, gap) };
@@ -45,6 +49,8 @@ namespace Selene
                     t.Face.Child = v == "done" || v == "erase" || v == "space" ? (UIElement)WithBadge(label, v == "done" ? "\u2261" : v == "space" ? "Y" : "X") : label;
                     t.Root.Margin = new Thickness(gap / 2, 0, gap / 2, 0);
                     rowPanel.Children.Add(t.Root);
+                    int selectedRow = keys.Count, selectedCol = rowKeys.Count;
+                    t.Root.MouseLeftButtonUp += (sender, e) => { row = selectedRow; col = selectedCol; Focus(true); Press("A"); e.Handled = true; };
                     rowKeys.Add(t);
                     rowCenters.Add(x + w / 2);
                     x += w + gap;
@@ -63,7 +69,7 @@ namespace Selene
         public void After(string text)
         {
             var t = text.TrimEnd();
-            upperNext = t.Length == 0 || t.EndsWith(".") || t.EndsWith("?") || t.EndsWith("!");
+            upperNext = sentenceCase && (t.Length == 0 || t.EndsWith(".") || t.EndsWith("?") || t.EndsWith("!"));
             UpdateCase();
         }
 

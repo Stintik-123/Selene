@@ -125,6 +125,13 @@ namespace Selene
                 cell.Children.Add(label);
                 cell.Children.Add(dot);
                 bar.Children.Add(cell);
+                int selectedCell = cells.Count;
+                cell.Background = Brushes.Transparent;
+                cell.MouseLeftButtonUp += (s, e) =>
+                {
+                    if (leaving || ask != null || powerList != null || soundList != null) return;
+                    index = selectedCell; Handle("A"); e.Handled = true;
+                };
                 cells.Add(cell); rings.Add(ring); labels.Add(label); scales.Add(scale);
             }
             Root.Children.Add(bar);

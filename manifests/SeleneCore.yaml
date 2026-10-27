@@ -1,5 +1,46 @@
 AddonId: SeleneCore_cd424c29-97f4-4dd0-aa66-4d8e01cc8724
 Packages:
+  - Version: 1.3.0
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2026-10-27
+    PackageUrl: https://github.com/mattxslv/Selene/releases/download/v1.3.0/SeleneCore.pext
+    Changelog:
+      - >-
+        News (#14): a News card on Spotlight shows the latest headlines from the RSS and Atom feeds you follow, as picture tiles with the numbers under the headline (new today, this week, sources, latest). Down goes into them, A opens an article in your browser. The full News screen (A on the card) shows the picked article's picture large with its source, headline and the start of its text, a row of picture tiles that glides as you move, and the sources as tabs (LB / RB). "Steam: your games" follows the news and patch notes of the Steam games you play, with their pictures, and is followed with Selene's other suggestions (PC Gamer and more) until you change it; Y on the News screen opens Manage feeds, a card per feed (A turns one on or off, X removes it, the last card adds one) with a row of suggested feeds. Selene settings > Spotlight > News feeds opens the same. Switch: Spotlight, News card.
+      - >-
+        Metadata source per game: Game options > Metadata source picks Steam or IGDB for a game's screenshots, or takes its exact Steam AppID or IGDB id, for the older and emulated games that get matched with a similarly named game. The screenshots are fetched again after each change (a Refresh row does it by hand); that game's Steam art follows the AppID too. Switch: Games, Choose a game's metadata source.
+      - >-
+        Home tiles: a cover that is not square is cropped where the detail is (faces, logos, art) instead of always from the top, so tall covers like Overwatch keep their subject. Switch: Look, Smart cover crop.
+      - >-
+        Game logos with empty space around the lettering (many came from Extra Metadata on a 640 x 360 canvas) showed small, like Monster Hunter Wilds. Every logo is now cut to its lettering once in the background, and a tall logo may grow a little above its usual box. Switch: Look, Fit game logos.
+      - >-
+        B on the loading screen now stops the game too: Playnite had already been told to start it, so it still opened a few seconds later (over the desktop when B came late). The game's processes that started after Play are closed, and Selene fades back in.
+      - >-
+        On the keyboard, Tab on the home or the library works like Start (a tap opens the menu, holding it opens Selene settings) and V like View (a tap switches home and Collection, holding it opens Find a game); the held key no longer repeats and flickers.
+      - >-
+        First setup: moving between the cards plays Selene's tick when Playnite has not loaded its own yet.
+      - >-
+        The session card ("Session ended") is wider and its figures wrap, so a long total is no longer cut off.
+      - >-
+        Quitting Playnite while it was hidden in the tray left its sound muted in Windows' volume mixer, which could carry over to other themes. The mute is lifted on exit.
+      - >-
+        Collection scrolling now uses Spotlight's transform spring as the single animation path instead of layering it over Playnite's per-frame layout animation. Covers and focus rings are cached, edge fades change only at row boundaries, pitch measurement stays near the selected item, and download/metadata work waits for a pause in navigation. Switching between Collection and Spotlight also settles the previous row's spring.
+      - >-
+        Language changes offer Restart now or Later, using Playnite's own restart. First-time Selene setup begins with language selection and remembers that step across a restart. `tools/first-setup.ps1` previews the public packages in a separate portable copy with fresh Selene settings.
+      - >-
+        Button hints update in place for keyboard, mouse and controller input, including Escape/Enter labels and mouse Click hints. Simulated keyboard events from controllers and tiny pointer changes do not switch devices. PageUp/PageDown switch tabs, Tab opens the menu and V opens Collection on the home.
+      - >-
+        Startup performance: build Spotlight's visible tiles with a small initial cache, then restore the full 12/16-tile cache in small batches after the intro. Required setup yields between dispatcher turns; library refresh and optional services start one at a time after the home and quiet frames. Game sorting reads metadata once per game, inactive localization adds no text watchers, and translation scans yield in short batches. Every feature remains enabled.
+      - >-
+        Background sizing: choose Fill, Fit or Stretch under Look. Spotlight, Collection, game details and launch art follow the choice; Fit preserves the full picture.
+      - >-
+        Mouse navigation: click profiles, menu items, settings, choices, dialog answers, on-screen keys and home/detail cards.
+      - >-
+        Games > Focus on Guide can disable Selene's foreground switching for other overlays. Playnite's own Guide focus remains a separate setting under Playnite settings > Input.
+      - >-
+        Localization now revisits text created before startup and watches later text changes. Look > Language adds an explicit choice, with seven starter translations for common navigation/settings and English fallback. User translations overlay the bundled base and regional files.
+      - >-
+        Launch screen customization: art and logo, art only, logo on black, or minimal title; optional art motion and shade levels. Fit backgrounds stay still to preserve the whole image.
   - Version: 1.2.3
     RequiredApiVersion: 6.0.0
     ReleaseDate: 2026-10-27
