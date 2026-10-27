@@ -7,7 +7,8 @@
 //   focus <hwnd>         bring that window (Playnite's) to the front
 //   close <pid>          close that process (its window first, ended if it is still there after 4 s)
 //   freeze <pid> <hwnd>  Home while playing: the game's window minimized (so Windows doesn't ghost it), then the game suspended
-//   thaw <pid> <hwnd>    back to the game: resumed, its window restored and given the screen
+//   thaw <pid> <hwnd> [behind]  back to the game: resumed, its window restored and given the screen ("behind": restored
+//                        without coming forward, Selene plays its animation over it and then hands it the screen)
 // While a game is frozen the helper stays running and looks at the request file every 20 ms, so going back is instant;
 // it thaws everything when Playnite is gone (closed, crashed) or after 30 minutes without a word.
 //
@@ -120,7 +121,7 @@ namespace Selene
             frozen.Remove(pid);
             if (hwnd != IntPtr.Zero && IsWindow(hwnd))
             {
-                if (IsIconic(hwnd)) ShowWindowAsync(hwnd, 9);   // SW_RESTORE, async: never wait on a window still waking up
+                if (IsIconic(hwnd)) ShowWindowAsync(hwnd, focus ? 9 : 4);   // SW_RESTORE / SW_SHOWNOACTIVATE, async: never wait on a window still waking up
                 if (focus) ForceForeground(hwnd);
             }
             Log("thaw " + pid + ": " + (r == 0 ? "resumed" : "resume failed (" + r + ")") + (focus && hwnd != IntPtr.Zero ? ", game in front=" + (GetForegroundWindow() == hwnd) : ""));
@@ -173,7 +174,7 @@ namespace Selene
                     int pid; long hw = 0;
                     if (parts.Length < 2 || !int.TryParse(parts[1], out pid)) continue;
                     if (parts.Length >= 3) long.TryParse(parts[2], out hw);
-                    if (parts[0] == "freeze") Freeze(pid, new IntPtr(hw)); else Thaw(pid, new IntPtr(hw), true);
+                    if (parts[0] == "freeze") Freeze(pid, new IntPtr(hw)); else Thaw(pid, new IntPtr(hw), !(parts.Length >= 4 && parts[3] == "behind"));
                 }
                 else Log("unknown request: " + l);
             }

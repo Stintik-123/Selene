@@ -807,6 +807,7 @@ namespace Selene
         {
             gameEndedAt = DateTime.Now;
             guideAtHome = false;
+            lastGameSnap = null;
             var app = Application.Current;
             if (app == null) return;
             app.Dispatcher.BeginInvoke(new Action(() =>
@@ -4953,6 +4954,7 @@ namespace Selene
         [System.Runtime.InteropServices.DllImport("gdi32.dll")] private static extern bool DeleteDC(IntPtr dc);
 
         private static System.Drawing.Rectangle snapBounds;   // the monitor, in screen pixels
+        private static BitmapSource lastGameSnap;   // the game as it was at the last Home press (frozen since: what it still shows)
         private static Window snapWindow;
         private static SnapAdorner snapAdorner;
 
@@ -6582,11 +6584,66 @@ namespace Selene
         }
 
         // ... and on the way back it zooms towards you and fades out, then the game comes forward
+        // Back to the game, mirrored from the way in: the game wakes and is restored behind Selene at once; Selene's home recedes
+        // while the game's picture (taken at the Home press: the frozen game still shows exactly that) grows back to full size;
+        // then the game gets the screen under the finished picture, so the hand-over can't be seen.
+        private static void ReturnWithCrossfade(Window w, FrameworkElement root, IntPtr target)
+        {
+            StopStealGuard(w);
+            HidePreview();
+            w.Topmost = true;   // the woken game is restored under Selene, not over it
+            GamePause.Resume(false);
+            if (IsIconic(target)) ShowWindow(target, 4);   // (frozen by Selene itself: SW_SHOWNOACTIVATE, behind Selene)
+            if (!AddSnapAdorner(w, lastGameSnap)) { w.Topmost = false; ForceForeground(target); return; }
+            var ad = snapAdorner;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var dur = TimeSpan.FromMilliseconds(200);
+            ad.Opacity = 0;
+            var adScale = ad.RenderTransform as ScaleTransform;
+            if (adScale != null)
+            {
+                adScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.94, 1, dur) { EasingFunction = ease });
+                adScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.94, 1, dur) { EasingFunction = ease });
+            }
+            root.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
+            var sc = RootScale(root);
+            if (sc != null)
+            {
+                sc.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 1.04, dur) { EasingFunction = ease });
+                sc.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 1.04, dur) { EasingFunction = ease });
+            }
+            var show = new DoubleAnimation(0, 1, dur) { EasingFunction = ease };
+            show.Completed += (s, e) =>
+            {
+                // the picture is up: Selene goes blank under it and the game takes the screen
+                root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+                root.CacheMode = null;
+                w.Topmost = false;
+                ForceForeground(target);
+                var verify = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
+                int attempt = 0;
+                verify.Tick += (s2, e2) =>
+                {
+                    attempt++;
+                    bool ok = GetForegroundWindow() == target;
+                    if (!ok && attempt == 1) { ForceForeground(target); RequestElevated("focus " + target.ToInt64()); return; }
+                    if (!ok && attempt < 4) return;
+                    verify.Stop();
+                    if (snapAdorner == ad) RemoveSnapAdorner();
+                    Log("guide -> back to game with the crossfade (foreground=" + ok + ", attempts=" + attempt + ")");
+                    if (!ok && w.IsActive) PlayEnterAnimation(w);   // the game didn't come: Selene back, never a frozen picture
+                };
+                verify.Start();
+            };
+            ad.BeginAnimation(UIElement.OpacityProperty, show);
+        }
+
         private static void ReturnToGame(Window w)
         {
             var target = gameWindow;
             var root = w.Content as FrameworkElement;
             CloseSnapWindow(); RemoveSnapAdorner();
+            if (root != null && target != IntPtr.Zero && lastGameSnap != null && GamePause.Frozen && Features.On("guidefade")) { ReturnWithCrossfade(w, root, target); return; }
             GamePause.Resume();   // at once: the game wakes (and a helper-frozen one comes back) while Selene fades
             StopStealGuard(w);  // the user asked for the game
             HidePreview();
@@ -7041,6 +7098,7 @@ namespace Selene
                     // the game's picture over everything at once (or black when it can't be pictured): no desktop, no taskbar
                     bool adminGame = ForegroundIsAdmin();
                     var snap = Features.On("guidefade") ? SnapScreen(hwnd) : null;
+                    lastGameSnap = snap;
                     if (snap != null) ShowSnapWindow(w, snap);
                     if (snapWindow == null) { snap = null; ShowShield(w); }
                     SetCloak(hwnd, true);  // and Playnite's old picture can never be shown while it comes forward

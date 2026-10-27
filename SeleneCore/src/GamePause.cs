@@ -121,12 +121,18 @@ namespace Selene
             HomeNav.Log("pause: " + gameName + " (pid " + pid + ") muted" + (suspended ? ", frozen" : online ? ", online: not frozen" : !allowFreeze ? ", not minimised: not frozen" : ", freeze failed"));
         }
 
-        public static void Resume()
+        // frozen right now (its picture from the Home press is still exactly what it shows)
+        public static bool Frozen { get { return pausedPid != 0 && suspended; } }
+
+        public static void Resume() { Resume(true); }
+
+        // bringBack=false: a game frozen by the helper is woken and restored behind Selene (Selene animates, then hands it the screen)
+        public static void Resume(bool bringBack)
         {
             if (pausedPid == 0) return;
             int pid = pausedPid;
             pausedPid = 0;
-            if (suspended && helperWindow != IntPtr.Zero) { HomeNav.RequestElevated("thaw " + pid + " " + helperWindow.ToInt64()); helperWindow = IntPtr.Zero; suspended = false; }
+            if (suspended && helperWindow != IntPtr.Zero) { HomeNav.RequestElevated("thaw " + pid + " " + helperWindow.ToInt64() + (bringBack ? "" : " behind")); helperWindow = IntPtr.Zero; suspended = false; }
             if (suspended) { Suspend(pid, false); suspended = false; }
             if (lowered) { SetPriority(pid, true); lowered = false; }
             SetProcessMute(pid, false);
