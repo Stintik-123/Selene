@@ -4937,6 +4937,179 @@ namespace Selene
 
         private static Window shield;
 
+        // ---- Home over a game: a crossfade from the game's own picture ----
+        // The press takes a picture of the screen (the game as it is). That picture covers the screen at once (no cut to
+        // black), Selene comes forward under it, and then the game's picture shrinks a little and fades while the home settles
+        // in from a slight zoom. A game in exclusive fullscreen can't be pictured (the copy comes back black): then the
+        // old fade from black. Switch: Look > "Home over a game".
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr GetDC(IntPtr h);
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern int ReleaseDC(IntPtr h, IntPtr dc);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleDC(IntPtr dc);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleBitmap(IntPtr dc, int w, int h);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")] private static extern IntPtr SelectObject(IntPtr dc, IntPtr obj);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")] private static extern bool BitBlt(IntPtr dst, int x, int y, int w, int h, IntPtr src, int sx, int sy, uint rop);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")] private static extern bool DeleteObject(IntPtr obj);
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")] private static extern bool DeleteDC(IntPtr dc);
+
+        private static System.Drawing.Rectangle snapBounds;   // the monitor, in screen pixels
+        private static Window snapWindow;
+        private static SnapAdorner snapAdorner;
+
+        private static BitmapSource SnapScreen(IntPtr hwnd)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            IntPtr screen = IntPtr.Zero, mem = IntPtr.Zero, bmp = IntPtr.Zero, old = IntPtr.Zero;
+            try
+            {
+                var b = System.Windows.Forms.Screen.FromHandle(hwnd).Bounds;
+                screen = GetDC(IntPtr.Zero);
+                mem = CreateCompatibleDC(screen);
+                bmp = CreateCompatibleBitmap(screen, b.Width, b.Height);
+                old = SelectObject(mem, bmp);
+                if (!BitBlt(mem, 0, 0, b.Width, b.Height, screen, b.Left, b.Top, 0x00CC0020 /* SRCCOPY */)) return null;
+                SelectObject(mem, old); old = IntPtr.Zero;
+                var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(bmp, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                src.Freeze();
+                // all (nearly) black: an exclusive-fullscreen game, which a screen copy can't see
+                var px = new byte[4];
+                int lit = 0;
+                for (int gy = 1; gy <= 6; gy++)
+                    for (int gx = 1; gx <= 8; gx++)
+                    {
+                        src.CopyPixels(new Int32Rect(src.PixelWidth * gx / 9, src.PixelHeight * gy / 7, 1, 1), px, 4, 0);
+                        if (px[0] > 12 || px[1] > 12 || px[2] > 12) lit++;
+                    }
+                if (lit < 3) { Log("guide: the game's picture came back black (exclusive fullscreen?) -> fade from black"); return null; }
+                snapBounds = b;
+                Log("guide: game pictured (" + b.Width + "x" + b.Height + ", " + sw.ElapsedMilliseconds + " ms)");
+                return src;
+            }
+            catch (Exception ex) { Log("guide: picture failed: " + ex.Message); return null; }
+            finally
+            {
+                if (old != IntPtr.Zero) SelectObject(mem, old);
+                if (bmp != IntPtr.Zero) DeleteObject(bmp);
+                if (mem != IntPtr.Zero) DeleteDC(mem);
+                if (screen != IntPtr.Zero) ReleaseDC(IntPtr.Zero, screen);
+            }
+        }
+
+        // the picture over the whole screen, at once: a new window each time, drawn while cloaked (a window shown again first
+        // shows its old frame)
+        private static void ShowSnapWindow(Window main, BitmapSource snap)
+        {
+            try
+            {
+                var src = PresentationSource.FromVisual(main);
+                var toDip = src != null && src.CompositionTarget != null ? src.CompositionTarget.TransformFromDevice : Matrix.Identity;
+                var tl = toDip.Transform(new Point(snapBounds.Left, snapBounds.Top));
+                var br = toDip.Transform(new Point(snapBounds.Right, snapBounds.Bottom));
+                var win = new Window
+                {
+                    WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, ShowActivated = false,
+                    Title = "SeleneGuidePicture", Left = tl.X, Top = tl.Y, Width = br.X - tl.X, Height = br.Y - tl.Y,
+                    Background = new ImageBrush(snap) { Stretch = Stretch.Fill }
+                };
+                win.SourceInitialized += (s, e) =>
+                {
+                    var h = new System.Windows.Interop.WindowInteropHelper(win).Handle;
+                    DisableWindowTransitions(h);
+                    SetCloak(h, true);
+                };
+                win.Show();
+                win.UpdateLayout();
+                win.Dispatcher.Invoke(new Action(() => { }), System.Windows.Threading.DispatcherPriority.Render);
+                System.Threading.Thread.Sleep(16);   // its first frame drawn, still cloaked
+                var wh = new System.Windows.Interop.WindowInteropHelper(win).Handle;
+                SetWindowPos(wh, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
+                SetCloak(wh, false);
+                snapWindow = win;
+                var safety = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+                safety.Tick += (s, e) => { safety.Stop(); if (snapWindow == win) { CloseSnapWindow(); Log("guide: picture window still up after 1.5 s -> removed"); } };
+                safety.Start();
+            }
+            catch (Exception ex) { Log("guide: picture window failed: " + ex.Message); snapWindow = null; }
+        }
+
+        private static void CloseSnapWindow()
+        {
+            var win = snapWindow;
+            snapWindow = null;
+            if (win == null) return;
+            try { SetCloak(new System.Windows.Interop.WindowInteropHelper(win).Handle, true); win.Close(); } catch { }
+        }
+
+        // the same picture inside Selene's own window, over everything (the window's adorner layer: Selene's content can fade
+        // and zoom under it without moving it)
+        private class SnapAdorner : System.Windows.Documents.Adorner
+        {
+            private readonly ImageSource picture;
+            private readonly Rect place;
+            public SnapAdorner(UIElement root, ImageSource picture, Rect place) : base(root)
+            {
+                this.picture = picture;
+                this.place = place;
+                IsHitTestVisible = false;
+                RenderTransformOrigin = new Point(0.5, 0.5);
+                RenderTransform = new ScaleTransform(1, 1);
+            }
+            protected override void OnRender(DrawingContext dc) { dc.DrawImage(picture, place); }
+            public override GeneralTransform GetDesiredTransform(GeneralTransform transform) { return Transform.Identity; }   // not zoomed with the content
+        }
+
+        private static bool AddSnapAdorner(Window w, BitmapSource snap)
+        {
+            RemoveSnapAdorner();
+            var root = w.Content as UIElement;
+            var layer = root != null ? System.Windows.Documents.AdornerLayer.GetAdornerLayer(root) : null;
+            if (layer == null) { Log("guide: no adorner layer, fade from black"); return false; }
+            var place = new Rect(layer.PointFromScreen(new Point(snapBounds.Left, snapBounds.Top)), layer.PointFromScreen(new Point(snapBounds.Right, snapBounds.Bottom)));
+            snapAdorner = new SnapAdorner(root, snap, place);
+            layer.Add(snapAdorner);
+            return true;
+        }
+
+        private static void RemoveSnapAdorner()
+        {
+            var ad = snapAdorner;
+            snapAdorner = null;
+            if (ad == null) return;
+            try { var layer = VisualTreeHelper.GetParent(ad) as System.Windows.Documents.AdornerLayer; if (layer != null) layer.Remove(ad); } catch { }
+        }
+
+        // the crossfade: the game's picture shrinks a little and fades, the home settles in from a slight zoom under it
+        private static void PlayGuideEnter(Window w)
+        {
+            var ad = snapAdorner;
+            CloseSnapWindow();   // Selene's window shows the same picture now: nothing changes on screen
+            if (ad == null) { PlayEnterAnimation(w); return; }
+            var root = w.Content as FrameworkElement;
+            if (root == null) { RemoveSnapAdorner(); return; }
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var gameOut = TimeSpan.FromMilliseconds(340);
+            var homeIn = TimeSpan.FromMilliseconds(420);
+            root.CacheMode = new BitmapCache(1.0) { SnapsToDevicePixels = false };
+            var fadeIn = new DoubleAnimation(0, 1, homeIn) { EasingFunction = ease };
+            fadeIn.Completed += (s, e) => root.CacheMode = null;
+            root.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+            var sc = RootScale(root);
+            if (sc != null)
+            {
+                sc.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.05, 1, homeIn) { EasingFunction = ease });
+                sc.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.05, 1, homeIn) { EasingFunction = ease });
+            }
+            var adScale = ad.RenderTransform as ScaleTransform;
+            if (adScale != null)
+            {
+                adScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 0.94, gameOut) { EasingFunction = ease });
+                adScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 0.94, gameOut) { EasingFunction = ease });
+            }
+            var gone = new DoubleAnimation(1, 0, gameOut) { EasingFunction = ease };
+            gone.Completed += (s, e) => { if (snapAdorner == ad) RemoveSnapAdorner(); };
+            ad.BeginAnimation(UIElement.OpacityProperty, gone);
+            Log("guide: crossfade from the game's picture");
+        }
+
         // a plain black, topmost, never-activated window over the TV; its last rendered frame is black, so showing it
         // again is instant and clean
         private static void ShowShield(Window main)
@@ -6411,6 +6584,7 @@ namespace Selene
         {
             var target = gameWindow;
             var root = w.Content as FrameworkElement;
+            CloseSnapWindow(); RemoveSnapAdorner();
             StopStealGuard(w);  // the user asked for the game
             HidePreview();
             Action go = () =>
@@ -6855,8 +7029,12 @@ namespace Selene
                 if (wasBehind)
                 {
                     guideSwitching = true;
-                    ShowShield(w);  // black over everything at once: no desktop, no taskbar
+                    // the game's picture over everything at once (or black when it can't be pictured): no desktop, no taskbar
+                    var snap = Features.On("guidefade") ? SnapScreen(hwnd) : null;
+                    if (snap != null) ShowSnapWindow(w, snap);
+                    if (snapWindow == null) { snap = null; ShowShield(w); }
                     SetCloak(hwnd, true);  // and Playnite's old picture can never be shown while it comes forward
+                    if (snap != null && !AddSnapAdorner(w, snap)) { CloseSnapWindow(); ShowShield(w); }
                     gameWindow = GetForegroundWindow();
                     StartStealGuard(w);
                     var root = w.Content as UIElement;
@@ -6889,6 +7067,8 @@ namespace Selene
                         if (!PlayniteInFront()) return;
                         bool fixedUp = false;
                         if (shield != null && shield.IsVisible) { HideShield(); fixedUp = true; }
+                        if (snapWindow != null) { CloseSnapWindow(); fixedUp = true; }
+                        if (snapAdorner != null && snapAdorner.Opacity > 0.99) { RemoveSnapAdorner(); fixedUp = true; }
                         SetCloak(hwnd, false);
                         var r = w.Content as UIElement;
                         if (r != null && r.Opacity < 0.99) { FadeInRoot(r); fixedUp = true; }
@@ -6908,7 +7088,7 @@ namespace Selene
                         CompositionTarget.Rendering -= reveal;
                         SetCloak(cloakHwnd, false);
                         HideShield();
-                        PlayEnterAnimation(w);
+                        PlayGuideEnter(w);
                     };
                     reveal = (s2, e2) => { if (++frames >= 3) doReveal(); };
                     CompositionTarget.Rendering += reveal;
@@ -6942,7 +7122,7 @@ namespace Selene
             catch (Exception ex)
             {
                 Log("guide home failed: " + ex.Message);
-                try { HideShield(); SetCloak(new System.Windows.Interop.WindowInteropHelper(Application.Current.MainWindow).Handle, false); } catch { }
+                try { HideShield(); CloseSnapWindow(); RemoveSnapAdorner(); SetCloak(new System.Windows.Interop.WindowInteropHelper(Application.Current.MainWindow).Handle, false); } catch { }
                 var root = Application.Current.MainWindow != null ? Application.Current.MainWindow.Content as UIElement : null;
                 if (root != null) FadeInRoot(root);  // never leave Playnite faded out
             }

@@ -333,6 +333,7 @@ namespace Selene
             // ---- Look ----
             new Option { Group = "Look", Key = "homebackground", Label = "Spotlight background", About = "Behind the picked game: its own art, or always your wallpaper.", Choices = new[] { "art", "wallpaper" }, Names = new[] { "Game art", "Wallpaper only" }, Default = "art" },
             new Option { Group = "Look", Key = "glow", Label = "Animated background", About = "The moving backdrop behind the login and cards." },
+            new Option { Group = "Look", Key = "guidefade", Label = "Home over a game", About = "Home while playing: the game's picture fades into Selene instead of a cut to black. Games in exclusive fullscreen still fade from black." },
             new Option { Group = "Games", Key = "gameoptions", Label = "Game options, Selene's way", About = "A game's options (favorite, hide, edit details, extensions...) as a Selene screen. Off: Playnite's menu." },
             new Option { Group = "Games", Key = "achievements", Label = "Achievements on a game's page", About = "The count on Spotlight and a game's page; Y on the page opens the full list, like a console's trophy list.", Available = AchievementsData.Available, Note = Background.AchievementsNote, Progress = Background.AchievementsProgress },
             new Option { Group = "Games", Key = "achcelebrate", Label = "Achievements: celebrate 100%", About = "A game with every achievement unlocked gets a little celebration on its Locked tab." },
