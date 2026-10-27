@@ -1,0 +1,338 @@
+# Selene — полная русская локализация
+# Живой, человеческий перевод. Фразы без перевода остаются на английском.
+# Положите файл в theme/Localization/ или в ExtensionsData\...\Localization\
+
+# --- Основное ---
+Settings = Настройки
+Back = Назад
+Select = Выбрать
+More = Ещё
+Edit = Изменить
+Menu = Меню
+Language = Язык
+Follow Playnite = Как в Playnite
+Background sizing = Размер фона
+Fill = Заполнить
+Fit = Вписать
+Stretch = Растянуть
+Mouse navigation = Навигация мышью
+Focus on Guide = Фокус кнопкой Guide
+Who's playing? = Кто играет?
+Switch profile = Сменить профиль
+Edit profile = Редактировать профиль
+Theme = Тема
+Selene settings = Настройки Selene
+Sound = Звук
+Power = Питание
+Extensions = Расширения
+Playnite settings = Настройки Playnite
+Update library = Обновить библиотеку
+Desktop mode = Режим рабочего стола
+Update = Обновить
+Sleep = Сон
+Restart = Перезапустить
+Shut down = Выключить
+Exit Playnite = Выйти из Playnite
+Collection = Коллекция
+Store = Магазин
+Achievements = Достижения
+Activity = Активность
+Captures = Записи
+Find a game = Найти игру
+Continue = Продолжить
+Done = Готово
+Cancel = Отмена
+Yes = Да
+No = Нет
+On = Вкл
+Off = Выкл
+Start-up = Запуск
+Spotlight = Spotlight
+Notifications = Уведомления
+Sound & music = Звук и музыка
+Look = Внешний вид
+Games = Игры
+Advanced = Дополнительно
+
+# --- Язык ---
+Choose your language = Выберите язык
+Choose the language Selene should use. You can change it later in Settings. = Выберите язык для Selene. Потом его можно сменить в настройках.
+Restart Playnite? = Перезапустить Playnite?
+Restart now to apply the selected language? = Перезапустить сейчас, чтобы применить язык?
+Restart now = Перезапустить сейчас
+Later = Позже
+
+# --- Профили и первый запуск ---
+What should we call you? = Как тебя зовут?
+All set = Всё готово
+All add-ons installed = Все дополнения установлены
+Checking = Проверяем…
+Checking your games = Смотрим ваши игры
+Check finished = Проверка закончена
+Install all = Установить всё
+Skip = Пропустить
+Next = Дальше
+Finish = Завершить
+Welcome = Добро пожаловать
+Make a profile = Создать профиль
+Your name = Ваше имя
+Pick an avatar = Выберите аватар
+Or your own picture = Или свою картинку
+Preview = Предпросмотр
+Live preview = Живой предпросмотр
+
+# --- Spotlight и навигация ---
+All games = Все игры
+Installed = Установленные
+Recently played = Недавно играли
+Favorites = Избранное
+Not played yet = Ещё не играли
+Surprise me = Удиви меня
+News = Новости
+Play = Играть
+Details = Подробнее
+Favorite = В избранное
+Unfavorite = Убрать из избранного
+Trailer sound = Звук трейлера
+Trailer sound off = Звук трейлера выкл
+Trailer cards after = Трейлеры через
+never = никогда
+1 s = 1 с
+2.5 s = 2,5 с
+5 s = 5 с
+Starting tab = Вкладка при старте
+Filter tabs = Вкладки фильтров
+Pictures under the cards = Картинки под карточками
+Collection card = Карточка «Коллекция»
+Activity card = Карточка «Активность»
+Captures card = Карточка «Записи»
+Surprise me card = Карточка «Удиви меня»
+News card = Карточка «Новости»
+Button hints = Подсказки кнопок
+View button = Кнопка View
+Button names = Названия кнопок
+Xbox = Xbox
+PlayStation = PlayStation
+Logo intro = Заставка с логотипом
+Start on = Открывать при запуске
+Library update at start = Обновлять библиотеку при старте
+where you left it = там, где остановились
+
+# --- Меню и питание ---
+A Sleep item. = Пункт «Сон».
+A Hibernate item. = Пункт «Гибернация».
+A Restart item in Playnite's menu. = Пункт «Перезапуск» в меню Playnite.
+A Shut down item. = Пункт «Выключить».
+A Lock Windows item. = Пункт «Заблокировать Windows».
+A Sign out of Windows item. = Пункт «Выйти из Windows».
+A Minimize item. = Пункт «Свернуть».
+
+# --- Настройки Selene ---
+Interface sounds = Звуки интерфейса
+Music control = Управление музыкой
+Quiet loading screen = Тихий экран загрузки
+Sound volume = Громкость
+Default music = Музыка по умолчанию
+Background music. = Фоновая музыка.
+Playnite settings, Selene's way = Настройки Playnite в стиле Selene
+Which controller's buttons the hints show. = Кнопки какого контроллера показывать в подсказках.
+as Playnite's setting = как в настройках Playnite
+Button prompts = Подсказки кнопок
+Navigation = Навигация
+Collect words to translate = Собирать слова для перевода
+Selene in Playnite's language = Selene на языке Playnite
+Blur on that art = Размытие фона
+Idle screen = Экран бездействия
+Session card = Карточка сессии
+Update notices = Уведомления об обновлениях
+
+# --- Магазин ---
+Best deals = Лучшие скидки
+Bestsellers = Бестселлеры
+Top sellers = Хиты продаж
+Free games = Бесплатные игры
+New releases = Новинки
+Sales = Скидки
+Buy on = Купить в
+% off = % скидка
+A game's page = Страница игры
+Web page = Веб-страница
+
+# --- Достижения ---
+ACHIEVEMENTS = ДОСТИЖЕНИЯ
+Unlocked = Получено
+Locked = Ещё нет
+Bronze = Бронза
+Silver = Серебро
+Gold = Золото
+Platinum = Платина
+Ultra rare = Ультра-редкое
+Rare = Редкое
+Uncommon = Необычное
+Common = Обычное
+Your score = Ваш счёт
+A game's trophies = Трофеи игры
+Achievements need the Playnite Achievements add-on. = Для достижений нужно дополнение Playnite Achievements.
+Turn it on in Playnite's Add-ons. = Включите его в дополнениях Playnite.
+
+# --- Активность ---
+ALL PLAY TIME = ВСЁ ВРЕМЯ В ИГРАХ
+AMONG YOUR MOST PLAYED = СРЕДИ САМЫХ ИГРАЕМЫХ
+YOUR TOP GAME = ВАША ЛУЧШАЯ ИГРА
+Your activity = Ваша активность
+Your play time, most played and last played games show here. = Здесь — время в играх, самые играемые и последние.
+This week = На этой неделе
+Today = Сегодня
+Yesterday = Вчера
+Past Week = За неделю
+Past Month = За месяц
+Past Year = За год
+More than a year ago = Больше года назад
+Under a minute = Меньше минуты
+Under an hour = Меньше часа
+hours = ч
+minutes = мин
+A history of when and how long you played each game. = История, когда и сколько вы играли в каждую игру.
+
+# --- Записи (Captures) ---
+CAPTURES = ЗАПИСИ
+Your captures = Ваши записи
+Your screenshot = Ваш скриншот
+Clip player = Проигрыватель клипов
+No captures yet = Пока нет записей
+Take a screenshot or record a clip while playing. = Сделайте скриншот или запишите клип во время игры.
+
+# --- Поиск ---
+Type a game's name = Введите название игры
+Your games show here as you type. = Игры появляются по мере ввода.
+No games found = Игры не найдены
+
+# --- Детали игры ---
+Play time = Время в игре
+Last played = Последний раз
+Never played = Никогда не играли
+Not installed = Не установлена
+Platforms = Платформы
+Genres = Жанры
+Release date = Дата выхода
+Developer = Разработчик
+Publisher = Издатель
+Description = Описание
+Screenshots = Скриншоты
+Trailers = Трейлеры
+Game options = Параметры игры
+What your add-ons can do with this game. = Что могут сделать дополнения с этой игрой.
+Back up save data? = Сделать бэкап сохранений?
+Unsaved progress will be lost. = Несохранённый прогресс пропадёт.
+Close Game = Закрыть игру
+Guide = Guide
+
+# --- Магазин и новости ---
+Add a feed = Добавить ленту
+Add feed = Добавить ленту
+Your feeds = Ваши ленты
+Add and enable feeds to see their updates here. = Добавьте и включите ленты — здесь появятся обновления.
+What you follow shows up in News and on its card. = То, на что вы подписаны, видно в Новостях и на карточке.
+What's new = Что нового
+
+# --- Обновления ---
+Update ready = Обновление готово
+A new version is ready. You have = Вышла новая версия. У вас
+Update now = Обновить сейчас
+Updating your library in the background. = Обновляем библиотеку в фоне.
+
+# --- Разное ---
+Try again = Попробовать ещё раз
+You got everything. = У вас уже всё есть.
+You've played them all = Вы уже всё прошли
+You've started everything = Вы уже всё начинали
+Add games and Selene picks one for you. = Добавьте игры — Selene выберет одну.
+Whole library = Вся библиотека
+Change its place on Spotlight. = Изменить место в Spotlight.
+Change layout = Изменить раскладку
+Zoom in = Увеличить
+Zoom out = Уменьшить
+Use it = Использовать
+Use this currency = Использовать эту валюту
+Turn on or off = Включить или выключить
+Turned off = Выключено
+Automatic = Автоматически
+Back to automatic = Вернуться к авто
+Background only = Только фон
+A little = Немного
+Adjust = Настроить
+About = О программе
+Help = Помощь
+Report a problem = Сообщить о проблеме
+Too many reports in a row for now. Send it from here. = Слишком много жалоб подряд. Отправьте отсюда.
+Three quick steps, or type on your phone; no account needed. = Три быстрых шага или напишите с телефона — аккаунт не нужен.
+
+# --- Состояния ---
+Loading… = Загрузка…
+Please wait… = Подождите…
+Working… = Работаем…
+Ready = Готово
+Error = Ошибка
+Something went wrong = Что-то пошло не так
+Couldn't download = Не удалось скачать
+COULDN'T DOWNLOAD = НЕ УДАЛОСЬ СКАЧАТЬ
+Connected = Подключено
+CONNECTED = ПОДКЛЮЧЕНО
+Offline = Офлайн
+No internet = Нет интернета
+
+# --- Кнопки и подсказки ---
+A confirms and A goes back. = A подтверждает, B — назад.
+B confirms and A goes back. = B подтверждает, A — назад.
+Hold View to search = Зажмите View для поиска
+Hold Start for Selene settings = Зажмите Start для настроек Selene
+Press A to play = Нажмите A, чтобы играть
+Press Y to move = Нажмите Y, чтобы переместить
+Press X for details = Нажмите X для подробностей
+Press B to go back = Нажмите B, чтобы вернуться
+
+# --- Тема и внешний вид ---
+Color theme = Цветовая тема
+Wallpaper = Обои
+Your wallpapers = Ваши обои
+Dark = Тёмная
+Light = Светлая
+Background = Фон
+Avatars = Аватары
+Fonts = Шрифты
+Contrast = Контраст
+Readable text = Читаемый текст
+
+# --- Дополнения ---
+Extra Metadata Loader = Extra Metadata Loader
+Ludusavi = Ludusavi
+HowLongToBeat = HowLongToBeat
+GameActivity = GameActivity
+Playnite Achievements = Playnite Achievements
+DuplicateHider = DuplicateHider
+UniPlaySong = UniPlaySong
+Audio Switcher = Audio Switcher
+Turn it off in Add-ons so the two don't fight = Выключите в дополнениях, чтобы они не мешали друг другу
+Turn it off in Playnite's Add-ons so the two don't fight. = Выключите в дополнениях Playnite, чтобы они не мешали друг другу.
+
+# --- Прочее полезное ---
+All Games = Все игры
+Presets = Пресеты
+Categories = Категории
+Age ratings = Возрастные рейтинги
+Features = Особенности
+Tags = Теги
+Series = Серия
+Source = Источник
+Platform = Платформа
+Library = Библиотека
+Installed games = Установленные игры
+Uninstalled games show darker in Collection. = Неустановленные игры в Коллекции темнее.
+Search = Поиск
+Filter Active = Фильтр активен
+Clear filter = Сбросить фильтр
+Sort by = Сортировка
+Name = Название
+Last activity = Последняя активность
+Added = Добавлено
+Random = Случайно
