@@ -769,11 +769,127 @@ namespace Selene
         // Playnite in front yet blank: its root is kept at opacity 0 behind a running game and fades back in on Activated,
         // but a game that closes without Windows re-activating Playnite left a black screen with the sounds still playing
         // (#24). Two checks a second apart, then it is shown.
+        // Back from a game, Playnite could stay black with its sounds playing until Alt+Tab (#24). A game that switches the
+        // display mode (exclusive fullscreen, another refresh rate) can leave WPF's drawing surface lost: nothing new is drawn
+        // until something forces a frame. Selene's own covers (loading veil, Guide's black shield) and a faded-out home are put
+        // right here too. Run once back from a game, and whenever the display mode changes.
+        private static DateTime gameEndedAt = DateTime.MinValue;
+        private static bool refreshQueued;
+        private static string pendingRefresh;
+        private static DateTime pendingRefreshAt;
+        // Playnite comes back on its own schedule (restored by Windows, no event to WPF): looked at twice a second
+        private static System.Windows.Threading.DispatcherTimer pendingWatch;
+        private static void WatchPendingRefresh()
+        {
+            if (pendingWatch == null)
+            {
+                pendingWatch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+                pendingWatch.Tick += (s, e) =>
+                {
+                    var w = Application.Current.MainWindow;
+                    if (pendingRefresh == null || (DateTime.Now - pendingRefreshAt).TotalMinutes >= 3) { pendingWatch.Stop(); pendingRefresh = null; return; }
+                    if (launching || Quitting || w == null || !w.IsVisible || IsIconic(new System.Windows.Interop.WindowInteropHelper(w).Handle) || !PlayniteInFront()) return;
+                    pendingWatch.Stop();
+                    RunPendingRefresh();
+                };
+            }
+            pendingWatch.Start();
+        }
+
+        private static void RunPendingRefresh()
+        {
+            if (pendingRefresh == null) return;
+            var why = pendingRefresh;
+            pendingRefresh = null;
+            if ((DateTime.Now - pendingRefreshAt).TotalMinutes < 3) QueueScreenRefresh(why + ", now on screen", 300);
+        }
+        public static void GameEnded()
+        {
+            gameEndedAt = DateTime.Now;
+            var app = Application.Current;
+            if (app == null) return;
+            app.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (launching) { AbortLaunchCover(IntPtr.Zero, "the game stopped while loading"); return; }
+                var w = app.MainWindow;
+                if (w != null && w.IsActive) { gameEndedAt = DateTime.MinValue; QueueScreenRefresh("back from a game", 400); }
+            }));
+        }
+
+        public static void ScreenRefresh(string why)
+        {
+            try
+            {
+                var w = Application.Current.MainWindow;
+                // (minimized as Windows sees it: Playnite restores its window through Windows and WPF's WindowState can stay "Minimized")
+                bool iconic = w != null && IsIconic(new System.Windows.Interop.WindowInteropHelper(w).Handle);
+                if (launching || Quitting || w == null || !w.IsVisible || iconic)
+                {
+                    Log("screen refresh (" + why + "): waits (" + (launching ? "loading screen up" : Quitting ? "quitting" : w == null ? "no window" : !w.IsVisible ? "Playnite hidden" : "minimized") + ")");
+                    if (!Quitting) { pendingRefresh = why; pendingRefreshAt = DateTime.Now; WatchPendingRefresh(); }   // done once Playnite is on screen and in front again
+                    return;
+                }
+                pendingRefresh = null;
+                var fixes = new System.Collections.Generic.List<string>();
+                if (coverWindow != null) { CloseCoverWindow(false, null); fixes.Add("loading cover closed"); }
+                int leftovers = CloseLeftoverCovers();
+                if (leftovers > 0) fixes.Add(leftovers + " leftover cover window(s) closed");
+                if (shield != null && shield.IsVisible) { HideShield(); fixes.Add("black shield hidden"); }
+                var root = w.Content as UIElement;
+                if (root != null && root.Opacity < 0.99 && !guideSwitching) { FadeInRoot(root); fixes.Add("home faded in (opacity " + root.Opacity.ToString("0.00") + ")"); }
+                // a new drawing surface: a frame drawn in software, then the graphics card again
+                var src = PresentationSource.FromVisual(w) as System.Windows.Interop.HwndSource;
+                if (src != null && src.CompositionTarget != null && src.CompositionTarget.RenderMode == System.Windows.Interop.RenderMode.Default)
+                {
+                    src.CompositionTarget.RenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
+                    w.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try { if (src.CompositionTarget != null) src.CompositionTarget.RenderMode = System.Windows.Interop.RenderMode.Default; } catch { }
+                        if (root != null) root.InvalidateVisual();
+                    }), System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    fixes.Add("drawing surface renewed");
+                }
+                Log("screen refresh (" + why + "): " + string.Join(", ", fixes));
+            }
+            catch (Exception ex) { Log("screen refresh: " + ex.Message); }
+        }
+
+        // the loading screen's own windows (its cover, the veil the game fades in under) still up with no game loading
+        private static int CloseLeftoverCovers()
+        {
+            if (launching) return 0;
+            int n = 0;
+            try
+            {
+                foreach (Window x in Application.Current.Windows)
+                    if ((x.Title == "SeleneLaunchCover" || x.Title == "SeleneLaunchVeil") && !ReferenceEquals(x, coverWindow)) { try { var xh = new System.Windows.Interop.WindowInteropHelper(x).Handle; x.Close(); n++; Log("leftover cover: closed #" + x.GetHashCode() + " hwnd " + xh + " (window still there: " + (xh != IntPtr.Zero && IsWindow(xh)) + ")"); } catch (Exception ex) { Log("leftover cover: close failed: " + ex.Message); } }
+            }
+            catch { }
+            return n;
+        }
+
+        private static void QueueScreenRefresh(string why, int ms)
+        {
+            if (refreshQueued) return;
+            refreshQueued = true;
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
+            t.Tick += (s, e) => { t.Stop(); refreshQueued = false; ScreenRefresh(why); };
+            t.Start();
+        }
+
         private static int blankTicks;
 
         // developer switch %TEMP%\selene-dev-isolated: a test copy run beside a PC in use (on a hidden desktop) - it reads no
         // controller (the pad belongs to whatever the user is playing) and its own sound stays muted
         public static readonly bool Isolated = System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-isolated"));
+        // a link, a store app or a file opened outside Playnite; a test copy beside a PC in use opens nothing (it would open in the
+        // user's own browser or store launcher)
+        public static void OpenOutside(string target)
+        {
+            if (Isolated) { Log("dev isolated: not opened (" + target + ")"); return; }
+            System.Diagnostics.Process.Start(target);
+        }
+
         public static void StartIsolatedMute()
         {
             if (!Isolated) return;
@@ -815,11 +931,37 @@ namespace Selene
         }
         public static void DevCycleFilter(int dir) { CycleRowFilter(dir); }
         public static void DevGuide() { Log("dev guide: as the Guide button"); GoHomeFromGuide(); }
+        public static void DevR3() { TogglePreviewSound(); }
+        // dev key "testgame:<exe>": a game of that program, started like any game (launch cover, return); removed once it stops
+        public static Guid DevGameId = Guid.Empty;
+        public static void DevTestGame(string exe)
+        {
+            try
+            {
+                string args = null;
+                var bar = exe.IndexOf('|');
+                if (bar > 0) { args = exe.Substring(bar + 1); exe = exe.Substring(0, bar); }   // "testgame:<exe>|<arguments>"
+                var g = Api.Database.Games.FirstOrDefault(x => x.Name == "Selene test game");
+                if (g == null)
+                {
+                    g = new Playnite.SDK.Models.Game("Selene test game") { IsInstalled = true, Hidden = true, InstallDirectory = System.IO.Path.GetDirectoryName(exe) };
+                    g.GameActions = new System.Collections.ObjectModel.ObservableCollection<Playnite.SDK.Models.GameAction> {
+                        new Playnite.SDK.Models.GameAction { Name = "Play", IsPlayAction = true, Type = Playnite.SDK.Models.GameActionType.File, Path = exe, WorkingDir = System.IO.Path.GetDirectoryName(exe), TrackingMode = Playnite.SDK.Models.TrackingMode.Process } };
+                    Api.Database.Games.Add(g);
+                }
+                var play = g.GameActions != null ? g.GameActions.FirstOrDefault(a => a.IsPlayAction) : null;
+                if (play != null && play.Arguments != args) { play.Arguments = args; Api.Database.Games.Update(g); }
+                DevGameId = g.Id;
+                Log("dev test game: starting " + exe + (args != null ? " " + args : ""));
+                Api.StartGame(g.Id);
+            }
+            catch (Exception ex) { Log("dev test game: " + ex.Message); }
+        }
         public static void DevFront()
         {
             var w = Application.Current.MainWindow;
             var root = w != null ? w.Content as UIElement : null;
-            Log("dev front: Playnite in front=" + PlayniteInFront() + ", window active=" + (w != null && w.IsActive) + ", root opacity " + (root != null ? root.Opacity.ToString("0.00") : "?") + ", quitting=" + Quitting);
+            Log("dev front: window " + (w != null ? w.WindowState.ToString() : "?") + ", Playnite in front=" + PlayniteInFront() + ", window active=" + (w != null && w.IsActive) + ", root opacity " + (root != null ? root.Opacity.ToString("0.00") : "?") + ", quitting=" + Quitting);
         }
         private static void StartBlankWatch()
         {
@@ -838,6 +980,7 @@ namespace Selene
                     blankTicks = 0;
                     Log("screen: Playnite in front but blank for 2 s -> shown");
                     PlayEnterAnimation(w);
+                    ScreenRefresh("blank in front");
                 }
                 catch (Exception ex) { Log("blank watch: " + ex.Message); }
             };
@@ -1933,6 +2076,7 @@ namespace Selene
                 ApplyVideoPause();
                 video.IsMuted = !previewSound;   // a silent clip has nothing to mute; the trailer's sound waits for R3
                 video.Source = new Uri(path);
+                WatchTrailer(video, path);   // what Windows can't decode comes from the browser (#28)
                 video.Opacity = 0;
                 video.MediaOpened -= OnPreviewOpened;
                 video.MediaOpened += OnPreviewOpened;
@@ -2032,7 +2176,7 @@ namespace Selene
             var game = item.DataContext;
             var full = FullTrailerPath(game); var clip = TrailerPath(game);
             if (full == null) return;
-            previewSound = !previewSound && !Isolated;
+            previewSound = !previewSound;   // (a test copy stays silent through its muted sound session)
             video.IsMuted = !previewSound;
             if (CardVideo(game) == video.Source.LocalPath || clip == null)
             {
@@ -2047,9 +2191,17 @@ namespace Selene
             pendingSeek = previewSound ? pos + TimeSpan.FromSeconds(4) : (pos > TimeSpan.FromSeconds(4) ? pos - TimeSpan.FromSeconds(4) : TimeSpan.Zero);
             ApplyVideoPause();
             video.Source = new Uri(previewSound ? full : clip);
+            WatchTrailer(video, previewSound ? full : clip);
             video.Play();
             ShowSoundBadge(item, true);
             Log("trailer sound " + (previewSound ? "on" : "off"));
+        }
+
+        private static TrailerFix previewFix;
+        private static void WatchTrailer(MediaElement video, string path)
+        {
+            if (previewFix != null) previewFix.Stop();
+            previewFix = TrailerFix.Watch(video, path, null);
         }
 
         private static void OnPreviewEnded(object sender, RoutedEventArgs e)
@@ -2403,6 +2555,7 @@ namespace Selene
                 if (vh != null) vh.Children.Remove(video);  // frees the player (one per tile used to cost a lot on every row rebuild)
             }
             ShowSoundBadge(item, false);
+            if (previewFix != null) { previewFix.Stop(); previewFix = null; }
             ApplyVideoPause();
             foreach (var w in previewFaded)
             {
@@ -5344,6 +5497,7 @@ namespace Selene
         private static DateTime launchStart;
         private static System.Windows.Threading.DispatcherTimer launchTimer;
         private static DateTime gameWindowSeenAt = DateTime.MinValue;
+        private static DateTime gameGoneSince = DateTime.MinValue;
         private static IntPtr lastGameWindow = IntPtr.Zero;
         private static readonly HashSet<int> gamePids = new HashSet<int>();
         private static DateTime gamePidsAt = DateTime.MinValue, soundSince = DateTime.MinValue, lastSoundAt = DateTime.MinValue;
@@ -5696,6 +5850,9 @@ namespace Selene
                     var melt = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(700)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
                     melt.Completed += (s5, e5) => { try { v.Close(); } catch { } };
                     v.BeginAnimation(UIElement.OpacityProperty, melt);
+                    var sure = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+                    sure.Tick += (s6, e6) => { sure.Stop(); if (v.IsLoaded || v.IsVisible) { try { v.Close(); Log("launch veil: closed (its fade didn't finish)"); } catch { } } };
+                    sure.Start();
                 };
                 hold.Start();
             };
@@ -5783,6 +5940,7 @@ namespace Selene
                 launching = true;
                 launchStart = DateTime.Now;
                 gameWindowSeenAt = DateTime.MinValue;
+                gameGoneSince = DateTime.MinValue;
                 coverArtGone = false;
                 lastGameWindow = IntPtr.Zero;
                 gamePids.Clear();
@@ -5852,6 +6010,17 @@ namespace Selene
                 gamePids.Clear();
                 try { var lg = Api != null ? Api.Database.Games.Get(launchGameId) : null; if (lg != null) foreach (var pid in LocalGames.ProcessesInGameFolder(lg)) gamePids.Add(pid); } catch { }
             }
+            // the game's window came and went: closed (or crashed) while the loading screen waited for it to be ready. The
+            // cover went on waiting (for sound, or up to 2 min while a launcher kept the game "running") and Playnite sat
+            // black behind it (#24). Nothing of the game left in its folder for 1 s -> back to Playnite; processes still
+            // there but no game window for 8 s -> back too.
+            if (gameWindowSeenAt != DateTime.MinValue && found == IntPtr.Zero && (lastGameWindow == IntPtr.Zero || !IsWindow(lastGameWindow)))
+            {
+                if (gameGoneSince == DateTime.MinValue) gameGoneSince = now;
+                var gone = (now - gameGoneSince).TotalSeconds;
+                if ((gamePids.Count == 0 && gone >= 1) || gone >= 8) { AbortLaunchCover(IntPtr.Zero, gamePids.Count == 0 ? "the game closed while loading" : "the game's window is gone (8 s)"); return; }
+            }
+            else gameGoneSince = DateTime.MinValue;
             uint foundPid = 0;
             if (found != IntPtr.Zero) GetWindowThreadProcessId(found, out foundPid);
             // a full-screen window of some other program (not from the game's folder) doesn't count as the game
@@ -6007,10 +6176,20 @@ namespace Selene
                 w.Topmost = false;
                 var root = w.Content as UIElement;
                 if (root != null) FadeInRoot(root);
+                // Playnite minimizes itself as a game starts: back on screen first (minimized, the loading screen's fade never
+                // finished and its black window stayed over everything, #24)
+                var mh = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+                if (bringForward == IntPtr.Zero && mh != IntPtr.Zero && IsIconic(mh)) { ShowWindow(mh, 9 /* SW_RESTORE */); Log("launch cover: Playnite restored"); }
             }
+            var sweep = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            sweep.Tick += (s, e) => { sweep.Stop(); int n = CloseLeftoverCovers(); if (n > 0) Log("launch cover: " + n + " leftover window(s) closed"); };
+            sweep.Start();
             // Playnite hides in the tray while a game starts: bring it back, or there is only the black desktop
-            CloseCoverWindow(true, () => { if (bringForward != IntPtr.Zero) ForceForeground(bringForward); else if (w != null) { if (CloseToTray.IsHidden) CloseToTray.ShowFromTray(); w.Activate(); FocusRowSoon(0); } });
+            // closed at once: the fade-into-the-game (a veil melting away) has no game to show, and with Playnite just restored its
+            // animations could stall and leave the black veil up (#24)
+            CloseCoverWindow(false, () => { if (bringForward != IntPtr.Zero) ForceForeground(bringForward); else if (w != null) { if (CloseToTray.IsHidden) CloseToTray.ShowFromTray(); w.Activate(); FocusRowSoon(0); } });
             Log("launch cover: aborted (" + why + ")");
+            QueueScreenRefresh("loading screen ended without the game", 600);
         }
 
         private static readonly string[] SteamProcesses = { "steam", "steamwebhelper" };
@@ -6447,7 +6626,11 @@ namespace Selene
                 {
                     var root = mw.Content as UIElement;
                     if (root != null && root.Opacity < 0.01 && !guideSwitching) PlayEnterAnimation(mw);
+                    if ((DateTime.Now - gameEndedAt).TotalSeconds < 90) { gameEndedAt = DateTime.MinValue; QueueScreenRefresh("back from a game", 400); }
+                    RunPendingRefresh();
                 };
+                Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (s, e) => mw.Dispatcher.BeginInvoke(new Action(() => QueueScreenRefresh("display mode changed", 700)));
+                mw.StateChanged += (s, e) => { if (mw.WindowState != WindowState.Minimized && mw.IsActive) RunPendingRefresh(); };
                 var h = new System.Windows.Interop.WindowInteropHelper(mw).Handle;
                 if (h != IntPtr.Zero) DisableWindowTransitions(h); else mw.SourceInitialized += (s, e) => DisableWindowTransitions(new System.Windows.Interop.WindowInteropHelper(mw).Handle);
             }

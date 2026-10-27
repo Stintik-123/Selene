@@ -387,7 +387,16 @@ namespace Selene
                         if (rsHint != null && videoHasSound) rsHint.Text = "Trailer sound";
                     });
                 };
-                player.MediaFailed += (s, e) => { HomeNav.Log("library trailer failed: " + e.ErrorException.Message); Stop(); };
+                // what Windows can't decode comes from the browser (#28); its picture up = the stage shows, as for the player's own
+                TrailerFix fix = null;
+                fix = TrailerFix.Watch(player, path, () =>
+                {
+                    if (video != player) return;
+                    Fade(true);
+                    HomeNav.SetMusic("trailer");
+                    if (rsHint != null && videoHasSound) rsHint.Text = "Trailer sound";
+                });
+                player.MediaFailed += (s, e) => { HomeNav.Log("library trailer failed: " + e.ErrorException.Message); if (fix == null || !fix.TookOver) Stop(); };
                 video = player;
                 videoHasSound = hasSound;
                 soundOn = false;
@@ -402,7 +411,7 @@ namespace Selene
         {
             if (video == null || !videoHasSound) return false;
             soundOn = !soundOn;
-            video.IsMuted = !soundOn || HomeNav.Isolated;
+            video.IsMuted = !soundOn;
             HomeNav.TrailerSound(soundOn);
             if (rsHint != null) rsHint.Text = soundOn ? "Trailer sound off" : "Trailer sound";
             Ui.Key();

@@ -115,7 +115,7 @@ namespace Selene
             var store = stores[index];
             Ui.Confirm();
             HomeNav.Log("store: opening " + store.Name);
-            try { System.Diagnostics.Process.Start(store.Link); }
+            try { HomeNav.OpenOutside(store.Link); }
             catch (Exception ex) { HomeNav.Log("store: " + store.Name + " failed: " + ex.Message); Ui.Shake(tiles[index].Root); return; }
             LoginScene.Finish();
         }

@@ -119,7 +119,7 @@ namespace Selene
                     var item = cardItems[focus];
                     Ui.Confirm();
                     HomeNav.Log("store card: opening " + item.Title + " (" + item.Link + ")");
-                    try { System.Diagnostics.Process.Start(item.Link); }
+                    try { HomeNav.OpenOutside(item.Link); }
                     catch (Exception ex) { HomeNav.Log("store card: open failed: " + ex.Message); Ui.Shake(cards[focus]); return true; }
                     Leave();
                     return true;

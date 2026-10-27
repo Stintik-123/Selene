@@ -206,6 +206,13 @@ namespace Selene
                 else if (step[1] == "fakequit") HomeNav.BeginQuit();
                 else if (step[1] == "front?") HomeNav.DevFront();
                 else if (step[1] == "guide") HomeNav.DevGuide();
+                else if (step[1] == "collection") SeleneShell.ShowLibrary();
+                else if (step[1].StartsWith("testgame:")) HomeNav.DevTestGame(step[1].Substring(9));
+                else if (step[1] == "refresh") HomeNav.ScreenRefresh("dev key");
+                else if (step[1] == "screen:extensions") OpenWith(() => GameOptionsScreen.Extensions());
+                else if (step[1] == "screen:currency") OpenWith(() => new StoreCurrencyScreen(false, null));
+                else if (step[1] == "windows?") foreach (Window x in Application.Current.Windows) HomeNav.Log("dev window: '" + x.Title + "' " + x.GetType().Name + " #" + x.GetHashCode() + " visible=" + x.IsVisible + " topmost=" + x.Topmost + " opacity=" + x.Opacity.ToString("0.00") + " content=" + (x.Content != null ? x.Content.GetType().Name : "null"));
+                else if (step[1] == "r3") { if (!LibraryStage.ToggleSound()) HomeNav.DevR3(); }
                 else if (step[1] == "helpersetup") LocalGames.DevSetUpHelper();
                 else if (step[1].StartsWith("filter:")) { int d; if (int.TryParse(step[1].Substring(7), out d)) HomeNav.DevCycleFilter(d); }
                 else if (step[1].StartsWith("type:") && current != null) current.Type(step[1].Substring(5));

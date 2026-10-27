@@ -126,7 +126,7 @@ namespace Selene
         public static void Install(string addonId)
         {
             LastAsked = addonId;
-            Process.Start("playnite://playnite/installaddon/" + addonId);
+            HomeNav.OpenOutside("playnite://playnite/installaddon/" + addonId);
         }
 
         // add-ons said yes to in Playnite's install question this run: Playnite puts them in on its next start, so until the

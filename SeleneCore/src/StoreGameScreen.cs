@@ -403,7 +403,7 @@ namespace Selene
 
         private static void Open(string link)
         {
-            try { System.Diagnostics.Process.Start(link); }
+            try { HomeNav.OpenOutside(link); }
             catch (Exception ex) { HomeNav.Log("store: open failed: " + ex.Message); }
         }
 

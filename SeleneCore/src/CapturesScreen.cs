@@ -694,7 +694,7 @@ namespace Selene
                 if (ext == ".mkv" || ext == ".avi")
                 {
                     // Playnite's player can't show these: the PC's own player, Selene waits here
-                    try { System.Diagnostics.Process.Start(c.Path); } catch (Exception ex) { HomeNav.Log("captures: open failed: " + ex.Message); }
+                    try { HomeNav.OpenOutside(c.Path); } catch (Exception ex) { HomeNav.Log("captures: open failed: " + ex.Message); }
                     return;
                 }
                 // Playnite's own player first (H.264 from Xbox Game Bar); a clip it can't decode (AV1 from the NVIDIA app) goes to

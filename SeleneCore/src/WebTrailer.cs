@@ -158,6 +158,87 @@ namespace Selene
             catch (Exception ex) { HomeNav.Log("clip: " + ex.Message); return null; }
         }
 
+        // A trailer file Windows' own player can't fully decode (TrailerFix): the browser plays it on a loop, muted until Mute(false).
+        // picture: drawn to fill the view (cover, like the trailer cards); false: only its sound is wanted (the view stays
+        // invisible, a few pixels). The page reports "playing WxH", then "p=<at>|<length>|<paused>|<frames>|<sound bytes>".
+        public static WebTrailer CreateLoop(string path, bool picture, Action playing, Action<string> failed)
+        {
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return null;
+            try
+            {
+                var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("CefSharp.Wpf.ChromiumWebBrowser", false)).FirstOrDefault(t => t != null);
+                if (type == null) { HomeNav.Log("trailer fix: no browser in this Playnite"); return null; }
+                var t2 = new WebTrailer();
+                var view = (FrameworkElement)Activator.CreateInstance(type);
+                view.IsHitTestVisible = false;
+                view.Focusable = false;
+                view.Opacity = 0;
+                t2.browser = view;
+                var name = System.IO.Path.GetFileName(path);
+                var title = DependencyPropertyDescriptor.FromName("Title", type, type);
+                if (title != null)
+                    title.AddValueChanged(view, (s, e) =>
+                    {
+                        var text = view.GetValue(title.DependencyProperty) as string;
+                        if (string.IsNullOrEmpty(text) || t2.browser == null) return;
+                        if (text.StartsWith("playing"))
+                        {
+                            if (t2.shown) return;
+                            t2.shown = true;
+                            HomeNav.Log("trailer fix: the browser is " + text + " (" + name + ")");
+                            if (picture) view.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(400)) { EasingFunction = Ui.Out() });
+                            // a click of our own on the page: the browser then lets it unmute later (media that starts by itself
+                            // stays muted until the page has been touched)
+                            if (!t2.poked) { t2.poked = true; view.Dispatcher.BeginInvoke(new Action(() => HostClick(view)), System.Windows.Threading.DispatcherPriority.Input); }
+                            if (playing != null) playing();
+                        }
+                        else if (text.StartsWith("failed"))
+                        {
+                            HomeNav.Log("trailer fix: the browser couldn't play " + name + " (" + text + ")");
+                            if (failed != null) failed(text);
+                        }
+                        else if (text.StartsWith("p="))
+                        {
+                            var parts = text.Substring(2).Split('|');
+                            double at, length;
+                            if (parts.Length >= 3 && double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out at)
+                                && double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out length))
+                            {
+                                var r = t2.reports++;
+                                if (r == 2 || r == 8) HomeNav.Log("trailer fix: " + text + " (" + name + ")");
+                                if (t2.Progress != null) t2.Progress(at, length, parts[2] == "1");
+                            }
+                        }
+                        else if (text.StartsWith("unmute")) HomeNav.Log("trailer fix: " + text);
+                    });
+                var src = new Uri(path).AbsoluteUri.Replace("\"", "%22");
+                var html = "<!doctype html><html><head><meta charset='utf-8'><style>html,body{margin:0;background:#000;overflow:hidden}"
+                    + "canvas{position:fixed;left:0;top:0;width:100vw;height:100vh}video{position:fixed;left:0;top:0;width:4px;height:4px;opacity:0.01}</style></head><body>"
+                    + (picture ? "<canvas id='c'></canvas>" : "") + "<video id='v' src=\"" + src + "\" muted autoplay playsinline loop></video><script>"
+                    + "var v=document.getElementById('v'),c=document.getElementById('c'),x=c?c.getContext('2d'):null,n=0;"
+                    + "function fit(){if(c){c.width=innerWidth;c.height=innerHeight;}}fit();addEventListener('resize',fit);"
+                    // cover: the picture fills the view, cut at the sides or top and bottom (as the trailer cards' own player does)
+                    + "function draw(){if(x&&v.videoWidth>0){var s=Math.max(c.width/v.videoWidth,c.height/v.videoHeight),w=v.videoWidth*s,h=v.videoHeight*s;"
+                    + "x.drawImage(v,(c.width-w)/2,(c.height-h)/2,w,h);n++;}requestAnimationFrame(draw);}requestAnimationFrame(draw);"
+                    + "v.addEventListener('playing',function(){document.title='playing '+v.videoWidth+'x'+v.videoHeight;});"
+                    + "v.addEventListener('error',function(){document.title='failed: '+(v.error?v.error.code+' '+v.error.message:'');});"
+                    + "setInterval(function(){if(v.readyState>0)document.title='p='+v.currentTime.toFixed(1)+'|'+(isFinite(v.duration)?v.duration.toFixed(1):'0')+'|'+(v.paused?1:0)+'|'+n+'|'+(v.webkitAudioDecodedByteCount||0)+'|muted='+(v.muted?1:0);},500);"
+                    + "window.selene={mute:function(m){v.muted=m;if(!m){var q=v.play();if(q&&q.catch)q.catch(function(e){document.title='unmute refused: '+e;});}},"
+                    + "seekTo:function(t){try{v.currentTime=Math.max(0,t);}catch(e){}},play:function(){v.play();},pause:function(){v.pause();}};"
+                    + (HomeNav.Isolated ? "v.volume=0;" : "")   // (a test copy beside a PC in use: unmuted, yet silent)
+                    + "var p=v.play();if(p&&p.catch)p.catch(function(e){document.title='failed: '+e;});"
+                    + "document.title='loading';</script></body></html>";
+                var page = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-trailer-" + DateTime.Now.Ticks + ".html");
+                System.IO.File.WriteAllText(page, html, Encoding.UTF8);
+                t2.pageFile = page;
+                type.GetProperty("Address").SetValue(view, new Uri(page).AbsoluteUri, null);
+                return t2;
+            }
+            catch (Exception ex) { HomeNav.Log("trailer fix: " + ex.Message); return null; }
+        }
+
+        public void Mute(bool muted) { Run("selene.mute(" + (muted ? "true" : "false") + ")"); }
+
         private string pageFile;
         private int reports;
         private bool poked;

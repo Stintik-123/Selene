@@ -97,6 +97,7 @@ namespace Selene
         public override void OnGameStopped(OnGameStoppedEventArgs args)
         {
             if (!Active || args.Game == null) return;
+            HomeNav.GameEnded();   // the next time Selene is in front, its screen is renewed (#24)
             LocalGames.AfterGameStopped(args.Game);
             Profiles.RecordSession(args.Game.Id, args.ElapsedSeconds);
             // back from a game: a card says how long it was played (once Selene is in front again) (any session over 10 s: a short one showed nothing)
