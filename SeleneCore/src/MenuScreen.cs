@@ -543,6 +543,7 @@ namespace Selene
         {
             var item = Items[i];
             HomeNav.Log("power: " + item[0]);
+            if (HomeNav.Isolated) { HomeNav.Log("dev isolated: " + item[0] + " NOT done (a test copy never sleeps, restarts or shuts down the PC)"); HomeNav.Quitting = false; return; }
             var helper = SelenePaths.Helper;
             bool viaHelper = !string.IsNullOrEmpty(helper) && System.IO.File.Exists(helper);
             // sleep straight through Windows: "rundll32 powrprof.dll,SetSuspendState" hibernates instead on a PC with

@@ -520,6 +520,7 @@ namespace Selene
         public static void StartRunningWatch()
         {
             if (runningTimer != null) return;
+            if (HomeNav.Isolated) { HomeNav.Log("dev isolated: games running on this PC are not adopted"); return; }
             // first look right after start (a game left running shows as playing at once), then every 4 s
             runningTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
             runningTimer.Tick += (s, e) => { runningTimer.Interval = TimeSpan.FromSeconds(4); CheckRunning(); };

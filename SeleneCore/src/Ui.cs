@@ -316,7 +316,7 @@ namespace Selene
             {
                 MediaPlayer mp;
                 if (!players.TryGetValue(file, out mp)) { mp = new MediaPlayer(); mp.Open(new Uri(path)); players[file] = mp; }
-                mp.Volume = Math.Max(0, Math.Min(1, volume * Features.Number("soundvolume") / 100.0));   // the Sound volume setting
+                mp.Volume = HomeNav.Isolated ? 0 : Math.Max(0, Math.Min(1, volume * Features.Number("soundvolume") / 100.0));   // the Sound volume setting
                 mp.Position = TimeSpan.Zero;
                 mp.Play();
             }

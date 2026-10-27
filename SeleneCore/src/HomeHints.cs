@@ -47,7 +47,7 @@ namespace Selene
             else if (item != null && HomeNav.InRow(item))
             {
                 if (item.DataContext is string) { key = "card"; hints = new[] { "Y", "Move", "A", "Open" }; }
-                else if (HomeNav.HasTrailer(item.DataContext)) { key = "game+"; hints = new[] { "R3", "Trailer sound", "X", "Details", "Y", "Game options", "A", "Play" }; }
+                else if (HomeNav.HasTrailerSound(item.DataContext)) { key = "game+"; hints = new[] { "R3", "Trailer sound", "X", "Details", "Y", "Game options", "A", "Play" }; }
                 else { key = "game"; hints = new[] { "X", "Details", "Y", "Game options", "A", "Play" }; }
             }
             else if (focused != null && focused.Name.StartsWith("SeleneShotTile")) { key = "shot"; hints = new[] { "A", "View" }; }

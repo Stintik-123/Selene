@@ -375,6 +375,7 @@ namespace Selene
 
         public static void SetOwnAudioMute(bool mute)
         {
+            if (HomeNav.Isolated) mute = true;
             ownMuted = mute;
             try
             {

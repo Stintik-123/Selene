@@ -402,7 +402,7 @@ namespace Selene
         {
             if (video == null || !videoHasSound) return false;
             soundOn = !soundOn;
-            video.IsMuted = !soundOn;
+            video.IsMuted = !soundOn || HomeNav.Isolated;
             HomeNav.TrailerSound(soundOn);
             if (rsHint != null) rsHint.Text = soundOn ? "Trailer sound off" : "Trailer sound";
             Ui.Key();

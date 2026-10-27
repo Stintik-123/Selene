@@ -57,6 +57,7 @@ namespace Selene
             SeleneShell.Start();
             SongSetup.StartLater();                   // game songs: UniPlaySong's downloads set up once
             if (string.IsNullOrWhiteSpace(settings.Settings.AvatarPath)) AnimatedAvatar.Fetch(SelenePaths.SteamId);
+            HomeNav.StartIsolatedMute();              // (dev: a test copy beside a PC in use stays silent)
             LocalGames.CheckHelper();                 // Selene's admin helper task: there or not (Home / Close game on admin games)
             HomeNav.Log("Selene Core started");
         }

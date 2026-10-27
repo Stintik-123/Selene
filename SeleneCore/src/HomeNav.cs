@@ -770,6 +770,56 @@ namespace Selene
         // but a game that closes without Windows re-activating Playnite left a black screen with the sounds still playing
         // (#24). Two checks a second apart, then it is shown.
         private static int blankTicks;
+
+        // developer switch %TEMP%\selene-dev-isolated: a test copy run beside a PC in use (on a hidden desktop) - it reads no
+        // controller (the pad belongs to whatever the user is playing) and its own sound stays muted
+        public static readonly bool Isolated = System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-dev-isolated"));
+        public static void StartIsolatedMute()
+        {
+            if (!Isolated) return;
+            Log("dev isolated: own audio muted");
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+            t.Tick += (s, e) => { CloseToTray.SetOwnAudioMute(true); if (t.Interval.TotalMilliseconds < 1000 && (DateTime.Now - Process0).TotalSeconds > 20) t.Interval = TimeSpan.FromSeconds(1); };
+            t.Start();
+        }
+        private static readonly DateTime Process0 = DateTime.Now;
+
+        // dev keys for tests without a screen (LoginScene.DevKeys): a picture drawn by WPF itself (a hidden desktop has no
+        // compositor to capture), a blank screen as after a game, Spotlight's LB / RB, and what Windows thinks is in front
+        public static void DevShot(string name)
+        {
+            try
+            {
+                var w = Application.Current.MainWindow;
+                var root = w != null ? w.Content as FrameworkElement : null;
+                if (root == null) return;
+                int pw = (int)Math.Max(1, root.ActualWidth), ph = (int)Math.Max(1, root.ActualHeight);
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(pw, ph, 96, 96, PixelFormats.Pbgra32);
+                var dv = new DrawingVisual();
+                using (var dc = dv.RenderOpen()) { dc.DrawRectangle(Brushes.Black, null, new Rect(0, 0, pw, ph)); dc.DrawRectangle(new VisualBrush(root), null, new Rect(0, 0, pw, ph)); }
+                rtb.Render(dv);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                var file = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "selene-shot-" + name + ".png");
+                using (var fs = System.IO.File.Create(file)) enc.Save(fs);
+                Log("dev shot: " + file + " (root opacity " + root.Opacity.ToString("0.00") + ")");
+            }
+            catch (Exception ex) { Log("dev shot failed: " + ex.Message); }
+        }
+        public static void DevBlank()
+        {
+            var w = Application.Current.MainWindow;
+            var root = w != null ? w.Content as UIElement : null;
+            if (root != null) root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.Zero));
+            Log("dev blank: root opacity 0 (as behind a game)");
+        }
+        public static void DevCycleFilter(int dir) { CycleRowFilter(dir); }
+        public static void DevFront()
+        {
+            var w = Application.Current.MainWindow;
+            var root = w != null ? w.Content as UIElement : null;
+            Log("dev front: Playnite in front=" + PlayniteInFront() + ", window active=" + (w != null && w.IsActive) + ", root opacity " + (root != null ? root.Opacity.ToString("0.00") : "?") + ", quitting=" + Quitting);
+        }
         private static void StartBlankWatch()
         {
             var since = DateTime.Now;
@@ -1894,7 +1944,7 @@ namespace Selene
                 if (title != null) title.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(150)));
                 // the title stays hidden while the 16:9 card is open; HidePreview puts it back under the tile
 
-                Log("preview: " + game);
+                Log("preview: " + game + " (" + Prop(game, "Id") + ") " + System.IO.Path.GetFileName(path));
                 var songFor = Prop(game, "Id");
                 if (songFor is Guid) SongSetup.NoteMissing((Guid)songFor);   // (no song yet while they're still coming: said once)
             }
@@ -1904,6 +1954,7 @@ namespace Selene
         private static void OnPreviewOpened(object sender, RoutedEventArgs e)
         {
             var video = (MediaElement)sender;
+            Log("preview: playing " + (video.Source != null ? System.IO.Path.GetFileName(video.Source.LocalPath) : "?") + " (" + (video.NaturalDuration.HasTimeSpan ? video.NaturalDuration.TimeSpan.TotalSeconds.ToString("0.0") + " s, " : "") + video.NaturalVideoWidth + "x" + video.NaturalVideoHeight + ")");
             if (pendingSeek.HasValue) { var seek = pendingSeek.Value; pendingSeek = null; try { video.Position = seek; } catch { } video.Opacity = 1; return; }
             video.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(400)) { BeginTime = TimeSpan.FromMilliseconds(200) });
         }
@@ -1914,7 +1965,7 @@ namespace Selene
         // the settings that are a choice of values, read once (the rest are read where they're used)
         public static void ApplyValueSettings()
         {
-            previewSound = Features.On("trailersound");
+            previewSound = Features.On("trailersound") && !Isolated;
             Ui.RefreshPrompts();   // Button names
             // the tab set may have changed (Selene's / Playnite's / both): rebuilt, shown, and the row refiltered
             try
@@ -1980,7 +2031,7 @@ namespace Selene
             var game = item.DataContext;
             var full = FullTrailerPath(game); var clip = TrailerPath(game);
             if (full == null) return;
-            previewSound = !previewSound;
+            previewSound = !previewSound && !Isolated;
             video.IsMuted = !previewSound;
             if (CardVideo(game) == video.Source.LocalPath || clip == null)
             {
@@ -3536,6 +3587,8 @@ namespace Selene
 
         private static bool PlayniteInFront()
         {
+            // (a hidden test desktop never has Windows' foreground window: there, Playnite's active window counts)
+            if (Isolated) { var mw = Application.Current.MainWindow; return mw != null && mw.IsActive; }
             uint pid;
             GetWindowThreadProcessId(GetForegroundWindow(), out pid);
             return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -3897,6 +3950,8 @@ namespace Selene
         internal static bool Moving { get { return movingCard != null || movingGame != null; } }
         internal static bool InRow(DependencyObject d) { return IsInRow(d); }
         internal static bool HasTrailer(object game) { return CardVideo(game) != null; }
+        // R3 has something to switch on: a full trailer (preview clips and Extra Metadata's short clips are silent)
+        internal static bool HasTrailerSound(object game) { return game != null && !(game is string) && FullTrailerPath(game) != null; }
 
         // a trailer just downloaded for the selected game: its card opens after the usual wait, and its hints learn R3
         public static void TrailerReady(Guid id)
@@ -3915,7 +3970,7 @@ namespace Selene
         {
             if (game == null || game is string) return null;
             var clip = TrailerPath(game);
-            return clip != null && !previewSound ? clip : FullTrailerPath(game) ?? clip;
+            return (clip != null && !previewSound ? clip : FullTrailerPath(game) ?? clip) ?? MicroTrailerPath(game);   // Extra Metadata's short clip last (#28)
         }
 
         private static void SetMoveVisual(ListBoxItem item, bool on)
@@ -4247,6 +4302,13 @@ namespace Selene
             RenderFilterTabs(Window.GetWindow(row), dir);
             PlayFilterSwitch(row, dir);
             Log("row filter -> " + RowFilters[rowFilter] + " (" + games.Count + " games) " + sw.ElapsedMilliseconds + " ms");
+            try
+            {
+                Log("row order: " + string.Join(" | ", games.Where(g => !(g is string) && !(g is RowPad)).Take(6).Select(g => Convert.ToString(Prop(g, "Name")))));
+                if (IsPresetTab(RowFilters[rowFilter]) && Api != null)
+                    Log("preset order (Playnite): " + string.Join(" | ", Api.MainView.FilteredGames.Take(6).Select(g => g.Name)));
+            }
+            catch { }
         }
 
         private static object FindWithProperty(object root, string prop, int depth)
@@ -4268,6 +4330,7 @@ namespace Selene
 
         private static bool TriggerHeld()
         {
+            if (Isolated) return false;
             for (int i = 0; i < 4; i++)
             {
                 XInputStateEx s;
@@ -5837,7 +5900,7 @@ namespace Selene
                 if (startingPlayer == null) { startingPlayer = new MediaPlayer(); startingPlayer.Open(new Uri(path)); }
                 startingPlayer.Stop();
                 startingPlayer.Position = TimeSpan.Zero;
-                startingPlayer.Play();
+                startingPlayer.Volume = Isolated ? 0 : 0.5; startingPlayer.Play();
             }
             catch { }
         }
@@ -5852,7 +5915,7 @@ namespace Selene
                 if (!System.IO.File.Exists(path)) return;
                 if (readyPlayer == null) { readyPlayer = new MediaPlayer(); readyPlayer.Open(new Uri(path)); }
                 readyPlayer.Position = TimeSpan.Zero;
-                readyPlayer.Volume = 1.0;
+                readyPlayer.Volume = Isolated ? 0 : 1.0;
                 // Playnite hides (and mutes itself) in the tray while a game starts: unmute just for the chime
                 bool hidden = CloseToTray.IsHidden;
                 if (hidden) CloseToTray.SetOwnAudioMute(false);
@@ -6353,6 +6416,7 @@ namespace Selene
                     System.Threading.Thread.Sleep(30);
                 }
             }) { IsBackground = true, Name = "SeleneGuideWatcher" };
+            if (Isolated) { Log("dev isolated: controllers not read"); return; }
             thread.Start();
         }
 

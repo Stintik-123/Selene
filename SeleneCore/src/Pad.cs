@@ -23,6 +23,7 @@ namespace Selene
 
         public static State Read()
         {
+            if (HomeNav.Isolated) return new State();
             if (getState == null) getState = Find();
             var raw = new byte[16];
             for (int user = 0; user < 4; user++)

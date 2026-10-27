@@ -77,6 +77,7 @@ namespace Selene
                 {
                     login.Visibility = Visibility.Collapsed;
                     HomeNav.Log("login: skipped (developer switch)");
+                    DevKeys();   // the scripted presses still run (on the home)
                     return;
                 }
                 // no intro and no Who's playing?: the last profile is already signed in, the home shows straight away
@@ -200,6 +201,11 @@ namespace Selene
                 var step = queue.Dequeue();
                 HomeNav.Log("dev key " + step[1]);
                 if (step[1] == "menu") SeleneShell.OpenMenu();
+                else if (step[1].StartsWith("shot:")) HomeNav.DevShot(step[1].Substring(5));
+                else if (step[1] == "blank") HomeNav.DevBlank();
+                else if (step[1] == "fakequit") HomeNav.BeginQuit();
+                else if (step[1] == "front?") HomeNav.DevFront();
+                else if (step[1].StartsWith("filter:")) { int d; if (int.TryParse(step[1].Substring(7), out d)) HomeNav.DevCycleFilter(d); }
                 else if (step[1].StartsWith("type:") && current != null) current.Type(step[1].Substring(5));
                 else if (IsActive) HandleButton(step[1]);
                 else DevKeyOnHome(step[1]);   // the layer closed: the key goes to the home as a keyboard press would
