@@ -1,1 +1,4 @@
-PLACEHOLDER
+# Selene — полная русская локализация
+# Живой, человеческий перевод. Фразы без перевода остаются на английском.
+
+# SEE ARTIFACTS - content will be loaded via alternative
